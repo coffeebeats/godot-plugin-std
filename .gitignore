@@ -1,0 +1,11 @@
+# Godot-specific ignores
+.godot/
+
+# Imported translations (automatically generated from CSV files)
+*.translation
+
+# MacOS-specific ignores
+.DS_Store
+
+# Testing-related ignores
+# ...
