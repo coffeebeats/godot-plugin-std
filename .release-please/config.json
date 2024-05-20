@@ -20,7 +20,7 @@
 
       "changelog-path": "CHANGELOG.md",
 
-      "extra-files": ["plugin.cfg"]
+      "extra-files": []
     }
   }
 }
