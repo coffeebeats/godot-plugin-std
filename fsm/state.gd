@@ -141,7 +141,7 @@ func _on_update(_delta: float) -> State:
 # 	next [NodePath] - the 'NodePath' (from root) of the next 'State' node.
 ##
 func _transition_to(next: NodePath):
-	_root._transition_to(next) # gdlint:ignore=private-method-call
+	_root._transition_to(next)  # gdlint:ignore=private-method-call
 	return null
 
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #
