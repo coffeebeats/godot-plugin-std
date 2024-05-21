@@ -63,13 +63,6 @@ jobs:
           ref: ${{ github.head_ref }}
           token: ${{ env.ACTIONS_BOT_TOKEN }}
 
-      - uses: actions/setup-python@v5
-        with:
-          cache: pip
-
-      - name: Set up 'gdtoolkit'
-        run: pip install "gdtoolkit==4.*"
-
       - uses: "coffeebeats/godot-infra/check-godot-project@main" # TODO: Pin to 'v0'.
 
   test:
