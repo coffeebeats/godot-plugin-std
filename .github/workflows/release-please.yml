@@ -69,6 +69,7 @@ jobs:
           # Remove development/project-related files.
           rm ${{ runner.temp }}/addon/project.godot
           rm ${{ runner.temp }}/addon/icon.*
+          rm -rf ${{ runner.temp }}/script_templates
 
           # Remove all nested addon dependencies.
           rm -rf ${{ runner.temp }}/addon/addons
