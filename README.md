@@ -1,6 +1,6 @@
-# godot-plugin-template
+# godot-plugin-std
 
-A template repository for a Godot 4+ plugin.
+A Godot 4.0+ plugin providing standard GDScript functions and components.
 
 ## **Development**
 
@@ -52,8 +52,5 @@ When submitting code for review, ensure the following requirements are met:
 See [CHANGELOG.md](https://github.com/coffeebeats/godot-plugin-template/blob/main/CHANGELOG.md).
 
 ## **License**
-
-> [!IMPORTANT]
-> After instantiating this repository, consider removing this license if the project isn't intended to be open source.
 
 [MIT License](https://github.com/coffeebeats/godot-plugin-template/blob/main/LICENSE)
