@@ -18,13 +18,6 @@
 @icon("../editor/icons/state_machine.svg")
 extends Node
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const Iterators := preload("../iter/node.gd")
-const State := preload("state.gd")
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## Emitted when a 'State' is entered.
@@ -32,6 +25,13 @@ signal state_entered(next)
 
 ## Emitted when a 'State' is exited.
 signal state_exited(previous)
+
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Iterators := preload("../iter/node.gd")
+const State := preload("state.gd")
+
+# -- DEFINITIONS --------------------------------------------------------------------- #
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -65,7 +65,7 @@ var _states: Dictionary = {}
 func input(event) -> void:
 	var target: State = state
 	while target:
-		target = target._on_input(event)
+		target = target._on_input(event)  # gdlint:ignore=private-method-call
 
 
 ## Returns whether the 'StateMachine' is currently in the specified 'State'. This can be
@@ -88,7 +88,7 @@ func is_in_state(other: State) -> bool:
 func update(delta: float) -> void:
 	var target: State = state
 	while target:
-		target = target._on_update(delta)
+		target = target._on_update(delta)  # gdlint:ignore=private-method-call
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -205,7 +205,7 @@ func _transition_to(path: NodePath) -> void:
 	var size_to_exit := to_exit.size()
 	while i < size_to_exit:
 		var s: State = to_exit[i]
-		s._on_exit(next)
+		s._on_exit(next)  # gdlint:ignore=private-method-call
 		state_exited.emit(s._path)
 		i += 1
 
@@ -217,7 +217,7 @@ func _transition_to(path: NodePath) -> void:
 	var j := to_enter.size() - 1
 	while j > -1:
 		var s: State = to_enter[j]
-		s._on_enter(previous)
+		s._on_enter(previous)  # gdlint:ignore=private-method-call
 		state_entered.emit(s._path)
 		j -= 1
 
