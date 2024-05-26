@@ -13,11 +13,33 @@ signal transition_stopped(prev: NodePath, next: String)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Transition := preload("transition.gd")
-
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 
+## Transition is an interface for implementing a scene transition.
+class Transition:
+	extends Node
+
+	signal done
+
+	## replace is an absolute 'NodePath' to the 'Node' to remove from the 'SceneTree'.
+	@export var replace: NodePath
+
+	## next is the loaded scene with which to swap the to-be-replaced 'Node' with.
+	@export var next: PackedScene
+
+	## _start_transition is an abstract method called by the 'Switcher' node when this
+	## transition should begin. When complete, emit the 'done' signal to run cleanup.
+	func _start_transition() -> Error:
+		assert(false, "unimplemented")
+		return FAILED
+
+	func _done() -> void:
+		done.emit()
+
+
+## TransitionInstant is an implementation of 'Transition' which instantly transitions
+## to the new scene using GDScript built-in methods.
 class TransitionInstant:
 	extends Transition
 
