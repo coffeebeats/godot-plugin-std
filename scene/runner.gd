@@ -26,10 +26,10 @@ const Switcher := preload("switcher.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var _tracked: Dictionary = {}
+
 @onready var _loader: Loader = get_node(loader)
 @onready var _switcher: Switcher = get_node(switcher)
-
-var _tracked: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

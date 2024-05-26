@@ -117,7 +117,7 @@ func _process(_delta: float):
 			"failed to load resource"
 		)
 
-		result._set_status(status)
+		result._set_status(status)  # gdlint:ignore=private-method-call
 
 		if status == ResourceLoader.THREAD_LOAD_LOADED:
 			completed.append(path)
@@ -129,7 +129,7 @@ func _process(_delta: float):
 		var packed_scene: PackedScene = ResourceLoader.load_threaded_get(path)
 		assert(packed_scene != null, "loaded scene was unexpectedly null")
 
-		result._set_packed_scene(packed_scene)
+		result._set_packed_scene(packed_scene)  # gdlint:ignore=private-method-call
 		scene_loaded.emit(path, packed_scene)
 
 		_to_load.erase(path)

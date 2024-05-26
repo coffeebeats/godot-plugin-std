@@ -85,7 +85,7 @@ func transition_to(
 	_transition = transition
 	add_child(_transition, false, INTERNAL_MODE_BACK)
 
-	err = _transition._start_transition()
+	err = _transition._start_transition()  # gdlint:ignore=private-method-call
 	assert(err == OK, "failed to start transition")
 
 
