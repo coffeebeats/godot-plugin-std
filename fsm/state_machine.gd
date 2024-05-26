@@ -21,10 +21,10 @@ extends Node
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## Emitted when a 'State' is entered.
-signal state_entered(next)
+signal state_entered(next: NodePath)
 
 ## Emitted when a 'State' is exited.
-signal state_exited(previous)
+signal state_exited(previous: NodePath)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -37,6 +37,10 @@ const State := preload("state.gd")
 
 ## The starting 'State' for the 'StateMachine'; will be transitioned to on 'ready'.
 @export_node_path var initial: NodePath
+
+## Whether to "compact" the 'StateMachine' by extracting 'State' scripts as 'Object'
+## instances from each child 'Node'.
+@export var compact: bool = true
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -95,13 +99,20 @@ func update(delta: float) -> void:
 
 
 func _enter_tree() -> void:
-	assert(initial, "Invalid configuration; missing 'initial' property!")
+	assert(initial, "invalid configuration; missing 'initial' property")
 
 	# Iterate through all 'State' nodes
 	for n in Iterators.descendents(
 		self, Iterators.Filter.ALL, Iterators.Order.DEPTH_FIRST
 	):
-		var s := _extract_state(n)
+		var s: State
+
+		if compact:
+			s = _extract_state(n)
+		else:
+			s = (n as Object) as State
+
+		assert(s != null, "child node is not a valid state")
 
 		var p := n.get_parent()
 		s._parent = _states[get_path_to(p)] if p and p != self else null
@@ -120,10 +131,10 @@ func _enter_tree() -> void:
 
 	# Transition to the initial 'State'
 	_transition_to(initial)
-	assert(state is State, "Failed to set initial 'State'!")
+	assert(state is State, "failed to set initial 'State'")
 	assert(
 		_leaves.has(state.get_instance_id()),
-		"Invalid configuration; 'initial' is not a leaf 'State'!"
+		"invalid configuration; 'initial' is not a leaf 'State'"
 	)
 
 
@@ -156,7 +167,7 @@ func _extract_state(node: Node, strict: bool = true) -> State:
 		s = s.get_base_script()
 
 	if not s is Script:
-		assert(not strict, "Failed to extract 'State' from 'Node'!")
+		assert(not strict, "failed to extract 'State' from 'Node'")
 		return null
 
 	var out: State = node.get_script().new()
