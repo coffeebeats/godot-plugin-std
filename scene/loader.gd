@@ -78,7 +78,9 @@ func load_scene(path: String, use_sub_threads: bool = true) -> Result:
 	if is_loading:
 		return _to_load[path]
 
-	var err := ResourceLoader.load_threaded_request(path,_TYPE_HINT_PACKED_SCENE, use_sub_threads)
+	var err := ResourceLoader.load_threaded_request(
+		path, _TYPE_HINT_PACKED_SCENE, use_sub_threads
+	)
 	assert(err == OK, "failed to load scene")
 
 	var status := ResourceLoader.load_threaded_get_status(path)

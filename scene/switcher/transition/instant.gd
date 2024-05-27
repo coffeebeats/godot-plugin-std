@@ -26,15 +26,18 @@ extends "../transition.gd"
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 func _start_transition() -> Error:
-    call_deferred("_impl")
-    return OK
-    
+	call_deferred("_impl")
+	return OK
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
+
 func _impl() -> void:
-    _change_scene()
-    _done()
+	_change_scene()
+	_done()
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 

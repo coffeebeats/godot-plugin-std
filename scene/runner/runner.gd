@@ -16,7 +16,6 @@ const Switcher := preload("../switcher/switcher.gd")
 const Transition := preload("../switcher/transition.gd")
 const TransitionInstant := preload("../switcher/transition/instant.gd")
 
-
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -67,7 +66,6 @@ func _ready() -> void:
 	assert(_switcher != null, "failed to load 'Switcher'")
 
 
-
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -91,7 +89,9 @@ func _untrack(scene: String) -> bool:
 	assert(scene != "", "missing argument: scene")
 	return _tracked.erase(scene)
 
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
 
 func _on_state_entered(path: NodePath) -> void:
 	var node := get_node_or_null(path)
@@ -116,6 +116,7 @@ func _on_state_entered(path: NodePath) -> void:
 		transition = state.transition.instantiate()
 
 	_switcher.transition_to(target, next, transition)
+
 
 func _on_state_exited(path: NodePath) -> void:
 	pass

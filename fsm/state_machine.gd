@@ -143,6 +143,7 @@ func _notification(what) -> void:
 func _physics_process(delta) -> void:
 	update(delta)
 
+
 func _ready() -> void:
 	# Transition to the initial 'State'
 	_transition_to(initial)
@@ -151,6 +152,7 @@ func _ready() -> void:
 		_leaves.has(state.get_instance_id()),
 		"invalid configuration; 'initial' is not a leaf 'State'"
 	)
+
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
@@ -193,7 +195,9 @@ func _transition_to(path: NodePath) -> void:
 	# If possible, normalize the provided path.
 	if not compact:
 		var target: State = get_node_or_null(path) as Object
-		assert(target is State or compact, "invalid argument; 'path' is not a State node")
+		assert(
+			target is State or compact, "invalid argument; 'path' is not a State node"
+		)
 
 		path = get_path_to(target as Object as Node)
 
