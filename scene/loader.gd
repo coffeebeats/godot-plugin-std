@@ -47,7 +47,7 @@ class Result:
 
 	func _set_packed_scene(packed_scene: PackedScene) -> void:
 		assert(packed_scene != null, "missing input: packed_scene")
-		assert(_packed_scene, "result already set")
+		assert(_packed_scene == null, "result already set")
 
 		_packed_scene = packed_scene
 		done.emit()
@@ -65,37 +65,36 @@ var _to_load: Dictionary = {}
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-func load_scene(path: String, use_sub_threads: bool = true) -> int:
+func load_scene(path: String, use_sub_threads: bool = true) -> Result:
 	assert(path.begins_with("res://"), "expected path to be absolute")
 	assert(
 		path.ends_with(".tscn") or path.ends_with(".scn"),
 		"expected path to be a packed scene"
 	)
 
+	print("loader.gd: ", "loading scene file: ", path)
+
 	var is_loading: bool = path in _to_load
-	if not is_loading:
-		var err := (
-			ResourceLoader
-			. load_threaded_request(
-				path,
-				_TYPE_HINT_PACKED_SCENE,
-				use_sub_threads,
-			)
-		)
+	if is_loading:
+		return _to_load[path]
 
-		if err != OK:
-			return err
+	var err := ResourceLoader.load_threaded_request(path,_TYPE_HINT_PACKED_SCENE, use_sub_threads)
+	assert(err == OK, "failed to load scene")
 
-		var status := ResourceLoader.load_threaded_get_status(path)
-		if (
-			status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE
-			or status == ResourceLoader.THREAD_LOAD_FAILED
-		):
-			return FAILED
+	var status := ResourceLoader.load_threaded_get_status(path)
+	assert(
+		(
+			status != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE
+			and status != ResourceLoader.THREAD_LOAD_FAILED
+		),
+		"failed to load resource"
+	)
 
-	_to_load[path] = Result.new_with_path(path)
+	var result := Result.new_with_path(path)
 
-	return OK
+	_to_load[path] = result
+
+	return result
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -131,6 +130,8 @@ func _process(_delta: float):
 
 		result._set_packed_scene(packed_scene)  # gdlint:ignore=private-method-call
 		scene_loaded.emit(path, packed_scene)
+
+		print("loader.gd: ", "finished loading scene: ", path)
 
 		_to_load.erase(path)
 

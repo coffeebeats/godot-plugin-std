@@ -21,10 +21,10 @@ extends Node
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## Emitted when a 'State' is entered.
-signal state_entered(next: NodePath)
+signal state_entered(path: NodePath)
 
 ## Emitted when a 'State' is exited.
-signal state_exited(previous: NodePath)
+signal state_exited(path: NodePath)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -123,23 +123,16 @@ func _enter_tree() -> void:
 		_states[get_path_to(n)] = s
 
 	# Delete 'Node' instances to prevent their addition to the scene.
-	var index := 0
-	while index < get_child_count():
-		var child := get_child(index)
-		remove_child(child)
-		child.free()
-
-	# Transition to the initial 'State'
-	_transition_to(initial)
-	assert(state is State, "failed to set initial 'State'")
-	assert(
-		_leaves.has(state.get_instance_id()),
-		"invalid configuration; 'initial' is not a leaf 'State'"
-	)
+	if compact:
+		var index := 0
+		while index < get_child_count():
+			var child := get_child(index)
+			remove_child(child)
+			child.free()
 
 
 func _notification(what) -> void:
-	if what == NOTIFICATION_PREDELETE:
+	if compact and what == NOTIFICATION_PREDELETE:
 		state = null
 		for s in _states.values():
 			if is_instance_valid(s):
@@ -150,6 +143,14 @@ func _notification(what) -> void:
 func _physics_process(delta) -> void:
 	update(delta)
 
+func _ready() -> void:
+	# Transition to the initial 'State'
+	_transition_to(initial)
+	assert(state is State, "failed to set initial 'State'")
+	assert(
+		_leaves.has(state.get_instance_id()),
+		"invalid configuration; 'initial' is not a leaf 'State'"
+	)
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
@@ -187,6 +188,15 @@ func _extract_state(node: Node, strict: bool = true) -> State:
 ## @args:
 ## 	path [NodePath] - A 'NodePath' (relative to 'StateMachine') to the target 'State'.
 func _transition_to(path: NodePath) -> void:
+	assert(path != NodePath(), "missing argument: path")
+
+	# If possible, normalize the provided path.
+	if not compact:
+		var target: State = get_node_or_null(path) as Object
+		assert(target is State or compact, "invalid argument; 'path' is not a State node")
+
+		path = get_path_to(target as Object as Node)
+
 	assert(path in _states, "Invalid argument; 'path' not found in 'StateMachine'!")
 	assert(not _is_in_transition, "Invalid config; nested transitions prohibited!")
 
