@@ -26,17 +26,16 @@ signal state_entered(path: NodePath)
 ## Emitted when a 'State' is exited.
 signal state_exited(path: NodePath)
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const Iterators := preload ("../iter/node.gd")
-const State := preload ("state.gd")
-
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 enum StateMachineProcessCallback {
-	STATE_MACHINE_PROCESS_CALLBACK_PHYSICS = 0,
-	STATE_MACHINE_PROCESS_CALLBACK_IDLE = 1
+	STATE_MACHINE_PROCESS_CALLBACK_PHYSICS = 0, STATE_MACHINE_PROCESS_CALLBACK_IDLE = 1
 }
+
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Iterators := preload("../iter/node.gd")
+const State := preload("state.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -49,7 +48,9 @@ enum StateMachineProcessCallback {
 
 ## process_callback determines whether 'update' is called during the physics or idle
 ## process callback function (if the process mode allows for it).
-@export var process_callback := StateMachineProcessCallback.STATE_MACHINE_PROCESS_CALLBACK_PHYSICS:
+@export var process_callback := (
+	StateMachineProcessCallback.STATE_MACHINE_PROCESS_CALLBACK_PHYSICS
+):
 	set(value):
 		process_callback = value
 
@@ -77,6 +78,7 @@ var _states: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 ## Dispatches 'StateMachine' events to the current 'State' node.
 ##
 ## NOTE: 'State' nodes may return a pointer to their parent node. In that case,
@@ -87,7 +89,8 @@ var _states: Dictionary = {}
 func input(event) -> void:
 	var target: State = state
 	while target:
-		target = target._on_input(event) # gdlint:ignore=private-method-call
+		target = target._on_input(event)  # gdlint:ignore=private-method-call
+
 
 ## Returns whether the 'StateMachine' is currently in the specified 'State'. This can be
 ## true if the specified 'State' is a super-state of the current leaf 'State'.
@@ -97,6 +100,7 @@ func input(event) -> void:
 func is_in_state(other: State) -> bool:
 	assert(other is State, "Invalid argument; expected 'other' to be a 'State'!")
 	return state.is_substate_of(other)
+
 
 ## Execute the next frame/tick of the 'StateMachine' (delegates to current 'State').
 ##
@@ -108,9 +112,11 @@ func is_in_state(other: State) -> bool:
 func update(delta: float) -> void:
 	var target: State = state
 	while target:
-		target = target._on_update(delta) # gdlint:ignore=private-method-call
+		target = target._on_update(delta)  # gdlint:ignore=private-method-call
+
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
 
 func _enter_tree() -> void:
 	assert(initial, "invalid configuration; missing 'initial' property")
@@ -144,6 +150,7 @@ func _enter_tree() -> void:
 			remove_child(child)
 			child.free()
 
+
 func _notification(what) -> void:
 	if compact and what == NOTIFICATION_PREDELETE:
 		state = null
@@ -151,11 +158,14 @@ func _notification(what) -> void:
 			if is_instance_valid(s):
 				s.free()
 
+
 func _physics_process(delta) -> void:
 	update(delta)
 
+
 func _process(delta) -> void:
 	update(delta)
+
 
 func _ready() -> void:
 	# Trigger the setter to properly configure callback functions.
@@ -169,13 +179,15 @@ func _ready() -> void:
 		"invalid configuration; 'initial' is not a leaf 'State'"
 	)
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
+
 ## Extracts a 'State' object from a 'Node' with a 'State' script attached. Also
 ## populates the returned object with correctly-set export variables.
-func _extract_state(node: Node, strict: bool=true) -> State:
+func _extract_state(node: Node, strict: bool = true) -> State:
 	var s: Script = node.get_script()
 	while s:
 		if s == State:
@@ -193,10 +205,11 @@ func _extract_state(node: Node, strict: bool=true) -> State:
 		var p_usage: PropertyUsageFlags = p["usage"]
 
 		# Need to populate export variables with the editor-defined values.
-		if p_usage&PROPERTY_USAGE_STORAGE:
+		if p_usage & PROPERTY_USAGE_STORAGE:
 			out.set(p_name, node.get(p_name))
 
 	return out
+
 
 ## Handles state transition lifecycle given the current and next states.
 ##
@@ -243,7 +256,7 @@ func _transition_to(path: NodePath) -> void:
 	var size_to_exit := to_exit.size()
 	while i < size_to_exit:
 		var s: State = to_exit[i]
-		s._on_exit(next) # gdlint:ignore=private-method-call
+		s._on_exit(next)  # gdlint:ignore=private-method-call
 		state_exited.emit(s._path)
 		i += 1
 
@@ -253,9 +266,9 @@ func _transition_to(path: NodePath) -> void:
 
 	# Finally, enter states; proceed from inner non-common ancestor 'State' to 'next'.
 	var j := to_enter.size() - 1
-	while j > - 1:
+	while j > -1:
 		var s: State = to_enter[j]
-		s._on_enter(previous) # gdlint:ignore=private-method-call
+		s._on_enter(previous)  # gdlint:ignore=private-method-call
 		state_entered.emit(s._path)
 		j -= 1
 
