@@ -9,9 +9,9 @@
 
 extends Node
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
 # -- DEFINITIONS --------------------------------------------------------------------- #
+
+# -- DEPENDENCIES -------------------------------------------------------------------- #
 
 ## An enumeration of different iteration algorithms.
 enum Order { BREADTH_FIRST, DEPTH_FIRST }
