@@ -27,10 +27,10 @@ signal state_entered(path: NodePath)
 signal state_exited(path: NodePath)
 
 ## Emitted when a 'State' transition is started.
-signal transition_started(from: State, to: State)
+signal transition_started(from: NodePath, to: NodePath)
 
 ## Emitted when a 'State' transition is finished.
-signal transition_finished(from: State, to: State)
+signal transition_finished(from: NodePath, to: NodePath)
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -249,7 +249,10 @@ func _transition_to(path: NodePath) -> void:
 	var next: State = _states[path]
 	assert(next.get_instance_id() in _leaves, "Argument 'next' was not a leaf 'State'!")
 
-	transition_started.emit(state, next)
+	var from_path := state._path if state else NodePath()
+	var to_path := next._path
+
+	transition_started.emit(from_path, to_path)
 
 	var to_exit := [state] if state else []
 	var to_enter := [next]
@@ -292,4 +295,4 @@ func _transition_to(path: NodePath) -> void:
 
 	_is_in_transition = false
 
-	transition_finished.emit(state, next)
+	transition_finished.emit(from_path, to_path)

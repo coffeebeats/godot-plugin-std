@@ -19,6 +19,10 @@ class StateControllable:
 		return _transition_to(input)
 
 
+func get_compact_params() -> Array[bool]:
+	return [true, false]
+
+
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
@@ -26,35 +30,42 @@ func test_state_machine_compaction_removes_children_when_added_to_scene_tree():
 	var root := _create_state_machine(^"A/B/C")
 	watch_signals(root)
 
-	# Trigger 'StateMachine' "compaction" process.
-	add_child_autofree(root)
+	# Triggers 'StateMachine' "compaction" process, if enabled.
+	add_child_autofree(root, true)
 
 	# No states are exited on the initial transition.
 	assert_eq(root.get_child_count(), 0)
 
 
-func test_state_machine_initial_transition_emits_correct_signals():
+func test_state_machine_initial_transition_emits_correct_signals(
+	compact = use_parameters(get_compact_params()),
+):
 	var root := _create_state_machine(^"A/B/C")
+	root.compact = compact
+
 	watch_signals(root)
 
-	# Trigger 'StateMachine' "compaction" process.
-	add_child_autofree(root)
+	# Triggers 'StateMachine' "compaction" process, if enabled.
+	add_child_autofree(root, true)
 
 	# No states are exited on the initial transition.
-	assert_signal_emit_count(root, "state_exit", 0)
+	assert_signal_emit_count(root, "state_exited", 0)
 
 	# Each 'State' on the path to 'A/B/C' is entered.
-	assert_signal_emit_count(root, "state_enter", 3)
-	assert_signal_emitted_with_parameters(root, "state_enter", [^"A"], 0)
-	assert_signal_emitted_with_parameters(root, "state_enter", [^"A/B"], 1)
-	assert_signal_emitted_with_parameters(root, "state_enter", [^"A/B/C"], 2)
+	assert_signal_emit_count(root, "state_entered", 3)
+	assert_signal_emitted_with_parameters(root, "state_entered", [^"A"], 0)
+	assert_signal_emitted_with_parameters(root, "state_entered", [^"A/B"], 1)
+	assert_signal_emitted_with_parameters(root, "state_entered", [^"A/B/C"], 2)
 
 
-func test_state_machine_transition_emits_correct_signals():
+func test_state_machine_transition_emits_correct_signals(
+	compact = use_parameters(get_compact_params()),
+):
 	var root := _create_state_machine(^"A/B/C", StateControllable)
+	root.compact = compact
 
-	# Trigger 'StateMachine' "compaction" process.
-	add_child_autofree(root)
+	# Triggers 'StateMachine' "compaction" process, if enabled.
+	add_child_autofree(root, true)
 
 	# Ignore signals from initial transition
 	watch_signals(root)
@@ -65,31 +76,34 @@ func test_state_machine_transition_emits_correct_signals():
 	# State machine emits a transition start signal.
 	assert_signal_emit_count(root, "transition_started", 1)
 	assert_signal_emitted_with_parameters(
-		root, "transition_started", [root.state, root.get_node_or_null(^"E")], 0
+		root, "transition_started", [^"A/B/C", ^"E"], 0
 	)
 
 	# Each 'State' on the path from 'A/B/C' is exited.
-	assert_signal_emit_count(root, "state_exit", 3)
-	assert_signal_emitted_with_parameters(root, "state_exit", [^"A/B/C"], 0)
-	assert_signal_emitted_with_parameters(root, "state_exit", [^"A/B"], 1)
-	assert_signal_emitted_with_parameters(root, "state_exit", [^"A"], 2)
+	assert_signal_emit_count(root, "state_exited", 3)
+	assert_signal_emitted_with_parameters(root, "state_exited", [^"A/B/C"], 0)
+	assert_signal_emitted_with_parameters(root, "state_exited", [^"A/B"], 1)
+	assert_signal_emitted_with_parameters(root, "state_exited", [^"A"], 2)
 
 	# Each 'State' on the path to 'E' is entered.
-	assert_signal_emit_count(root, "state_enter", 1)
-	assert_signal_emitted_with_parameters(root, "state_enter", [^"E"], 0)
+	assert_signal_emit_count(root, "state_entered", 1)
+	assert_signal_emitted_with_parameters(root, "state_entered", [^"E"], 0)
 
 	# State machine emits a transition end signal.
 	assert_signal_emit_count(root, "transition_finished", 1)
 	assert_signal_emitted_with_parameters(
-		root, "transition_finished", [root.state, root.get_node_or_null(^"E")], 0
+		root, "transition_finished", [^"A/B/C", ^"E"], 0
 	)
 
 
-func test_state_machine_self_transition_emits_correct_signals():
+func test_state_machine_self_transition_emits_correct_signals(
+	compact = use_parameters(get_compact_params()),
+):
 	var root := _create_state_machine(^"A/B/C", StateControllable)
+	root.compact = compact
 
-	# Trigger 'StateMachine' "compaction" process.
-	add_child_autofree(root)
+	# Triggers 'StateMachine' "compaction" process, if enabled.
+	add_child_autofree(root, true)
 
 	# Ignore signals from initial transition
 	watch_signals(root)
@@ -98,12 +112,12 @@ func test_state_machine_self_transition_emits_correct_signals():
 	root.input(^"A/B/C")
 
 	# Only 'A/B/C' is exited.
-	assert_signal_emit_count(root, "state_exit", 1)
-	assert_signal_emitted_with_parameters(root, "state_exit", [^"A/B/C"], 0)
+	assert_signal_emit_count(root, "state_exited", 1)
+	assert_signal_emitted_with_parameters(root, "state_exited", [^"A/B/C"], 0)
 
 	# Only 'A/B/C' is (re-)entered.
-	assert_signal_emit_count(root, "state_enter", 1)
-	assert_signal_emitted_with_parameters(root, "state_enter", [^"A/B/C"], 0)
+	assert_signal_emit_count(root, "state_entered", 1)
+	assert_signal_emitted_with_parameters(root, "state_entered", [^"A/B/C"], 0)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
