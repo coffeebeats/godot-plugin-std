@@ -17,6 +17,7 @@ enum SceneProcessCallback {
 	SCENE_PROCESS_IDLE = 1,
 }
 
+
 ## Result contains the results of loading the specified resource.
 class Result:
 	extends RefCounted
@@ -45,6 +46,7 @@ class Result:
 
 		return OK
 
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## process_callback determines whether 'update' is called during the physics or idle
@@ -66,6 +68,7 @@ class Result:
 var _loading: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
 
 ## load loads the provided packed scene file in the background and returns a handle to
 ## track the progress of the request and access the loaded resource.
@@ -116,7 +119,9 @@ func load(path: String) -> Result:
 
 	return _loading[path]
 
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
 
 func _init() -> void:
 	# Trigger the setter to properly configure callback functions.
@@ -125,13 +130,17 @@ func _init() -> void:
 	# Disable processing until a request is made.
 	process_mode = Node.PROCESS_MODE_DISABLED
 
+
 func _physics_process(delta: float) -> void:
 	return _update(delta)
+
 
 func _process(delta: float) -> void:
 	return _update(delta)
 
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
 
 func _update(_delta: float) -> void:
 	var completed: Array[Result] = []

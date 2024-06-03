@@ -6,10 +6,11 @@ extends GutTest
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const State := preload ("state.gd")
-const StateMachine := preload ("state_machine.gd")
+const State := preload("state.gd")
+const StateMachine := preload("state_machine.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
+
 
 class StateControllable:
 	extends State
@@ -17,7 +18,9 @@ class StateControllable:
 	func _on_input(input: NodePath) -> State:
 		return _transition_to(input)
 
+
 # -- TEST METHODS -------------------------------------------------------------------- #
+
 
 func test_state_machine_compaction_removes_children_when_added_to_scene_tree():
 	var root := _create_state_machine(^"A/B/C")
@@ -28,6 +31,7 @@ func test_state_machine_compaction_removes_children_when_added_to_scene_tree():
 
 	# No states are exited on the initial transition.
 	assert_eq(root.get_child_count(), 0)
+
 
 func test_state_machine_initial_transition_emits_correct_signals():
 	var root := _create_state_machine(^"A/B/C")
@@ -45,6 +49,7 @@ func test_state_machine_initial_transition_emits_correct_signals():
 	assert_signal_emitted_with_parameters(root, "state_enter", [^"A/B"], 1)
 	assert_signal_emitted_with_parameters(root, "state_enter", [^"A/B/C"], 2)
 
+
 func test_state_machine_transition_emits_correct_signals():
 	var root := _create_state_machine(^"A/B/C", StateControllable)
 
@@ -59,7 +64,9 @@ func test_state_machine_transition_emits_correct_signals():
 
 	# State machine emits a transition start signal.
 	assert_signal_emit_count(root, "transition_started", 1)
-	assert_signal_emitted_with_parameters(root, "transition_started", [root.state, root.get_node_or_null(^"E")], 0)
+	assert_signal_emitted_with_parameters(
+		root, "transition_started", [root.state, root.get_node_or_null(^"E")], 0
+	)
 
 	# Each 'State' on the path from 'A/B/C' is exited.
 	assert_signal_emit_count(root, "state_exit", 3)
@@ -73,7 +80,10 @@ func test_state_machine_transition_emits_correct_signals():
 
 	# State machine emits a transition end signal.
 	assert_signal_emit_count(root, "transition_finished", 1)
-	assert_signal_emitted_with_parameters(root, "transition_finished", [root.state, root.get_node_or_null(^"E")], 0)
+	assert_signal_emitted_with_parameters(
+		root, "transition_finished", [root.state, root.get_node_or_null(^"E")], 0
+	)
+
 
 func test_state_machine_self_transition_emits_correct_signals():
 	var root := _create_state_machine(^"A/B/C", StateControllable)
@@ -95,13 +105,17 @@ func test_state_machine_self_transition_emits_correct_signals():
 	assert_signal_emit_count(root, "state_enter", 1)
 	assert_signal_emitted_with_parameters(root, "state_enter", [^"A/B/C"], 0)
 
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
+
 
 func before_all():
 	# NOTE: Hide unactionable errors when using object doubles.
 	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
 
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
 
 ## Creates a simple 'StateMachine' for testing, structured as follows:
 ##
@@ -115,7 +129,7 @@ func before_all():
 ## @args:
 ## 	initial - A 'NodePath' pointing to the starting 'State'
 ## 	state - The script to use for 'State' objects
-func _create_state_machine(initial: NodePath, state: GDScript=State) -> StateMachine:
+func _create_state_machine(initial: NodePath, state: GDScript = State) -> StateMachine:
 	var out := StateMachine.new()
 
 	var nodes: Dictionary = {}

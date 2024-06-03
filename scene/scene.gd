@@ -18,6 +18,7 @@ enum Mode {
 	SCENE_MODE_AFTER = 2,
 }
 
+
 ## State is the base class for all state scripts supported by this state machine.
 class State:
 	extends "../fsm/state.gd"
@@ -31,12 +32,13 @@ class State:
 	func _on_input(_event: Event) -> State:
 		return _parent
 
+
 const _GROUP_SCENE_FSM := "std/scene:scene"
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Event := preload ("event.gd")
-const Loader := preload ("loader.gd")
+const Event := preload("event.gd")
+const Loader := preload("loader.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -53,11 +55,14 @@ var _loader: Loader = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 ## Dispatches 'StateMachine' events to the current 'State' node.
 func input(event: Event) -> void:
 	super(event)
 
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
 
 func _enter_tree() -> void:
 	add_to_group(_GROUP_SCENE_FSM)
@@ -69,6 +74,7 @@ func _enter_tree() -> void:
 
 	super()
 
+
 func _ready() -> void:
 	# Remove any property paths or subnames.
 	game_root = NodePath(game_root.get_concatenated_names())
@@ -79,10 +85,12 @@ func _ready() -> void:
 
 	super()
 
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
+
 func _add_node_to_scene(
-	path: NodePath, node: Node, mode: Mode=Mode.SCENE_MODE_REPLACE
+	path: NodePath, node: Node, mode: Mode = Mode.SCENE_MODE_REPLACE
 ) -> void:
 	assert(not path.is_empty(), "missing scene path")
 	assert(node != null, "missing scene node to add")
