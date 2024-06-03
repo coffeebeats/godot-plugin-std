@@ -26,16 +26,20 @@ signal state_entered(path: NodePath)
 ## Emitted when a 'State' is exited.
 signal state_exited(path: NodePath)
 
+## Emitted when a 'State' transition is started.
+signal transition_started(from: State, to: State)
+
+## Emitted when a 'State' transition is finished.
+signal transition_finished(from: State, to: State)
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-enum StateMachineProcessCallback {
-	STATE_MACHINE_PROCESS_CALLBACK_PHYSICS = 0, STATE_MACHINE_PROCESS_CALLBACK_IDLE = 1
-}
+enum StateMachineProcessCallback {STATE_MACHINE_PROCESS_PHYSICS = 0, STATE_MACHINE_PROCESS_IDLE = 1}
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Iterators := preload("../iter/node.gd")
-const State := preload("state.gd")
+const Iterators := preload ("../iter/node.gd")
+const State := preload ("state.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -48,17 +52,15 @@ const State := preload("state.gd")
 
 ## process_callback determines whether 'update' is called during the physics or idle
 ## process callback function (if the process mode allows for it).
-@export var process_callback := (
-	StateMachineProcessCallback.STATE_MACHINE_PROCESS_CALLBACK_PHYSICS
-):
+@export var process_callback := StateMachineProcessCallback.STATE_MACHINE_PROCESS_PHYSICS:
 	set(value):
 		process_callback = value
 
 		match value:
-			StateMachineProcessCallback.STATE_MACHINE_PROCESS_CALLBACK_PHYSICS:
+			StateMachineProcessCallback.STATE_MACHINE_PROCESS_PHYSICS:
 				set_physics_process(true)
 				set_process(false)
-			StateMachineProcessCallback.STATE_MACHINE_PROCESS_CALLBACK_IDLE:
+			StateMachineProcessCallback.STATE_MACHINE_PROCESS_IDLE:
 				set_physics_process(false)
 				set_process(true)
 
@@ -78,7 +80,6 @@ var _states: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
-
 ## Dispatches 'StateMachine' events to the current 'State' node.
 ##
 ## NOTE: 'State' nodes may return a pointer to their parent node. In that case,
@@ -89,8 +90,7 @@ var _states: Dictionary = {}
 func input(event) -> void:
 	var target: State = state
 	while target:
-		target = target._on_input(event)  # gdlint:ignore=private-method-call
-
+		target = target._on_input(event) # gdlint:ignore=private-method-call
 
 ## Returns whether the 'StateMachine' is currently in the specified 'State'. This can be
 ## true if the specified 'State' is a super-state of the current leaf 'State'.
@@ -100,7 +100,6 @@ func input(event) -> void:
 func is_in_state(other: State) -> bool:
 	assert(other is State, "Invalid argument; expected 'other' to be a 'State'!")
 	return state.is_substate_of(other)
-
 
 ## Execute the next frame/tick of the 'StateMachine' (delegates to current 'State').
 ##
@@ -112,25 +111,24 @@ func is_in_state(other: State) -> bool:
 func update(delta: float) -> void:
 	var target: State = state
 	while target:
-		target = target._on_update(delta)  # gdlint:ignore=private-method-call
-
+		target = target._on_update(delta) # gdlint:ignore=private-method-call
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
-
 
 func _enter_tree() -> void:
 	assert(initial, "invalid configuration; missing 'initial' property")
 
 	# Iterate through all 'State' nodes
-	for n in Iterators.descendents(
-		self, Iterators.Filter.ALL, Iterators.Order.DEPTH_FIRST
-	):
+	for n in Iterators.descendents(self, Iterators.Filter.ALL, Iterators.Order.DEPTH_FIRST):
 		var s: State
 
 		if compact:
 			s = _extract_state(n)
 		else:
 			s = (n as Object) as State
+
+		if s == null:
+			continue
 
 		assert(s != null, "child node is not a valid state")
 
@@ -142,6 +140,10 @@ func _enter_tree() -> void:
 		_leaves[s.get_instance_id()] = s
 		_states[get_path_to(n)] = s
 
+		print(
+			"std/fsm/state_machine.gd[", get_instance_id(), "]: registered state: " + str(s._path)
+		)
+
 	# Delete 'Node' instances to prevent their addition to the scene.
 	if compact:
 		var index := 0
@@ -150,7 +152,6 @@ func _enter_tree() -> void:
 			remove_child(child)
 			child.free()
 
-
 func _notification(what) -> void:
 	if compact and what == NOTIFICATION_PREDELETE:
 		state = null
@@ -158,14 +159,11 @@ func _notification(what) -> void:
 			if is_instance_valid(s):
 				s.free()
 
-
 func _physics_process(delta) -> void:
 	update(delta)
 
-
 func _process(delta) -> void:
 	update(delta)
-
 
 func _ready() -> void:
 	# Trigger the setter to properly configure callback functions.
@@ -179,15 +177,11 @@ func _ready() -> void:
 		"invalid configuration; 'initial' is not a leaf 'State'"
 	)
 
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
-
 
 ## Extracts a 'State' object from a 'Node' with a 'State' script attached. Also
 ## populates the returned object with correctly-set export variables.
-func _extract_state(node: Node, strict: bool = true) -> State:
+func _extract_state(node: Node, strict: bool=true) -> State:
 	var s: Script = node.get_script()
 	while s:
 		if s == State:
@@ -205,11 +199,10 @@ func _extract_state(node: Node, strict: bool = true) -> State:
 		var p_usage: PropertyUsageFlags = p["usage"]
 
 		# Need to populate export variables with the editor-defined values.
-		if p_usage & PROPERTY_USAGE_STORAGE:
+		if p_usage&PROPERTY_USAGE_STORAGE:
 			out.set(p_name, node.get(p_name))
 
 	return out
-
 
 ## Handles state transition lifecycle given the current and next states.
 ##
@@ -220,18 +213,20 @@ func _transition_to(path: NodePath) -> void:
 
 	# If possible, normalize the provided path.
 	if not compact:
-		var target: State = get_node_or_null(path) as Object
-		assert(
-			target is State or compact, "invalid argument; 'path' is not a State node"
-		)
+		var target = get_node_or_null(path)
+		assert(target is State, "invalid argument; 'path' is not a State node")
 
 		path = get_path_to(target as Object as Node)
 
 	assert(path in _states, "Invalid argument; 'path' not found in 'StateMachine'!")
 	assert(not _is_in_transition, "Invalid config; nested transitions prohibited!")
 
+	print("std/fsm/state_machine.gd[", get_instance_id(), "]: transition to state: " + str(path))
+
 	var next: State = _states[path]
 	assert(next.get_instance_id() in _leaves, "Argument 'next' was not a leaf 'State'!")
+
+	transition_started.emit(state, next)
 
 	var to_exit := [state] if state else []
 	var to_enter := [next]
@@ -256,7 +251,7 @@ func _transition_to(path: NodePath) -> void:
 	var size_to_exit := to_exit.size()
 	while i < size_to_exit:
 		var s: State = to_exit[i]
-		s._on_exit(next)  # gdlint:ignore=private-method-call
+		s._on_exit(next) # gdlint:ignore=private-method-call
 		state_exited.emit(s._path)
 		i += 1
 
@@ -266,14 +261,12 @@ func _transition_to(path: NodePath) -> void:
 
 	# Finally, enter states; proceed from inner non-common ancestor 'State' to 'next'.
 	var j := to_enter.size() - 1
-	while j > -1:
+	while j > - 1:
 		var s: State = to_enter[j]
-		s._on_enter(previous)  # gdlint:ignore=private-method-call
+		s._on_enter(previous) # gdlint:ignore=private-method-call
 		state_entered.emit(s._path)
 		j -= 1
 
 	_is_in_transition = false
 
-# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
+	transition_finished.emit(state, next)
