@@ -82,6 +82,7 @@ func _on_update(_delta: float) -> State:
 		if not path.is_empty():
 			path_with_fallback = path
 
+		# gdlint:ignore=private-method-call
 		_root._add_node_to_scene(path_with_fallback, _node, Mode.SCENE_MODE_REPLACE)
 
 	return _parent

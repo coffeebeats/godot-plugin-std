@@ -78,6 +78,7 @@ func _on_enter(previous: State) -> void:
 	else:
 		_color_rect.modulate.a = 0.0
 
+	# gdlint:ignore=private-method-call
 	_root._add_node_to_scene(_root.game_root, _color_rect, Mode.SCENE_MODE_AFTER)
 
 
@@ -112,7 +113,7 @@ func _on_update(delta: float) -> State:
 		if (target as Object) is Instantiable and not target.path.is_empty():
 			path = target.path
 
-		_root._add_node_to_scene(path, node, Mode.SCENE_MODE_REPLACE)
+		_root._add_node_to_scene(path, node, Mode.SCENE_MODE_REPLACE)  # gdlint:ignore=private-method-call
 		_is_node_added_to_scene = true
 
 		if target as Object as State is Playable:

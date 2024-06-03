@@ -8,8 +8,6 @@ extends Node
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const _TYPE_HINT_PACKED_SCENE := "PackedScene"
-
 ## SceneProcessCallback is an enumeration of supported engine callbacks in which to run
 ## background loading status checks.
 enum SceneProcessCallback {
@@ -46,6 +44,8 @@ class Result:
 
 		return OK
 
+
+const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
