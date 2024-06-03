@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://c0kd16i7v6rkm"]
+
+[ext_resource type="Script" path="res://scene/example/screen.gd" id="1_0xa13"]
+[ext_resource type="Script" path="res://scene/handle.gd" id="2_87pjw"]
+
+[node name="Screen" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.233148, 0.457125, 1, 1)
+script = ExtResource("1_0xa13")
+target = NodePath("Boot/Transition3")
+
+[node name="SceneHandle" type="Node" parent="."]
+script = ExtResource("2_87pjw")

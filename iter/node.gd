@@ -9,8 +9,6 @@
 
 extends Node
 
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 ## An enumeration of different iteration algorithms.
@@ -127,7 +125,3 @@ func _enter_tree() -> void:
 		not is_inside_tree(),
 		"Invalid config; this 'Node' should not be added to the 'SceneTree'!"
 	)
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
