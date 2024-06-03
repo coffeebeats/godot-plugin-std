@@ -98,6 +98,7 @@ jobs:
           -s addons/gut/gut_cmdln.gd
           -gdir=res://
           -ginclude_subdirs
+          -gprefix=
           -gsuffix=_test.gd
           -gexit
 

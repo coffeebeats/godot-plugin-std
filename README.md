@@ -37,9 +37,10 @@ When submitting code for review, ensure the following requirements are met:
         --quit \
         --headless \
         -s addons/gut/gut_cmdln.gd \
-        -gdir=res:// \
+        -gdir="res://" \
         -ginclude_subdirs \
-        -gsuffix=_test.gd \
+        -gprefix="" \
+        -gsuffix="_test.gd" \
         -gexit
     ```
 
