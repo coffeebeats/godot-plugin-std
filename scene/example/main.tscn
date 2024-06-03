@@ -1,0 +1,61 @@
+[gd_scene load_steps=6 format=3 uid="uid://bno7ek647xnaf"]
+
+[ext_resource type="Script" path="res://scene/scene.gd" id="1_58vt3"]
+[ext_resource type="Script" path="res://scene/example/main.gd" id="1_y7srq"]
+[ext_resource type="Script" path="res://scene/state/track.gd" id="2_xj43q"]
+[ext_resource type="Script" path="res://scene/state/playable.gd" id="3_d0na2"]
+[ext_resource type="Script" path="res://scene/state/fade.gd" id="4_x50d8"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_y7srq")
+
+[node name="Scene" type="Node" parent="."]
+script = ExtResource("1_58vt3")
+game_root = NodePath("../Root")
+initial = NodePath("Boot/Scene1")
+compact = false
+process_callback = 1
+
+[node name="Boot" type="Node" parent="Scene"]
+script = ExtResource("2_xj43q")
+
+[node name="Scene1" type="Node" parent="Scene/Boot"]
+script = ExtResource("3_d0na2")
+scene = "res://scene/example/black.tscn"
+
+[node name="Transition2" type="Node" parent="Scene/Boot"]
+script = ExtResource("4_x50d8")
+fade_in = false
+to = NodePath("../Scene2")
+
+[node name="Scene2" type="Node" parent="Scene/Boot"]
+script = ExtResource("3_d0na2")
+scene = "res://scene/example/blue.tscn"
+
+[node name="Transition3" type="Node" parent="Scene/Boot"]
+script = ExtResource("4_x50d8")
+to = NodePath("../Scene3")
+
+[node name="Scene3" type="Node" parent="Scene/Boot"]
+script = ExtResource("3_d0na2")
+scene = "res://scene/example/red.tscn"
+
+[node name="Transition4" type="Node" parent="Scene/Boot"]
+script = ExtResource("4_x50d8")
+fade_out = false
+to = NodePath("../Scene1")
+
+[node name="Root" type="Node" parent="."]
+
+[node name="Label" type="Label" parent="."]
+z_index = 10
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = 27.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.897813, 0.897813, 0.897813, 1)
+theme_override_font_sizes/font_size = 48
+horizontal_alignment = 1
+vertical_alignment = 1

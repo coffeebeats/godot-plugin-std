@@ -11,8 +11,6 @@ extends Node
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
 ## An enumeration of different iteration algorithms.
 enum Order { BREADTH_FIRST, DEPTH_FIRST }
 
@@ -127,7 +125,3 @@ func _enter_tree() -> void:
 		not is_inside_tree(),
 		"Invalid config; this 'Node' should not be added to the 'SceneTree'!"
 	)
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #

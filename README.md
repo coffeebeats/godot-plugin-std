@@ -2,6 +2,22 @@
 
 A Godot 4.0+ plugin providing standard GDScript functions and components.
 
+## Usage
+
+### **`fsm`**
+
+The [fsm](./fsm) directory contains an implementation of a hierarchical [StateMachine](./fsm/state_machine.gd) suited for most applications. State machines are constructed as a scene with the node hierarchy used to define the level of state nesting. Each state should utilize a custom script to implement its behavior, and users can input events into the state machine to trigger transitions or update states.
+
+Additionally, the [StateMachine](./fsm/state_machine.gd) implementation provides a "compaction" process which is enabled by default. The state machine extracts the scripts of all child [State](./fsm/state.gd) nodes and stores those objects internally without adding children to the scene tree. This improves performance, especially for state machines which are instantiated often.
+
+### **`iter`**
+
+The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
+
+### **`scene`**
+
+The [scene](./scene) directory contains an implementation of a [StateMachine](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
+
 ## **Development**
 
 ### Setup
@@ -37,9 +53,10 @@ When submitting code for review, ensure the following requirements are met:
         --quit \
         --headless \
         -s addons/gut/gut_cmdln.gd \
-        -gdir=res:// \
+        -gdir="res://" \
         -ginclude_subdirs \
-        -gsuffix=_test.gd \
+        -gprefix="" \
+        -gsuffix="_test.gd" \
         -gexit
     ```
 

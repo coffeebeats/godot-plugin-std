@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0 (2024-06-03)
+
+## What's Changed
+* fix(fsm): allow setting compact behavior and process callback by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/12
+* feat(scene): create a `Scene` state machine for declaratively managing scene transitions by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/14
+* chore: bump minor version after `scene` package addition by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/15
+* chore!: document new `scene` folder; bump minor version by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/16
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v0.1.2...v0.2.0
+
 ## 0.1.2 (2024-05-21)
 
 ## What's Changed

@@ -23,12 +23,12 @@ extends Object
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const StateMachine := preload("state_machine.gd")
 const State := preload("state.gd")
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -77,7 +77,7 @@ func is_substate_of(other: State) -> bool:
 ##
 ## @args:
 ## 	previous - the 'State' node being transitioned *from*
-func _on_enter(_previous: State) -> void:
+func _on_enter(_previous) -> void:
 	pass
 
 
@@ -90,7 +90,7 @@ func _on_enter(_previous: State) -> void:
 ##
 ## @args:
 ## 	next - the 'State' node being transitioned *to*
-func _on_exit(_next: State) -> void:
+func _on_exit(_next) -> void:
 	pass
 
 
