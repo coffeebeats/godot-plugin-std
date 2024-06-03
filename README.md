@@ -2,6 +2,12 @@
 
 A Godot 4.0+ plugin providing standard GDScript functions and components.
 
+## Usage
+
+### **scene**
+
+The [scene](./scene) directory contains an implementation of a [StateMachine](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
+
 ## **Development**
 
 ### Setup
