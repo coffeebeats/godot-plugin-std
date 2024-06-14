@@ -32,6 +32,11 @@ var _load_result: Loader.Result = null
 ## A virtual method called when this state is entered (after exiting previous state).
 func _on_enter(_previous: State) -> void:
 	if not scene.is_empty():
+		assert(
+			_load_result.status == ResourceLoader.THREAD_LOAD_LOADED,
+			"invalid config; 'Instantiable' state was not loaded before entering"
+		)
+
 		_load_result = _get_loader().load(scene)
 
 

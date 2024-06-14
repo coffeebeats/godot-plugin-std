@@ -10,15 +10,21 @@ extends "../scene.gd".State
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Instantiable := preload("instantiable.gd")
-const Loader := preload("../loader.gd")
 const Nodes := preload("../../iter/node.gd")
+const Loader := preload("../loader.gd")
+const Scene := preload("../scene.gd")
+const Instantiable := preload("instantiable.gd")
+const Track := preload("track.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## track_direct_only configures the 'Track' state to only load scenes of direct child
 ## states. Set to 'false' to load scene files for all descendents.
 @export var track_direct_only: bool = true
+
+## track_extra specifies an additional set of 'State' nodes whose dependencies this
+## state should load and track.
+@export var track_extra: Array[NodePath] = []
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -31,19 +37,44 @@ var _tracked: Array[Loader.Result] = []
 func _on_enter(_previous: State) -> void:
 	assert(_tracked.is_empty(), "invalid state; found leftover resources")
 
-	for n in Nodes.descendents(
-		self as Object, Nodes.Filter.ALL, Nodes.Order.BREADTH_FIRST
-	):
-		if not track_direct_only and n.get_parent() != self:
-			break
-
-		var descendent: Instantiable = n as Object as Instantiable
-		if not descendent or descendent.scene == "":
-			continue
-
-		_tracked.append(_root._loader.load(descendent.scene))
+	_tracked = _track_states()
 
 
 ## A virtual method called when leaving this state (prior to entering next state).
 func _on_exit(_next: State) -> void:
 	_tracked.clear()
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _track_states() -> Array[Loader.Result]:
+	var out: Array[Loader.Result] = []
+	var node: Node = self as Object
+
+	# Duplicate are OK; the scene loader is idempotent.
+	var states: Array[Scene.State] = []
+
+	for path in track_extra:
+		var state: Scene.State = node.get_node_or_null(path) as Object
+		assert(state, "invalid config; expected path to a 'Scene' state")
+
+		states.append(state)
+
+	for state in Nodes.descendents(node, Nodes.Filter.ALL, Nodes.Order.BREADTH_FIRST):
+		if track_direct_only and state.get_parent() != self:
+			break
+
+		if not (state as Object) is Scene.State:
+			continue
+
+		states.append(state)
+
+	for state in states:
+		if state as Object is Instantiable and state.scene != "":
+			out.append(_root._loader.load(state.scene))
+
+		if state as Object is Track and state != self and len(state.track_extra) > 0:
+			out.append_array(state._track_states())  # gdlint:ignore=private-method-call
+
+	return out
