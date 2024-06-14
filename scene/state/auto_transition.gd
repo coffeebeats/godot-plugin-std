@@ -14,10 +14,7 @@ extends "transition.gd"
 
 ## A virtual method called to process a frame/tick, given the frame time 'delta'.
 func _on_update(_delta: float) -> State:
-	if (
-		_to_load_result
-		and _to_load_result.status != ResourceLoader.THREAD_LOAD_IN_PROGRESS
-	):
+	if _to_load_result and _to_load_result.status != ResourceLoader.THREAD_LOAD_LOADED:
 		return _parent
 
 	var target: Scene.State = (self as Object).get_node_or_null(to) as Object
