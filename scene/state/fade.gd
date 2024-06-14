@@ -75,8 +75,6 @@ func _on_enter(previous: State) -> void:
 			. set_trans(fade_out_transition)
 			. set_ease(fade_out_ease)
 		)
-	else:
-		_color_rect.modulate.a = 0.0
 
 	# gdlint:ignore=private-method-call
 	_root._add_node_to_scene(_root.game_root, _color_rect, Mode.SCENE_MODE_AFTER)
