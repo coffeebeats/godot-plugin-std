@@ -70,7 +70,6 @@ jobs:
           rm ${{ runner.temp }}/addon/project.godot
           rm ${{ runner.temp }}/addon/icon.*
           rm -rf ${{ runner.temp }}/addon/script_templates
-          rm ${{ runner.temp }}/addon/editor/icons/*.import
 
           # Remove all nested addon dependencies.
           rm -rf ${{ runner.temp }}/addon/addons
