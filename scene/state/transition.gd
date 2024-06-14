@@ -9,7 +9,7 @@ extends "../scene.gd".State
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const BaseState := preload("../scene.gd").State
+const Scene := preload("../scene.gd")
 const Instantiable := preload("instantiable.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -30,7 +30,7 @@ func _on_enter(previous: State) -> void:
 
 	var node: Node = self as Object as Node
 
-	var target: BaseState = node.get_node_or_null(to) as Object
+	var target: Scene.State = node.get_node_or_null(to) as Object
 	assert(target, "missing target state node; must be a scene state")
 
 	if target is Instantiable:

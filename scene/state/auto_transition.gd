@@ -20,7 +20,7 @@ func _on_update(_delta: float) -> State:
 	):
 		return _parent
 
-	var target: BaseState = (self as Object).get_node_or_null(to) as Object
+	var target: Scene.State = (self as Object).get_node_or_null(to) as Object
 	assert(target, "missing target state node")
 
 	return _transition_to(_root.get_path_to(target as Object))
