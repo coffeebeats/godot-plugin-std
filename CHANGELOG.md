@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3 (2024-06-14)
+
+## What's Changed
+* fix(ci): update leftover hard-coded reference to addon subfolder by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/26
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v0.2.2...v0.2.3
+
 ## 0.2.2 (2024-06-14)
 
 ## What's Changed
