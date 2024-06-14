@@ -55,6 +55,10 @@ jobs:
         with:
           gdenv-pin-path: .godot-version
 
+      - uses: coffeebeats/godot-infra/.github/actions/setup-godot@v0
+        with:
+          version: ${{ steps.version.outputs.semantic }}
+
       - name: Construct addon directory
         id: addon
         run: |
@@ -76,6 +80,15 @@ jobs:
 
           # Remove testing-related files.
           rm ${{ runner.temp }}/addon/**/*_test.gd
+
+          # Add pruned directory into project as an addon
+          mv ${{ runner.temp }}/addon addons/std
+
+          # Reimport assets so *.import files are updated.
+          godot --editor --headless --import --quit
+
+          # Move the updated addon folder to the target path.
+          mv addons/std ${{ runner.temp }}/addon
 
           echo "Addon files to publish:"
           ls -lsa ${{ runner.temp }}/addon
