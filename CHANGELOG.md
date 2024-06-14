@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.4 (2024-06-14)
+
+## What's Changed
+* feat(scene): implement a `Splash` scene state for splash screens by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/28
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v0.2.3...v0.2.4
+
 ## 0.2.3 (2024-06-14)
 
 ## What's Changed
