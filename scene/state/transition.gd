@@ -47,7 +47,7 @@ func _on_exit(next: State) -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _get_target() -> Node:
+func _get_target() -> Scene.State:
 	var node: Node = self as Object as Node
 	assert(node, "invalid configuration; not a node")
 
