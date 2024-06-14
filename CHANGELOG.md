@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2 (2024-06-14)
+
+## What's Changed
+* fix(ci): generate correct paths in `.import` files by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/24
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v0.2.1...v0.2.2
+
 ## 0.2.1 (2024-06-14)
 
 ## What's Changed
