@@ -9,6 +9,7 @@ extends "../scene.gd".State
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const Scene := preload("../scene.gd")
 const Instantiable := preload("instantiable.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -29,10 +30,11 @@ func _on_enter(previous: State) -> void:
 
 	var node: Node = self as Object as Node
 
-	var target: Instantiable = node.get_node_or_null(to) as Object
-	assert(target, "missing target state node; must be an 'Instantiable' state")
+	var target: Scene.State = node.get_node_or_null(to) as Object
+	assert(target, "missing target state node; must be a scene state")
 
-	_to_load_result = _get_loader().load(target.scene)
+	if target is Instantiable:
+		_to_load_result = _get_loader().load(target.scene)
 
 
 ## A virtual method called when leaving this state (prior to entering next state).
