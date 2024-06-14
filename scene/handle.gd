@@ -9,17 +9,24 @@ extends Node
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Scene := preload("scene.gd")
+const AdvanceEvent := preload("event/advance.gd")
 const TransitionEvent := preload("event/transition.gd")
+const Scene := preload("scene.gd")
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## transition_to transitions the 'Scene' state machine to the state specified by 'path'.
-func transition_to(path: NodePath, data: Resource = null) -> void:
-	var event := TransitionEvent.new()
-	event.target = path
+## advance transitions the 'Scene' state machine to the next predefined state.
+func advance(data: Resource = null) -> void:
+	var event := AdvanceEvent.new()
 	event.data = data
+
+	return input(event)
+
+
+## input sends the provided scene event to the 'Scene' state machine.
+func input(event: Scene.Event) -> void:
+	assert(event, "invalid argument; missing scene event")
 
 	var nodes := get_tree().get_nodes_in_group(Scene._GROUP_SCENE_FSM)
 	assert(len(nodes) == 1, "unexpected number of scene FSM nodes")
@@ -28,3 +35,12 @@ func transition_to(path: NodePath, data: Resource = null) -> void:
 	assert(scene is Scene, "invalid 'Scene' state machine node")
 
 	scene.input(event)
+
+
+## transition_to transitions the 'Scene' state machine to the state specified by 'path'.
+func transition_to(path: NodePath, data: Resource = null) -> void:
+	var event := TransitionEvent.new()
+	event.target = path
+	event.data = data
+
+	return input(event)
