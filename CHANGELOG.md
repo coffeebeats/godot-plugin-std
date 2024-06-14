@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1 (2024-06-14)
+
+## What's Changed
+* fix(scene): correctly initialize `ColorRect` in `Fade` states; add initial state type by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/20
+* feat(scene): allow tracking additional `State` nodes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/22
+* chore: keep `*.import` files when exporting the plugin by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/23
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v0.2.0...v0.2.1
+
 ## 0.2.0 (2024-06-03)
 
 ## What's Changed
