@@ -82,7 +82,9 @@ jobs:
           rm ${{ runner.temp }}/addon/**/*_test.gd
 
           # Add pruned directory into project as an addon
-          mv ${{ runner.temp }}/addon addons/std
+          mv \
+            ${{ runner.temp }}/addon \
+            "addons/$(echo ${{ github.repository }} | sed -E 's/^${{ github.repository_owner }}\/godot-plugin-//')"
 
           # Reimport assets so *.import files are updated.
           godot --editor --headless --import --quit
