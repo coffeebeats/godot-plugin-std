@@ -16,7 +16,7 @@ const Playable := preload("playable.gd")
 
 @export_group("Fade In ")
 @export var fade_in: bool = true
-@export_range(0.0, 4.0) var fade_in_duration: float = 1.2
+@export_range(0.0, 4.0) var fade_in_duration: float = 1.0
 @export var fade_in_ease: Tween.EaseType = Tween.EASE_OUT
 @export var fade_in_transition: Tween.TransitionType = Tween.TRANS_CUBIC
 
