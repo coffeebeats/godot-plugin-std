@@ -35,13 +35,13 @@ jobs:
 
       - name: Check for any non-source code changes
         id: check-non-source
-        uses: tj-actions/changed-files@v44
+        uses: tj-actions/changed-files@v45
         with:
           files_ignore: "**/*.gd"
 
       - name: Check for any source code changes
         id: check-source
-        uses: tj-actions/changed-files@v44
+        uses: tj-actions/changed-files@v45
         with:
           files: "**/*.gd"
 
