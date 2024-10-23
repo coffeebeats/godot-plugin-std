@@ -63,7 +63,7 @@ jobs:
           ref: ${{ github.head_ref }}
           token: ${{ env.ACTIONS_BOT_TOKEN }}
 
-      - uses: "coffeebeats/godot-infra/check-godot-project@main" # TODO: Pin to 'v0'.
+      - uses: "coffeebeats/godot-infra/check-godot-project@v0"
 
   test:
     needs: ["changes"]
@@ -77,12 +77,12 @@ jobs:
         with:
           submodules: true
 
-      - uses: "coffeebeats/godot-infra/.github/actions/parse-godot-version@main" # TODO: Pin to 'v0'.
+      - uses: "coffeebeats/godot-infra/.github/actions/parse-godot-version@v0"
         id: version
         with:
           gdenv-pin-path: .godot-version
 
-      - uses: "coffeebeats/godot-infra/.github/actions/setup-godot@main" # TODO: Pin to 'v0'.
+      - uses: "coffeebeats/godot-infra/.github/actions/setup-godot@v0"
         with:
           version: ${{ steps.version.outputs.semantic }}
 
