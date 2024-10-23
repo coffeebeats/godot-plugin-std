@@ -4,6 +4,17 @@ A Godot 4.0+ plugin providing standard GDScript functions and components.
 
 ## Usage
 
+### Add as a dependency
+
+To use this plugin, add this repository as a submodule of a Godot project (typically under the `addons` directory). The following section lists which version should be used depending on the project's supported Godot version.
+
+#### Branch name / Release tag: Godot version
+
+- `main` / `v1`: `v4.3`
+- `v0`: `v4.2`
+
+### Plugin API
+
 ### **`fsm`**
 
 The [fsm](./fsm) directory contains an implementation of a hierarchical [StateMachine](./fsm/state_machine.gd) suited for most applications. State machines are constructed as a scene with the node hierarchy used to define the level of state nesting. Each state should utilize a custom script to implement its behavior, and users can input events into the state machine to trigger transitions or update states.
