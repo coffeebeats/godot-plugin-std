@@ -1,4 +1,4 @@
 [submodule "addons/gut"]
 	path = addons/gut
 	url = git@github.com:coffeebeats/gut.git
-	branch = godot-v4.2
+	branch = godot-v4.3
