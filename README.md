@@ -6,7 +6,7 @@ A Godot 4.0+ plugin providing standard GDScript functions and components.
 
 ### Add as a dependency
 
-To use `godot-plugin-std`, add this repository as a submodule of a Godot project's `addons` directory. The following section lists which version should be used depending on the project's supported Godot version.
+To use this plugin, add this repository as a submodule of a Godot project (typically under the `addons` directory). The following section lists which version should be used depending on the project's supported Godot version.
 
 #### Branch name / Release tag: Godot version
 
