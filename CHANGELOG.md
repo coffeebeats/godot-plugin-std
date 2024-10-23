@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 (2024-10-23)
+
+## What's Changed
+* feat!: upgrade `Godot` version to `4.3-stable` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/33
+* chore(docs): provide instructions on which version to use by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/35
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v0.2.5...v1.0.0
+
 ## 0.2.5 (2024-10-23)
 
 ## What's Changed
