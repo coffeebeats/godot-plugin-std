@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.5 (2024-10-23)
+
+## What's Changed
+* chore(deps): bump tj-actions/changed-files from 44 to 45 by @dependabot in https://github.com/coffeebeats/godot-plugin-std/pull/30
+* chore(ci): pin to `godot-infra` actions at `v0` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/32
+
+## New Contributors
+* @dependabot made their first contribution in https://github.com/coffeebeats/godot-plugin-std/pull/30
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v0.2.4...v0.2.5
+
 ## 0.2.4 (2024-06-14)
 
 ## What's Changed
