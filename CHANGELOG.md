@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1 (2024-10-24)
+
+## What's Changed
+* fix(ci): upgrade `godot-infra` release actions to `v1` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/36
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.0.0...v1.0.1
+
 ## 1.0.0 (2024-10-23)
 
 ## What's Changed
