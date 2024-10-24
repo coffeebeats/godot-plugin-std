@@ -50,12 +50,12 @@ jobs:
         with:
           submodules: true
 
-      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v0
+      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v1
         id: version
         with:
           gdenv-pin-path: .godot-version
 
-      - uses: coffeebeats/godot-infra/.github/actions/setup-godot@v0
+      - uses: coffeebeats/godot-infra/.github/actions/setup-godot@v1
         with:
           version: ${{ steps.version.outputs.semantic }}
 
