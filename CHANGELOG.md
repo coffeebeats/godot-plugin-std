@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 (2024-10-28)
+
+## What's Changed
+* feat(config): implement secure `Config` and `ConfigWithFileSync` classes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/38
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.0.1...v1.1.0
+
 ## 1.0.1 (2024-10-24)
 
 ## What's Changed
