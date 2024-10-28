@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1 (2024-10-28)
+
+## What's Changed
+* chore(addons): update to latest `gut` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/40
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.1.0...v1.1.1
+
 ## 1.1.0 (2024-10-28)
 
 ## What's Changed
