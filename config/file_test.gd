@@ -10,13 +10,15 @@ const ConfigWithFileSync := preload("file.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var path: String
+## path_test_dir is the path to the case-specific testing directory; this will be
+## removed at the end of each test.
+var path_test_dir: String
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 func test_config_with_file_sync_create_new_file_is_successful():
-    # Given: A test file path within the user data directory.
-    path = "user://test.dat"
+    # Given: A test file path.
+    var path := path_test_dir.path_join("test.dat")
 
     # When: A file-synced configuration item is created.
     var config := ConfigWithFileSync.sync_to_file(path)
@@ -24,9 +26,25 @@ func test_config_with_file_sync_create_new_file_is_successful():
     # Then: The 'ConfigWithFileSync' instance is successfully created.
     assert_not_null(config)
 
+    # Then: The settings file exists.
+    assert_true(FileAccess.file_exists(path))
+
+func test_config_with_file_sync_create_new_nested_file_is_successful():
+    # Given: A test file path that's nested in a non-existent directory.
+    var path := path_test_dir.path_join("directory/does/not/exist/test.dat")
+
+    # When: A file-synced configuration item is created.
+    var config := ConfigWithFileSync.sync_to_file(path)
+
+    # Then: The 'ConfigWithFileSync' instance is successfully created.
+    assert_not_null(config)
+
+    # Then: The settings file exists.
+    assert_true(FileAccess.file_exists(path))
+
 func test_config_with_file_sync_set_value_updates_file():
-    # Given: A test file path within the user data directory.
-    path = "user://test.dat"
+    # Given: A test file path.
+    var path := path_test_dir.path_join("test.dat")
 
     # Given: A file-synced configuration item is created.
     var config := ConfigWithFileSync.sync_to_file(path)
@@ -62,8 +80,8 @@ func test_config_with_file_sync_set_value_updates_file():
     assert_eq(category.get("key"), 1.0)
 
 func test_config_with_file_sync_loads_data_from_file():
-    # Given: A test file path within the user data directory.
-    path = "user://test.dat"
+    # Given: A test file path.
+    var path := path_test_dir.path_join("test.dat")
 
     # Given: The settings file is created.
     var file := FileAccess.open(path, FileAccess.WRITE)
@@ -112,11 +130,34 @@ func test_config_with_file_sync_loads_data_from_file():
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 func after_each():
-    if FileAccess.file_exists(path):
-        assert_eq(DirAccess.remove_absolute(path), OK)
+    var to_search: Array[String] = [path_test_dir]
+    while to_search:
+        var path_dir: String = to_search.pop_back()
+
+        var dir := DirAccess.open(path_dir)
+        assert_not_null(dir)
+
+        dir.include_hidden = true
+        dir.include_navigational = false
+
+        for filepath in dir.get_files():
+            DirAccess.remove_absolute(path_dir.path_join(filepath))
+
+        var directories := dir.get_directories()
+        if not directories:
+            assert_eq(DirAccess.remove_absolute(path_dir), OK)
+            continue
+
+        to_search.append(path_dir)
+
+        for directory in dir.get_directories():
+            to_search.append(path_dir.path_join(directory))
+
+
+func before_each():
+    path_test_dir = "user://".path_join("test-%d" % randi())
+    assert_eq(DirAccess.make_dir_absolute(path_test_dir), OK)
 
 func before_all():
     # NOTE: Hide unactionable errors when using object doubles.
     ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
