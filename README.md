@@ -15,11 +15,15 @@ To use this plugin, add this repository as a submodule of a Godot project (typic
 
 ### Plugin API
 
+### **`config`**
+
+The [config](./config) directory contains replacement classes for `ConfigFile`, [which shouldn't be used due to security issues](https://github.com/godotengine/godot/issues/80562). The [`Config`](./config/config.gd) class is an in-memory, typed, categorized key-value store. To synchronize the configuration data to the file system, use [`ConfigWithFileSync`](./config/file.gd) instead.
+
 ### **`fsm`**
 
-The [fsm](./fsm) directory contains an implementation of a hierarchical [StateMachine](./fsm/state_machine.gd) suited for most applications. State machines are constructed as a scene with the node hierarchy used to define the level of state nesting. Each state should utilize a custom script to implement its behavior, and users can input events into the state machine to trigger transitions or update states.
+The [fsm](./fsm) directory contains an implementation of a hierarchical [`StateMachine`](./fsm/state_machine.gd) suited for most applications. State machines are constructed as a scene with the node hierarchy used to define the level of state nesting. Each state should utilize a custom script to implement its behavior, and users can input events into the state machine to trigger transitions or update states.
 
-Additionally, the [StateMachine](./fsm/state_machine.gd) implementation provides a "compaction" process which is enabled by default. The state machine extracts the scripts of all child [State](./fsm/state.gd) nodes and stores those objects internally without adding children to the scene tree. This improves performance, especially for state machines which are instantiated often.
+Additionally, the [`StateMachine`](./fsm/state_machine.gd) implementation provides a "compaction" process which is enabled by default. The state machine extracts the scripts of all child [`State`](./fsm/state.gd) nodes and stores those objects internally without adding children to the scene tree. This improves performance, especially for state machines which are instantiated often.
 
 ### **`iter`**
 
@@ -27,7 +31,7 @@ The [iter](./iter) directory contains helpful functions for interacting with seq
 
 ### **`scene`**
 
-The [scene](./scene) directory contains an implementation of a [StateMachine](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
+The [scene](./scene) directory contains an implementation of a [`StateMachine`](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
 
 ## **Development**
 
