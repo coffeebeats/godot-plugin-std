@@ -19,6 +19,7 @@ const SettingsProperty := preload("../property/property.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+# TODO(#44): Replace this with a custom group to utilize membership notifications.
 const _GROUP_SETTINGS_REPOSITORY := &"addons/std/setting:repository"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
