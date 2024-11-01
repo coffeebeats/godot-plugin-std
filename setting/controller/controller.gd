@@ -28,9 +28,10 @@ var _target: Node = null
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
-func _enter_tree() -> void:
-    _target = get_node(target)
-    assert(_target is Node, "missing target node: %s" % target)
 
-    _repository = SettingsRepository.find_in_tree(get_tree(), repository)
-    assert(_repository is SettingsRepository, "missing settings repository")
+func _enter_tree() -> void:
+	_target = get_node(target)
+	assert(_target is Node, "missing target node: %s" % target)
+
+	_repository = SettingsRepository.find_in_tree(get_tree(), repository)
+	assert(_repository is SettingsRepository, "missing settings repository")
