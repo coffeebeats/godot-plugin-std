@@ -33,7 +33,7 @@ class State:
 		return _parent
 
 
-const _GROUP_SCENE_FSM := "std/scene:scene"
+const _GROUP_SCENE_FSM := "addons/std/scene:scene"
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
