@@ -1,6 +1,8 @@
 ##
 ## std/config/file.gd
 ##
+## TODO(#42): Refactor this to be a separate node, enabling debounced writes.
+## 
 ## ConfigWithFileSync is a Config instance which synchronously updates a provided file
 ## with changes.
 ##
