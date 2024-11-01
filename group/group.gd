@@ -1,7 +1,3 @@
-# meta-name: Resource
-# meta-default: true
-# meta-space-indent: 4
-
 ##
 ## Insert 'Resource' description here.
 ##
@@ -15,17 +11,11 @@ signal member_added(member: Variant)
 
 signal member_removed(member: Variant)
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
-# -- CONFIGURATION ------------------------------------------------------------------- #
-
-var name: StringName = ""
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 static var _groups: Dictionary = {}
+
+var name: StringName = ""
 
 var _members: Dictionary = {}
 
@@ -65,22 +55,3 @@ func remove_member(member: Variant) -> bool:
 
 	member_removed.emit(member)
 	return true
-
-# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
-
-#func _init() -> void:
-#	pass
-
-#func _setup_local_to_scene() -> void:
-#	pass
-
-#func _to_string() -> void:
-#	pass
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
