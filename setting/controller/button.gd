@@ -7,7 +7,7 @@
 ##
 
 class_name SettingsButtonController
-extends "controller.gd"
+extends SettingsController
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
@@ -32,7 +32,7 @@ func _exit_tree() -> void:
 		_target.value_changed.disconnect(_on_BaseButton_toggled)
 
 
-func _enter_tree() -> void:
+func _ready() -> void:
 	assert(_target is BaseButton, "invalid target type, expected a BaseButton node")
 	assert(_target.toggle_mode, "invalid state; expected toggle button")
 	assert(
@@ -43,8 +43,6 @@ func _enter_tree() -> void:
 	if not _target.toggled.is_connected(_on_BaseButton_toggled):
 		_target.toggled.connect(_on_BaseButton_toggled)
 
-
-func _ready() -> void:
 	var value: float = property.get_value_from_config(_repository.config)
 	assert(value is float, "invalid value type from property")
 

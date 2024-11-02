@@ -6,7 +6,7 @@
 ##
 
 class_name SettingsRangeController
-extends "controller.gd"
+extends SettingsController
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
@@ -31,7 +31,7 @@ func _exit_tree() -> void:
 		_target.value_changed.disconnect(_on_Range_value_changed)
 
 
-func _enter_tree() -> void:
+func _ready() -> void:
 	assert(_target is Range, "invalid target type, expected a Range node")
 	assert(
 		property is SettingsFloatProperty,
@@ -41,8 +41,6 @@ func _enter_tree() -> void:
 	if not _target.value_changed.is_connected(_on_Range_value_changed):
 		_target.value_changed.connect(_on_Range_value_changed)
 
-
-func _ready() -> void:
 	var value: float = property.get_value_from_config(_repository.config)
 	assert(value is float, "invalid value type from property")
 
