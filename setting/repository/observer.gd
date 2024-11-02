@@ -8,10 +8,6 @@
 class_name SettingsRepositoryObserver
 extends Resource
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const SettingsProperty := preload("../property/property.gd")
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 

@@ -7,7 +7,7 @@
 ##
 
 class_name SettingsIntProperty
-extends "property.gd"
+extends SettingsProperty
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -18,7 +18,7 @@ extends "property.gd"
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_value_on_config(config: Config) -> Variant:
+func _get_value_from_config(config: Config) -> Variant:
 	return config.get_int(category, name, default)
 
 
