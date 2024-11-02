@@ -1,6 +1,8 @@
 ##
 ## std/config/file.gd
 ##
+## TODO(#42): Refactor this to be a separate node, enabling debounced writes.
+##
 ## ConfigWithFileSync is a Config instance which synchronously updates a provided file
 ## with changes.
 ##
@@ -34,15 +36,9 @@ var _file: FileAccess = null
 static func sync_to_file(path: String) -> ConfigWithFileSync:
 	assert(path != "", "missing argument: path")
 	assert(path.ends_with(".dat"), "invalid argument: past must end with '.dat'")
+	assert(path.begins_with("res://") or path.begins_with("user://"), "invalid path")
 
-	var path_absolute: String = path
-
-	if path.begins_with("res://") or path.begins_with("user://"):
-		path_absolute = ProjectSettings.globalize_path(path)
-	elif not path.begins_with("/"):
-		path_absolute = OS.get_executable_path().get_base_dir().path_join(path)
-
-	assert(path_absolute.begins_with("/"), "invalid argument: path")
+	var path_absolute: String = ProjectSettings.globalize_path(path)
 
 	if not DirAccess.dir_exists_absolute(path_absolute.get_base_dir()):
 		var err := DirAccess.make_dir_recursive_absolute(path_absolute.get_base_dir())
