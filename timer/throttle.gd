@@ -14,16 +14,14 @@
 @tool
 extends Node
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
-const MICROSECONDS_PER_SECOND := 1e6
-
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## Emitted when "execution" is ready, following a call to 'start'.
 signal timeout
+
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+const MICROSECONDS_PER_SECOND := 1e6
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 

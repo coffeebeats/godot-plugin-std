@@ -19,23 +19,22 @@
 @tool
 extends Node
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
-const MICROSECONDS_PER_SECOND := 1e6
-
-## Defines when "execution" occurs for the debounce effect. For 'LEADING', "execution"
-## is at the start of a cluster; 'TRAILING' "execution" is at the end of a cluster.
-enum ExecutionMode {LEADING, TRAILING}
-
-const EXECUTION_MODE_LEADING := ExecutionMode.LEADING
-const EXECUTION_MODE_TRAILING := ExecutionMode.TRAILING
-
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## Emitted when "execution" is ready, following a call to 'start'.
 signal timeout
+
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## Defines when "execution" occurs for the debounce effect. For 'LEADING', "execution"
+## is at the start of a cluster; 'TRAILING' "execution" is at the end of a cluster.
+enum ExecutionMode { LEADING, TRAILING }
+
+const EXECUTION_MODE_LEADING := ExecutionMode.LEADING
+
+const EXECUTION_MODE_TRAILING := ExecutionMode.TRAILING
+
+const MICROSECONDS_PER_SECOND := 1e6
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -226,11 +225,3 @@ func _ready():
 	# NOTE: Calls to 'set_process' and 'set_physics_process' are ignored prior to
 	# '_ready', so manually run it again via the 'process_callback' setter.
 	process_callback = process_callback
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
