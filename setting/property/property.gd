@@ -6,6 +6,7 @@
 ## specific logic.
 ##
 
+class_name SettingsProperty
 extends Resource
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #

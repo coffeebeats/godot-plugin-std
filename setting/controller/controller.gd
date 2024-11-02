@@ -1,16 +1,13 @@
 ##
 ## std/setting/controller/controller.gd
 ##
-## SettingController is a base class for a node which allows "remote" management of UI
+## SettingsController is a base class for a node which allows "remote" management of UI
 ## settings controls. Effectively, this node allows for decoupling settings state from
 ## the UI which modifies it.
 ##
 
+class_name SettingsController
 extends Node
-
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const SettingsProperty := preload("../property/property.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
