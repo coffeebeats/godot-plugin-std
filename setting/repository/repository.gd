@@ -136,7 +136,7 @@ func _on_Config_changed(category: StringName, key: StringName) -> void:
 			assert(observer is SettingsRepositoryObserver, "invalid type")
 			(
 				observer
-				.handle_value_change(
+				. handle_value_change(
 					property,
 					property.get_value_from_config(config),
 				)
