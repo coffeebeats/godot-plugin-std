@@ -5,6 +5,7 @@
 ## scene tree to a 'SettingsController'.
 ##
 
+@tool
 class_name SettingsRepository
 extends Node
 
@@ -22,8 +23,11 @@ const _GROUP_SETTINGS_REPOSITORY := &"addons/std/setting:repository"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## handle is an identifier for the "scope" of contained settings.
-@export var handle: SettingsRepositoryHandle = null
+## id is a globally unique identifier for the "scope" of contained settings.
+@export var id: StringName = "":
+	set(value):
+		id = value
+		update_configuration_warnings()
 
 ## filepath is a file to which the settings in this repository will be synced. If
 ## specified, settings will first be loaded from disk and the loaded values used as the
@@ -45,10 +49,8 @@ var _observers: Dictionary = {}
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## find_in_tree finds a 'SettingsRepository' in the scene tree with the provided handle.
-static func find_in_tree(
-	tree: SceneTree, target: SettingsRepositoryHandle
-) -> SettingsRepository:
+## find_in_tree finds a 'SettingsRepository' in the scene tree with the provided ID.
+static func find_in_tree(tree: SceneTree, target: StringName) -> SettingsRepository:
 	var nodes := tree.get_nodes_in_group(_GROUP_SETTINGS_REPOSITORY)
 	for node in nodes:
 		var repository: SettingsRepository = node
@@ -57,7 +59,7 @@ static func find_in_tree(
 			"invalid state: expected repository node",
 		)
 
-		if repository.handle == target:
+		if repository.id == target:
 			return repository
 
 	return null
@@ -91,6 +93,7 @@ func _enter_tree() -> void:
 	else:
 		config = Config.new()
 
+	assert(_is_unique_repository(), "invalid state; found duplicate repository")
 	add_to_group(_GROUP_SETTINGS_REPOSITORY)
 
 	var err := config.changed.connect(_on_Config_changed)
@@ -112,11 +115,28 @@ func _exit_tree() -> void:
 	config.changed.disconnect(_on_Config_changed)
 
 
+func _get_configuration_warnings() -> PackedStringArray:
+	var out := PackedStringArray()
+
+	if id == "":
+		out.append("Invalid config; missing property 'id'!")
+
+	return out
+
+
 func _ready() -> void:
-	assert(
-		handle is SettingsRepositoryHandle,
-		"invalid configuration; missing property: handle",
-	)
+	assert(id != &"", "invalid configuration; missing property: id")
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _is_unique_repository() -> bool:
+	for node in get_tree().get_nodes_in_group(_GROUP_SETTINGS_REPOSITORY):
+		if node is SettingsRepository and node.id == id:
+			return false
+
+	return true
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
