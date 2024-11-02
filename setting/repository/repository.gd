@@ -14,8 +14,6 @@ extends Node
 
 const Config := preload("../../config/config.gd")
 const ConfigWithFileSync := preload("../../config/file.gd")
-const SettingsController := preload("../controller/controller.gd")
-const SettingsProperty := preload("../property/property.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -30,7 +28,11 @@ const _GROUP_SETTINGS_REPOSITORY := &"addons/std/setting:repository"
 ## filepath is a file to which the settings in this repository will be synced. If
 ## specified, settings will first be loaded from disk and the loaded values used as the
 ## initial configuration state.
-@export_global_file("*.dat") var filepath: String = ""
+@export var filepath: String = ""
+
+## observers is a list of script resources which inherit from
+## 'SettingsRepositoryObserver'; these will be automatically added to the repository.
+@export var observers: Array[GDScript] = []
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -94,6 +96,14 @@ func _enter_tree() -> void:
 	var err := config.changed.connect(_on_Config_changed)
 	assert(err == OK, "failed to connect to signal")
 
+	for script in observers:
+		var observer := Resource.new()
+
+		observer.set_script(script)
+		assert(observer is SettingsRepositoryObserver, "invalid script type")
+
+		add_observer(observer)
+
 
 func _exit_tree() -> void:
 	remove_from_group(_GROUP_SETTINGS_REPOSITORY)
@@ -126,7 +136,7 @@ func _on_Config_changed(category: StringName, key: StringName) -> void:
 			assert(observer is SettingsRepositoryObserver, "invalid type")
 			(
 				observer
-				. handle_value_change(
+				.handle_value_change(
 					property,
 					property.get_value_from_config(config),
 				)
