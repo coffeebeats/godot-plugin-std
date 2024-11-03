@@ -146,7 +146,6 @@ func close(flush: bool = true) -> void:
 	if flush and _debounce != null && _debounce.is_debounced():
 		_flush()
 
-
 	_file.close()
 	_file = null
 
