@@ -81,6 +81,13 @@ func open(path: String) -> Error:
 
 	var path_absolute: String = ProjectSettings.globalize_path(path)
 
+	print(
+		"std/file/syncer.gd[",
+		get_instance_id(),
+		"]: opening file: ",
+		path_absolute,
+	)
+
 	var path_base_dir := path_absolute.get_base_dir()
 	if not DirAccess.dir_exists_absolute(path_base_dir):
 		var err := DirAccess.make_dir_recursive_absolute(path_base_dir)
@@ -122,6 +129,15 @@ func close(flush: bool = true) -> void:
 
 		return
 
+	var path_absolute := _file.get_path_absolute()
+
+	print(
+		"std/file/syncer.gd[",
+		get_instance_id(),
+		"]: closing file: ",
+		path_absolute,
+	)
+
 	if _debounce != null:
 		_debounce.reset()
 
@@ -130,7 +146,6 @@ func close(flush: bool = true) -> void:
 	if flush and _debounce != null && _debounce.is_debounced():
 		_flush()
 
-	var path_absolute := _file.get_path_absolute()
 
 	_file.close()
 	_file = null
@@ -151,6 +166,12 @@ func read_bytes() -> PackedByteArray:
 	assert(is_inside_tree(), "invalid state: expected node to be in tree")
 	assert(_file is FileAccess, "invalid state: file not open")
 	assert(_debounce is Debounce, "invalid state: missing Debounce timer")
+
+	print(
+		"std/file/syncer.gd[",
+		get_instance_id(),
+		"]: reading file contents",
+	)
 
 	_file.seek(0)
 	return _file.get_buffer(_file.get_length())
@@ -179,6 +200,12 @@ func store_bytes(bytes: PackedByteArray) -> void:
 	_bytes = bytes
 	_variant = null
 
+	print(
+		"std/file/syncer.gd[",
+		get_instance_id(),
+		"]: write requested",
+	)
+
 	_debounce.start()
 
 
@@ -196,6 +223,12 @@ func store_var(variant: Variant) -> void:
 	assert(is_inside_tree(), "invalid state: expected node to be in tree")
 	assert(_file is FileAccess, "invalid state: file not open")
 	assert(_debounce is Debounce, "invalid state: missing Debounce timer")
+
+	print(
+		"std/file/syncer.gd[",
+		get_instance_id(),
+		"]: write requested",
+	)
 
 	_bytes = PackedByteArray()
 	_variant = variant
@@ -281,6 +314,13 @@ func _create_debounce_timer() -> Debounce:
 func _flush() -> void:
 	if not _file:
 		return
+
+	print(
+		"std/file/syncer.gd[",
+		get_instance_id(),
+		"]: flushing data to disk: ",
+		_file.get_path_absolute()
+	)
 
 	var err := _file.resize(0)
 	assert(err == OK, "failed to truncate file before write")

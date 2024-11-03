@@ -23,6 +23,13 @@ var _connected: Config = null
 func load_config(config: Config) -> Error:
 	assert(config is Config, "invalid argument: expected a 'Config' instance")
 
+	print(
+		"std/config/writer/writer.gd[",
+		get_instance_id(),
+		"]: loading configuration from file: ",
+		_get_filepath()
+	)
+
 	var err := _open_file()
 	if err != OK:
 		return err
@@ -38,6 +45,13 @@ func load_config(config: Config) -> Error:
 ## store_config persists the provided 'Config' instance's contents to the file.
 func store_config(config: Config) -> Error:
 	assert(config is Config, "invalid argument: expected a 'Config' instance")
+
+	print(
+		"std/config/writer/writer.gd[",
+		get_instance_id(),
+		"]: storing configuration in file: ",
+		_get_filepath()
+	)
 
 	var err := _open_file()
 	if err != OK:
@@ -64,6 +78,13 @@ func sync_config(config: Config) -> Error:
 	if _connected != null:
 		unsync_config(_connected)
 
+	print(
+		"std/config/writer/writer.gd[",
+		get_instance_id(),
+		"]: syncing configuration to file: ",
+		_get_filepath()
+	)
+
 	var err := load_config(config)
 	if err != OK:
 		return err
@@ -86,6 +107,13 @@ func unsync_config(config: Config) -> void:
 
 	if _connected == null or config != _connected:
 		return
+
+	print(
+		"std/config/writer/writer.gd[",
+		get_instance_id(),
+		"]: stopping configuration sync to file: ",
+		_get_filepath()
+	)
 
 	assert(
 		_connected.changed.is_connected(_on_Config_changed),
