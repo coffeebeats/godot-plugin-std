@@ -126,6 +126,10 @@ func _ready() -> void:
 		_writer = get_node(writer)
 		assert(_writer is ConfigWriter, "invalid config: expected a config writer")
 
+	if Engine.is_editor_hint():
+		return
+
+	if _writer:
 		var err := _writer.sync_config(config)
 		assert(err == OK, "failed to synchronize settings repository")
 
