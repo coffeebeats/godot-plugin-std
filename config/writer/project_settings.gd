@@ -15,6 +15,12 @@ var _config_file: ConfigFile = null
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _init() -> void:
+	super._init()
+
+	assert(_get_filepath() != "", "missing project settings override path")
+
+
 func _enter_tree() -> void:
 	super._enter_tree()
 
