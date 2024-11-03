@@ -15,6 +15,7 @@ extends ConfigWriter
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 # NOTE: This method must be overridden.
 func _get_filepath() -> String:
 	return path

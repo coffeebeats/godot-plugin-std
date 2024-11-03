@@ -18,6 +18,7 @@ var _connected: Config = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 ## load_config hydrates the provided 'Config' instance with the contents of the file.
 func load_config(config: Config) -> Error:
 	assert(config is Config, "invalid argument: expected a 'Config' instance")
@@ -33,10 +34,11 @@ func load_config(config: Config) -> Error:
 
 	return OK
 
+
 ## store_config persists the provided 'Config' instance's contents to the file.
 func store_config(config: Config) -> Error:
 	assert(config is Config, "invalid argument: expected a 'Config' instance")
-	
+
 	var err := _open_file()
 	if err != OK:
 		return err
@@ -44,6 +46,7 @@ func store_config(config: Config) -> Error:
 	store_var(config._data)
 
 	return OK
+
 
 ## sync_config is a convenience method which first hydrates the provided 'Config'
 ## instance with the file's contents and then saves the config to disk each time a
@@ -73,6 +76,7 @@ func sync_config(config: Config) -> Error:
 
 	return OK
 
+
 ## unsync_config stops syncing the specified 'Config' instance.
 ##
 ## NOTE: If the provided instance is not being synced, or no instance is currently being
@@ -93,7 +97,9 @@ func unsync_config(config: Config) -> void:
 
 	_connected = null
 
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
 
 func _exit_tree() -> void:
 	super._exit_tree()
@@ -104,12 +110,15 @@ func _exit_tree() -> void:
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 # NOTE: This method must be overridden.
 func _get_filepath() -> String:
 	assert(false, "unimplemented")
 	return ""
 
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
 
 func _open_file() -> Error:
 	if is_open():
@@ -117,7 +126,9 @@ func _open_file() -> Error:
 
 	return open(_get_filepath())
 
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
 
 func _on_Config_changed(_category: StringName, _key: StringName) -> void:
 	assert(_connected is Config, "invalid state: missing signal emitter")

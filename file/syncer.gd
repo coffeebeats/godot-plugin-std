@@ -155,6 +155,7 @@ func read_bytes() -> PackedByteArray:
 	_file.seek(0)
 	return _file.get_buffer(_file.get_length())
 
+
 ## read_var returns the contents of the synced file, serialized as a 'Variant'. By
 ## default this is done using the function 'bytes_to_var', but this can be controlled by
 ## overriding the method '_deserialize_var'.
@@ -179,6 +180,7 @@ func store_bytes(bytes: PackedByteArray) -> void:
 	_variant = null
 
 	_debounce.start()
+
 
 ## store_var requests that the variant value be written to the opened file. By default
 ## the variant will be converted to bytes using 'var_to_bytes', but this behavior can be
@@ -238,13 +240,17 @@ func _ready() -> void:
 	var result := _debounce.timeout.connect(_on_Debounce_timeout)
 	assert(result == OK, "Failed to connect to signal!")
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
 	return bytes_to_var(bytes)
 
+
 func _serialize_var(variant: Variant) -> PackedByteArray:
 	return var_to_bytes(variant)
+
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 

@@ -96,7 +96,6 @@ func _enter_tree() -> void:
 	assert(_is_unique_repository(), "invalid state; found duplicate repository")
 	add_to_group(_GROUP_SETTINGS_REPOSITORY)
 
-	
 	var err := config.changed.connect(_on_Config_changed)
 	assert(err == OK, "failed to connect to signal")
 
@@ -139,12 +138,15 @@ func _ready() -> void:
 			if not observer.should_call_on_value_loaded:
 				continue
 
-			observer.handle_value_change(
-				property,
-				property.get_value_from_config(config),
+			(
+				observer
+				. handle_value_change(
+					property,
+					property.get_value_from_config(config),
+				)
 			)
 
-	
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 

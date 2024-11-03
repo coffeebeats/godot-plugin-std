@@ -14,10 +14,12 @@ var _config_file: ConfigFile = null
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
+
 func _enter_tree() -> void:
 	super._enter_tree()
 
 	_config_file = ConfigFile.new()
+
 
 func _exit_tree() -> void:
 	super._exit_tree()
@@ -29,6 +31,7 @@ func _exit_tree() -> void:
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
 	var out: Dictionary = {}
@@ -48,9 +51,12 @@ func _deserialize_var(bytes: PackedByteArray) -> Variant:
 
 	return out
 
+
 # NOTE: This method must be overridden.
 func _get_filepath() -> String:
-	return ProjectSettings.get_setting_with_override(&"application/config/project_settings_override")
+	return ProjectSettings.get_setting_with_override(
+		&"application/config/project_settings_override"
+	)
 
 
 func _serialize_var(variant: Variant) -> PackedByteArray:
