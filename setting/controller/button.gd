@@ -6,23 +6,17 @@
 ## to use 'toggle_mode', as the toggle state is interpreted as a boolean value.
 ##
 
+@tool
 class_name SettingsButtonController
 extends SettingsController
-
-# -- SIGNALS ------------------------------------------------------------------------- #
-
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## property is a 'SettingsBoolProperty' to scope changes to.
-@export var property: SettingsBoolProperty = null
-
-# -- INITIALIZATION ------------------------------------------------------------------ #
-
-# -- PUBLIC METHODS ------------------------------------------------------------------ #
+@export var property: SettingsBoolProperty = null:
+	set(value):
+		property = value
+		update_configuration_warnings()
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -30,6 +24,15 @@ extends SettingsController
 func _exit_tree() -> void:
 	if _target.toggled.is_connected(_on_BaseButton_toggled):
 		_target.value_changed.disconnect(_on_BaseButton_toggled)
+
+
+func _get_configuration_warnings() -> PackedStringArray:
+	var out := PackedStringArray()
+
+	if property is not SettingsBoolProperty:
+		out.append("Invalid config; expected 'SettingsBoolProperty' for 'property'!")
+
+	return out
 
 
 func _ready() -> void:
@@ -49,14 +52,8 @@ func _ready() -> void:
 	_target.value = value
 
 
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_BaseButton_toggled(value: bool) -> void:
 	property.set_value_on_config(_repository.config, value)
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #

@@ -8,20 +8,13 @@
 class_name SettingsRangeController
 extends SettingsController
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## property is a 'SettingsFloatProperty' to scope changes to.
-@export var property: SettingsFloatProperty = null
-
-# -- INITIALIZATION ------------------------------------------------------------------ #
-
-# -- PUBLIC METHODS ------------------------------------------------------------------ #
+@export var property: SettingsFloatProperty = null:
+	set(value):
+		property = value
+		update_configuration_warnings()
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -29,6 +22,15 @@ extends SettingsController
 func _exit_tree() -> void:
 	if _target.value_changed.is_connected(_on_Range_value_changed):
 		_target.value_changed.disconnect(_on_Range_value_changed)
+
+
+func _get_configuration_warnings() -> PackedStringArray:
+	var out := PackedStringArray()
+
+	if property is not SettingsFloatProperty:
+		out.append("Invalid config; expected 'SettingsFloatProperty' for 'property'!")
+
+	return out
 
 
 func _ready() -> void:
@@ -47,14 +49,8 @@ func _ready() -> void:
 	_target.value = value
 
 
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_Range_value_changed(value: float) -> void:
 	property.set_value_on_config(_repository.config, value)
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #

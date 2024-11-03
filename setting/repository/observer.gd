@@ -8,6 +8,12 @@
 class_name SettingsRepositoryObserver
 extends Resource
 
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+## should_call_on_value_loaded controls whether this observer will be called when one of
+## the matching properties is first loaded from disk.
+@export var should_call_on_value_loaded: bool = true
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
