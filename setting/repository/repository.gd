@@ -14,7 +14,6 @@ extends Node
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Config := preload("../../config/config.gd")
-const ConfigWithFileSync := preload("../../config/file.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
