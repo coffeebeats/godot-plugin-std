@@ -76,7 +76,6 @@ func open(path: String) -> Error:
 	assert(not _file, "invalid state: a file is already open")
 
 	assert(path != "", "missing argument: path")
-	assert(path.ends_with(".dat"), "invalid argument: past must end with '.dat'")
 	assert(path.begins_with("res://") or path.begins_with("user://"), "invalid path")
 
 	var path_absolute: String = ProjectSettings.globalize_path(path)
