@@ -43,7 +43,6 @@ const _GROUP_SETTINGS_REPOSITORY := &"addons/std/setting:repository"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## TODO(#42): Refactor this to use debounced writes.
 ## config is the 'Config' object containing the current state.
 var config: Config = null
 
