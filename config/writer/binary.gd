@@ -15,6 +15,18 @@ extends ConfigWriter
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+# NOTE: serialization is done using 'var_to_bytes', so the opposite function should be
+# used. However, 'ConfigWriter' expects a 'Dictionary', which can't be nil so this check
+# is required to avoid exceptions.
+func _deserialize_var(bytes: PackedByteArray) -> Variant:
+	if bytes.is_empty():
+		return {}
+
+	var data: Variant = bytes_to_var(bytes)
+	if not data is Dictionary:
+		return {}
+
+	return data
 
 # NOTE: This method must be overridden.
 func _get_filepath() -> String:
