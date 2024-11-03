@@ -1,5 +1,5 @@
 ##
-## std/fs/syncer.gd
+## std/file/syncer.gd
 ##
 ## FileSyncer is a node which manages reading and writing to a file. All writes will be
 ## debounced, ensuring that performance does not degrade during frequent writes.
@@ -13,12 +13,13 @@ extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-signal error(err: Error, message: String)
+## file_closed is emitted when this file syncer closes a file at the specified 'path'.
+signal file_closed(path: String)
 
-signal file_closed
-signal file_opened
+## file_opened is emitted when this file syncer opens a file at the specified 'path'.
+signal file_opened(path: String)
 
-signal write_requested
+## write_flushed is emitted whenever a requested write is flushed to disk.
 signal write_flushed
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
@@ -29,12 +30,11 @@ const Debounce := preload("../timer/debounce.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-@export var path: String:
-	set(value):
-		path = value
-		update_configuration_warnings()
-
-@export var open_on_tree_entered: bool = true
+## close_on_tree_exited controls whether the file should be closed when this node is
+## removed from the scene tree.
+##
+## NOTE: This should be set to 'false' only if the syncer will be added back to the
+## scene tree and I/O will continue on the same file.
 @export var close_on_tree_exited: bool = true
 
 # NOTE: Insert a space to avoid overwriting global 'Timer' variable.
@@ -62,17 +62,18 @@ const Debounce := preload("../timer/debounce.gd")
 var _bytes: PackedByteArray = PackedByteArray()
 var _debounce: Debounce = null
 var _file: FileAccess = null
+var _variant: Variant = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## open opens the file at 'filepath' for reading and writing. An 'Error' will be
-## returned if the file couldn't be opened.
+## open opens the file at 'path' for reading and writing. An 'Error' will be returned
+## if the file couldn't be opened.
 ##
 ## NOTE: This method must be called prior to reading or writing its contents.
-func open() -> Error:
+func open(path: String) -> Error:
 	assert(is_inside_tree(), "invalid state: expected node to be in tree")
-	assert(not _file, "invalid state: file is already open")
+	assert(not _file, "invalid state: a file is already open")
 
 	assert(path != "", "missing argument: path")
 	assert(path.ends_with(".dat"), "invalid argument: past must end with '.dat'")
@@ -80,32 +81,30 @@ func open() -> Error:
 
 	var path_absolute: String = ProjectSettings.globalize_path(path)
 
-	if not DirAccess.dir_exists_absolute(path_absolute.get_base_dir()):
-		var err := DirAccess.make_dir_recursive_absolute(path_absolute.get_base_dir())
+	var path_base_dir := path_absolute.get_base_dir()
+	if not DirAccess.dir_exists_absolute(path_base_dir):
+		var err := DirAccess.make_dir_recursive_absolute(path_base_dir)
 		if err != OK:
-			error.emit(
-				err,
-				"failed to make containing directory: %s" % path_absolute.get_base_dir()
-			)
+			push_error("failed to make containing directory: %s" % path_base_dir)
 			return err
 
 	if not FileAccess.file_exists(path_absolute):
 		if FileAccess.open(path_absolute, FileAccess.WRITE) == null:
 			var err := FileAccess.get_open_error()
 			if err != OK:
-				error.emit(err, "failed to create file: %s" % path_absolute)
+				push_error("failed to create file: %s" % path_absolute)
 				return err
 
 	var file := FileAccess.open(path_absolute, FileAccess.READ_WRITE)
 	if file == null:
 		var err := FileAccess.get_open_error()
 		if err != OK:
-			error.emit(err, "failed to open file for r+w: %s" % path_absolute)
+			push_error("failed to open file for r+w: %s" % path_absolute)
 			return err
 
 	_file = file
 
-	file_opened.emit()
+	file_opened.emit(path_absolute)
 
 	return OK
 
@@ -131,10 +130,17 @@ func close(flush: bool = true) -> void:
 	if flush and _debounce != null && _debounce.is_debounced():
 		_flush()
 
+	var path_absolute := _file.get_path_absolute()
+
 	_file.close()
 	_file = null
 
-	file_closed.emit()
+	file_closed.emit(path_absolute)
+
+
+## is_open returns whether the underlying file is currently open for reading/writing.
+func is_open() -> bool:
+	return _file is FileAccess and _file.is_open()
 
 
 ## read_bytes returns the contents of the synced file.
@@ -149,20 +155,50 @@ func read_bytes() -> PackedByteArray:
 	_file.seek(0)
 	return _file.get_buffer(_file.get_length())
 
-
-## store_bytes requests the contents at 'filepath' to be overwritten with the provided
-## value. Note that because writes are debounced, this may not occur immediately.
+## read_var returns the contents of the synced file, serialized as a 'Variant'. By
+## default this is done using the function 'bytes_to_var', but this can be controlled by
+## overriding the method '_deserialize_var'.
 ##
-## NOTE: The file must be opened via 'open' prior to writing contents.
+## NOTE: This method always reads the file immediately and is not debounced. Invoking it
+## too frequently may cause performance issues.
+func read_var() -> Variant:
+	return _deserialize_var(read_bytes())
+
+
+## store_bytes requests that the provided data be written to the opened file. Note that
+## because writes are debounced, this may not occur immediately.
+##
+## NOTE: The file must be opened via 'open' prior to writing contents. Any pending
+## writes will be dropped.
 func store_bytes(bytes: PackedByteArray) -> void:
 	assert(is_inside_tree(), "invalid state: expected node to be in tree")
 	assert(_file is FileAccess, "invalid state: file not open")
 	assert(_debounce is Debounce, "invalid state: missing Debounce timer")
 
 	_bytes = bytes
+	_variant = null
+
 	_debounce.start()
 
-	write_requested.emit()
+## store_var requests that the variant value be written to the opened file. By default
+## the variant will be converted to bytes using 'var_to_bytes', but this behavior can be
+## controlled by overriding the method '_serialize_var'. Note that because writes are
+## debounced, the write may not occur immediately.
+##
+## This method should be preferred over 'store_bytes' when possible as it defers a
+## potentially expensive serialization step until the write is actually flushed.
+##
+## NOTE: The file must be opened via 'open' prior to writing contents. Any pending
+## writes will be dropped.
+func store_var(variant: Variant) -> void:
+	assert(is_inside_tree(), "invalid state: expected node to be in tree")
+	assert(_file is FileAccess, "invalid state: file not open")
+	assert(_debounce is Debounce, "invalid state: missing Debounce timer")
+
+	_bytes = PackedByteArray()
+	_variant = variant
+
+	_debounce.start()
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -176,9 +212,6 @@ func _init() -> void:
 func _enter_tree() -> void:
 	var err := child_exiting_tree.connect(_on_Self_child_exiting_tree)
 	assert(err == OK, "failed to connect to signal")
-
-	if open_on_tree_entered:
-		open()
 
 
 func _exit_tree() -> void:
@@ -205,6 +238,13 @@ func _ready() -> void:
 	var result := _debounce.timeout.connect(_on_Debounce_timeout)
 	assert(result == OK, "Failed to connect to signal!")
 
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+func _deserialize_var(bytes: PackedByteArray) -> Variant:
+	return bytes_to_var(bytes)
+
+func _serialize_var(variant: Variant) -> PackedByteArray:
+	return var_to_bytes(variant)
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
@@ -239,8 +279,19 @@ func _flush() -> void:
 	var err := _file.resize(0)
 	assert(err == OK, "failed to truncate file before write")
 
+	var bytes: PackedByteArray = PackedByteArray()
+	if _variant == null:
+		assert(_bytes.size() > 0, "missing write data")
+		bytes = _bytes
+	else:
+		assert(_bytes.size() == 0, "conflicting write data")
+		bytes = _serialize_var(_variant)
+
+	_bytes = PackedByteArray()
+	_variant = null
+
 	_file.seek(0)
-	_file.store_buffer(_bytes)
+	_file.store_buffer(bytes)
 	_file.flush()
 
 	write_flushed.emit()
@@ -248,13 +299,6 @@ func _flush() -> void:
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var out := PackedStringArray()
-
-	if path == "":
-		out.append("Invalid config; missing property 'path'!")
-	elif not (path.begins_with("res://") or path.begins_with("user://")):
-		out.append(
-			"Invalid config; property 'path' should start with 'res://' or 'user://'!"
-		)
 
 	if not _debounce:
 		return out

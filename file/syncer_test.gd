@@ -19,28 +19,27 @@ func test_file_syncer_open_creates_file():
 
 	# Given: A file syncer writing to a file that doesn't exist.
 	var file_syncer := FileSyncer.new()
-	file_syncer.path = path
-	file_syncer.open_on_tree_entered = false
 	add_child_autofree(file_syncer)
 
 	# Given: Signal emissions are monitored.
 	watch_signals(file_syncer)
 
 	# When: The file is opened.
-	var err := file_syncer.open()
+	var err := file_syncer.open(path)
 
 	# Then: The file is successfully opened.
 	assert_eq(err, OK)
-
-	# Then: The 'error' signal was not emitted.
-	assert_signal_not_emitted(file_syncer, "error")
 
 	# Then: The file exists.
 	assert_true(FileAccess.file_exists(path))
 
 	# Then: The 'file_opened' signal was emitted.
 	assert_signal_emit_count(file_syncer, "file_opened", 1)
-	assert_signal_emitted_with_parameters(file_syncer, "file_opened", [])
+	assert_signal_emitted_with_parameters(
+		file_syncer,
+		"file_opened",
+		[ProjectSettings.globalize_path(path)],
+	)
 
 
 func test_file_syncer_open_creates_file_nested_in_missing_directory():
@@ -49,28 +48,27 @@ func test_file_syncer_open_creates_file_nested_in_missing_directory():
 
 	# Given: A file syncer writing to a file that doesn't exist.
 	var file_syncer := FileSyncer.new()
-	file_syncer.path = path
-	file_syncer.open_on_tree_entered = false
 	add_child_autofree(file_syncer)
 
 	# Given: Signal emissions are monitored.
 	watch_signals(file_syncer)
 
 	# When: The file is opened.
-	var err := file_syncer.open()
+	var err := file_syncer.open(path)
 
 	# Then: The file is successfully opened.
 	assert_eq(err, OK)
-
-	# Then: The 'error' signal was not emitted.
-	assert_signal_not_emitted(file_syncer, "error")
 
 	# Then: The file exists.
 	assert_true(FileAccess.file_exists(path))
 
 	# Then: The 'file_opened' signal was emitted.
 	assert_signal_emit_count(file_syncer, "file_opened", 1)
-	assert_signal_emitted_with_parameters(file_syncer, "file_opened", [])
+	assert_signal_emitted_with_parameters(
+		file_syncer,
+		"file_opened",
+		[ProjectSettings.globalize_path(path)],
+	)
 
 
 func test_file_syncer_set_value_updates_file():
@@ -82,9 +80,6 @@ func test_file_syncer_set_value_updates_file():
 
 	# Given: A file syncer writing to a file that doesn't exist.
 	var file_syncer := FileSyncer.new()
-	file_syncer.path = path
-	file_syncer.open_on_tree_entered = false
-	file_syncer.duration = duration
 	file_syncer.duration = duration
 	add_child_autofree(file_syncer)
 
@@ -92,7 +87,7 @@ func test_file_syncer_set_value_updates_file():
 	watch_signals(file_syncer)
 
 	# Given: The file is opened.
-	var err := file_syncer.open()
+	var err := file_syncer.open(path)
 	assert_eq(err, OK)
 
 	# Given: Contents to be written to disk.
@@ -101,18 +96,12 @@ func test_file_syncer_set_value_updates_file():
 	# When: The value is written to disk.
 	file_syncer.store_bytes(want)
 
-	# Then: The 'write_requested' signal is emitted.
-	assert_signal_emit_count(file_syncer, "write_requested", 1)
-
 	# Then: The write has not yet occurred.
-	assert_signal_not_emitted(file_syncer, "write_flushed")
+	assert_eq(FileAccess.get_file_as_bytes(path), PackedByteArray())
 
 	# Given: The debounce duration elapses.
 	simulate(file_syncer, 1, duration, true)
 	simulate(file_syncer._debounce, 1, duration, true)
-
-	# Then: The write was flushed.
-	assert_signal_emit_count(file_syncer, "write_flushed", 1)
 
 	# Then: The file's contents match expectations.
 	var got := FileAccess.get_file_as_bytes(path)
