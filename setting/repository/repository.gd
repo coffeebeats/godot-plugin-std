@@ -29,14 +29,17 @@ const _GROUP_SETTINGS_REPOSITORY := &"addons/std/setting:repository"
 		id = value
 		update_configuration_warnings()
 
-## filepath is a file to which the settings in this repository will be synced. If
-## specified, settings will first be loaded from disk and the loaded values used as the
-## initial configuration state.
-@export var filepath: String = ""
+## writer is a node path to an optional 'ConfigWriter' used to persist the configuration
+## to disk.
+##
+## NOTE: If present, values will first be loaded from disk. This initial hydration won't
+## trigger observable change notifications unless the observer is configured to be
+## called on first load.
+@export_node_path var writer := NodePath()
 
-## observers is a list of script resources which inherit from
-## 'SettingsRepositoryObserver'; these will be automatically added to the repository.
-@export var observers: Array[GDScript] = []
+## observers is a list of 'SettingsRepositoryObserver' resources which will be notified
+## when properties matching their interest are changed.
+@export var observers: Array[SettingsRepositoryObserver] = []
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -45,6 +48,7 @@ const _GROUP_SETTINGS_REPOSITORY := &"addons/std/setting:repository"
 var config: Config = null
 
 var _observers: Dictionary = {}
+var _writer: ConfigWriter = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -87,24 +91,16 @@ func add_observer(observer: SettingsRepositoryObserver) -> void:
 
 
 func _enter_tree() -> void:
-	if filepath != "":
-		config = ConfigWithFileSync.sync_to_file(filepath)
-		assert(config is Config, "failed to create config file")
-	else:
-		config = Config.new()
+	config = Config.new()
 
 	assert(_is_unique_repository(), "invalid state; found duplicate repository")
 	add_to_group(_GROUP_SETTINGS_REPOSITORY)
 
+	
 	var err := config.changed.connect(_on_Config_changed)
 	assert(err == OK, "failed to connect to signal")
 
-	for script in observers:
-		var observer := Resource.new()
-
-		observer.set_script(script)
-		assert(observer is SettingsRepositoryObserver, "invalid script type")
-
+	for observer in observers:
 		add_observer(observer)
 
 
@@ -113,6 +109,8 @@ func _exit_tree() -> void:
 
 	assert(config.changed.is_connected(_on_Config_changed), "missing connection")
 	config.changed.disconnect(_on_Config_changed)
+
+	config = null
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -127,7 +125,26 @@ func _get_configuration_warnings() -> PackedStringArray:
 func _ready() -> void:
 	assert(id != &"", "invalid configuration; missing property: id")
 
+	if writer:
+		_writer = get_node(writer)
+		assert(_writer is ConfigWriter, "invalid config: expected a config writer")
 
+		var err := _writer.sync_config(config)
+		assert(err == OK, "failed to synchronize settings repository")
+
+	# NOTE: This must be done in '_ready' so that an attached 'ConfigWriter' has had a
+	# chance to hydrate the configuration values.
+	for property in _observers:
+		for observer in _observers[property]:
+			if not observer.should_call_on_value_loaded:
+				continue
+
+			observer.handle_value_change(
+				property,
+				property.get_value_from_config(config),
+			)
+
+	
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
@@ -152,12 +169,8 @@ func _on_Config_changed(category: StringName, key: StringName) -> void:
 		if property.name != key:
 			continue
 
+		var value: Variant = property.get_value_from_config(config)
+
 		for observer in _observers[property]:
 			assert(observer is SettingsRepositoryObserver, "invalid type")
-			(
-				observer
-				. handle_value_change(
-					property,
-					property.get_value_from_config(config),
-				)
-			)
+			observer.handle_value_change(property, value)
