@@ -162,5 +162,3 @@ func _on_Config_changed(_category: StringName, _key: StringName) -> void:
 	assert(_connected is Config, "invalid state: missing signal emitter")
 
 	store_config(_connected)
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
