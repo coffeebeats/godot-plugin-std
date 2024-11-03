@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 (2024-11-03)
+
+## What's Changed
+* feat(setting): implement components for updating settings within a scope by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/43
+* feat(timer): add `Debounce` and `Throttle` timer nodes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/46
+* feat(config,file): create standalone `FileSyncer` and `ConfigWriter` nodes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/47
+* feat(group): implement a more flexible value group by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/48
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.1.1...v1.2.0
+
 ## 1.1.1 (2024-10-28)
 
 ## What's Changed
