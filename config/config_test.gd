@@ -1,5 +1,5 @@
 ##
-## Tests pertaining to the 'Config' class.
+## Tests pertaining to the `Config` class.
 ##
 
 extends GutTest

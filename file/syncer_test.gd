@@ -1,5 +1,5 @@
 ##
-## Tests pertaining to the 'FileSyncer' class.
+## Tests pertaining to the `StdFileSyncer` class.
 ##
 
 extends GutTest
@@ -18,7 +18,7 @@ func test_file_syncer_open_creates_file():
 	var path := path_test_dir.path_join("test.dat")
 
 	# Given: A file syncer writing to a file that doesn't exist.
-	var file_syncer := FileSyncer.new()
+	var file_syncer := StdFileSyncer.new()
 	add_child_autofree(file_syncer)
 
 	# Given: Signal emissions are monitored.
@@ -47,7 +47,7 @@ func test_file_syncer_open_creates_file_nested_in_missing_directory():
 	var path := path_test_dir.path_join("directory/does/not/exist/test.dat")
 
 	# Given: A file syncer writing to a file that doesn't exist.
-	var file_syncer := FileSyncer.new()
+	var file_syncer := StdFileSyncer.new()
 	add_child_autofree(file_syncer)
 
 	# Given: Signal emissions are monitored.
@@ -79,7 +79,7 @@ func test_file_syncer_set_value_updates_file():
 	var duration := 0.1
 
 	# Given: A file syncer writing to a file that doesn't exist.
-	var file_syncer := FileSyncer.new()
+	var file_syncer := StdFileSyncer.new()
 	file_syncer.duration = duration
 	add_child_autofree(file_syncer)
 

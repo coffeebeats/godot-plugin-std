@@ -1,12 +1,12 @@
 ##
 ## std/config/writer/binary.gd
 ##
-## BinaryConfigWriter synchronizes the provided 'Config' instance with the specified
-## file. File contents will be written using binary serialization.
+## `StdBinaryConfigWriter` synchronizes the provided `Config` instance with the
+## specified file. File contents will be written using binary serialization.
 ##
 
-class_name BinaryConfigWriter
-extends ConfigWriter
+class_name StdBinaryConfigWriter
+extends StdConfigWriter
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 

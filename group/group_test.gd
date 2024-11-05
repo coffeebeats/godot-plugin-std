@@ -1,5 +1,5 @@
 ##
-## Tests pertaining to the 'StdGroup' class.
+## Tests pertaining to the `StdGroup` class.
 ##
 
 extends GutTest

@@ -1,7 +1,7 @@
 ##
 ## std/group/group.gd
 ##
-## StdGroup is a collection of 'Object' instances which relate in some way. Largely
+## `StdGroup` is a collection of 'Object' instances which relate in some way. Largely
 ## inspired by node groups, this implementation removes a few limitations:
 ## 	 1. These groups aren't limited to 'Node' instances - any 'Variant' can be added.
 ##   2. Groups inherit 'RefCounted', but are globally unique and can thus be accessed in

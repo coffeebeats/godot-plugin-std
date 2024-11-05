@@ -1,9 +1,9 @@
 ##
 ## std/config/config.gd
 ##
-## Config is a collection of categorized key-value pairs, conceptually similar to INI-
-## style configuration files. This is meant as a secure replacement for 'ConfigFile'
-## that doesn't load 'Variant' types from disk [1]. Although the API is simpler, it also
+## `Config` is a collection of categorized key-value pairs, conceptually similar to INI-
+## style configuration files. This is meant as a secure replacement for `ConfigFile`
+## that doesn't load `Variant` types from disk [1]. Although the API is simpler, it also
 ## provides new functionality like signals which notify listeners on changes.
 ##
 ## [1] https://github.com/godotengine/godot/issues/80562.
