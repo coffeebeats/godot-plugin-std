@@ -13,8 +13,6 @@ extends StdSettingsController
 
 
 func _exit_tree() -> void:
-	super._exit_tree()
-
 	if _target.value_changed.is_connected(_on_Range_value_changed):
 		_target.value_changed.disconnect(_on_Range_value_changed)
 

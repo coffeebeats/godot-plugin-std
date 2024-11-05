@@ -14,8 +14,6 @@ extends StdSettingsController
 
 
 func _exit_tree() -> void:
-	super._exit_tree()
-
 	if _target.toggled.is_connected(_on_BaseButton_toggled):
 		_target.toggled.disconnect(_on_BaseButton_toggled)
 
