@@ -101,6 +101,7 @@ func _exit_tree() -> void:
 	var is_changed := StdGroup.with_id(scope.get_scope_id()).remove_member(self)
 	assert(is_changed, "invalid state: repository not registered")
 
+	_observers = {} # Free all observers, cleaning up signal connections.
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
@@ -108,7 +109,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if not scope is StdSettingsScope:
 		(
 			warnings
-			. append(
+			.append(
 				"missing or invalid property: scope (expected a 'StdSettingsScope')",
 			)
 		)
@@ -116,7 +117,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if sync_target != null and not sync_target is StdSettingsSyncTarget:
 		(
 			warnings
-			. append(
+			.append(
 				"invalid property: sync_target (expected a 'StdSettingsSyncTarget')",
 			)
 		)
@@ -159,7 +160,7 @@ func _ready() -> void:
 
 			(
 				observer
-				. handle_value_change(
+				.handle_value_change(
 					property,
 					property.get_value_from_config(scope.config),
 				)
