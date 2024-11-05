@@ -31,25 +31,12 @@ extends Node
 		target = value
 		update_configuration_warnings()
 
-## dependencies is a list of settings properties which will trigger a refresh of this
-## controller's initial state.
-@export var dependencies: Array[StdSettingsProperty] = []
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 @warning_ignore("unused_private_class_variable")
 @onready var _target: Node = get_node(target)
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
-
-
-func _exit_tree() -> void:
-	for dependency in dependencies:
-		if dependency == property:
-			continue
-
-		if scope.config.changed.is_connected(_initialize):
-			scope.config.changed.disconnect(_initialize)
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -80,11 +67,6 @@ func _get_configuration_warnings() -> PackedStringArray:
 	elif not _is_valid_property():
 		warnings.append("invalid type: property")
 
-	for dependency in dependencies:
-		if dependency and dependency == property:
-			warnings.append("invalid config: cannot mark property as dependency")
-			break
-
 	return warnings
 
 
@@ -92,13 +74,7 @@ func _ready() -> void:
 	assert(_is_valid_target(), "invalid type: target")
 	assert(_is_valid_property(), "invalid type: property")
 
-	for dependency in dependencies:
-		if dependency == property:
-			continue
-
-		if not scope.config.changed.is_connected(_initialize):
-			var err := scope.config.changed.connect(_initialize)
-			assert(err == OK, "failed to connect to signal")
+	_initialize()
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
