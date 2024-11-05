@@ -49,11 +49,13 @@ func get_string(category: StringName, key: StringName, default: String) -> Strin
 	var value: Variant = _get_variant(category, key)
 	return value if value is String else default
 
+
 ## get_vector2 retrieves the value associated with `key` in `category` if one is set and
 ## it's type is a 'vector2'. If no value is associated then 'default' is returned.
 func get_vector2(category: StringName, key: StringName, default: Vector2) -> Vector2:
 	var value: Variant = _get_variant(category, key)
 	return value if value is Vector2 else default
+
 
 ## has_float returns whether there is a 'float'-typed value associated with `key` in
 ## `category`.
@@ -74,6 +76,7 @@ func has_int(category: StringName, key: StringName) -> bool:
 func has_string(category: StringName, key: StringName) -> bool:
 	var value: Variant = _get_variant(category, key)
 	return value is String
+
 
 ## has_vector2 returns whether there is a `Vector2`-typed value associated with `key` in
 ## `category`.
@@ -98,6 +101,7 @@ func set_int(category: StringName, key: StringName, value: int) -> bool:
 ## the value was changed.
 func set_string(category: StringName, key: StringName, value: String) -> bool:
 	return _set_variant(category, key, value)
+
 
 ## set_vector2 updates the value associated with `key` in `category` and returns whether
 ## the value was changed.

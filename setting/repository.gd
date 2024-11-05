@@ -10,8 +10,6 @@
 class_name StdSettingsRepository
 extends Node
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Config := preload("../../config/config.gd")
@@ -88,7 +86,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if not scope is StdSettingsScope:
 		(
 			warnings
-			.append(
+			. append(
 				"missing or invalid property: scope (expected a 'StdSettingsScope')",
 			)
 		)
@@ -96,7 +94,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if sync_target != null and not sync_target is StdSettingsSyncTarget:
 		(
 			warnings
-			.append(
+			. append(
 				"invalid property: sync_target (expected a 'StdSettingsSyncTarget')",
 			)
 		)
@@ -139,16 +137,12 @@ func _ready() -> void:
 
 			(
 				observer
-				.handle_value_change(
+				. handle_value_change(
 					property,
 					property.get_value_from_config(scope.config),
 				)
 			)
 
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
@@ -168,5 +162,3 @@ func _on_Config_changed(category: StringName, key: StringName) -> void:
 		for observer in _observers[property]:
 			assert(observer is StdSettingsObserver, "invalid type")
 			observer.handle_value_change(property, value)
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
