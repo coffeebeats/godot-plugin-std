@@ -153,7 +153,7 @@ func _ready() -> void:
 
 func _on_Config_changed(category: StringName, key: StringName) -> void:
 	for property in _observers:
-		assert(property is SettingsProperty, "invalid type")
+		assert(property is StdSettingsProperty, "invalid type")
 
 		if property.category != category:
 			continue
@@ -164,7 +164,7 @@ func _on_Config_changed(category: StringName, key: StringName) -> void:
 		var value: Variant = property.get_value_from_config(scope.config)
 
 		for observer in _observers[property]:
-			assert(observer is SettingsRepositoryObserver, "invalid type")
+			assert(observer is StdSettingsObserver, "invalid type")
 			observer.handle_value_change(property, value)
 
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #
