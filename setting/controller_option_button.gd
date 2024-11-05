@@ -40,13 +40,17 @@ func _is_valid_target() -> bool:
 	return _target is OptionButton
 
 
+func _map_value_to_string(value: Variant) -> String:
+	return value if value is String else str(value)
+
+
 func _set_initial_value(value: Variant) -> void:
 	assert(value is String, "invalid argument: wrong value type")
 
 	_target.clear()
 
 	for allowed_value in property.allowed_values:
-		_target.add_item(allowed_value)
+		_target.add_item(_map_value_to_string(allowed_value))
 		if allowed_value == value:
 			_target.select(_target.item_count - 1)
 
@@ -54,5 +58,10 @@ func _set_initial_value(value: Variant) -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_OptionButton_item_selected(value: float) -> void:
-	_set_value(value)
+func _on_OptionButton_item_selected(index: int) -> void:
+	assert(
+		index >= 0 and index < property.allowed_values.size(),
+		"invalid argument: index out of range",
+	)
+
+	_set_value(property.allowed_values[index])
