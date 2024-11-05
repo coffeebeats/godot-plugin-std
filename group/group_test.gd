@@ -1,5 +1,5 @@
 ##
-## Tests pertaining to the 'Group' class.
+## Tests pertaining to the 'StdGroup' class.
 ##
 
 extends GutTest
@@ -9,10 +9,10 @@ extends GutTest
 
 func test_group_with_id_returns_same_instance():
 	# Given: A new group is referenced.
-	var group := Group.with_id(&"group-id")
+	var group := StdGroup.with_id(&"group-id")
 
 	# When: That same group is accessed again.
-	var got := Group.with_id(&"group-id")
+	var got := StdGroup.with_id(&"group-id")
 
 	# Then: The two groups are the same instance.
 	assert_same(got, group)
@@ -20,7 +20,7 @@ func test_group_with_id_returns_same_instance():
 
 func test_group_add_member_uniquely_adds_value():
 	# Given: A new group is referenced.
-	var group := Group.with_id(&"group-id")
+	var group := StdGroup.with_id(&"group-id")
 
 	# Given: Signals are monitored.
 	watch_signals(group)
@@ -56,7 +56,7 @@ func test_group_add_member_uniquely_adds_value():
 
 func test_group_remove_member_correctly_deletes_value():
 	# Given: A new group is referenced.
-	var group := Group.with_id(&"group-id")
+	var group := StdGroup.with_id(&"group-id")
 
 	# Given: Signals are monitored.
 	watch_signals(group)
@@ -92,7 +92,7 @@ func test_group_remove_member_correctly_deletes_value():
 
 func test_group_clear_members_deletes_all_members():
 	# Given: A new group is referenced.
-	var group := Group.with_id(&"group-id")
+	var group := StdGroup.with_id(&"group-id")
 
 	# Given: Signals are monitored.
 	watch_signals(group)
@@ -130,4 +130,4 @@ func before_all():
 
 func before_each() -> void:
 	# HACK: Clear the global 'Group' index before each test.
-	Group._groups = {}
+	StdGroup._groups = {}
