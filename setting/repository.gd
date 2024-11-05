@@ -1,7 +1,9 @@
 ##
 ## std/setting/repository.gd
 ##
-## StdSettingsRepository ...
+## `StdSettingsRepository` hosts the specified `StdSettingsScope`, ensuring it stays
+## referenced for the lifespan of this node. Additionally, manages syncing the
+## configuration to the specified sync target and handling settings observers.
 ##
 
 @tool
