@@ -8,6 +8,22 @@
 class_name StdSettingsObserver
 extends Resource
 
+# -- DEFINITION ---------------------------------------------------------------------- #
+
+
+## `PropertyCallable` is a simple `StdSettingsObserver` which defers to the provided
+## callable. The callable's signature must match
+## `StdSettingsObserver.handle_value_change`.
+class PropertyCallable:
+	extends StdSettingsObserver
+
+	var callable: Callable
+
+	func _handle_value_change(property: StdSettingsProperty, value: Variant) -> void:
+		assert(callable is Callable, "invalid config: missing callable")
+		callable.call(property, value)
+
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## should_call_on_value_loaded controls whether this observer will be called when one of

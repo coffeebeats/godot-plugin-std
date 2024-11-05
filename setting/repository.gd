@@ -40,6 +40,28 @@ var _observers: Dictionary = {}
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## notify_on_change calls the provided callable whenever one of the specified properties
+## changes. The callable signature must match `StdSettingsObserver.handle_value_change`.
+##
+## NOTE: Repeatedly registering the same callable will cause duplicate observers to be
+## added.
+func notify_on_change(
+	properties: Array[StdSettingsProperty], callable: Callable
+) -> void:
+	assert(callable is Callable, "missing argument: callable")
+	assert(len(properties) > 0, "missing argument: properties")
+	assert(not properties.has(null), "invalid argument: found null property")
+
+	for property in properties:
+		if not _observers.has(property):
+			_observers[property] = []
+
+		var observer := StdSettingsObserver.PropertyCallable.new()
+		observer.callable = callable
+
+		_observers[property].append(observer)
+
+
 ## add_observer registers the provided `StdSettingsObserver`, causing it to be notified
 ## whenever one of the properties it cares about is changed.
 func add_observer(observer: StdSettingsObserver) -> void:
