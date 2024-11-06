@@ -1,17 +1,17 @@
 ##
-## std/setting/property/bool.gd
+## std/setting/property_bool.gd
 ##
-## SettingsBoolProperty is a handle that identifies a single 'bool' property within a
-## settings scope (i.e. repository). It can also be used to modify a provided 'Config'
+## `StdSettingsPropertyBool` is a handle that identifies a single 'bool' property within
+## a settings scope (i.e. repository). It can also be used to modify a provided `Config`
 ## instance.
 ##
 
-class_name SettingsBoolProperty
-extends SettingsProperty
+class_name StdSettingsPropertyBool
+extends StdSettingsProperty
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## default is the value that will be returned from 'Config' reads if the property
+## default is the value that will be returned from `Config` reads if the property
 ## doesn't have a value defined.
 @export var default: bool
 

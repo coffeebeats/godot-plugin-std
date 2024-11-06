@@ -1,7 +1,7 @@
 ##
 ## std/group/group.gd
 ##
-## Group is a collection of 'Object' instances which relate in some way. Largely
+## `StdGroup` is a collection of 'Object' instances which relate in some way. Largely
 ## inspired by node groups, this implementation removes a few limitations:
 ## 	 1. These groups aren't limited to 'Node' instances - any 'Variant' can be added.
 ##   2. Groups inherit 'RefCounted', but are globally unique and can thus be accessed in
@@ -9,7 +9,7 @@
 ##	 3. Membership operations emit a signal, allowing reactive programming.
 ##
 
-class_name Group
+class_name StdGroup
 extends RefCounted
 
 # -- SIGNALS ------------------------------------------------------------------------- #
@@ -40,12 +40,12 @@ var _members: Dictionary = {}
 ## with_id access the group with the provided identifier, creating one if it does not
 ## exist. Groups should *always* be referenced using this method as it ensures duplicate
 ## groups (which wouldn't be connected) aren't created.
-static func with_id(group_id: StringName) -> Group:
+static func with_id(group_id: StringName) -> StdGroup:
 	if group_id in _groups:
-		assert(_groups[group_id] is Group, "invalid state: expected group")
+		assert(_groups[group_id] is StdGroup, "invalid state: expected group")
 		return _groups[group_id]
 
-	var group := Group.new()
+	var group := StdGroup.new()
 	group.id = group_id
 
 	_groups[group_id] = group

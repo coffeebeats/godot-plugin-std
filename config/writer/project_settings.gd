@@ -1,18 +1,18 @@
 ##
 ## std/config/writer/project_settings.gd
 ##
-## ProjectSettingsConfigWriter synchronizes the provided 'Config' instance with the
+## `StdProjectSettingsConfigWriter` synchronizes the provided `Config` instance with the
 ## project settings override file. File contents will be written as UTF8-encoded text.
 ##
-## WARNING: Parsing 'ConfigFile' objects from files is insecure [1]. If possible, avoid
-## the use of this 'ConfigWriter'. However, project settings overrides are currently the
+## WARNING: Parsing `ConfigFile` objects from files is insecure [1]. If possible, avoid
+## the use of this `ConfigWriter`. However, project settings overrides are currently the
 ## only means of configuring different settings at startup, so the tradeoff can be made.
 ##
 ## [1] https://github.com/godotengine/godot/issues/80562
 ##
 
-class_name ProjectSettingsConfigWriter
-extends ConfigWriter
+class_name StdProjectSettingsConfigWriter
+extends StdConfigWriter
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 

@@ -1,12 +1,28 @@
 ##
-## std/setting/repository/observer.gd
+## std/setting/observer.gd
 ##
-## SettingsRepositoryObserver is a type which listens to changes to the specified
-## settings properties.
+## `StdSettingsObserver` is a type which listens to changes to the specified settings
+## properties.
 ##
 
-class_name SettingsRepositoryObserver
+class_name StdSettingsObserver
 extends Resource
+
+# -- DEFINITION ---------------------------------------------------------------------- #
+
+
+## `PropertyCallable` is a simple `StdSettingsObserver` which defers to the provided
+## callable. The callable's signature must match
+## `StdSettingsObserver.handle_value_change`.
+class PropertyCallable:
+	extends StdSettingsObserver
+
+	var callable: Callable
+
+	func _handle_value_change(property: StdSettingsProperty, value: Variant) -> void:
+		assert(callable is Callable, "invalid config: missing callable")
+		callable.call(property, value)
+
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -19,13 +35,13 @@ extends Resource
 
 ## get_settings_properties returns the list of 'SettingsProperty' instances for which
 ## this observer should be notified on changes to.
-func get_settings_properties() -> Array[SettingsProperty]:
+func get_settings_properties() -> Array[StdSettingsProperty]:
 	return _get_settings_properties()
 
 
 ## handle_value_change is called when a property that this observer is registered for
 ## has changed.
-func handle_value_change(property: SettingsProperty, value: Variant) -> void:
+func handle_value_change(property: StdSettingsProperty, value: Variant) -> void:
 	return _handle_value_change(property, value)
 
 
@@ -39,12 +55,12 @@ func mount_observer_node() -> Node:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_settings_properties() -> Array[SettingsProperty]:
+func _get_settings_properties() -> Array[StdSettingsProperty]:
 	assert(false, "unimplemented")
 	return []
 
 
-func _handle_value_change(_property: SettingsProperty, _value) -> void:
+func _handle_value_change(_property: StdSettingsProperty, _value) -> void:
 	assert(false, "unimplemented")
 
 

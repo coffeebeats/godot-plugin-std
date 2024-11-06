@@ -1,17 +1,17 @@
 ##
-## std/setting/property/string.gd
+## std/setting/property_string.gd
 ##
-## SettingsStringProperty is a handle that identifies a single 'String' property within
-## a settings scope (i.e. repository). It can also be used to modify a provided 'Config'
-## instance.
+## `StdSettingsPropertyString` is a handle that identifies a single 'String' property
+## within a settings scope (i.e. repository). It can also be used to modify a provided
+## `Config` instance.
 ##
 
-class_name SettingsStringProperty
-extends SettingsProperty
+class_name StdSettingsPropertyString
+extends StdSettingsProperty
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## default is the value that will be returned from 'Config' reads if the property
+## default is the value that will be returned from `Config` reads if the property
 ## doesn't have a value defined.
 @export var default: String
 
