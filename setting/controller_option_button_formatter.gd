@@ -10,8 +10,10 @@ extends Resource
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 func format_option(value: Variant) -> String:
 	return _format_option(value)
+
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

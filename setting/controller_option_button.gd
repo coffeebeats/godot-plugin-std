@@ -37,7 +37,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if not options_property is StdSettingsProperty:
 		(
 			warnings
-			.append(
+			. append(
 				"missing or invalid property: options (expected a 'StdSettingsProperty')",
 			)
 		)
