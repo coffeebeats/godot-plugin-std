@@ -1,17 +1,17 @@
 ##
-## std/setting/property/int.gd
+## std/setting/property_int.gd
 ##
-## SettingsIntProperty is a handle that identifies a single 'int' property within a
-## settings scope (i.e. repository). It can also be used to modify a provided 'Config'
+## `StdSettingsPropertyInt` is a handle that identifies a single 'int' property within a
+## settings scope (i.e. repository). It can also be used to modify a provided `Config`
 ## instance.
 ##
 
-class_name SettingsIntProperty
-extends SettingsProperty
+class_name StdSettingsPropertyInt
+extends StdSettingsProperty
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## default is the value that will be returned from 'Config' reads if the property
+## default is the value that will be returned from `Config` reads if the property
 ## doesn't have a value defined.
 @export var default: int
 

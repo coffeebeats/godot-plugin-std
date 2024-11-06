@@ -1,14 +1,14 @@
 ##
 ## std/file/syncer.gd
 ##
-## FileSyncer is a node which manages reading and writing to a file. All writes will be
-## debounced, ensuring that performance does not degrade during frequent writes.
+## `StdFileSyncer` is a node which manages reading and writing to a file. All writes
+## will be debounced, ensuring that performance does not degrade during frequent writes.
 ##
-## NOTE: FileSyncer is *not* thread-safe.
+## NOTE: `StdFileSyncer` is *not* thread-safe.
 ##
 
 @tool
-class_name FileSyncer
+class_name StdFileSyncer
 extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #

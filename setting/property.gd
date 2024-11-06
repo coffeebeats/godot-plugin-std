@@ -1,36 +1,44 @@
 ##
-## std/setting/property/property.gd
+## std/setting/property.gd
 ##
-## SettingsProperty is a handle that identifies a single property within a settings
+## `StdSettingsProperty` is a handle that identifies a single property within a settings
 ## scope (i.e. repository). This is a base class which should be extended with type-
 ## specific logic.
 ##
 
-class_name SettingsProperty
+class_name StdSettingsProperty
 extends Resource
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Config := preload("../../config/config.gd")
+const Config := preload("../config/config.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## category is the category within a 'Config' instance.
+## category is the category within a `Config` instance.
 @export var category: StringName = ""
 
-## name is the key within a 'Config' instance category.
+## name is the key within a `Config` instance category.
 @export var name: StringName = ""
+
+## readonly controls whether the property can be used to write to configuration. This
+## can be used by virtual properties to ensure changes aren't saved.
+@export var readonly: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_value_from_config reads the specified property from a 'Config' instance.
+## get_value_from_config reads the specified property from a `Config` instance.
 func get_value_from_config(config: Config) -> Variant:
 	return _get_value_from_config(config)
 
 
-## set_value_on_config sets the specified property on a 'Config' instance.
+## set_value_on_config sets the specified property on a `Config` instance.
 func set_value_on_config(config: Config, value: Variant) -> bool:
+	if readonly:
+		push_warning("tried to write a read-only property: %s::%s" % [category, name])
+		return false
+
 	return _set_value_on_config(config, value)
 
 

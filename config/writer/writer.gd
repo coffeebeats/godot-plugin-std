@@ -1,12 +1,12 @@
 ##
 ## std/config/writer/writer.gd
 ##
-## ConfigWriter is a base class for types which synchronize 'Config' instances with a
-## configured storage file.
+## `StdConfigWriter` is a base class for types which synchronize `Config` instances with
+## a configured storage file.
 ##
 
-class_name ConfigWriter
-extends FileSyncer
+class_name StdConfigWriter
+extends StdFileSyncer
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
