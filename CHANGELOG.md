@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1 (2024-11-06)
+
+## What's Changed
+* refactor(setting): make settings implementation more flexible and type-safe by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/49
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.2.0...v1.2.1
+
 ## 1.2.0 (2024-11-03)
 
 ## What's Changed
