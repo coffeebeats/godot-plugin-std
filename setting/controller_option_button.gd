@@ -15,8 +15,13 @@ extends StdSettingsController
 ## from. To customize how those options are displayed, override `_map_option_to_string`.
 @export var options_property: StdSettingsProperty = null:
 	set(value):
-		property = value
+		options_property = value
 		update_configuration_warnings()
+
+## `formatter` is a type which describes how to format the options available to this
+## `OptionButton` node. The formatter should accept types returned by `options_property`
+## and return a `String`.
+@export var formatter: StdSettingsControllerOptionButtonFormatter = null
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -32,12 +37,12 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if not options_property is StdSettingsProperty:
 		(
 			warnings
-			. append(
-				"missing or invalid property: options (expected a 'StdSettingsProperty'",
+			.append(
+				"missing or invalid property: options (expected a 'StdSettingsProperty')",
 			)
 		)
 	elif not _is_valid_options_property():
-		warnings.append("invalid type: property")
+		warnings.append("invalid type: options property")
 
 	return warnings
 
@@ -46,6 +51,9 @@ func _ready() -> void:
 	# NOTE: Call first to set initial value prior to signal connection, avoiding an
 	# extra set operation from the controller.
 	super._ready()
+
+	if Engine.is_editor_hint():
+		return
 
 	assert(_is_valid_options_property(), "invalid type: options_property")
 
@@ -63,40 +71,47 @@ func _ready() -> void:
 
 
 func _is_valid_property() -> bool:
-	return property is StdSettingsPropertyStringOneOf
+	assert(false, "unimplemented")
+	return false
 
 
 func _is_valid_options_property() -> bool:
-	return property is StdSettingsPropertyStringOneOf
+	assert(false, "unimplemented")
+	return false
 
 
 func _is_valid_target() -> bool:
 	return _target is OptionButton
 
 
-func _map_option_to_string(value: Variant) -> String:
-	return value if value is String else str(value)
-
-
 func _set_initial_value(value: Variant) -> void:
 	_target.clear()
 
-	var options := Array(options_property.get_value_from_config(scope.config))
+	var options := _get_options()
 	assert(options.has(value), "invalid config: value not in options")
 
 	for option in options:
-		_target.add_item(_map_option_to_string(option))
+		_target.add_item(formatter.format_option(option) if formatter else str(option))
 		if option == value:
 			_target.select(_target.item_count - 1)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _get_options() -> Array:
+	return Array(options_property.get_value_from_config(scope.config))
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_OptionButton_item_selected(index: int) -> void:
+	var options := _get_options()
+
 	assert(
-		index >= 0 and index < property.allowed_values.size(),
+		index >= 0 and index < options.size(),
 		"invalid argument: index out of range",
 	)
 
-	_set_value(property.allowed_values[index])
+	_set_value(options[index])
