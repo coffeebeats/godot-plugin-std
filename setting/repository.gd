@@ -12,7 +12,7 @@ extends Node
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Config := preload("../../config/config.gd")
+const Config := preload("../config/config.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -88,20 +88,19 @@ func add_observer(observer: StdSettingsObserver) -> void:
 
 
 func _enter_tree() -> void:
-	var err := scope.config.changed.connect(_on_Config_changed)
-	assert(err == OK, "failed to connect to signal")
-
-	for observer in observers:
-		add_observer(observer)
+	if scope is StdSettingsScope:
+		var is_changed := StdGroup.with_id(scope.get_scope_id()).add_member(self)
+		assert(is_changed, "invalid state: duplicate repository registered")
 
 
 func _exit_tree() -> void:
-	assert(scope is StdSettingsScope, "invalid config; missing settings scope")
-
-	var is_changed := StdGroup.with_id(scope.get_scope_id()).remove_member(self)
-	assert(is_changed, "invalid state: repository not registered")
+	if scope is StdSettingsScope:
+		var is_changed := StdGroup.with_id(scope.get_scope_id()).remove_member(self)
+		if not is_changed:
+			push_warning("invalid state: repository not registered")
 
 	_observers = {} # Free all observers, cleaning up signal connections.
+
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
@@ -129,10 +128,17 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 func _ready() -> void:
-	assert(scope is StdSettingsScope, "invalid config; missing settings scope")
+	if Engine.is_editor_hint():
+		return
 
-	var is_changed := StdGroup.with_id(scope.get_scope_id()).add_member(self)
-	assert(is_changed, "invalid state: duplicate repository registered")
+	assert(scope is StdSettingsScope, "invalid state: missing scope")
+	assert(
+		scope.get_repository() == self,
+		"invalid state: duplicate repository for scope",
+	)
+
+	for observer in observers:
+		add_observer(observer)
 
 	if sync_target is StdSettingsSyncTarget and not Engine.is_editor_hint():
 		var node := sync_target.create_sync_target_node()
@@ -147,9 +153,6 @@ func _ready() -> void:
 
 	var err := scope.config.changed.connect(_on_Config_changed)
 	assert(err == OK, "failed to connect to signal")
-
-	for observer in observers:
-		add_observer(observer)
 
 	# NOTE: This must be done in '_ready' so that an attached 'ConfigWriter' has had a
 	# chance to hydrate the configuration values.
