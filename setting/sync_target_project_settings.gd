@@ -6,7 +6,7 @@
 ##
 
 class_name StdSettingsSyncTargetProjectSettings
-extends Resource
+extends StdSettingsSyncTarget
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

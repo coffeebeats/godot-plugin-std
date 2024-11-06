@@ -6,7 +6,7 @@
 ##
 
 class_name StdSettingsSyncTargetFile
-extends Resource
+extends StdSettingsSyncTarget
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
