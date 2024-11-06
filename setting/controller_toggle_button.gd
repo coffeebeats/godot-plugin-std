@@ -23,6 +23,9 @@ func _ready() -> void:
 	# extra set operation from the controller.
 	super._ready()
 
+	if Engine.is_editor_hint():
+		return
+
 	if not _target.toggled.is_connected(_on_BaseButton_toggled):
 		var err: Error = _target.toggled.connect(_on_BaseButton_toggled)
 		assert(err == OK, "failed to connect to signal")

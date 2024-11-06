@@ -22,6 +22,9 @@ func _ready() -> void:
 	# extra set operation from the controller.
 	super._ready()
 
+	if Engine.is_editor_hint():
+		return
+
 	if not _target.value_changed.is_connected(_on_Range_value_changed):
 		var err: Error = _target.value_changed.connect(_on_Range_value_changed)
 		assert(err == OK, "failed to connect to signal")

@@ -45,7 +45,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if not scope is StdSettingsScope:
 		(
 			warnings
-			. append(
+			.append(
 				"missing or invalid property: scope (expected a 'StdSettingsScope')",
 			)
 		)
@@ -60,7 +60,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if not property is StdSettingsProperty:
 		(
 			warnings
-			. append(
+			.append(
 				"missing or invalid property: property (expected a 'StdSettingsProperty'",
 			)
 		)
@@ -71,6 +71,9 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
+
 	assert(_is_valid_target(), "invalid type: target")
 	assert(_is_valid_property(), "invalid type: property")
 
