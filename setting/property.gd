@@ -11,7 +11,7 @@ extends Resource
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Config := preload("../../config/config.gd")
+const Config := preload("../config/config.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -20,6 +20,10 @@ const Config := preload("../../config/config.gd")
 
 ## name is the key within a `Config` instance category.
 @export var name: StringName = ""
+
+## readonly controls whether the property can be used to write to configuration. This
+## can be used by virtual properties to ensure changes aren't saved.
+@export var readonly: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -31,6 +35,10 @@ func get_value_from_config(config: Config) -> Variant:
 
 ## set_value_on_config sets the specified property on a `Config` instance.
 func set_value_on_config(config: Config, value: Variant) -> bool:
+	if readonly:
+		push_warning("tried to write a read-only property: %s::%s" % [category, name])
+		return false
+
 	return _set_value_on_config(config, value)
 
 
