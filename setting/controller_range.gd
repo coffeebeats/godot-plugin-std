@@ -9,6 +9,14 @@
 class_name StdSettingsControllerRange
 extends StdSettingsController
 
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+## property is a settings property defining which configuration property to update.
+@export var property: StdSettingsPropertyFloatRange = null:
+	set(value):
+		property = value
+		update_configuration_warnings()
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
@@ -33,8 +41,8 @@ func _ready() -> void:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _is_valid_property() -> bool:
-	return property is StdSettingsPropertyFloatRange
+func _get_property() -> StdSettingsProperty:
+	return property
 
 
 func _is_valid_target() -> bool:

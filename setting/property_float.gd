@@ -23,4 +23,7 @@ func _get_value_from_config(config: Config) -> Variant:
 
 
 func _set_value_on_config(config: Config, value: float) -> bool:
+	if value == default:
+		return config.erase(category, name)
+
 	return config.set_float(category, name, value)
