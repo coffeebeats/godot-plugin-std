@@ -11,13 +11,6 @@ extends StdSettingsController
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## `options_property` is a settings property defining the list of options to choose
-## from. To customize how those options are displayed, override `_map_option_to_string`.
-@export var options_property: StdSettingsProperty = null:
-	set(value):
-		options_property = value
-		update_configuration_warnings()
-
 ## `formatter` is a type which describes how to format the options available to this
 ## `OptionButton` node. The formatter should accept types returned by `options_property`
 ## and return a `String`.
@@ -34,15 +27,8 @@ func _exit_tree() -> void:
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := super._get_configuration_warnings()
 
-	if not options_property is StdSettingsProperty:
-		(
-			warnings
-			. append(
-				"missing or invalid property: options (expected a 'StdSettingsProperty')",
-			)
-		)
-	elif not _is_valid_options_property():
-		warnings.append("invalid type: options property")
+	if not _get_options_property() is StdSettingsProperty:
+		warnings.append("invalid config: missing options property")
 
 	return warnings
 
@@ -55,7 +41,11 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 
-	assert(_is_valid_options_property(), "invalid type: options_property")
+	var options_property := _get_options_property()
+	assert(
+		options_property is StdSettingsProperty,
+		"invalid state: missing options property",
+	)
 
 	var repository := scope.get_repository()
 	assert(repository is StdSettingsRepository, "missing repository")
@@ -70,14 +60,9 @@ func _ready() -> void:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _is_valid_property() -> bool:
+func _get_options_property() -> StdSettingsProperty:
 	assert(false, "unimplemented")
-	return false
-
-
-func _is_valid_options_property() -> bool:
-	assert(false, "unimplemented")
-	return false
+	return null
 
 
 func _is_valid_target() -> bool:
@@ -100,6 +85,12 @@ func _set_initial_value(value: Variant) -> void:
 
 
 func _get_options() -> Array:
+	var options_property := _get_options_property()
+	assert(
+		options_property is StdSettingsProperty,
+		"invalid state: missing options property",
+	)
+
 	return Array(options_property.get_value_from_config(scope.config))
 
 
