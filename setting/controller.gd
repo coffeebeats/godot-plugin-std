@@ -39,7 +39,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if not scope is StdSettingsScope:
 		(
 			warnings
-			.append(
+			. append(
 				"missing or invalid property: scope (expected a 'StdSettingsScope')",
 			)
 		)
