@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.3 (2024-11-08)
+
+## What's Changed
+* fix(setting): change slider value after changing its configuration by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/55
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.2.2...v1.2.3
+
 ## 1.2.2 (2024-11-08)
 
 ## What's Changed
