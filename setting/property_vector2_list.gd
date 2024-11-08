@@ -23,4 +23,7 @@ func _get_value_from_config(config: Config) -> Variant:
 
 
 func _set_value_on_config(config: Config, value: PackedVector2Array) -> bool:
+	if value == default:
+		return config.erase(category, name)
+
 	return config.set_vector2_list(category, name, value)
