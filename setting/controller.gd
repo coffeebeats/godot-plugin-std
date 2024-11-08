@@ -12,12 +12,6 @@ extends Node
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## property is a settings property defining which configuration property to update.
-@export var property: StdSettingsProperty = null:
-	set(value):
-		property = value
-		update_configuration_warnings()
-
 ## scope is a reference to the settings scope to which changes should be pushed. Initial
 ## state will also be read from the scope.
 @export var scope: StdSettingsScope = null:
@@ -45,7 +39,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if not scope is StdSettingsScope:
 		(
 			warnings
-			. append(
+			.append(
 				"missing or invalid property: scope (expected a 'StdSettingsScope')",
 			)
 		)
@@ -57,15 +51,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 	elif not _is_valid_target():
 		warnings.append("invalid property: target")
 
-	if not property is StdSettingsProperty:
-		(
-			warnings
-			. append(
-				"missing or invalid property: property (expected a 'StdSettingsProperty'",
-			)
-		)
-	elif not _is_valid_property():
-		warnings.append("invalid type: property")
+	if not _get_property() is StdSettingsProperty:
+		warnings.append("invalid config: missing property")
 
 	return warnings
 
@@ -75,7 +62,7 @@ func _ready() -> void:
 		return
 
 	assert(_is_valid_target(), "invalid type: target")
-	assert(_is_valid_property(), "invalid type: property")
+	assert(_get_property() is StdSettingsProperty, "invalid state: missing property")
 
 	_initialize()
 
@@ -83,8 +70,9 @@ func _ready() -> void:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _is_valid_property() -> bool:
-	return true
+func _get_property() -> StdSettingsProperty:
+	assert(false, "unimplemented")
+	return null
 
 
 func _is_valid_target() -> bool:
@@ -99,9 +87,15 @@ func _set_initial_value(_value) -> void:
 
 
 func _initialize() -> void:
+	var property := _get_property()
+	assert(property is StdSettingsProperty, "invalid state: missing property")
+
 	var value: Variant = property.get_value_from_config(scope.config)
 	_set_initial_value(value)
 
 
 func _set_value(value: Variant) -> void:
+	var property := _get_property()
+	assert(property is StdSettingsProperty, "invalid state: missing property")
+
 	property.set_value_on_config(scope.config, value)
