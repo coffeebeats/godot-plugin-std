@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.2 (2024-11-08)
+
+## What's Changed
+* fix(setting): don't store default values by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/52
+* refactor(setting): strictly type `property` and `options_property` variables on `StdSettingsController` classes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/54
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.2.1...v1.2.2
+
 ## 1.2.1 (2024-11-06)
 
 ## What's Changed
