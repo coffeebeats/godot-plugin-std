@@ -50,12 +50,16 @@ func _is_valid_target() -> bool:
 
 
 func _set_initial_value(value: Variant) -> void:
+	assert(_is_valid_target(), "invalid state: wrong target type")
 	assert(value is float, "invalid argument: wrong value type")
 
-	_target.value = value
 	_target.min_value = property.minimum
 	_target.max_value = property.maximum
 	_target.step = property.step
+
+	# NOTE: Update the value *after* changing the slider's parameters, otherwise the
+	# value might get bounded by outdated slider configuration.
+	_target.value = value
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
