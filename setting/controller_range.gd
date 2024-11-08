@@ -12,7 +12,7 @@ extends StdSettingsController
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## property is a settings property defining which configuration property to update.
-@export var property: StdSettingsPropertyBool = null:
+@export var property: StdSettingsPropertyFloatRange = null:
 	set(value):
 		property = value
 		update_configuration_warnings()
