@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.5 (2024-11-09)
+
+## What's Changed
+* fix(setting): update controlled `OptionButton` when properties change by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/59
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.2.4...v1.2.5
+
 ## 1.2.4 (2024-11-09)
 
 ## What's Changed
