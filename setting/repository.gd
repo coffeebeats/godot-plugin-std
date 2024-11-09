@@ -186,6 +186,15 @@ func _on_Config_changed(category: StringName, key: StringName) -> void:
 
 		var value: Variant = property.get_value_from_config(scope.config)
 
+		print(
+			"std/setting/repository.gd[",
+			get_instance_id(),
+			(
+				"]: update property '%s/%s' to value: %s"
+				% [property.category, property.name, value]
+			),
+		)
+
 		for observer in _observers[property]:
 			assert(observer is StdSettingsObserver, "invalid type")
 			observer.handle_value_change(scope.config, property, value)
