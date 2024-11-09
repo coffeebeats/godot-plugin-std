@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.4 (2024-11-09)
+
+## What's Changed
+* fix(setting): pass `Config` to `StdSettingsObserver` when handling a property change by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/57
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.2.3...v1.2.4
+
 ## 1.2.3 (2024-11-08)
 
 ## What's Changed
