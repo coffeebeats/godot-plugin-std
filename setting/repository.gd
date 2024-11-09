@@ -164,6 +164,7 @@ func _ready() -> void:
 			(
 				observer
 				. handle_value_change(
+					scope.config,
 					property,
 					property.get_value_from_config(scope.config),
 				)
@@ -187,4 +188,4 @@ func _on_Config_changed(category: StringName, key: StringName) -> void:
 
 		for observer in _observers[property]:
 			assert(observer is StdSettingsObserver, "invalid type")
-			observer.handle_value_change(property, value)
+			observer.handle_value_change(scope.config, property, value)
