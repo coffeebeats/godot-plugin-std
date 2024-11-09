@@ -8,6 +8,10 @@
 class_name StdSettingsObserver
 extends Resource
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Config := preload("../config/config.gd")
+
 # -- DEFINITION ---------------------------------------------------------------------- #
 
 
@@ -19,7 +23,9 @@ class PropertyCallable:
 
 	var callable: Callable
 
-	func _handle_value_change(property: StdSettingsProperty, value: Variant) -> void:
+	func _handle_value_change(
+		_config: Config, property: StdSettingsProperty, value: Variant
+	) -> void:
 		assert(callable is Callable, "invalid config: missing callable")
 		callable.call(property, value)
 
@@ -41,8 +47,10 @@ func get_settings_properties() -> Array[StdSettingsProperty]:
 
 ## handle_value_change is called when a property that this observer is registered for
 ## has changed.
-func handle_value_change(property: StdSettingsProperty, value: Variant) -> void:
-	return _handle_value_change(property, value)
+func handle_value_change(
+	config: Config, property: StdSettingsProperty, value: Variant
+) -> void:
+	return _handle_value_change(config, property, value)
 
 
 ## mount_observer_node creates a 'Node' which should be added to the scene tree for the
@@ -60,7 +68,9 @@ func _get_settings_properties() -> Array[StdSettingsProperty]:
 	return []
 
 
-func _handle_value_change(_property: StdSettingsProperty, _value) -> void:
+func _handle_value_change(
+	_config: Config, _property: StdSettingsProperty, _value
+) -> void:
 	assert(false, "unimplemented")
 
 
