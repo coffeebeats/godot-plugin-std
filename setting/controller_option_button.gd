@@ -41,6 +41,12 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 
+	var property := _get_property()
+	assert(
+		property is StdSettingsProperty,
+		"invalid state: missing property",
+	)
+
 	var options_property := _get_options_property()
 	assert(
 		options_property is StdSettingsProperty,
@@ -50,7 +56,12 @@ func _ready() -> void:
 	var repository := scope.get_repository()
 	assert(repository is StdSettingsRepository, "missing repository")
 	if repository is StdSettingsRepository:
-		repository.notify_on_change([options_property], _initialize)
+		repository.notify_on_change(
+			[options_property], func(_property, _value): _rebuild_options()
+		)
+		repository.notify_on_change(
+			[property], func(_property, value): _select_value(value)
+		)
 
 	if not _target.item_selected.is_connected(_on_OptionButton_item_selected):
 		var err: Error = _target.item_selected.connect(_on_OptionButton_item_selected)
@@ -70,15 +81,8 @@ func _is_valid_target() -> bool:
 
 
 func _set_initial_value(value: Variant) -> void:
-	_target.clear()
-
-	var options := _get_options()
-	assert(options.has(value), "invalid config: value not in options")
-
-	for option in options:
-		_target.add_item(formatter.format_option(option) if formatter else str(option))
-		if option == value:
-			_target.select(_target.item_count - 1)
+	_rebuild_options()
+	_select_value(value)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -92,6 +96,28 @@ func _get_options() -> Array:
 	)
 
 	return Array(options_property.get_value_from_config(scope.config))
+
+
+func _rebuild_options() -> void:
+	_target.clear()
+
+	var options := _get_options()
+
+	for option in options:
+		_target.add_item(formatter.format_option(option) if formatter else str(option))
+
+
+func _select_value(value) -> void:
+	var options := _get_options()
+	assert(options.has(value), "invalid config: value not in options")
+
+	var index: int = 0
+	for option in options:
+		if option == value:
+			_target.select(index)
+			break
+
+		index += 1
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
