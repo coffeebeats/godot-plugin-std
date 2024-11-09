@@ -111,9 +111,13 @@ func _select_value(value) -> void:
 	var options := _get_options()
 	assert(options.has(value), "invalid config: value not in options")
 
+	var index: int = 0
 	for option in options:
 		if option == value:
-			_target.select(_target.item_count - 1)
+			_target.select(index)
+			break
+
+		index += 1
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
