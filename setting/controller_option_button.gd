@@ -29,6 +29,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 	if not _get_options_property() is StdSettingsProperty:
 		warnings.append("invalid config: missing options property")
+	elif not _get_options_property().scope is StdSettingsScope:
+		warnings.append("invalid config: missing 'scope' for options property")
 
 	return warnings
 
@@ -53,18 +55,14 @@ func _ready() -> void:
 		"invalid state: missing options property",
 	)
 
-	var repository := scope.get_repository()
-	assert(repository is StdSettingsRepository, "missing repository")
-	if repository is StdSettingsRepository:
-		repository.notify_on_change(
-			[options_property], func(_property, _value): _rebuild_options()
-		)
-		repository.notify_on_change(
-			[property], func(_property, value): _select_value(value)
-		)
+	var err := options_property.value_changed.connect(func(_value): _rebuild_options())
+	assert(err == OK, "failed to connect to signal")
+
+	err = property.value_changed.connect(_select_value)
+	assert(err == OK, "failed to connect to signal")
 
 	if not _target.item_selected.is_connected(_on_OptionButton_item_selected):
-		var err: Error = _target.item_selected.connect(_on_OptionButton_item_selected)
+		err = _target.item_selected.connect(_on_OptionButton_item_selected)
 		assert(err == OK, "failed to connect to signal")
 
 
@@ -95,7 +93,7 @@ func _get_options() -> Array:
 		"invalid state: missing options property",
 	)
 
-	return Array(options_property.get_value_from_config(scope.config))
+	return Array(options_property.get_value())
 
 
 func _rebuild_options() -> void:
