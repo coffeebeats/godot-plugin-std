@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0 (2024-11-21)
+
+## What's Changed
+* feat(setting): simplify property notifications by binding each to a scope by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/61
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.2.5...v1.3.0
+
 ## 1.2.5 (2024-11-09)
 
 ## What's Changed
