@@ -9,6 +9,11 @@
 class_name StdSettingsProperty
 extends Resource
 
+# -- SIGNALS ------------------------------------------------------------------------- #
+
+## value_changed is emitted when the property value is modified.
+signal value_changed(value: Variant)
+
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Config := preload("../config/config.gd")
@@ -25,21 +30,34 @@ const Config := preload("../config/config.gd")
 ## can be used by virtual properties to ensure changes aren't saved.
 @export var readonly: bool = false
 
+# NOTE: Add a space character to disambiguate with property of same name.
+@export_category("Scope ")
+
+## scope is the settings scope to which this property will read and writes its value.
+@export var scope: StdSettingsScope = null
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_value_from_config reads the specified property from a `Config` instance.
-func get_value_from_config(config: Config) -> Variant:
-	return _get_value_from_config(config)
+## get_value reads the specified property from the configured `StdSettingsScope`.
+func get_value() -> Variant:
+	assert(scope is StdSettingsScope, "invalid state; missing scope")
+	return _get_value_from_config(scope.config)
 
 
-## set_value_on_config sets the specified property on a `Config` instance.
-func set_value_on_config(config: Config, value: Variant) -> bool:
+## set_value sets the specified property on the configured `StdSettingsScope`.
+func set_value(value: Variant) -> bool:
+	assert(scope is StdSettingsScope, "invalid config; missing 'scope'")
+
 	if readonly:
 		push_warning("tried to write a read-only property: %s::%s" % [category, name])
 		return false
 
-	return _set_value_on_config(config, value)
+	if _set_value_on_config(scope.config, value):
+		value_changed.emit(value)
+		return true
+
+	return false
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
