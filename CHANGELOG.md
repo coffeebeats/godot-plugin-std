@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1 (2024-11-24)
+
+## What's Changed
+* fix(settings): cache options for `StdSettingsOptionButtonController`s by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/63
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.3.0...v1.3.1
+
 ## 1.3.0 (2024-11-21)
 
 ## What's Changed

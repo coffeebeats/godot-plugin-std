@@ -16,7 +16,16 @@ extends StdSettingsController
 ## and return a `String`.
 @export var formatter: StdSettingsControllerOptionButtonFormatter = null
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _options: Array = []
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _enter_tree() -> void:
+	if Engine.is_editor_hint():
+		return
 
 
 func _exit_tree() -> void:
@@ -55,7 +64,9 @@ func _ready() -> void:
 		"invalid state: missing options property",
 	)
 
-	var err := options_property.value_changed.connect(func(_value): _rebuild_options())
+	var err := options_property.value_changed.connect(
+		func(v): _rebuild_options(Array(v))
+	)
 	assert(err == OK, "failed to connect to signal")
 
 	err = property.value_changed.connect(_select_value)
@@ -79,38 +90,43 @@ func _is_valid_target() -> bool:
 
 
 func _set_initial_value(value: Variant) -> void:
-	_rebuild_options()
-	_select_value(value)
-
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-func _get_options() -> Array:
 	var options_property := _get_options_property()
 	assert(
 		options_property is StdSettingsProperty,
 		"invalid state: missing options property",
 	)
 
-	return Array(options_property.get_value())
+	_rebuild_options(Array(options_property.get_value()))
+	_select_value(value)
 
 
-func _rebuild_options() -> void:
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _rebuild_options(options: Array) -> void:
+	assert(
+		options is Array and not options.is_empty(),
+		"invalid argument; missing options",
+	)
+
+	_options = options
+
 	_target.clear()
-
-	var options := _get_options()
 
 	for option in options:
 		_target.add_item(formatter.format_option(option) if formatter else str(option))
 
 
 func _select_value(value) -> void:
-	var options := _get_options()
-	assert(options.has(value), "invalid config: value not in options")
+	assert(
+		_options is Array and not _options.is_empty(),
+		"invalid state; missing options",
+	)
+
+	assert(value in _options, "invalid config: value not in options")
 
 	var index: int = 0
-	for option in options:
+	for option in _options:
 		if option == value:
 			_target.select(index)
 			break
@@ -122,11 +138,14 @@ func _select_value(value) -> void:
 
 
 func _on_OptionButton_item_selected(index: int) -> void:
-	var options := _get_options()
+	assert(
+		_options is Array and not _options.is_empty(),
+		"invalid state; missing options",
+	)
 
 	assert(
-		index >= 0 and index < options.size(),
+		index >= 0 and index < _options.size(),
 		"invalid argument: index out of range",
 	)
 
-	_set_value(options[index])
+	_set_value(_options[index])

@@ -22,21 +22,6 @@ const Config := preload("../config/config.gd")
 
 var _connected: Dictionary = {}
 
-# -- PUBLIC METHODS ------------------------------------------------------------------ #
-
-
-## get_settings_properties returns the list of 'SettingsProperty' instances for which
-## this observer should be notified on changes to.
-func get_settings_properties() -> Array[StdSettingsProperty]:
-	return _get_settings_properties()
-
-
-## handle_value_change is called when a property that this observer is registered for
-## has changed.
-func handle_value_change(property: StdSettingsProperty, value: Variant) -> void:
-	return _handle_value_change(property, value)
-
-
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
