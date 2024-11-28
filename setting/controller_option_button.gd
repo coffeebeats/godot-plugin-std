@@ -89,6 +89,10 @@ func _is_valid_target() -> bool:
 	return _target is OptionButton
 
 
+func _set_enabled(value: bool) -> void:
+	_target.disabled = not value
+
+
 func _set_initial_value(value: Variant) -> void:
 	var options_property := _get_options_property()
 	assert(
