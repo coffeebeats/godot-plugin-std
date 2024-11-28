@@ -92,6 +92,7 @@ func _is_valid_target() -> bool:
 func _set_enabled(_value: bool) -> void:
 	pass
 
+
 func _set_initial_value(_value) -> void:
 	assert(false, "unimplemented")
 
@@ -113,7 +114,9 @@ func _set_value(value: Variant) -> void:
 
 	property.set_value(value)
 
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
 
 func _on_disabled_value_changed(value: bool) -> void:
 	_set_enabled(value if invert_disabled_property else not value)

@@ -57,6 +57,7 @@ func _is_valid_target() -> bool:
 func _set_enabled(value: bool) -> void:
 	_target.disabled = not value
 
+
 func _set_initial_value(value: Variant) -> void:
 	assert(value is bool, "invalid argument: wrong value type")
 
