@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.2 (2024-11-28)
+
+## What's Changed
+* fix(settings): disable `OptionButton` with only one option by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/65
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.3.1...v1.3.2
+
 ## 1.3.1 (2024-11-24)
 
 ## What's Changed
