@@ -18,6 +18,19 @@ extends Node
 		target = value
 		update_configuration_warnings()
 
+@export_group("Modifiers ")
+@export_subgroup("Disable input")
+
+## disabled is a settings property defining whether to enable or disable the input.
+@export var disabled: StdSettingsPropertyBool = null:
+	set(value):
+		disabled = value
+		update_configuration_warnings()
+
+## invert_disabled_property defines whether the value from `disabled` should be inverted
+# when interpreting the "disabled" input state.
+@export var invert_disabled_property: bool = false
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 @warning_ignore("unused_private_class_variable")
@@ -40,6 +53,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("invalid config: missing property")
 	elif not _get_property().scope is StdSettingsScope:
 		warnings.append("invalid config: missing 'scope' for property")
+	elif disabled and not disabled.scope is StdSettingsScope:
+		warnings.append("invalid config: missing 'scope' for property")
 
 	return warnings
 
@@ -50,6 +65,14 @@ func _ready() -> void:
 
 	assert(_is_valid_target(), "invalid type: target")
 	assert(_get_property() is StdSettingsProperty, "invalid state: missing property")
+
+	assert(
+		not disabled or disabled is StdSettingsPropertyBool,
+		"invalid config; wrong property type",
+	)
+	if disabled is StdSettingsPropertyBool:
+		var err := disabled.value_changed.connect(_on_disabled_value_changed)
+		assert(err == OK, "failed to connect to signal")
 
 	_initialize()
 
@@ -64,6 +87,10 @@ func _get_property() -> StdSettingsProperty:
 
 func _is_valid_target() -> bool:
 	return true
+
+
+func _set_enabled(_value: bool) -> void:
+	pass
 
 
 func _set_initial_value(_value) -> void:
@@ -86,3 +113,10 @@ func _set_value(value: Variant) -> void:
 	assert(property is StdSettingsProperty, "invalid state: missing property")
 
 	property.set_value(value)
+
+
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_disabled_value_changed(value: bool) -> void:
+	_set_enabled(value if invert_disabled_property else not value)
