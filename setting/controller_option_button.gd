@@ -112,6 +112,7 @@ func _rebuild_options(options: Array) -> void:
 	_options = options
 
 	_target.clear()
+	_target.disabled = len(options) <= 1
 
 	for option in options:
 		_target.add_item(formatter.format_option(option) if formatter else str(option))
