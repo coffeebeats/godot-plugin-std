@@ -48,6 +48,8 @@ func _get_property() -> StdSettingsProperty:
 func _is_valid_target() -> bool:
 	return _target is Range
 
+func _set_enabled(value: bool) -> void:
+	_target.editable = value
 
 func _set_initial_value(value: Variant) -> void:
 	assert(_is_valid_target(), "invalid state: wrong target type")

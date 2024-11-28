@@ -38,6 +38,10 @@ func _ready() -> void:
 		var err: Error = _target.toggled.connect(_on_BaseButton_toggled)
 		assert(err == OK, "failed to connect to signal")
 
+	if not property.value_changed.is_connected(_set_initial_value):
+		var err: Error = property.value_changed.connect(_set_initial_value) as Error
+		assert(err == OK, "failed to connect to signal")
+
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
@@ -49,6 +53,9 @@ func _get_property() -> StdSettingsProperty:
 func _is_valid_target() -> bool:
 	return _target is CheckBox or _target is CheckButton
 
+
+func _set_enabled(value: bool) -> void:
+	_target.disabled = not value
 
 func _set_initial_value(value: Variant) -> void:
 	assert(value is bool, "invalid argument: wrong value type")
