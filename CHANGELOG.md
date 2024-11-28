@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0 (2024-11-28)
+
+## What's Changed
+* feat(settings): add support for disabling input controls via a property by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/67
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.3.2...v1.4.0
+
 ## 1.3.2 (2024-11-28)
 
 ## What's Changed
