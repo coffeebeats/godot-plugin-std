@@ -245,10 +245,6 @@ func before_all() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _set_events_as_default(action: StringName, events: Array[InputEvent]) -> void:
-	ProjectSettings.set_setting(&"input/" + action, {"deadzone": 0.5, "events": events})
-
-
 func _assert_events_equal(v1: Array[InputEvent], v2: Array[InputEvent]) -> void:
 	var events1 := PackedInt64Array()
 	var events2 := PackedInt64Array()
@@ -268,3 +264,7 @@ func _assert_events_equal(v1: Array[InputEvent], v2: Array[InputEvent]) -> void:
 			events2.append(value_encoded)
 
 	assert_eq_deep(events1, events2)
+
+
+func _set_events_as_default(action: StringName, events: Array[InputEvent]) -> void:
+	ProjectSettings.set_setting(&"input/" + action, {"deadzone": 0.5, "events": events})
