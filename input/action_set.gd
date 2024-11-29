@@ -33,8 +33,8 @@ extends Resource
 ## (i.e. on/off) input origins.
 @export var actions_digital: Array[StringName] = []
 
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
 
 ## is_matching_event_origin returns whether the provided `InputEvent` is a valid type
 ## for the specified input action.
@@ -48,13 +48,14 @@ func is_matching_event_origin(action: StringName, event: InputEvent) -> bool:
 
 		if axis > JOY_AXIS_INVALID and axis < JOY_AXIS_TRIGGER_LEFT:
 			return action in actions_analog_2d
-		
+
 		if axis == JOY_AXIS_TRIGGER_LEFT or axis == JOY_AXIS_TRIGGER_RIGHT:
 			return action in actions_analog_1d
 
-	if (event is InputEventMouseButton or
-		event is InputEventKey or
-		event is InputEventJoypadButton
+	if (
+		event is InputEventMouseButton
+		or event is InputEventKey
+		or event is InputEventJoypadButton
 	):
 		return action in actions_digital
 
