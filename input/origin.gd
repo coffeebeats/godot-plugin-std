@@ -26,6 +26,7 @@ const BITMASK_MOUSE_BUTTON := (1 << 4) - 1
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 ## encode stores the provided input event type and the specified key/axis code in an
 ## integer.
 ##
@@ -37,22 +38,35 @@ static func encode(event: InputEvent) -> int:
 		return type_encoded | value_encoded
 
 	if event is InputEventJoypadMotion:
-		var type_encoded: int = (BITMASK_INDEX_JOY_AXIS & BITMASK_TYPE) << BITMASK_INDEX_TYPE
-		var value_encoded: int = (event.axis & BITMASK_JOY_AXIS) << BITMASK_INDEX_JOY_AXIS
+		var type_encoded: int = (
+			(BITMASK_INDEX_JOY_AXIS & BITMASK_TYPE) << BITMASK_INDEX_TYPE
+		)
+		var value_encoded: int = (
+			(event.axis & BITMASK_JOY_AXIS) << BITMASK_INDEX_JOY_AXIS
+		)
 		return type_encoded | value_encoded
-	
+
 	if event is InputEventJoypadButton:
-		var type_encoded: int = (BITMASK_INDEX_JOY_BUTTON & BITMASK_TYPE) << BITMASK_INDEX_TYPE
-		var value_encoded: int = (event.button_index & BITMASK_JOY_BUTTON) << BITMASK_INDEX_JOY_BUTTON
+		var type_encoded: int = (
+			(BITMASK_INDEX_JOY_BUTTON & BITMASK_TYPE) << BITMASK_INDEX_TYPE
+		)
+		var value_encoded: int = (
+			(event.button_index & BITMASK_JOY_BUTTON) << BITMASK_INDEX_JOY_BUTTON
+		)
 		return type_encoded | value_encoded
 
 	if event is InputEventMouseButton:
-		var type_encoded: int = (BITMASK_INDEX_MOUSE_BUTTON & BITMASK_TYPE) << BITMASK_INDEX_TYPE
-		var value_encoded: int = (event.button_index & BITMASK_MOUSE_BUTTON) << BITMASK_INDEX_MOUSE_BUTTON
+		var type_encoded: int = (
+			(BITMASK_INDEX_MOUSE_BUTTON & BITMASK_TYPE) << BITMASK_INDEX_TYPE
+		)
+		var value_encoded: int = (
+			(event.button_index & BITMASK_MOUSE_BUTTON) << BITMASK_INDEX_MOUSE_BUTTON
+		)
 		return type_encoded | value_encoded
 
 	assert(false, "invalid input; unsupported event type")
 	return -1
+
 
 ## decode parses the encoded origin integer and returns an 'InputEvent'.
 ##
@@ -60,27 +74,37 @@ static func encode(event: InputEvent) -> int:
 static func decode(value: int) -> InputEvent:
 	assert(value >= 0, "invalid input; value out of range")
 
-	var type_decoded: int = (value & (BITMASK_TYPE << BITMASK_INDEX_TYPE)) >> BITMASK_INDEX_TYPE
+	var type_decoded: int = (
+		(value & (BITMASK_TYPE << BITMASK_INDEX_TYPE)) >> BITMASK_INDEX_TYPE
+	)
 
 	match type_decoded:
 		BITMASK_INDEX_KEY:
-			var value_decoded: int = (value & (BITMASK_KEY << BITMASK_INDEX_KEY)) >> (BITMASK_INDEX_KEY)
+			var value_decoded: int = (
+				(value & (BITMASK_KEY << BITMASK_INDEX_KEY)) >> (BITMASK_INDEX_KEY)
+			)
 
 			var event := InputEventKey.new()
 			event.keycode = value_decoded as Key
-			
+
 			return event
 
 		BITMASK_INDEX_JOY_AXIS:
-			var value_decoded: int = (value & (BITMASK_JOY_AXIS << BITMASK_INDEX_JOY_AXIS)) >> (BITMASK_INDEX_JOY_AXIS)
+			var value_decoded: int = (
+				(value & (BITMASK_JOY_AXIS << BITMASK_INDEX_JOY_AXIS))
+				>> (BITMASK_INDEX_JOY_AXIS)
+			)
 
 			var event := InputEventJoypadMotion.new()
 			event.axis = value_decoded as JoyAxis
-			
+
 			return event
 
 		BITMASK_INDEX_JOY_BUTTON:
-			var value_decoded: int = (value & (BITMASK_JOY_BUTTON << BITMASK_INDEX_JOY_BUTTON)) >> (BITMASK_INDEX_JOY_BUTTON)
+			var value_decoded: int = (
+				(value & (BITMASK_JOY_BUTTON << BITMASK_INDEX_JOY_BUTTON))
+				>> (BITMASK_INDEX_JOY_BUTTON)
+			)
 
 			var event := InputEventJoypadButton.new()
 			event.button_index = value_decoded as JoyButton
@@ -88,13 +112,15 @@ static func decode(value: int) -> InputEvent:
 			return event
 
 		BITMASK_INDEX_MOUSE_BUTTON:
-			var value_decoded: int = (value & (BITMASK_MOUSE_BUTTON << BITMASK_INDEX_MOUSE_BUTTON)) >> (BITMASK_INDEX_MOUSE_BUTTON)
+			var value_decoded: int = (
+				(value & (BITMASK_MOUSE_BUTTON << BITMASK_INDEX_MOUSE_BUTTON))
+				>> (BITMASK_INDEX_MOUSE_BUTTON)
+			)
 
 			var event := InputEventMouseButton.new()
 			event.button_index = value_decoded as MouseButton
 
 			return event
-
 
 	assert(false, "invalid input; unrecognized event type")
 	return null
