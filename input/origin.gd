@@ -24,6 +24,18 @@ const BITMASK_JOY_AXIS := (1 << 4) - 1
 const BITMASK_JOY_BUTTON := (1 << 8) - 1
 const BITMASK_MOUSE_BUTTON := (1 << 4) - 1
 
+## bitmask_indices_joy defines the set of bitmask indices that match the joypad input
+## paradigm.
+static var bitmask_indices_joy := PackedInt64Array(
+	[BITMASK_INDEX_JOY_AXIS, BITMASK_INDEX_JOY_BUTTON]
+)
+
+## bitmask_indices_kbm defines the set of bitmask indices that match the keyboard+mouse
+## input paradigm.
+static var bitmask_indices_kbm := PackedInt64Array(
+	[BITMASK_INDEX_KEY, BITMASK_INDEX_MOUSE_BUTTON]
+)
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -124,6 +136,29 @@ static func decode(value: int) -> InputEvent:
 
 	assert(false, "invalid input; unrecognized event type")
 	return null
+
+
+## is_encoded_joy_value returns whether the provided `int` value is an encoded input
+## event for the joypad control paradigm.
+static func is_encoded_joy_value(value: int) -> bool:
+	return is_encoded_value_type(value, bitmask_indices_joy)
+
+
+## is_encoded_kbm_value returns whether the provided `int` value is an encoded input
+## event for the keyboard and mouse control paradigm.
+static func is_encoded_kbm_value(value: int) -> bool:
+	return is_encoded_value_type(value, bitmask_indices_kbm)
+
+
+## is_encoded_value_type returns whether the provided `int` value is an encoded input
+## event for the specified control input types. Note that `indices` is a list of bitmask
+## index values (e.g. [BITMASK_INDEX_KEY, BITMASK_MOUSE_BUTTON] for KB+M input).
+static func is_encoded_value_type(value: int, indices: PackedInt64Array) -> bool:
+	var type_decoded: int = (
+		(value & (BITMASK_TYPE << BITMASK_INDEX_TYPE)) >> BITMASK_INDEX_TYPE
+	)
+
+	return type_decoded in indices
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
