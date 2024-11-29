@@ -9,7 +9,6 @@ extends GutTest
 const Binding := preload("binding.gd")
 const Origin := preload("origin.gd")
 
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var test_action: StringName = &"test_action"
@@ -74,6 +73,7 @@ func test_get_unset_kbm_binding_reads_from_project_settings() -> void:
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_kbm])
 
+
 func test_get_set_joy_binding_reads_from_scope() -> void:
 	# Given: An input event for a joypad.
 	var event_joy := InputEventJoypadButton.new()
@@ -109,6 +109,7 @@ func test_get_set_joy_binding_reads_from_scope() -> void:
 
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_joy_override])
+
 
 func test_get_set_kbm_binding_reads_from_scope() -> void:
 	# Given: An input event for a joypad.
@@ -146,7 +147,9 @@ func test_get_set_kbm_binding_reads_from_scope() -> void:
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_kbm_override])
 
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
+
 
 func after_each() -> void:
 	ProjectSettings.set_setting(&"input/" + test_action, null)
@@ -156,10 +159,13 @@ func before_all() -> void:
 	# NOTE: Hide unactionable errors when using object doubles.
 	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
 
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
 
 func _set_events_as_default(action: StringName, events: Array[InputEvent]) -> void:
 	ProjectSettings.set_setting(&"input/" + action, {"deadzone": 0.5, "events": events})
+
 
 func _assert_events_equal(v1: Array[InputEvent], v2: Array[InputEvent]) -> void:
 	var events1 := PackedInt64Array()

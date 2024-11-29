@@ -75,6 +75,7 @@ static func set_joy(
 		events,
 	)
 
+
 ## set_kbm stores the provided input events as bindings for the specified action within
 ## the action set. Only keyboard and mouse-typed events will be stored. If `events` is
 ## null or empty, the bindings will be erased.
@@ -103,7 +104,9 @@ func _init() -> void:
 		"Invalid config; this 'Object' should not be instantiated!"
 	)
 
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
 
 static func _get_events(
 	scope: StdSettingsScope,
@@ -118,10 +121,14 @@ static func _get_events(
 
 	var events: Array[InputEvent] = []
 
-	var values := scope.config.get_int_list(
-		action_set.name,
-		action + action_property_suffix,
-		PackedInt64Array(),
+	var values := (
+		scope
+		. config
+		. get_int_list(
+			action_set.name,
+			action + action_property_suffix,
+			PackedInt64Array(),
+		)
 	)
 
 	if values:
@@ -148,9 +155,12 @@ static func _get_events(
 			for event in info["events"]:
 				# NOTE: This is a less efficient means of checking compatibility, but
 				# it maintains consistency with other input event stores.
-				if not Origin.is_encoded_value_type(
-					Origin.encode(event),
-					origin_bitmask_indices,
+				if not (
+					Origin
+					. is_encoded_value_type(
+						Origin.encode(event),
+						origin_bitmask_indices,
+					)
 				):
 					continue
 
@@ -158,6 +168,7 @@ static func _get_events(
 					events.append(event)
 
 	return events
+
 
 static func _set_events(
 	scope: StdSettingsScope,
@@ -183,17 +194,24 @@ static func _set_events(
 			if value_encoded in next:
 				continue
 
-			if not Origin.is_encoded_value_type(
-				value_encoded,
-				origin_bitmask_indices,
+			if not (
+				Origin
+				. is_encoded_value_type(
+					value_encoded,
+					origin_bitmask_indices,
+				)
 			):
 				assert(false, "invalid input; wrong event type")
 				continue
 
 			next.append(value_encoded)
 
-	return scope.config.set_int_list(
-		action_set.name,
-		action + action_property_suffix,
-		next,
+	return (
+		scope
+		. config
+		. set_int_list(
+			action_set.name,
+			action + action_property_suffix,
+			next,
+		)
 	)
