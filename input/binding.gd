@@ -1,5 +1,5 @@
 ##
-## Binding
+## std/input/binding.gd
 ##
 ## A shared library for reading and writing input bindings to a `StdSettingsScope`.
 ##
@@ -123,8 +123,8 @@ static func _get_events(
 
 	var values := (
 		scope
-		. config
-		. get_int_list(
+		.config
+		.get_int_list(
 			action_set.name,
 			action + action_property_suffix,
 			PackedInt64Array(),
@@ -157,7 +157,7 @@ static func _get_events(
 				# it maintains consistency with other input event stores.
 				if not (
 					Origin
-					. is_encoded_value_type(
+					.is_encoded_value_type(
 						Origin.encode(event),
 						origin_bitmask_indices,
 					)
@@ -196,7 +196,7 @@ static func _set_events(
 
 			if not (
 				Origin
-				. is_encoded_value_type(
+				.is_encoded_value_type(
 					value_encoded,
 					origin_bitmask_indices,
 				)
@@ -208,8 +208,8 @@ static func _set_events(
 
 	return (
 		scope
-		. config
-		. set_int_list(
+		.config
+		.set_int_list(
 			action_set.name,
 			action + action_property_suffix,
 			next,
