@@ -196,17 +196,17 @@ func get_action_glyph(
 	if not origins:
 		return null
 
-	return (
-		glyphs
-		. get_origin_glyph(
-			(
-				device_type_override
-				if device_type_override != DEVICE_TYPE_UNKNOWN
-				else device_type
-			),
-			origins[0],
-		)
-	)
+	var effective_device_type := device_type
+
+	if glyph_type_override_property:
+		var value := glyph_type_override_property.get_value() as InputDeviceType
+		if value != DEVICE_TYPE_UNKNOWN:
+			effective_device_type = value
+
+	if device_type_override != DEVICE_TYPE_UNKNOWN:
+		effective_device_type = device_type_override
+
+	return glyphs.get_origin_glyph(effective_device_type, origins[0])
 
 
 # Haptics
