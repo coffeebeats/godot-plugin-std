@@ -1,5 +1,5 @@
 ##
-## Binding
+## std/input/binding.gd
 ##
 ## A shared library for reading and writing input bindings to a `StdSettingsScope`.
 ##

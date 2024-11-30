@@ -1,5 +1,5 @@
 ##
-## Origin
+## std/input/origin.gd
 ##
 ## A shared library for encoding and decoding input events, suitable for action
 ## bindings, within a 64-bit integer.
