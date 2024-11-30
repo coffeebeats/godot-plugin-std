@@ -43,6 +43,7 @@ const DEVICE_TYPE_STEAM_DECK := InputDeviceType.STEAM_DECK
 ## DEVICE_TYPE_STEAM_CONTROLLER defines a Steam controller joypad.
 const DEVICE_TYPE_STEAM_CONTROLLER := InputDeviceType.STEAM_CONTROLLER
 
+
 ## Bindings is the interface for the input device bindings component. Set the input
 ## device's `bindings` property to an instance of `Bindings` to override.
 class Bindings:
@@ -73,6 +74,7 @@ class Bindings:
 	func get_action_origins(_action: StringName) -> PackedInt64Array:
 		return PackedInt64Array()
 
+
 ## Glyphs is the interface for the input device bindings component. Set the input
 ## device's `bindings` property to an instance of `Glyphs` to override.
 class Glyphs:
@@ -80,6 +82,7 @@ class Glyphs:
 
 	func get_origin_glyph(_device_type: InputDeviceType, _origin: int) -> Texture2D:
 		return null
+
 
 ## Haptics is the interface for the input device bindings component. Set the input
 ## device's `bindings` property to an instance of `Haptics` to override.
@@ -94,6 +97,7 @@ class Haptics:
 
 	func stop_vibrate(_device: int) -> void:
 		pass
+
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -114,7 +118,7 @@ class Haptics:
 
 ## glyph_type_override_property is a settings property which specifies an override for
 ## the device type when determining which glyph set to display for an origin. Note that
-## if set and its value is not 
+## if set and its value is not
 @export var glyph_type_override_property: StdSettingsPropertyInt = null
 
 @export_group("Components")
@@ -135,6 +139,7 @@ class Haptics:
 
 # Action sets
 
+
 ## load_action_set unbinds any actions currently bound (including activated layers) and
 ## then binds the actions defined within the action set. Does nothing if the action set
 ## is already activated.
@@ -145,7 +150,9 @@ func load_action_set(action_set: InputActionSet) -> bool:
 
 	return bindings.load_action_set(action_set)
 
+
 # Action set layers
+
 
 ## enable_action_set_layer binds all of the actions defined within the layer. All
 ## *conflicting* origins from either the base action set or prior layers will be
@@ -160,6 +167,7 @@ func enable_action_set_layer(layer: InputActionSetLayer) -> bool:
 
 	return bindings.enable_action_set_layer(layer)
 
+
 ## disable_action_set_layer unbinds all of the actions defined within the layer. Does
 ## nothing if not activated.
 ##
@@ -171,7 +179,9 @@ func disable_action_set_layer(layer: InputActionSetLayer) -> bool:
 
 	return bindings.disable_action_set_layer(layer)
 
+
 # Glyphs
+
 
 ## get_action_glyph returns a `Texture2D` containing the glyph of the primary (i.e.
 ## first) controller origin which will actuate the specified action.
@@ -186,16 +196,21 @@ func get_action_glyph(
 	if not origins:
 		return null
 
-	return glyphs.get_origin_glyph(
-		(
-			device_type_override if
-			device_type_override != DEVICE_TYPE_UNKNOWN else
-			device_type
-		),
-		origins[0],
+	return (
+		glyphs
+		. get_origin_glyph(
+			(
+				device_type_override
+				if device_type_override != DEVICE_TYPE_UNKNOWN
+				else device_type
+			),
+			origins[0],
+		)
 	)
 
+
 # Haptics
+
 
 ## start_vibrate_weak initiates an input device vibration for `duration` seconds using
 ## the device's weak vibration motor, if available.
@@ -204,12 +219,14 @@ func start_vibrate_weak(duration: float) -> bool:
 
 	return haptics.start_vibrate_weak(index, duration)
 
+
 ## start_vibrate_strong initiates an input device vibration for `duration` seconds using
 ## the device's strong vibration motor, if available.
 func start_vibrate_strong(duration: float) -> bool:
 	assert(haptics is Haptics, "invalid state; missing component")
 
 	return haptics.start_vibrate_strong(index, duration)
+
 
 ## stop_vibrate terminates all ongoing vibration for the input device.
 func stop_vibrate() -> void:
