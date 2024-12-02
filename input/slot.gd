@@ -263,7 +263,7 @@ func _exit_tree() -> void:
 		device_disconnected.emit(kbm)
 
 		remove_child(kbm)
-		kbm.queue_free()
+		kbm.free()
 
 	for joypad in _joypad_devices:
 		_disconnect_joy_device(joypad.index)
@@ -440,7 +440,7 @@ func _disconnect_joy_device(device: int) -> bool:
 		device_disconnected.emit(joypad)
 
 		remove_child(joypad)
-		joypad.queue_free()
+		joypad.free()
 
 		return true
 

@@ -25,7 +25,7 @@ func test_input_slot_activates_keyboard_on_ready() -> void:
 	watch_signals(slot)
 
 	# When: The input slot is added to the scene.
-	add_child_autoqfree(slot)
+	add_child_autofree(slot)
 
 	# Then: The active device is the keyboard.
 	var got := slot.get_active_device()
@@ -56,7 +56,7 @@ func test_input_slot_connects_and_disconnects_joypads() -> void:
 	watch_signals(slot)
 
 	# Given: The input slot is added to the scene.
-	add_child_autoqfree(slot)
+	add_child_autofree(slot)
 
 	# Given: There's no active or connected devices.
 	assert_null(slot.get_active_device())
@@ -83,6 +83,16 @@ func test_input_slot_connects_and_disconnects_joypads() -> void:
 	# Then: The joypad is in the list of connected devices.
 	assert_eq(len(slot.get_connected_devices()), 1)
 	assert_has(slot.get_connected_devices(), got)
+
+	# When: The connected joypad device is disconnected.
+	joypad_monitor.joy_disconnected.emit(0)
+
+	# Then: The disconnect signal was emitted.
+	assert_signal_emit_count(slot, "device_disconnected", 1)
+	assert_signal_emitted_with_parameters(slot, "device_disconnected", [got])
+
+	# Then: There are no connected devices.
+	assert_eq(len(slot.get_connected_devices()), 0)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
