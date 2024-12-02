@@ -7,13 +7,7 @@
 
 extends InputSlot.JoypadMonitor
 
-# -- CONFIGURATION ------------------------------------------------------------------- #
-
-## broadcast_connected_devices_on_ready controls whether already-connected devices will
-## be broadcasted upon this node's ready status.
-@export var broadcast_connected_devices_on_ready: bool = true
-
-# -- INITIALIZATION ------------------------------------------------------------------ #
+# -- DEFINITIONS --------------------------------------------------------------------- #
 
 # NOTE: Match the supported device types to regular expression patterns using the SDL
 # controller database [1].
@@ -26,6 +20,12 @@ static var _regex_steam_deck := RegEx.create_from_string(
 	"(Steam Deck|Steam Virtual Gamepad)"
 )
 static var _regex_xbox := RegEx.create_from_string("(Xbox|X-Box|XBOX)")
+
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+## broadcast_connected_devices_on_ready controls whether already-connected devices will
+## be broadcasted upon this node's ready status.
+@export var broadcast_connected_devices_on_ready: bool = true
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

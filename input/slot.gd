@@ -348,23 +348,17 @@ func _ready() -> void:
 
 
 func _activate_device(device: InputDevice) -> bool:
-	if not device is InputDevice:
-		assert(false, "missing argument: device")
+	assert(device is InputDevice, "missing argument: device")
 
 	if device and _active == device:
 		return false
 
 	if device.device_type == DEVICE_TYPE_KEYBOARD:
-		if not claim_kbm_input:
-			assert(false, "invalid config; keyboard not claimed")
-			return false
+		if not claim_kbm_input or not _kbm_device or _kbm_device != device:
+			assert(claim_kbm_input, "invalid config; keyboard not claimed")
+			assert(_kbm_device, "invalid state; device not connected")
+			assert(_kbm_device == device, "invalid argument; conflicting device")
 
-		if not _kbm_device:
-			assert(false, "invalid state; device not connected")
-			return false
-
-		if _kbm_device != device:
-			assert(false, "invalid argument; conflicting device")
 			return false
 
 		_active = _kbm_device
@@ -373,11 +367,8 @@ func _activate_device(device: InputDevice) -> bool:
 		return true
 
 	for joypad in _joypad_devices:
-		if not joypad:
-			assert(false, "invalid state; missing device")
-			continue
-
-		if joypad.index != device.index:
+		if not joypad or joypad.index != device.index:
+			assert(joypad, "invalid state; missing device")
 			continue
 
 		if joypad != device:
