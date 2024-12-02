@@ -25,7 +25,8 @@ signal device_activated(device: InputDevice)
 
 ## device_connected is emitted when a new `InputDevice` is connected.
 ##
-## NOTE: This won't be emitted for any devices already connected when the game starts.
+## NOTE: This might not be emitted for devices already connected when the game starts.
+## To change this behavior, alter the `JoypadMonitor` component's behavior.
 signal device_connected(device: InputDevice)
 
 ## device_disconnected is emitted when a previously connected `InputDevice` disconnects.
@@ -97,8 +98,8 @@ class Bindings:
 		return active.get_action_origins(device, action)
 
 
-## Glyphs is an implementation of `InputDevice.Glyphs` which delegates to all input
-## devices associated with this `InputSlot`.
+## Glyphs is an implementation of `InputDevice.Glyphs` which delegates to the active
+## input device associated with this `InputSlot`.
 class Glyphs:
 	extends InputDevice.Glyphs
 
@@ -123,8 +124,8 @@ class Glyphs:
 		return active.glyphs.get_origin_glyph(device, effective_device_type, origin)
 
 
-## Haptics is an implementation of `InputDevice.Haptics` which delegates to input
-## devices associated with this `InputSlot`.
+## Haptics is an implementation of `InputDevice.Haptics` which delegates to the active
+## input device associated with this `InputSlot`.
 ##
 ## NOTE: This is a naive implementation which doesn't track vibrations across device
 ## activations/deactivations. It's not a priority to fix as haptic feedback is short.
