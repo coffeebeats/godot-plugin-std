@@ -62,8 +62,8 @@ class Bindings:
 	func load_action_set(_device: int, action_set: InputActionSet) -> bool:
 		return (
 			devices
-			.map(func(d): return d.load_action_set(action_set))
-			.any(func(r): return r)
+			. map(func(d): return d.load_action_set(action_set))
+			. any(func(r): return r)
 		)
 
 	# Action set layers
@@ -74,8 +74,8 @@ class Bindings:
 	) -> bool:
 		return (
 			devices
-			.map(func(d): return d.enable_action_set_layer(action_set_layer))
-			.any(func(r): return r)
+			. map(func(d): return d.enable_action_set_layer(action_set_layer))
+			. any(func(r): return r)
 		)
 
 	func disable_action_set_layer(
@@ -84,8 +84,8 @@ class Bindings:
 	) -> bool:
 		return (
 			devices
-			.map(func(d): return d.disable_action_set_layer(action_set_layer))
-			.any(func(r): return r)
+			. map(func(d): return d.disable_action_set_layer(action_set_layer))
+			. any(func(r): return r)
 		)
 
 	# Action origins
@@ -389,7 +389,7 @@ func _activate_device(device: InputDevice) -> bool:
 	return false
 
 
-@warning_ignore("SHADOWED_VARIABLE") # NOTE: Shadowing here prevents using wrong type.
+@warning_ignore("SHADOWED_VARIABLE")  # NOTE: Shadowing here prevents using wrong type.
 
 
 func _connect_joy_device(
