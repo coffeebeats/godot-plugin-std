@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3 uid="uid://ddx5baao2c4i1"]
+
+[ext_resource type="Script" path="res://input/device.gd" id="1_k3efh"]
+[ext_resource type="Script" path="res://input/godot/device_bindings.gd" id="2_scxyt"]
+[ext_resource type="Script" path="res://input/godot/device_glyphs.gd" id="3_qewis"]
+[ext_resource type="Script" path="res://input/godot/device_haptics.gd" id="4_8x12g"]
+
+[node name="InputDeviceJoy" type="Node" node_paths=PackedStringArray("bindings", "glyphs", "haptics")]
+script = ExtResource("1_k3efh")
+device_type = 1
+bindings = NodePath("Bindings")
+glyphs = NodePath("Glyphs")
+haptics = NodePath("Haptics")
+
+[node name="Bindings" type="Node" parent="."]
+script = ExtResource("2_scxyt")
+
+[node name="Glyphs" type="Node" parent="."]
+script = ExtResource("3_qewis")
+
+[node name="Haptics" type="Node" parent="."]
+script = ExtResource("4_8x12g")
