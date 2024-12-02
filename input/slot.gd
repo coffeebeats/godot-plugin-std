@@ -239,19 +239,6 @@ func _enter_tree() -> void:
 	err = device_disconnected.connect(_on_Self_device_disconnected)
 	assert(err == OK, "failed to connect to signal")
 
-	if not bindings:
-		bindings = Bindings.new()
-		add_child(bindings, false, INTERNAL_MODE_BACK)
-
-	if not glyphs:
-		glyphs = Glyphs.new()
-		glyphs.glyph_type_override_property = glyph_type_override_property
-		add_child(glyphs, false, INTERNAL_MODE_BACK)
-
-	if not haptics:
-		haptics = Haptics.new()
-		add_child(haptics, false, INTERNAL_MODE_BACK)
-
 
 func _exit_tree() -> void:
 	if joypad_monitor.joy_connected.is_connected(_connect_joy_device):
@@ -317,6 +304,21 @@ func _input(event: InputEvent) -> void:
 
 
 func _ready() -> void:
+	if not bindings:
+		bindings = Bindings.new()
+		add_child(bindings, false, INTERNAL_MODE_BACK)
+
+	if not glyphs:
+		glyphs = Glyphs.new()
+		glyphs.glyph_type_override_property = glyph_type_override_property
+		add_child(glyphs, false, INTERNAL_MODE_BACK)
+
+	if not haptics:
+		haptics = Haptics.new()
+		add_child(haptics, false, INTERNAL_MODE_BACK)
+
+	# NOTE: This must be called after adding components, otherwise no-op components will
+	# be created by the super's implementation.
 	super._ready()
 
 	assert(joy_device_scene, "invalid config; missing joypad device scene")
