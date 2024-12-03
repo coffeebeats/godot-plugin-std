@@ -36,6 +36,9 @@ extends Resource
 @export_group("Cursor ")
 
 ## confine_cursor defines whether the cursor is confined to the game window.
+##
+## NOTE: This property must be set for each action set and action set layer, as only the
+## top action set or layer on the stack will be used.
 @export var confine_cursor: bool = false
 
 @export_subgroup("Visibility ")
@@ -43,17 +46,29 @@ extends Resource
 ## actions_hide_cursor is the list of actions which, when "just" triggered, will trigger
 ## the cursor to be hidden. Note that this doesn't guarantee that the cursor will be
 ## hidden, as the visibility is dependent on a number of factors.
+##
+## If `always_hide_cursor` or `always_show_cursor` are true, then this property will be
+## ignored.
+##
+## NOTE: Actions defined in layers will add to the total set of actions which will hide
+## layers. As such, there's no need to include actions from parent layers.
 @export var actions_hide_cursor: Array[StringName] = []
 
 ## always_hide_cursor defines whether to always hide the cursor when this action set is
 ## active. Only one of `always_hide_cursor` and `always_show_cursor` may be `true`.
+##
+## NOTE: This property does *not* override action sets and layers lower in the stack. If
+## any action set or layer sets this to `true`, then it will resolve to `true`.
 @export var always_hide_cursor: bool = false:
 	set(value):
 		always_hide_cursor = value
 		always_show_cursor = not value
 
 ## always_show_cursor defines whether to always show the cursor when this action set is
-## active. Only one of `always_hide_cursor` and `always_show_cursor` may be `true`.
+## active. Only one of `always_hide_cursor` and `always_show_cursor` may be `true`.\
+##
+## NOTE: This property does *not* override action sets and layers lower in the stack. If
+## any action set or layer sets this to `true`, then it will resolve to `true`.
 @export var always_show_cursor: bool = false:
 	set(value):
 		always_show_cursor = value
