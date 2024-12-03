@@ -32,7 +32,13 @@ signal device_connected(device: InputDevice)
 ## device_disconnected is emitted when a previously connected `InputDevice` disconnects.
 signal device_disconnected(device: InputDevice)
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Signals := preload("../event/signal.gd")
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
+
+# InputSlot components
 
 
 ## JoypadMonitor is an abstract inferface for a `Node` which tracks joypad activity
@@ -50,19 +56,26 @@ class JoypadMonitor:
 	signal joy_disconnected(index: int)
 
 
+# InputDevice components
+
+
 ## Bindings is an implementation of `InputDevice.Bindings` which delegates to all input
 ## devices associated with this `InputSlot`.
 class Bindings:
 	extends InputDevice.Bindings
 
-	@export var active: InputDevice = null
-	@export var devices: Array[InputDevice] = []
+	@export var slot: InputSlot = null
 
 	# Action sets
 
 	func load_action_set(_device: int, action_set: InputActionSet) -> bool:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return false
+
 		return (
-			devices
+			slot
+			. get_connected_devices()
 			. map(func(d): return d.load_action_set(action_set))
 			. any(func(r): return r)
 		)
@@ -73,8 +86,13 @@ class Bindings:
 		_device: int,
 		action_set_layer: InputActionSetLayer,
 	) -> bool:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return false
+
 		return (
-			devices
+			slot
+			. get_connected_devices()
 			. map(func(d): return d.enable_action_set_layer(action_set_layer))
 			. any(func(r): return r)
 		)
@@ -83,8 +101,13 @@ class Bindings:
 		_device: int,
 		action_set_layer: InputActionSetLayer,
 	) -> bool:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return false
+
 		return (
-			devices
+			slot
+			. get_connected_devices()
 			. map(func(d): return d.disable_action_set_layer(action_set_layer))
 			. any(func(r): return r)
 		)
@@ -92,6 +115,11 @@ class Bindings:
 	# Action origins
 
 	func get_action_origins(device: int, action: StringName) -> PackedInt64Array:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return PackedInt64Array()
+
+		var active := slot.get_active_device()
 		if not active:
 			return PackedInt64Array()
 
@@ -103,21 +131,25 @@ class Bindings:
 class Glyphs:
 	extends InputDevice.Glyphs
 
-	@export var active: InputDevice = null
-	@export var glyph_type_override_property: StdSettingsPropertyInt = null
+	@export var slot: InputSlot = null
 
 	func get_origin_glyph(
 		device: int,
 		device_type: InputDeviceType,
 		origin: int,
 	) -> Texture2D:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return null
+
+		var active := slot.get_active_device()
 		if not active:
 			return null
 
 		var effective_device_type := device_type
 
-		if glyph_type_override_property:
-			var value := glyph_type_override_property.get_value() as InputDeviceType
+		if slot.glyph_type_override_property:
+			var value: InputDeviceType = slot.glyph_type_override_property.get_value()
 			if value != DEVICE_TYPE_UNKNOWN:
 				effective_device_type = value
 
@@ -132,21 +164,36 @@ class Glyphs:
 class Haptics:
 	extends InputDevice.Haptics
 
-	@export var active: InputDevice = null
+	@export var slot: InputSlot = null
 
 	func start_vibrate_weak(device: int, duration: float) -> bool:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return false
+
+		var active := slot.get_active_device()
 		if not active:
 			return false
 
 		return active.haptics.start_vibrate_weak(device, duration)
 
 	func start_vibrate_strong(device: int, duration: float) -> bool:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return false
+
+		var active := slot.get_active_device()
 		if not active:
 			return false
 
 		return active.haptics.start_vibrate_strong(device, duration)
 
 	func stop_vibrate(device: int) -> void:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return
+
+		var active := slot.get_active_device()
 		if not active:
 			return
 
@@ -225,34 +272,15 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[InputDevice]:
 func _enter_tree() -> void:
 	assert(joypad_monitor is JoypadMonitor, "invalid config; missing component")
 
-	var err := joypad_monitor.joy_connected.connect(_connect_joy_device)
-	assert(err == OK, "failed to connect to signal")
-
-	err = joypad_monitor.joy_disconnected.connect(_disconnect_joy_device)
-	assert(err == OK, "failed to connect to signal")
-
-	err = device_activated.connect(_on_Self_device_activated)
-	assert(err == OK, "failed to connect to signal")
-
-	err = device_connected.connect(_on_Self_device_connected)
-	assert(err == OK, "failed to connect to signal")
-
-	err = device_disconnected.connect(_on_Self_device_disconnected)
-	assert(err == OK, "failed to connect to signal")
+	Signals.connect_safe(device_activated, _on_Self_device_activated)
+	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
+	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
 
 func _exit_tree() -> void:
-	if joypad_monitor.joy_connected.is_connected(_connect_joy_device):
-		joypad_monitor.joy_connected.disconnect(_connect_joy_device)
-	if joypad_monitor.joy_disconnected.is_connected(_disconnect_joy_device):
-		joypad_monitor.joy_disconnected.disconnect(_disconnect_joy_device)
-
-	if device_activated.is_connected(_on_Self_device_activated):
-		device_activated.disconnect(_on_Self_device_activated)
-	if device_connected.is_connected(_on_Self_device_connected):
-		device_connected.disconnect(_on_Self_device_connected)
-	if device_disconnected.is_connected(_on_Self_device_disconnected):
-		device_disconnected.disconnect(_on_Self_device_disconnected)
+	Signals.disconnect_safe(device_activated, _on_Self_device_activated)
+	Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
+	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
 	_active = null
 
@@ -292,7 +320,7 @@ func _input(event: InputEvent) -> void:
 				continue
 
 			_activate_device(joypad)
-			return
+			break
 
 	# Swap to keyboard + mouse
 	elif (
@@ -307,15 +335,18 @@ func _input(event: InputEvent) -> void:
 func _ready() -> void:
 	if not bindings:
 		bindings = Bindings.new()
+		bindings.slot = weakref(self)
 		add_child(bindings, false, INTERNAL_MODE_BACK)
 
 	if not glyphs:
 		glyphs = Glyphs.new()
+		glyphs.slot = weakref(self)
 		glyphs.glyph_type_override_property = glyph_type_override_property
 		add_child(glyphs, false, INTERNAL_MODE_BACK)
 
 	if not haptics:
 		haptics = Haptics.new()
+		haptics.slot = weakref(self)
 		add_child(haptics, false, INTERNAL_MODE_BACK)
 
 	# NOTE: This must be called after adding components, otherwise no-op components will
@@ -444,15 +475,3 @@ func _disconnect_joy_device(device: int) -> bool:
 func _on_Self_device_activated(device: InputDevice) -> void:
 	index = device.index
 	device_type = device.device_type
-
-	(bindings as Bindings).active = device
-	(glyphs as Glyphs).active = device
-	(haptics as Haptics).active = device
-
-
-func _on_Self_device_connected(_device: InputDevice) -> void:
-	(bindings as Bindings).devices = get_connected_devices()
-
-
-func _on_Self_device_disconnected(_device: InputDevice) -> void:
-	(bindings as Bindings).devices = get_connected_devices()
