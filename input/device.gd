@@ -54,25 +54,45 @@ class Bindings:
 
 	# Action sets
 
+	## get_action_set returns the currently active `InputActionSet`, if any.
+	func get_action_set(_device: int) -> InputActionSet:
+		return null
+
+	## load_action_set unloads the currently active `InputActionSet`, if any, and then
+	## activates the provided action set *for the specified device*. If the action set
+	## is already active for the device then no change occurs.
 	func load_action_set(_device: int, _action_set: InputActionSet) -> bool:
 		return true
 
 	# Action set layers
 
+	## enable_action_set_layer pushes the provided action set layer onto the stack of
+	## active layers *for the device*. If the action set layer is already active then no
+	## change occurs.
 	func enable_action_set_layer(
 		_device: int,
 		_action_set_layer: InputActionSetLayer,
 	) -> bool:
 		return true
 
+	## disable_action_set_layer removes the provided action set layer from the set of
+	## active layers *for the device*. If the action set layer is not active then no
+	## change occurs.
 	func disable_action_set_layer(
 		_device: int,
 		_action_set_layer: InputActionSetLayer,
 	) -> bool:
 		return true
 
+	## list_action_set_layers returns the stack of currently active action set layers
+	## *for the device*.
+	func list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
+		return []
+
 	# Action origins
 
+	## get_action_origins returns the set of input origins which are bound to the
+	## specified action *for the device*.
 	func get_action_origins(_device: int, _action: StringName) -> PackedInt64Array:
 		return PackedInt64Array()
 
@@ -82,6 +102,8 @@ class Bindings:
 class Glyphs:
 	extends Node
 
+	## get_origin_glyph returns a `Texture2D` containing an input origin glyph icon *for
+	## the specified device*.
 	func get_origin_glyph(
 		_device: int,
 		_device_type: InputDeviceType,
@@ -95,12 +117,17 @@ class Glyphs:
 class Haptics:
 	extends Node
 
+	## start_vibrate_weak executes a weak vibration effect for the provided duration
+	## and device.
 	func start_vibrate_weak(_device: int, _duration: float) -> bool:
 		return false
 
+	## start_vibrate_strong executes a strong vibration effect for the provided duration
+	## and device
 	func start_vibrate_strong(_device: int, _duration: float) -> bool:
 		return false
 
+	## stop_vibrate stops all ongoing vibration effects *for the device*.
 	func stop_vibrate(_device: int) -> void:
 		pass
 
