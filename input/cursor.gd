@@ -16,15 +16,24 @@ const GROUP_INPUT_CURSOR := "std/input:cursor"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-@export_group("Properties")
+## actions_hide_cursor is the list of actions which, when "just" triggered, will trigger
+## the cursor to be hidden. Note that this doesn't guarantee that the cursor will be
+## hidden, as the visibility is dependent on a number of factors.
+@export var actions_hide_cursor := PackedStringArray()
 
-## confined_property is a settings property which controls whether the cursor should be
-## confined to the application window.
-@export var confined_property: StdSettingsPropertyBool = null
+@export_group("Cursor state")
 
-## visible_property is a settings property which controls whether the cursor should be
-## visible.
-@export var visible_property: StdSettingsPropertyBool = null
+## confined controls whether the cursor is confined to the application window.
+@export var confined: bool = false:
+	set(value):
+		confined = (value as bool)
+		_on_properties_changed()
+
+## show_cursor controls whether the cursor is currently visible.
+@export var show_cursor: bool = true:
+	set(value):
+		show_cursor = (value as bool)
+		_on_properties_changed()
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -71,12 +80,8 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
+	assert(StdGroup.is_empty(GROUP_INPUT_CURSOR), "invalid state; duplicate node found")
 	StdGroup.with_id(GROUP_INPUT_CURSOR).add_member(self)
-
-	if not confined_property.changed.is_connected(_on_properties_changed):
-		confined_property.changed.connect(_on_properties_changed)
-	if not visible_property.changed.is_connected(_on_properties_changed):
-		visible_property.changed.connect(_on_properties_changed)
 
 	# Trigger the initial state.
 	_on_properties_changed()
@@ -86,11 +91,8 @@ func _ready() -> void:
 
 
 func _on_properties_changed() -> void:
-	var is_confined := get_confined()
-	var is_visible := get_visible()
-
-	if is_visible:
-		if not is_confined:
+	if show_cursor:
+		if not confined:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_VISIBLE)
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED)
@@ -98,33 +100,10 @@ func _on_properties_changed() -> void:
 		get_viewport().gui_release_focus()
 
 	else:
-		if not is_confined:
+		if not confined:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_HIDDEN)
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
 		_hovered.grab_focus()
 		unset_hovered(_hovered)
-
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
-
-
-## get_confined returns whether the cursor should (currently) be confined to the window.
-func get_confined() -> bool:
-	assert(
-		confined_property is StdSettingsPropertyBool,
-		"invalid config; missing settings property",
-	)
-
-	return confined_property.get_value()
-
-
-## get_visible returns whether the cursor should (currently) be visible.
-func get_visible() -> bool:
-	assert(
-		confined_property is StdSettingsPropertyBool,
-		"invalid config; missing settings property",
-	)
-
-	return confined_property.get_value()
