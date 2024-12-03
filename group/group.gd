@@ -52,6 +52,15 @@ static func get_sole_member(group_id: StringName) -> Variant:
 
 	return members[0]
 
+## is_empty returns whether the specified group is empty (i.e. has no members).
+static func is_empty(group_id: StringName) -> bool:
+	var group := with_id(group_id)
+	if not group:
+		return true
+
+	var members := group.list_members()
+	return members.is_empty()
+
 
 ## with_id access the group with the provided identifier, creating one if it does not
 ## exist. Groups should *always* be referenced using this method as it ensures duplicate
