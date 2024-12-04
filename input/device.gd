@@ -71,10 +71,20 @@ class Bindings:
 	## activates the provided action set *for the specified device*. If the action set
 	## is already active for the device then no change occurs.
 	func load_action_set(action_set: InputActionSet) -> bool:
+		assert(action_set is InputActionSet, "missing argument: action set")
+		assert(not action_set is InputActionSetLayer, "invalid argument: cannot use a layer")
+
 		if action_set == _action_set:
 			return false
 
 		_action_set = action_set
+
+		while true:
+			var action_set_layer: InputActionSetLayer = _action_set_layers.pop_back()
+			if not action_set_layer:
+				break
+
+			disable_action_set_layer(action_set_layer)
 
 		return true
 
@@ -84,6 +94,13 @@ class Bindings:
 	## active layers *for the device*. If the action set layer is already active then no
 	## change occurs.
 	func enable_action_set_layer(action_set_layer: InputActionSetLayer) -> bool:
+		assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
+		assert(_action_set is InputActionSet, "invalid state: missing action set")
+		assert(
+			action_set_layer.parent == _action_set,
+			"invalid argument: wrong parent action set",
+		)
+
 		if action_set_layer in _action_set_layers:
 			return false
 
@@ -95,6 +112,13 @@ class Bindings:
 	## active layers *for the device*. If the action set layer is not active then no
 	## change occurs.
 	func disable_action_set_layer(action_set_layer: InputActionSetLayer) -> bool:
+		assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
+		assert(_action_set is InputActionSet, "invalid state: missing action set")
+		assert(
+			action_set_layer.parent == _action_set,
+			"invalid argument: wrong parent action set",
+		)
+
 		if action_set_layer not in _action_set_layers:
 			return false
 
@@ -306,7 +330,7 @@ func _ready() -> void:
 		haptics = Haptics.new()
 		add_child(haptics, false, INTERNAL_MODE_BACK)
 
-	set_index(index)  # NOTE: Ensure device ID is set on these components.
+	set_index(index) # NOTE: Ensure device ID is set on these components.
 
 
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #
