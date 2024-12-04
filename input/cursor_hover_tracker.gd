@@ -16,9 +16,9 @@ extends Node
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-@onready var _control: Control = get_node(control)
-
 var _cursor: InputCursor = null
+
+@onready var _control: Control = get_node(control)
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
