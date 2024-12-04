@@ -77,8 +77,8 @@ class Bindings:
 
 		if not (
 			connected
-			.map(func(d): return d.load_action_set(action_set))
-			.any(func(r): return r)
+			. map(func(d): return d.load_action_set(action_set))
+			. any(func(r): return r)
 		):
 			return false
 
@@ -95,8 +95,8 @@ class Bindings:
 
 		if not (
 			connected
-			.map(func(d): return d.enable_action_set_layer(action_set_layer))
-			.any(func(r): return r)
+			. map(func(d): return d.enable_action_set_layer(action_set_layer))
+			. any(func(r): return r)
 		):
 			return false
 
@@ -111,8 +111,8 @@ class Bindings:
 
 		if not (
 			connected
-			.map(func(d): return d.disable_action_set_layer(action_set_layer))
-			.any(func(r): return r)
+			. map(func(d): return d.disable_action_set_layer(action_set_layer))
+			. any(func(r): return r)
 		):
 			return false
 
@@ -415,7 +415,7 @@ func _connect_joy_device(
 ) -> bool:
 	assert(device >= 0, "invalid argument; device must be >= 0")
 
-	@warning_ignore("SHADOWED_VARIABLE") # NOTE: Shadowing here prevents using wrong type.
+	@warning_ignore("SHADOWED_VARIABLE")  # NOTE: Shadowing here prevents using wrong type.
 	var device_type := joy_device_type
 
 	if device_type == DEVICE_TYPE_KEYBOARD:
@@ -497,6 +497,7 @@ func _on_Self_device_connected(device: InputDevice) -> void:
 
 	for layer in bindings.list_action_set_layers():
 		device.enable_action_set_layer(layer)
+
 
 func _on_Self_device_disconnected(_device: InputDevice) -> void:
 	assert(bindings is Bindings, "invalid state; missing component")

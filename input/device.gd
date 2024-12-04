@@ -72,7 +72,10 @@ class Bindings:
 	## is already active for the device then no change occurs.
 	func load_action_set(action_set: InputActionSet) -> bool:
 		assert(action_set is InputActionSet, "missing argument: action set")
-		assert(not action_set is InputActionSetLayer, "invalid argument: cannot use a layer")
+		assert(
+			not action_set is InputActionSetLayer,
+			"invalid argument: cannot use a layer"
+		)
 
 		if action_set == _action_set:
 			return false
@@ -330,7 +333,7 @@ func _ready() -> void:
 		haptics = Haptics.new()
 		add_child(haptics, false, INTERNAL_MODE_BACK)
 
-	set_index(index) # NOTE: Ensure device ID is set on these components.
+	set_index(index)  # NOTE: Ensure device ID is set on these components.
 
 
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #
