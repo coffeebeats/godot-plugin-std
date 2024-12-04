@@ -72,11 +72,79 @@ func unset_hovered(control: Control) -> bool:
 	return true
 
 
+## update_configuration changes the cursor state and triggering actions based on the
+## provided action set and action set layers.
+func update_configuration(
+	action_set: InputActionSet = null, layers: Array[InputActionSetLayer] = []
+) -> void:
+	if not action_set:
+		return
+
+	confined = (layers[-1].confine_cursor if layers else action_set.confine_cursor)
+
+	var always_hide_cursor := (
+		action_set.always_hide_cursor
+		or layers.any(func(s): return s.always_hide_cursor)
+	)
+	var always_show_cursor := (
+		action_set.always_show_cursor
+		or layers.any(func(s): return s.always_show_cursor)
+	)
+
+	assert(
+		(
+			not (always_hide_cursor or always_show_cursor)
+			or (always_hide_cursor != always_show_cursor)
+		),
+		"invalid state; conflicting cursor states"
+	)
+
+	actions_hide_cursor = PackedStringArray()
+
+	if always_hide_cursor:
+		show_cursor = false
+		return
+
+	if always_show_cursor:
+		show_cursor = true
+		return
+
+	for action in action_set.actions_hide_cursor:
+		# NOTE: This operation makes this O(n^2), but arrays should be small.
+		if action not in actions_hide_cursor:
+			actions_hide_cursor.append(action)
+
+	for layer in layers:
+		for action in layer.actions_hide_cursor:
+			# NOTE: This operation makes this O(n^2), but arrays should be small.
+			if action not in actions_hide_cursor:
+				actions_hide_cursor.append(action)
+
+	# NOTE: Don't change the visibility of the cursor.
+	actions_hide_cursor = actions_hide_cursor
+
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_INPUT_CURSOR).remove_member(self)
+
+
+func _input(event: InputEvent) -> void:
+	if not show_cursor:
+		if event is InputEventMouseMotion:
+			show_cursor = true
+
+		return
+
+	if not actions_hide_cursor:
+		return
+
+	for action in actions_hide_cursor:
+		if Input.is_action_just_pressed(action):
+			show_cursor = false
+			break
 
 
 func _ready() -> void:
