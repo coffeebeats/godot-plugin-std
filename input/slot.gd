@@ -482,11 +482,24 @@ func _on_Self_device_activated(device: InputDevice) -> void:
 	haptics.active = device
 
 
-func _on_Self_device_connected(_device: InputDevice) -> void:
+func _on_Self_device_connected(device: InputDevice) -> void:
 	assert(bindings is Bindings, "invalid state; missing component")
 	bindings.connected = get_connected_devices()
 
+	var action_set := bindings.get_action_set()
+	if not action_set:
+		assert(
+			bindings.list_action_set_layers().is_empty(),
+			"invalid state; found dangling layers",
+		)
+
+	device.load_action_set(action_set)
+
+	for layer in bindings.list_action_set_layers():
+		device.enable_action_set_layer(layer)
 
 func _on_Self_device_disconnected(_device: InputDevice) -> void:
 	assert(bindings is Bindings, "invalid state; missing component")
 	bindings.connected = get_connected_devices()
+
+	# No need to disable action sets/layers here - the device may reconnect.
