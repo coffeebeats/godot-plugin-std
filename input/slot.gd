@@ -64,66 +64,71 @@ class JoypadMonitor:
 class Bindings:
 	extends InputDevice.Bindings
 
-	@export var slot: InputSlot = null
+	@export var active: InputDevice = null
+	@export var connected: Array[InputDevice] = []
+
+	@export var cursor: InputCursor = null
 
 	# Action sets
 
-	func load_action_set(_device: int, action_set: InputActionSet) -> bool:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
+	func load_action_set(action_set: InputActionSet) -> bool:
+		# NOTE: Ignore the result; this just caches the action set.
+		super.load_action_set(action_set)
+
+		if not (
+			connected
+			.map(func(d): return d.load_action_set(action_set))
+			.any(func(r): return r)
+		):
 			return false
 
-		return (
-			slot
-			. get_connected_devices()
-			. map(func(d): return d.load_action_set(action_set))
-			. any(func(r): return r)
-		)
+		if cursor:
+			cursor.update_configuration(_action_set, _action_set_layers)
+
+		return true
 
 	# Action set layers
 
-	func enable_action_set_layer(
-		_device: int,
-		action_set_layer: InputActionSetLayer,
-	) -> bool:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
+	func enable_action_set_layer(action_set_layer: InputActionSetLayer) -> bool:
+		# NOTE: Ignore the result; this just caches the layer.
+		super.enable_action_set_layer(action_set_layer)
+
+		if not (
+			connected
+			.map(func(d): return d.enable_action_set_layer(action_set_layer))
+			.any(func(r): return r)
+		):
 			return false
 
-		return (
-			slot
-			. get_connected_devices()
-			. map(func(d): return d.enable_action_set_layer(action_set_layer))
-			. any(func(r): return r)
-		)
+		if cursor:
+			cursor.update_configuration(_action_set, _action_set_layers)
 
-	func disable_action_set_layer(
-		_device: int,
-		action_set_layer: InputActionSetLayer,
-	) -> bool:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
+		return true
+
+	func disable_action_set_layer(action_set_layer: InputActionSetLayer) -> bool:
+		# NOTE: Ignore the result; this just caches the layer.
+		super.disable_action_set_layer(action_set_layer)
+
+		if not (
+			connected
+			.map(func(d): return d.disable_action_set_layer(action_set_layer))
+			.any(func(r): return r)
+		):
 			return false
 
-		return (
-			slot
-			. get_connected_devices()
-			. map(func(d): return d.disable_action_set_layer(action_set_layer))
-			. any(func(r): return r)
-		)
+		if cursor:
+			cursor.update_configuration(_action_set, _action_set_layers)
+
+		return true
 
 	# Action origins
 
-	func get_action_origins(device: int, action: StringName) -> PackedInt64Array:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return PackedInt64Array()
-
-		var active := slot.get_active_device()
+	func get_action_origins(action: StringName) -> PackedInt64Array:
 		if not active:
 			return PackedInt64Array()
 
-		return active.get_action_origins(device, action)
+		assert(device == active.index, "invalid argument; wrong device index")
+		return active.get_action_origins(action)
 
 
 ## Glyphs is an implementation of `InputDevice.Glyphs` which delegates to the active
@@ -131,29 +136,22 @@ class Bindings:
 class Glyphs:
 	extends InputDevice.Glyphs
 
-	@export var slot: InputSlot = null
+	@export var active: InputDevice = null
+	@export var glyph_type_override_property: StdSettingsPropertyInt = null
 
-	func get_origin_glyph(
-		device: int,
-		device_type: InputDeviceType,
-		origin: int,
-	) -> Texture2D:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return null
-
-		var active := slot.get_active_device()
+	func get_origin_glyph(device_type: InputDeviceType, origin: int) -> Texture2D:
 		if not active:
 			return null
 
 		var effective_device_type := device_type
 
-		if slot.glyph_type_override_property:
-			var value: InputDeviceType = slot.glyph_type_override_property.get_value()
+		if glyph_type_override_property:
+			var value: InputDeviceType = glyph_type_override_property.get_value()
 			if value != DEVICE_TYPE_UNKNOWN:
 				effective_device_type = value
 
-		return active.glyphs.get_origin_glyph(device, effective_device_type, origin)
+		assert(device == active.index, "invalid argument; wrong device index")
+		return active.glyphs.get_origin_glyph(effective_device_type, origin)
 
 
 ## Haptics is an implementation of `InputDevice.Haptics` which delegates to the active
@@ -164,40 +162,28 @@ class Glyphs:
 class Haptics:
 	extends InputDevice.Haptics
 
-	@export var slot: InputSlot = null
+	@export var active: InputDevice = null
 
-	func start_vibrate_weak(device: int, duration: float) -> bool:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return false
-
-		var active := slot.get_active_device()
+	func start_vibrate_weak(duration: float) -> bool:
 		if not active:
 			return false
 
-		return active.haptics.start_vibrate_weak(device, duration)
+		assert(device == active.index, "invalid argument; wrong device index")
+		return active.haptics.start_vibrate_weak(duration)
 
-	func start_vibrate_strong(device: int, duration: float) -> bool:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return false
-
-		var active := slot.get_active_device()
+	func start_vibrate_strong(duration: float) -> bool:
 		if not active:
 			return false
 
-		return active.haptics.start_vibrate_strong(device, duration)
+		assert(device == active.index, "invalid argument; wrong device index")
+		return active.haptics.start_vibrate_strong(duration)
 
-	func stop_vibrate(device: int) -> void:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return
-
-		var active := slot.get_active_device()
+	func stop_vibrate() -> void:
 		if not active:
 			return
 
-		return active.haptics.stop_vibrate(device)
+		assert(device == active.index, "invalid argument; wrong device index")
+		return active.haptics.stop_vibrate()
 
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -228,6 +214,10 @@ class Haptics:
 @export var joy_device_scene: PackedScene = null
 
 @export_group("Components")
+
+## cursor is a node which manages the visibility state of the game's cursor. This is an
+## optional component, but only one `InputSlot` at most may have one.
+@export var cursor: InputCursor = null
 
 ## joypad_monitor is a node which monitors joypad activity. This `InputSlot` node will
 ## manage active input devices based on the monitor's signals.
@@ -273,12 +263,16 @@ func _enter_tree() -> void:
 	assert(joypad_monitor is JoypadMonitor, "invalid config; missing component")
 
 	Signals.connect_safe(device_activated, _on_Self_device_activated)
+	Signals.connect_safe(device_connected, _on_Self_device_connected)
+	Signals.connect_safe(device_disconnected, _on_Self_device_disconnected)
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
 
 func _exit_tree() -> void:
 	Signals.disconnect_safe(device_activated, _on_Self_device_activated)
+	Signals.disconnect_safe(device_connected, _on_Self_device_connected)
+	Signals.disconnect_safe(device_disconnected, _on_Self_device_disconnected)
 	Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
@@ -335,18 +329,20 @@ func _input(event: InputEvent) -> void:
 func _ready() -> void:
 	if not bindings:
 		bindings = Bindings.new()
-		bindings.slot = weakref(self)
+		bindings.active = get_active_device()
+		bindings.connected = get_connected_devices()
+		bindings.cursor = cursor
 		add_child(bindings, false, INTERNAL_MODE_BACK)
 
 	if not glyphs:
 		glyphs = Glyphs.new()
-		glyphs.slot = weakref(self)
+		glyphs.active = get_active_device()
 		glyphs.glyph_type_override_property = glyph_type_override_property
 		add_child(glyphs, false, INTERNAL_MODE_BACK)
 
 	if not haptics:
 		haptics = Haptics.new()
-		haptics.slot = weakref(self)
+		haptics.active = get_active_device()
 		add_child(haptics, false, INTERNAL_MODE_BACK)
 
 	# NOTE: This must be called after adding components, otherwise no-op components will
@@ -414,13 +410,13 @@ func _activate_device(device: InputDevice) -> bool:
 	return false
 
 
-@warning_ignore("SHADOWED_VARIABLE")  # NOTE: Shadowing here prevents using wrong type.
-
-
 func _connect_joy_device(
-	device: int, device_type: InputDeviceType = DEVICE_TYPE_UNKNOWN
+	device: int, joy_device_type: InputDeviceType = DEVICE_TYPE_UNKNOWN
 ) -> bool:
 	assert(device >= 0, "invalid argument; device must be >= 0")
+
+	@warning_ignore("SHADOWED_VARIABLE") # NOTE: Shadowing here prevents using wrong type.
+	var device_type := joy_device_type
 
 	if device_type == DEVICE_TYPE_KEYBOARD:
 		assert(false, "invalid argument: cannot use keyboard")
@@ -475,3 +471,22 @@ func _disconnect_joy_device(device: int) -> bool:
 func _on_Self_device_activated(device: InputDevice) -> void:
 	index = device.index
 	device_type = device.device_type
+
+	assert(bindings is Bindings, "invalid state; missing component")
+	bindings.active = device
+
+	assert(glyphs is Glyphs, "invalid state; missing component")
+	glyphs.active = device
+
+	assert(haptics is Haptics, "invalid state; missing component")
+	haptics.active = device
+
+
+func _on_Self_device_connected(_device: InputDevice) -> void:
+	assert(bindings is Bindings, "invalid state; missing component")
+	bindings.connected = get_connected_devices()
+
+
+func _on_Self_device_disconnected(_device: InputDevice) -> void:
+	assert(bindings is Bindings, "invalid state; missing component")
+	bindings.connected = get_connected_devices()
