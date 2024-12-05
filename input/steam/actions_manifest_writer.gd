@@ -8,13 +8,9 @@
 
 extends RefCounted
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const FilePath := preload("../../file/path.gd")
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -172,17 +168,6 @@ func write_actions_manifest() -> Error:
 
 	return OK
 
-
-# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
-
-#func _init() -> void:
-#	pass
-
-#func _notification(what: int) -> void:
-#	pass
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
@@ -280,7 +265,3 @@ func _write_actions_in_action_set(action_set: InputActionSet) -> void:
 					_write_string("#Action_%s" % action, false)
 
 		_write_close_bracket()
-
-# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
