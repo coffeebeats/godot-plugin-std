@@ -10,14 +10,10 @@
 
 extends InputDevice.Bindings
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Origin := preload("../origin.gd")
 const Binding := preload("../binding.gd")
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -27,13 +23,13 @@ const Binding := preload("../binding.gd")
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: InputActionSet = null
+static var _action_set: InputActionSet = null  # gdlint: ignore=class-definitions-order
 
 ## _action_set_layers is the stack of currently active action set layers.
-static var _action_set_layers: Array[InputActionSetLayer] = []
+static var _action_set_layers: Array[InputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _bindings maps origins (integers) to the actions they are bound to.
-static var _bindings: Dictionary = {}
+static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -162,8 +158,6 @@ func _ready() -> void:
 	assert(scope is StdSettingsScope, "invalid config; missing bindings scope")
 
 
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
@@ -205,7 +199,3 @@ func _bind_action_to_origin(
 
 	InputMap.action_add_event(action, event)
 	_bindings[origin] = action
-
-# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
