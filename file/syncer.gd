@@ -25,6 +25,7 @@ signal write_flushed
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Debounce := preload("../timer/debounce.gd")
+const FilePath := preload("path.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -75,10 +76,7 @@ func open(path: String) -> Error:
 	assert(is_inside_tree(), "invalid state: expected node to be in tree")
 	assert(not _file, "invalid state: a file is already open")
 
-	assert(path != "", "missing argument: path")
-	assert(path.begins_with("res://") or path.begins_with("user://"), "invalid path")
-
-	var path_absolute: String = ProjectSettings.globalize_path(path)
+	var path_absolute := FilePath.make_project_path_absolute(path)
 
 	print(
 		"std/file/syncer.gd[",
