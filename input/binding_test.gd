@@ -31,15 +31,8 @@ func test_get_unset_joy_binding_reads_from_project_settings() -> void:
 	# Given: A new, empty scope.
 	var scope := StdSettingsScope.new()
 
-	# Given: A new action set.
-	var action_set := InputActionSet.new()
-	action_set.name = "test-action-set"
-
-	# Given: The action is added to the action set.
-	action_set.actions_digital.append(test_action)
-
 	# When: The action is read from the empty scope.
-	var got := Binding.get_joy(scope, action_set, test_action)
+	var got := Binding.get_joy(scope, test_action)
 
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_joy])
@@ -60,15 +53,8 @@ func test_get_unset_kbm_binding_reads_from_project_settings() -> void:
 	# Given: A new, empty scope.
 	var scope := StdSettingsScope.new()
 
-	# Given: A new action set.
-	var action_set := InputActionSet.new()
-	action_set.name = "test-action-set"
-
-	# Given: The action is added to the action set.
-	action_set.actions_digital.append(test_action)
-
 	# When: The action is read from the empty scope.
-	var got := Binding.get_kbm(scope, action_set, test_action)
+	var got := Binding.get_kbm(scope, test_action)
 
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_kbm])
@@ -93,19 +79,12 @@ func test_get_set_joy_binding_reads_from_scope() -> void:
 	# Given: A new, empty scope.
 	var scope := StdSettingsScope.new()
 
-	# Given: A new action set.
-	var action_set := InputActionSet.new()
-	action_set.name = "test-action-set"
-
-	# Given: The action is added to the action set.
-	action_set.actions_digital.append(test_action)
-
 	# Given: The override input event is stored in the scope.
-	var updated := Binding.set_joy(scope, action_set, test_action, [event_joy_override])
+	var updated := Binding.set_joy(scope, test_action, [event_joy_override])
 	assert_true(updated)
 
 	# When: The action is read from the scope.
-	var got := Binding.get_joy(scope, action_set, test_action)
+	var got := Binding.get_joy(scope, test_action)
 
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_joy_override])
@@ -130,19 +109,12 @@ func test_get_set_kbm_binding_reads_from_scope() -> void:
 	# Given: A new, empty scope.
 	var scope := StdSettingsScope.new()
 
-	# Given: A new action set.
-	var action_set := InputActionSet.new()
-	action_set.name = "test-action-set"
-
-	# Given: The action is added to the action set.
-	action_set.actions_digital.append(test_action)
-
 	# Given: The override input event is stored in the scope.
-	var updated := Binding.set_kbm(scope, action_set, test_action, [event_kbm_override])
+	var updated := Binding.set_kbm(scope, test_action, [event_kbm_override])
 	assert_true(updated)
 
 	# When: The action is read from the scope.
-	var got := Binding.get_kbm(scope, action_set, test_action)
+	var got := Binding.get_kbm(scope, test_action)
 
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_kbm_override])
@@ -167,23 +139,16 @@ func test_set_empty_joy_binding_resets_value() -> void:
 	# Given: A new, empty scope.
 	var scope := StdSettingsScope.new()
 
-	# Given: A new action set.
-	var action_set := InputActionSet.new()
-	action_set.name = "test-action-set"
-
-	# Given: The action is added to the action set.
-	action_set.actions_digital.append(test_action)
-
 	# Given: The override input event is stored in the scope.
-	var updated := Binding.set_joy(scope, action_set, test_action, [event_joy_override])
+	var updated := Binding.set_joy(scope, test_action, [event_joy_override])
 	assert_true(updated)
 
 	# Given: The scope is cleared for the action.
-	updated = Binding.set_joy(scope, action_set, test_action, [])
+	updated = Binding.set_joy(scope, test_action, [])
 	assert_true(updated)
 
 	# When: The action is read from the scope.
-	var got := Binding.get_joy(scope, action_set, test_action)
+	var got := Binding.get_joy(scope, test_action)
 
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_joy])
@@ -208,23 +173,16 @@ func test_set_empty_kbm_binding_resets_value() -> void:
 	# Given: A new, empty scope.
 	var scope := StdSettingsScope.new()
 
-	# Given: A new action set.
-	var action_set := InputActionSet.new()
-	action_set.name = "test-action-set"
-
-	# Given: The action is added to the action set.
-	action_set.actions_digital.append(test_action)
-
 	# Given: The override input event is stored in the scope.
-	var updated := Binding.set_kbm(scope, action_set, test_action, [event_kbm_override])
+	var updated := Binding.set_kbm(scope, test_action, [event_kbm_override])
 	assert_true(updated)
 
 	# Given: The scope is cleared for the action.
-	updated = Binding.set_kbm(scope, action_set, test_action, [])
+	updated = Binding.set_kbm(scope, test_action, [])
 	assert_true(updated)
 
 	# When: The action is read from the scope.
-	var got := Binding.get_kbm(scope, action_set, test_action)
+	var got := Binding.get_kbm(scope, test_action)
 
 	# Then: The returned events match.
 	_assert_events_equal(got, [event_kbm])
