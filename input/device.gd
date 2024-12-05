@@ -52,94 +52,55 @@ const DEVICE_TYPE_XBOX := InputDeviceType.XBOX
 class Bindings:
 	extends Node
 
-	## device is the device ID to which these methods apply.
-	var device: int = 0
-
-	## _action_set is the currently active action set.
-	var _action_set: InputActionSet = null
-
-	## _action_set_layers is the stack of currently active action set layers.
-	var _action_set_layers: Array[InputActionSetLayer] = []
-
 	# Action sets
 
-	## get_action_set returns the currently active `InputActionSet`, if any.
-	func get_action_set() -> InputActionSet:
-		return _action_set
+	## get_action_set returns the currently active `InputActionSet` *for the specified
+	## device*, if.
+	func get_action_set(_device: int) -> InputActionSet:
+		return null
 
 	## load_action_set unloads the currently active `InputActionSet`, if any, and then
 	## activates the provided action set *for the specified device*. If the action set
 	## is already active for the device then no change occurs.
-	func load_action_set(action_set: InputActionSet) -> bool:
-		assert(action_set is InputActionSet, "missing argument: action set")
-		assert(
-			not action_set is InputActionSetLayer,
-			"invalid argument: cannot use a layer"
-		)
-
-		if action_set == _action_set:
-			return false
-
-		_action_set = action_set
-
-		while true:
-			var action_set_layer: InputActionSetLayer = _action_set_layers.pop_back()
-			if not action_set_layer:
-				break
-
-			disable_action_set_layer(action_set_layer)
-
+	func load_action_set(
+		_device: int, _device_type: InputDeviceType, _action_set: InputActionSet
+	) -> bool:
 		return true
 
 	# Action set layers
 
 	## enable_action_set_layer pushes the provided action set layer onto the stack of
-	## active layers *for the device*. If the action set layer is already active then no
-	## change occurs.
-	func enable_action_set_layer(action_set_layer: InputActionSetLayer) -> bool:
-		assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
-		assert(_action_set is InputActionSet, "invalid state: missing action set")
-		assert(
-			action_set_layer.parent == _action_set,
-			"invalid argument: wrong parent action set",
-		)
-
-		if action_set_layer in _action_set_layers:
-			return false
-
-		_action_set_layers.append(action_set_layer)
-
+	## active layers *for the specified device*. If the action set layer is already
+	## active then no change occurs.
+	func enable_action_set_layer(
+		_device: int,
+		_device_type: InputDeviceType,
+		_action_set_layer: InputActionSetLayer
+	) -> bool:
 		return true
 
 	## disable_action_set_layer removes the provided action set layer from the set of
-	## active layers *for the device*. If the action set layer is not active then no
-	## change occurs.
-	func disable_action_set_layer(action_set_layer: InputActionSetLayer) -> bool:
-		assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
-		assert(_action_set is InputActionSet, "invalid state: missing action set")
-		assert(
-			action_set_layer.parent == _action_set,
-			"invalid argument: wrong parent action set",
-		)
-
-		if action_set_layer not in _action_set_layers:
-			return false
-
-		_action_set_layers.erase(action_set_layer)
-		assert(action_set_layer not in _action_set_layers, "found duplicate layer")
-
+	## active layers *for the specified device*. If the action set layer is not active
+	## then no change occurs.
+	func disable_action_set_layer(
+		_device: int,
+		_device_type: InputDeviceType,
+		_action_set_layer: InputActionSetLayer
+	) -> bool:
 		return true
 
 	## list_action_set_layers returns the stack of currently active action set layers
-	## *for the device*.
-	func list_action_set_layers() -> Array[InputActionSetLayer]:
-		return _action_set_layers
+	## *for the specified device*.
+	func list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
+		return []
 
 	# Action origins
 
 	## get_action_origins returns the set of input origins which are bound to the
-	## specified action *for the device*.
-	func get_action_origins(_action: StringName) -> PackedInt64Array:
+	## specified action *for the specified device*.
+	func get_action_origins(
+		_device: int, _device_type: InputDeviceType, _action: StringName
+	) -> PackedInt64Array:
 		return PackedInt64Array()
 
 
@@ -148,12 +109,11 @@ class Bindings:
 class Glyphs:
 	extends Node
 
-	## device is the device ID to which these methods apply.
-	var device: int = 0
-
 	## get_origin_glyph returns a `Texture2D` containing an input origin glyph icon *for
 	## the specified device*.
-	func get_origin_glyph(_device_type: InputDeviceType, _origin: int) -> Texture2D:
+	func get_origin_glyph(
+		_device: int, _device_type: InputDeviceType, _origin: int
+	) -> Texture2D:
 		return null
 
 
@@ -162,21 +122,18 @@ class Glyphs:
 class Haptics:
 	extends Node
 
-	## device is the device ID to which these methods apply.
-	var device: int = 0
-
 	## start_vibrate_weak executes a weak vibration effect for the provided duration
 	## and device.
-	func start_vibrate_weak(_duration: float) -> bool:
+	func start_vibrate_weak(_device: int, _duration: float) -> bool:
 		return false
 
 	## start_vibrate_strong executes a strong vibration effect for the provided duration
 	## and device
-	func start_vibrate_strong(_duration: float) -> bool:
+	func start_vibrate_strong(_device: int, _duration: float) -> bool:
 		return false
 
 	## stop_vibrate stops all ongoing vibration effects *for the device*.
-	func stop_vibrate() -> void:
+	func stop_vibrate(_device: int) -> void:
 		pass
 
 
@@ -193,8 +150,7 @@ class Haptics:
 ## under the keyboard+mouse paradigm. The `index` would refer to the keyboard's index in
 ## that case (which is expected to be `0` in all cases because Godot/Windows does not
 ## seem to distinguish between different keyboards).
-@export var index: int = 0:
-	set = set_index
+@export var index: int = 0
 
 @export_group("Configuration ")
 
@@ -230,7 +186,7 @@ func load_action_set(action_set: InputActionSet) -> bool:
 	assert(not action_set is InputActionSetLayer, "invalid argument: cannot be a layer")
 	assert(bindings is Bindings, "invalid state; missing component")
 
-	return bindings.load_action_set(action_set)
+	return bindings.load_action_set(index, device_type, action_set)
 
 
 # Action set layers
@@ -247,7 +203,7 @@ func enable_action_set_layer(layer: InputActionSetLayer) -> bool:
 	assert(layer is InputActionSetLayer, "invalid argument: layer")
 	assert(bindings is Bindings, "invalid state; missing component")
 
-	return bindings.enable_action_set_layer(layer)
+	return bindings.enable_action_set_layer(index, device_type, layer)
 
 
 ## disable_action_set_layer unbinds all of the actions defined within the layer. Does
@@ -259,7 +215,7 @@ func disable_action_set_layer(layer: InputActionSetLayer) -> bool:
 	assert(layer is InputActionSetLayer, "invalid argument: layer")
 	assert(bindings is Bindings, "invalid state; missing component")
 
-	return bindings.disable_action_set_layer(layer)
+	return bindings.disable_action_set_layer(index, device_type, layer)
 
 
 # Glyphs
@@ -274,7 +230,7 @@ func get_action_glyph(
 	assert(bindings is Bindings, "invalid state; missing component")
 	assert(glyphs is Glyphs, "invalid state; missing component")
 
-	var origins := bindings.get_action_origins(action)
+	var origins := bindings.get_action_origins(index, device_type, action)
 	if not origins:
 		return null
 
@@ -288,7 +244,7 @@ func get_action_glyph(
 	if device_type_override != DEVICE_TYPE_UNKNOWN:
 		effective_device_type = device_type_override
 
-	return glyphs.get_origin_glyph(effective_device_type, origins[0])
+	return glyphs.get_origin_glyph(index, effective_device_type, origins[0])
 
 
 # Haptics
@@ -299,7 +255,7 @@ func get_action_glyph(
 func start_vibrate_weak(duration: float) -> bool:
 	assert(haptics is Haptics, "invalid state; missing component")
 
-	return haptics.start_vibrate_weak(duration)
+	return haptics.start_vibrate_weak(index, duration)
 
 
 ## start_vibrate_strong initiates an input device vibration for `duration` seconds using
@@ -307,14 +263,14 @@ func start_vibrate_weak(duration: float) -> bool:
 func start_vibrate_strong(duration: float) -> bool:
 	assert(haptics is Haptics, "invalid state; missing component")
 
-	return haptics.start_vibrate_strong(duration)
+	return haptics.start_vibrate_strong(index, duration)
 
 
 ## stop_vibrate terminates all ongoing vibration for the input device.
 func stop_vibrate() -> void:
 	assert(haptics is Haptics, "invalid state; missing component")
 
-	return haptics.stop_vibrate()
+	return haptics.stop_vibrate(index)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -332,21 +288,3 @@ func _ready() -> void:
 	if not haptics:
 		haptics = Haptics.new()
 		add_child(haptics, false, INTERNAL_MODE_BACK)
-
-	set_index(index)  # NOTE: Ensure device ID is set on these components.
-
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
-
-
-## set_index updates the `InputDevice`'s device ID. This value is also set on the input
-## device's components, if they exist.
-func set_index(value: int) -> void:
-	index = value
-
-	if bindings:
-		bindings.device = value
-	if glyphs:
-		glyphs.device = value
-	if haptics:
-		haptics.device = value
