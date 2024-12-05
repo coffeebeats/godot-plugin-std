@@ -49,14 +49,17 @@ var _indent: int = 0
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 ## get_filename returns the basename of the actions manifest file.
 func get_filename() -> String:
 	return "res://game_actions_%d.vdf" % app_id
+
 
 ## get_filepath returns the absolute filepath to the directory in which the actions
 ## manifest will be written.
 func get_filepath() -> String:
 	return dir.path_join(get_filename())
+
 
 ## write_actions_manifest outputs a Steam actions manifest to the configured filepath
 ## using the configured action sets and action set layers.
@@ -108,7 +111,7 @@ func write_actions_manifest() -> Error:
 		_write_string(action_set_layer.parent.name, false)
 
 		_write_actions_in_action_set(action_set_layer)
-		
+
 		_write_close_bracket()
 
 	_write_close_bracket()
@@ -123,7 +126,7 @@ func write_actions_manifest() -> Error:
 
 		_write_string(locale_steam)
 		write_open_bracket()
-		
+
 		for action_set in action_sets:
 			_write_string("set_" + action_set.name, true, false)
 			write_space()
@@ -169,6 +172,7 @@ func write_actions_manifest() -> Error:
 
 	return OK
 
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 #func _init() -> void:
@@ -186,20 +190,24 @@ func _write_indent() -> void:
 	for _i in range(_indent):
 		_contents += "\t"
 
+
 func _write_string(value: String, indent: bool = true, newline: bool = true) -> void:
 	if indent:
 		_write_indent()
 
-	_contents += "\"%s\"" % value
+	_contents += '"%s"' % value
 	if newline:
 		_write_newline()
+
 
 func _write_newline() -> void:
 	_contents += "\n"
 
+
 func write_space() -> void:
 	for _i in range(8 - _indent):
 		_contents += "\t"
+
 
 func write_open_bracket(newline: bool = true) -> void:
 	_write_indent()
@@ -210,16 +218,18 @@ func write_open_bracket(newline: bool = true) -> void:
 		_write_newline()
 		_indent += 1
 
+
 func _write_close_bracket(newline: bool = true) -> void:
 	_indent -= 1
 	assert(_indent >= 0, "invalid indent; outdented too far")
 
 	_write_indent()
-	
+
 	_contents += "}"
 
 	if newline:
 		_write_newline()
+
 
 func _write_actions_in_action_set(action_set: InputActionSet) -> void:
 	for section in ["StickPadGyro", "AnalogTrigger", "Button"]:
@@ -248,7 +258,9 @@ func _write_actions_in_action_set(action_set: InputActionSet) -> void:
 
 					_write_string("title", true, false)
 					write_space()
-					_write_string("#Action_%s" % action_set.action_absolute_mouse, false, true)
+					_write_string(
+						"#Action_%s" % action_set.action_absolute_mouse, false, true
+					)
 
 					_write_string("input_mode", true, false)
 					write_space()
