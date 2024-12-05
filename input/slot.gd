@@ -60,7 +60,7 @@ class JoypadMonitor:
 
 
 ## Bindings is an implementation of `InputDevice.Bindings` which delegates to all input
-## devices associated with this `InputSlot`. Note that
+## devices associated with this `InputSlot`.
 class Bindings:
 	extends InputDevice.Bindings
 
