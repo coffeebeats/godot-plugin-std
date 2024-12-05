@@ -154,6 +154,9 @@ static func is_encoded_kbm_value(value: int) -> bool:
 ## event for the specified control input types. Note that `indices` is a list of bitmask
 ## index values (e.g. [BITMASK_INDEX_KEY, BITMASK_MOUSE_BUTTON] for KB+M input).
 static func is_encoded_value_type(value: int, indices: PackedInt64Array) -> bool:
+	if value < 0:
+		return false
+
 	var type_decoded: int = (
 		(value & (BITMASK_TYPE << BITMASK_INDEX_TYPE)) >> BITMASK_INDEX_TYPE
 	)

@@ -69,66 +69,95 @@ class Bindings:
 
 	@export var cursor: InputCursor = null
 
+	## _action_set is the currently active action set.
+	var _action_set: InputActionSet = null
+
+	## _action_set_layers is the stack of currently active action set layers.
+	var _action_set_layers: Array[InputActionSetLayer] = []
+
 	# Action sets
 
-	func load_action_set(action_set: InputActionSet) -> bool:
-		# NOTE: Ignore the result; this just caches the action set.
-		super.load_action_set(action_set)
+	func get_action_set(_device: int) -> InputActionSet:
+		return _action_set
 
+	func load_action_set(
+		device: int, device_type: InputDeviceType, action_set: InputActionSet
+	) -> bool:
 		if not (
 			connected
-			. map(func(d): return d.load_action_set(action_set))
+			. map(func(d): return d.load_action_set(device, device_type, action_set))
 			. any(func(r): return r)
 		):
 			return false
 
+		if _action_set != action_set:
+			_action_set = action_set
+			_action_set_layers = []
+
 		if cursor:
-			cursor.update_configuration(_action_set, _action_set_layers)
+			cursor.update_configuration(action_set)
 
 		return true
 
 	# Action set layers
 
-	func enable_action_set_layer(action_set_layer: InputActionSetLayer) -> bool:
-		# NOTE: Ignore the result; this just caches the layer.
-		super.enable_action_set_layer(action_set_layer)
-
+	func enable_action_set_layer(
+		device: int, device_type: InputDeviceType, layer: InputActionSetLayer
+	) -> bool:
 		if not (
 			connected
-			. map(func(d): return d.enable_action_set_layer(action_set_layer))
+			. map(func(d): return d.enable_action_set_layer(device, device_type, layer))
 			. any(func(r): return r)
 		):
 			return false
+
+		if not layer in _action_set_layers:
+			_action_set_layers.append(layer)
 
 		if cursor:
 			cursor.update_configuration(_action_set, _action_set_layers)
 
 		return true
 
-	func disable_action_set_layer(action_set_layer: InputActionSetLayer) -> bool:
-		# NOTE: Ignore the result; this just caches the layer.
-		super.disable_action_set_layer(action_set_layer)
-
+	## disable_action_set_layer removes the provided action set layer from the set of
+	## active layers *for the specified device*. If the action set layer is not active
+	## then no change occurs.
+	func disable_action_set_layer(
+		device: int, device_type: InputDeviceType, layer: InputActionSetLayer
+	) -> bool:
 		if not (
 			connected
-			. map(func(d): return d.disable_action_set_layer(action_set_layer))
+			. map(
+				func(d): return d.disable_action_set_layer(device, device_type, layer)
+			)
 			. any(func(r): return r)
 		):
 			return false
+
+		_action_set_layers.erase(layer)
 
 		if cursor:
 			cursor.update_configuration(_action_set, _action_set_layers)
 
 		return true
+
+	## list_action_set_layers returns the stack of currently active action set layers
+	## *for the specified device*.
+	func list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
+		return _action_set_layers.duplicate()
 
 	# Action origins
 
-	func get_action_origins(action: StringName) -> PackedInt64Array:
+	## get_action_origins returns the set of input origins which are bound to the
+	## specified action *for the specified device*.
+	func get_action_origins(
+		device: int, device_type: InputDeviceType, action: StringName
+	) -> PackedInt64Array:
 		if not active:
 			return PackedInt64Array()
 
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.get_action_origins(action)
+		return active.get_action_origins(device, device_type, action)
 
 
 ## Glyphs is an implementation of `InputDevice.Glyphs` which delegates to the active
@@ -139,7 +168,9 @@ class Glyphs:
 	@export var active: InputDevice = null
 	@export var glyph_type_override_property: StdSettingsPropertyInt = null
 
-	func get_origin_glyph(device_type: InputDeviceType, origin: int) -> Texture2D:
+	func get_origin_glyph(
+		device: int, device_type: InputDeviceType, origin: int
+	) -> Texture2D:
 		if not active:
 			return null
 
@@ -151,7 +182,7 @@ class Glyphs:
 				effective_device_type = value
 
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.glyphs.get_origin_glyph(effective_device_type, origin)
+		return active.glyphs.get_origin_glyph(device, effective_device_type, origin)
 
 
 ## Haptics is an implementation of `InputDevice.Haptics` which delegates to the active
@@ -164,26 +195,26 @@ class Haptics:
 
 	@export var active: InputDevice = null
 
-	func start_vibrate_weak(duration: float) -> bool:
+	func start_vibrate_weak(device: int, duration: float) -> bool:
 		if not active:
 			return false
 
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.haptics.start_vibrate_weak(duration)
+		return active.haptics.start_vibrate_weak(device, duration)
 
-	func start_vibrate_strong(duration: float) -> bool:
+	func start_vibrate_strong(device: int, duration: float) -> bool:
 		if not active:
 			return false
 
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.haptics.start_vibrate_strong(duration)
+		return active.haptics.start_vibrate_strong(device, duration)
 
-	func stop_vibrate() -> void:
+	func stop_vibrate(device: int) -> void:
 		if not active:
 			return
 
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.haptics.stop_vibrate()
+		return active.haptics.stop_vibrate(device)
 
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -486,16 +517,18 @@ func _on_Self_device_connected(device: InputDevice) -> void:
 	assert(bindings is Bindings, "invalid state; missing component")
 	bindings.connected = get_connected_devices()
 
-	var action_set := bindings.get_action_set()
+	var action_set := bindings.get_action_set(index)
 	if not action_set:
 		assert(
-			bindings.list_action_set_layers().is_empty(),
+			bindings.list_action_set_layers(index).is_empty(),
 			"invalid state; found dangling layers",
 		)
 
+		return
+
 	device.load_action_set(action_set)
 
-	for layer in bindings.list_action_set_layers():
+	for layer in bindings.list_action_set_layers(index):
 		device.enable_action_set_layer(layer)
 
 

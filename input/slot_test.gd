@@ -104,9 +104,33 @@ func before_all() -> void:
 
 
 func before_each() -> void:
+	var scope := StdSettingsScope.new()
+
+	# Create Joypad input device scene.
+
+	var joy := InputDeviceJoy.instantiate()
+	joy.bindings.scope = scope
+
+	var scene_joy := PackedScene.new()
+	scene_joy.pack(joy)
+
+	joy.free()
+
+	# Create Keyboard+mouse input device scene.
+
+	var kbm := InputDeviceKBM.instantiate()
+	kbm.bindings.scope = scope
+
+	var scene_kbm := PackedScene.new()
+	scene_kbm.pack(kbm)
+
+	kbm.free()
+
+	# Construct input slot scene.
+
 	slot = InputSlot.new()
-	slot.joy_device_scene = InputDeviceJoy
-	slot.kbm_device_scene = InputDeviceKBM
+	slot.joy_device_scene = scene_joy
+	slot.kbm_device_scene = scene_kbm
 
 	joypad_monitor = InputSlot.JoypadMonitor.new()
 	slot.joypad_monitor = joypad_monitor
