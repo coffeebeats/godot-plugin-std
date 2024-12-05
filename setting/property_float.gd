@@ -13,7 +13,7 @@ extends StdSettingsProperty
 
 ## default is the value that will be returned from `Config` reads if the property
 ## doesn't have a value defined.
-@export var default: float
+@export var default: float = 0.0
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

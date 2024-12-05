@@ -131,6 +131,9 @@ func before_each() -> void:
 	slot = InputSlot.new()
 	slot.joy_device_scene = scene_joy
 	slot.kbm_device_scene = scene_kbm
+	slot.glyph_type_override_property = StdSettingsPropertyInt.new()
+	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
+	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
 
 	joypad_monitor = InputSlot.JoypadMonitor.new()
 	slot.joypad_monitor = joypad_monitor
