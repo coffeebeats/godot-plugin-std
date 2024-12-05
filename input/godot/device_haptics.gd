@@ -3,53 +3,28 @@
 ##
 ## An implemention of `InputDevice.Haptics` which uses Godot's built-in haptics API.
 ##
-## TODO: Implement this class.
-##
 
 extends InputDevice.Haptics
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
-# -- CONFIGURATION ------------------------------------------------------------------- #
-
-# -- INITIALIZATION ------------------------------------------------------------------ #
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
-# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
-#func _draw() -> void:
-#	pass
+## start_vibrate_strong executes a strong vibration effect for the provided duration
+## and device
+func start_vibrate_strong(device: int, duration: float, strength: float = 1.0) -> bool:
+	Input.start_joy_vibration(device, 0, strength, duration)
 
-#func _enter_tree() -> void:
-#	pass
+	return false
 
-#func _exit_tree() -> void:
-#	pass
 
-#func _notification(what) -> void:
-#	pass
+## start_vibrate_weak executes a weak vibration effect for the provided duration
+## and device.
+func start_vibrate_weak(device: int, duration: float, strength: float = 1.0) -> bool:
+	Input.start_joy_vibration(device, strength, 0, duration)
 
-#func _physics_process(delta: float) -> void:
-#	pass
+	return true
 
-#func _process(delta: float) -> void:
-#	pass
 
-#func _ready() -> void:
-#	pass
-
-#func _unhandled_input(event: InputEvent) -> void:
-#	pass
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
+## stop_vibrate stops all ongoing vibration effects *for the device*.
+func stop_vibrate(device: int) -> void:
+	Input.stop_joy_vibration(device)
