@@ -13,7 +13,7 @@ extends StdSettingsProperty
 
 ## default is the value that will be returned from `Config` reads if the property
 ## doesn't have a value defined.
-@export var default: PackedInt64Array
+@export var default: PackedInt64Array = PackedInt64Array()
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

@@ -12,11 +12,11 @@ extends StdSettingsPropertyFloat
 
 ## minimum is the smallest value allowed in the range. Values lower than this will be
 ## raised to this value when reading and writing.
-@export var minimum: float
+@export var minimum: float = 0.0
 
 ## maximum is the largest value allowed in the range. Values higher than this will be
 ## lowered to this value when reading and writing.
-@export var maximum: float
+@export var maximum: float = 1.0
 
 ## step is a step size within the range to which values will be rounded. This value will
 ## be ignored if less than or equal to `0`.
