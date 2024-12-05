@@ -156,21 +156,6 @@ class Haptics:
 ## seem to distinguish between different keyboards).
 @export var index: int = 0
 
-@export_group("Configuration ")
-
-## glyph_type_override_property is a settings property which specifies an override for
-## the device type when determining which glyph set to display for an origin. Note that
-## if set and its value is not
-@export var glyph_type_override_property: StdSettingsPropertyInt = null
-
-## haptics_disabled_property is a settings property which controls whether haptics are
-## completely disabled.
-@export var haptics_disabled_property: StdSettingsPropertyBool = null
-
-## haptics_strength_property is a settings property which controls the strength of
-## triggered haptic effects.
-@export var haptics_strength_property: StdSettingsPropertyFloatRange = null
-
 @export_group("Components")
 
 ## bindings is the `InputDevice`'s bindings component which will be delegated to for
@@ -246,17 +231,10 @@ func get_action_glyph(
 	if not origins:
 		return null
 
-	var effective_device_type := device_type
+	if device_type_override == DEVICE_TYPE_UNKNOWN:
+		device_type_override = device_type
 
-	if glyph_type_override_property:
-		var value := glyph_type_override_property.get_value() as InputDeviceType
-		if value != DEVICE_TYPE_UNKNOWN:
-			effective_device_type = value
-
-	if device_type_override != DEVICE_TYPE_UNKNOWN:
-		effective_device_type = device_type_override
-
-	return glyphs.get_origin_glyph(index, effective_device_type, origins[0])
+	return glyphs.get_origin_glyph(index, device_type_override, origins[0])
 
 
 # Haptics
@@ -264,32 +242,18 @@ func get_action_glyph(
 
 ## start_vibrate_strong initiates an input device vibration for `duration` seconds using
 ## the device's strong vibration motor, if available.
-func start_vibrate_strong(duration: float) -> bool:
+func start_vibrate_strong(duration: float, strength: float = 1.0) -> bool:
 	assert(haptics is Haptics, "invalid state; missing component")
 
-	if haptics_disabled_property and haptics_disabled_property.get_value():
-		return false
-
-	var strength: float = 1.0
-	if haptics_strength_property:
-		strength = haptics_strength_property.get_normalized_value()
-
-	return haptics.start_vibrate_strong(index, duration, strength)
+	return haptics.start_vibrate_strong(index, duration, clampf(strength, 0.0, 1.0))
 
 
 ## start_vibrate_weak initiates an input device vibration for `duration` seconds using
 ## the device's weak vibration motor, if available.
-func start_vibrate_weak(duration: float) -> bool:
+func start_vibrate_weak(duration: float, strength: float = 1.0) -> bool:
 	assert(haptics is Haptics, "invalid state; missing component")
 
-	if haptics_disabled_property and haptics_disabled_property.get_value():
-		return false
-
-	var strength: float = 1.0
-	if haptics_strength_property:
-		strength = haptics_strength_property.get_normalized_value()
-
-	return haptics.start_vibrate_weak(index, duration, strength)
+	return haptics.start_vibrate_weak(index, duration, clampf(strength, 0.0, 1.0))
 
 
 ## stop_vibrate terminates all ongoing vibration for the input device.

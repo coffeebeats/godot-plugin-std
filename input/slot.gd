@@ -64,10 +64,10 @@ class JoypadMonitor:
 class Bindings:
 	extends InputDevice.Bindings
 
-	@export var active: InputDevice = null
-	@export var connected: Array[InputDevice] = []
+	var active: InputDevice = null
+	var connected: Array[InputDevice] = []
 
-	@export var cursor: InputCursor = null
+	var cursor: InputCursor = null
 
 	## _action_set is the currently active action set.
 	var _action_set: InputActionSet = null
@@ -165,8 +165,8 @@ class Bindings:
 class Glyphs:
 	extends InputDevice.Glyphs
 
-	@export var active: InputDevice = null
-	@export var glyph_type_override_property: StdSettingsPropertyInt = null
+	var active: InputDevice = null
+	var glyph_type_override_property: StdSettingsPropertyInt = null
 
 	func get_origin_glyph(
 		device: int, device_type: InputDeviceType, origin: int
@@ -174,15 +174,13 @@ class Glyphs:
 		if not active:
 			return null
 
-		var effective_device_type := device_type
-
 		if glyph_type_override_property:
 			var value: InputDeviceType = glyph_type_override_property.get_value()
 			if value != DEVICE_TYPE_UNKNOWN:
-				effective_device_type = value
+				device_type = value
 
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.glyphs.get_origin_glyph(device, effective_device_type, origin)
+		return active.glyphs.get_origin_glyph(device, device_type, origin)
 
 
 ## Haptics is an implementation of `InputDevice.Haptics` which delegates to the active
@@ -193,28 +191,27 @@ class Glyphs:
 class Haptics:
 	extends InputDevice.Haptics
 
-	@export var active: InputDevice = null
-	@export var haptics_disabled_property: StdSettingsPropertyBool = null
-	@export var haptics_strength_property: StdSettingsPropertyFloatRange = null
+	var active: InputDevice = null
+	var haptics_disabled_property: StdSettingsPropertyBool = null
+	var haptics_strength_property: StdSettingsPropertyFloatRange = null
 
 	func start_vibrate_strong(
-		device: int, duration: float, _strength: float = 1.0
+		device: int, duration: float, strength: float = 1.0
 	) -> bool:
 		if not active:
 			return false
 
-		if haptics_disabled_property and haptics_disabled_property.get_value():
+		if haptics_disabled_property.get_value():
 			return false
 
-		var strength: float = 1.0
 		if haptics_strength_property:
-			strength = haptics_strength_property.get_normalized_value()
+			strength *= haptics_strength_property.get_normalized_value()
 
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.haptics.start_vibrate_strong(device, duration, strength)
+		return active.start_vibrate_strong(duration, strength)
 
 	func start_vibrate_weak(
-		device: int, duration: float, _strength: float = 1.0
+		device: int, duration: float, strength: float = 1.0
 	) -> bool:
 		if not active:
 			return false
@@ -222,12 +219,11 @@ class Haptics:
 		if haptics_disabled_property and haptics_disabled_property.get_value():
 			return false
 
-		var strength: float = 1.0
 		if haptics_strength_property:
-			strength = haptics_strength_property.get_normalized_value()
+			strength *= haptics_strength_property.get_normalized_value()
 
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.haptics.start_vibrate_weak(device, duration, strength)
+		return active.start_vibrate_weak(duration, strength)
 
 	func stop_vibrate(device: int) -> void:
 		if not active:
@@ -263,6 +259,21 @@ class Haptics:
 ## joy_device_scene is a `PackedScene` which will be used as the `InputDevice`
 ## implementation for joypad input.
 @export var joy_device_scene: PackedScene = null
+
+@export_group("Properties")
+
+## glyph_type_override_property is a settings property which specifies an override for
+## the device type when determining which glyph set to display for an origin. Note that
+## if set and its value is not
+@export var glyph_type_override_property: StdSettingsPropertyInt = null
+
+## haptics_disabled_property is a settings property which controls whether haptics are
+## completely disabled.
+@export var haptics_disabled_property: StdSettingsPropertyBool = null
+
+## haptics_strength_property is a settings property which controls the strength of
+## triggered haptic effects.
+@export var haptics_strength_property: StdSettingsPropertyFloatRange = null
 
 @export_group("Components")
 
@@ -378,6 +389,19 @@ func _input(event: InputEvent) -> void:
 
 
 func _ready() -> void:
+	assert(
+		glyph_type_override_property is StdSettingsPropertyInt,
+		"invalid config; missing property",
+	)
+	assert(
+		haptics_disabled_property is StdSettingsPropertyBool,
+		"invalid config; missing property",
+	)
+	assert(
+		haptics_strength_property is StdSettingsPropertyFloatRange,
+		"invalid config; missing property",
+	)
+
 	if not bindings:
 		bindings = Bindings.new()
 		bindings.active = get_active_device()
