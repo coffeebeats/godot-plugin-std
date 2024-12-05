@@ -22,6 +22,14 @@ extends StdSettingsPropertyFloat
 ## be ignored if less than or equal to `0`.
 @export var step: float = -1
 
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## get_normalized_value returns the value normalized into the [0,1] interval.
+func get_normalized_value() -> float:
+	return (get_value() - minimum) / (maximum - minimum)
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
