@@ -558,6 +558,11 @@ func _on_Self_device_activated(device: InputDevice) -> void:
 	assert(haptics is Haptics, "invalid state; missing component")
 	haptics.active = device
 
+	# Stop haptic effects upon deactivation.
+	for joypad in _joypad_devices:
+		if joypad != device:
+			joypad.stop_vibrate()
+
 
 func _on_Self_device_connected(device: InputDevice) -> void:
 	assert(bindings is Bindings, "invalid state; missing component")
