@@ -194,20 +194,40 @@ class Haptics:
 	extends InputDevice.Haptics
 
 	@export var active: InputDevice = null
+	@export var haptics_disabled_property: StdSettingsPropertyBool = null
+	@export var haptics_strength_property: StdSettingsPropertyFloatRange = null
 
-	func start_vibrate_weak(device: int, duration: float) -> bool:
+	func start_vibrate_strong(
+		device: int, duration: float, _strength: float = 1.0
+	) -> bool:
 		if not active:
 			return false
 
-		assert(device == active.index, "invalid argument; wrong device index")
-		return active.haptics.start_vibrate_weak(device, duration)
+		if haptics_disabled_property and haptics_disabled_property.get_value():
+			return false
 
-	func start_vibrate_strong(device: int, duration: float) -> bool:
+		var strength: float = 1.0
+		if haptics_strength_property:
+			strength = haptics_strength_property.get_normalized_value()
+
+		assert(device == active.index, "invalid argument; wrong device index")
+		return active.haptics.start_vibrate_strong(device, duration, strength)
+
+	func start_vibrate_weak(
+		device: int, duration: float, _strength: float = 1.0
+	) -> bool:
 		if not active:
 			return false
 
+		if haptics_disabled_property and haptics_disabled_property.get_value():
+			return false
+
+		var strength: float = 1.0
+		if haptics_strength_property:
+			strength = haptics_strength_property.get_normalized_value()
+
 		assert(device == active.index, "invalid argument; wrong device index")
-		return active.haptics.start_vibrate_strong(device, duration)
+		return active.haptics.start_vibrate_weak(device, duration, strength)
 
 	func stop_vibrate(device: int) -> void:
 		if not active:
@@ -374,6 +394,8 @@ func _ready() -> void:
 	if not haptics:
 		haptics = Haptics.new()
 		haptics.active = get_active_device()
+		haptics.haptics_disabled_property = haptics_disabled_property
+		haptics.haptics_strength_property = haptics_strength_property
 		add_child(haptics, false, INTERNAL_MODE_BACK)
 
 	# NOTE: This must be called after adding components, otherwise no-op components will
