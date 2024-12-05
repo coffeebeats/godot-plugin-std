@@ -37,6 +37,32 @@ var _members: Dictionary = {}
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## get_sole_member returns the sole member of a group. If `0` or more than `1` member
+## exists, `null` will be returned and an error pushed.
+static func get_sole_member(group_id: StringName) -> Variant:
+	var group := with_id(group_id)
+	if not group:
+		assert(false, "invalid argument; missing group")
+		return null
+
+	var members := group.list_members()
+	if len(members) != 1:
+		assert(false, "invalid state; incorrect number of members")
+		return null
+
+	return members[0]
+
+
+## is_empty returns whether the specified group is empty (i.e. has no members).
+static func is_empty(group_id: StringName) -> bool:
+	var group := with_id(group_id)
+	if not group:
+		return true
+
+	var members := group.list_members()
+	return members.is_empty()
+
+
 ## with_id access the group with the provided identifier, creating one if it does not
 ## exist. Groups should *always* be referenced using this method as it ensures duplicate
 ## groups (which wouldn't be connected) aren't created.
