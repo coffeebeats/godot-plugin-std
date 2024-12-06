@@ -8,6 +8,17 @@
 class_name InputDevice
 extends Node
 
+# -- SIGNALS ------------------------------------------------------------------------- #
+
+# action_set_loaded is emitted any time an action set is loaded (i.e. activated).
+signal action_set_loaded(action_set: InputActionSet)
+
+## action_set_layer_enabled is emitted when an action set layer is enabled.
+signal action_set_layer_enabled(action_set_layer: InputActionSetLayer)
+
+## action_set_layer_disabled is emitted when an action set layer is disabled.
+signal action_set_layer_disabled(action_set_layer: InputActionSetLayer)
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## InputDeviceType is an enumeration of the categories of player input devices.
@@ -183,7 +194,18 @@ func load_action_set(action_set: InputActionSet) -> bool:
 	assert(not action_set is InputActionSetLayer, "invalid argument: cannot be a layer")
 	assert(bindings is Bindings, "invalid state; missing component")
 
-	return bindings.load_action_set(index, device_type, action_set)
+	var layers := bindings.list_action_set_layers(index)
+
+	if not bindings.load_action_set(index, device_type, action_set):
+		return false
+
+	layers.reverse()
+	for layer in layers:
+		action_set_layer_disabled.emit(layer)
+
+	action_set_loaded.emit(action_set)
+
+	return true
 
 
 # Action set layers
@@ -200,7 +222,12 @@ func enable_action_set_layer(layer: InputActionSetLayer) -> bool:
 	assert(layer is InputActionSetLayer, "invalid argument: layer")
 	assert(bindings is Bindings, "invalid state; missing component")
 
-	return bindings.enable_action_set_layer(index, device_type, layer)
+	if not bindings.enable_action_set_layer(index, device_type, layer):
+		return false
+
+	action_set_layer_enabled.emit(layer)
+
+	return true
 
 
 ## disable_action_set_layer unbinds all of the actions defined within the layer. Does
@@ -212,7 +239,12 @@ func disable_action_set_layer(layer: InputActionSetLayer) -> bool:
 	assert(layer is InputActionSetLayer, "invalid argument: layer")
 	assert(bindings is Bindings, "invalid state; missing component")
 
-	return bindings.disable_action_set_layer(index, device_type, layer)
+	if not bindings.disable_action_set_layer(index, device_type, layer):
+		return false
+
+	action_set_layer_disabled.emit(layer)
+
+	return true
 
 
 # Glyphs
