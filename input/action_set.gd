@@ -62,7 +62,8 @@ extends Resource
 @export var always_hide_cursor: bool = false:
 	set(value):
 		always_hide_cursor = value
-		always_show_cursor = not value
+		if value and always_show_cursor != false:
+			always_show_cursor = false
 
 ## always_show_cursor defines whether to always show the cursor when this action set is
 ## active. Only one of `always_hide_cursor` and `always_show_cursor` may be `true`.\
@@ -72,7 +73,8 @@ extends Resource
 @export var always_show_cursor: bool = false:
 	set(value):
 		always_show_cursor = value
-		always_hide_cursor = not value
+		if value and always_hide_cursor != false:
+			always_hide_cursor = false
 
 # NOTE: Unfortunately, due to Steam Input offering a far richer API for defining action
 # sets, this abstraction must leak some Steam-related details.
@@ -110,7 +112,10 @@ func is_matching_event_origin(action: StringName, event: InputEvent) -> bool:
 		var axis: JoyAxis = event.axis
 
 		if axis > JOY_AXIS_INVALID and axis < JOY_AXIS_TRIGGER_LEFT:
-			return action in actions_analog_2d
+			return (
+				action in actions_analog_2d
+				or action in actions_digital
+			)
 
 		if axis == JOY_AXIS_TRIGGER_LEFT or axis == JOY_AXIS_TRIGGER_RIGHT:
 			return action in actions_analog_1d
