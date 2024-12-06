@@ -269,8 +269,7 @@ class Haptics:
 @export_group("Properties")
 
 ## glyph_type_override_property is a settings property which specifies an override for
-## the device type when determining which glyph set to display for an origin. Note that
-## if set and its value is not
+## the device type when determining which glyph set to display for an origin.
 @export var glyph_type_override_property: StdSettingsPropertyInt = null
 
 ## haptics_disabled_property is a settings property which controls whether haptics are
