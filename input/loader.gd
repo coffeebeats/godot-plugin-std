@@ -73,7 +73,6 @@ extends Control
 
 var _slot: InputSlot = null
 
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -84,12 +83,14 @@ func disable_action_set_layer() -> bool:
 
 	return _slot.disable_action_set_layer(action_set_layer)
 
+
 ## enable_action_set_layer enables the configured action set layer for the the player.
 func enable_action_set_layer() -> bool:
 	assert(_slot is InputSlot, "invalid state; missing input slot")
 	assert(action_set_layer is InputActionSetLayer, "invalid state; missing layer")
 
 	return _slot.enable_action_set_layer(action_set_layer)
+
 
 ## load_action_set loads the configured action set for the the player.
 func load_action_set() -> bool:
@@ -98,7 +99,9 @@ func load_action_set() -> bool:
 
 	return _slot.load_action_set(action_set_layer)
 
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
 
 func _enter_tree() -> void:
 	_slot = InputSlot.for_player(player_id)
@@ -109,9 +112,11 @@ func _enter_tree() -> void:
 	elif action_set_layer and enable_on_enter:
 		enable_action_set_layer()
 
+
 func _exit_tree() -> void:
 	if action_set_layer and disable_on_exit:
 		disable_action_set_layer()
+
 
 func _notification(what) -> void:
 	match what:
@@ -124,6 +129,7 @@ func _notification(what) -> void:
 			else:
 				if action_set_layer and disable_on_hidden:
 					disable_action_set_layer()
+
 
 func _ready() -> void:
 	if action_set and load_on_ready:
