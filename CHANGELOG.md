@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.0 (2024-12-06)
+
+## What's Changed
+* feat(input): create an `InputActionSetLoader` node for facilitating action set management by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/83
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.5.0...v1.6.0
+
 ## 1.5.0 (2024-12-06)
 
 ## What's Changed
