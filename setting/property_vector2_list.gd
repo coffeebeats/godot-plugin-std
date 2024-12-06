@@ -13,7 +13,7 @@ extends StdSettingsProperty
 
 ## default is the value that will be returned from `Config` reads if the property
 ## doesn't have a value defined.
-@export var default: PackedVector2Array
+@export var default: PackedVector2Array = PackedVector2Array()
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

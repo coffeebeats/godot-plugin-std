@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.5.0 (2024-12-06)
+
+## What's Changed
+* feat(input): write `encode`/`decode` functions for storing `InputEvent` types in an `int` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/69
+* feat(input): define `InputActionSet` and `InputActionSetLayer` resources by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/71
+* feat(input): create a library for reading and writing input event bindings by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/72
+* feat(input): create an `InputDevice` interface by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/73
+* feat(input): create an `InputSlot` abstraction for managing per-player `InputDevice`s by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/74
+* feat(input): add support for cursor management via `InputCursor` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/75
+* feat(input): implement `Bindings` components with native Godot support by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/76
+* feat(input): implement haptics; move settings properties to `InputSlot` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/77
+* feat(input): create a class for writing a Steam action manifest from action sets by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/78
+* feat(feature,input): create conditional subtree nodes; assign each `InputSlot` to a player by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/79
+* fix(input): address various bugs in `InputActionSet`, `InputSlot`, and `InputCursor` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/80
+* feat(input): emit signals when action sets and layers change by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/81
+* feat(input): create a `Glyph` node for displaying latest origin icons by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/82
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.4.0...v1.5.0
+
 ## 1.4.0 (2024-11-28)
 
 ## What's Changed

@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://bhbmalnew7ni2"]
+
+[ext_resource type="Script" path="res://input/device.gd" id="1_pvfsp"]
+[ext_resource type="Script" path="res://input/godot/device_bindings.gd" id="2_smer7"]
+[ext_resource type="Script" path="res://input/godot/device_glyphs.gd" id="3_xi30o"]
+
+[node name="InputDeviceKBM" type="Node" node_paths=PackedStringArray("bindings", "glyphs", "haptics")]
+script = ExtResource("1_pvfsp")
+device_type = 1
+bindings = NodePath("Bindings")
+glyphs = NodePath("Glyphs")
+haptics = NodePath("")
+
+[node name="Bindings" type="Node" parent="."]
+script = ExtResource("2_smer7")
+
+[node name="Glyphs" type="Node" parent="."]
+script = ExtResource("3_xi30o")
