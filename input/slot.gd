@@ -38,6 +38,8 @@ const Signals := preload("../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+const GROUP_INPUT_SLOT := "std/input:slot"
+
 # InputSlot components
 
 
@@ -235,6 +237,12 @@ class Haptics:
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## player_id is the player identifier to which this `InputSlot` is assigned. Player IDs
+## begin from `1` and go up to the maximum local multiplayer player count (e.g. `8`).
+@export var player_id: int = 1
+
+@export_group("Configuration")
+
 ## claim_kbm_input defines whether this `InputSlot` will consider keyboard and mouse
 ## input as belonging to itself. Depending on certain factors, this will generally
 ## activate the `InputDevice` belonging to the keyboard and mouse when that input is
@@ -295,6 +303,18 @@ var _joypad_devices: Array[InputDevice] = []
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## for_player finds the `InputSlot` in the scene tree that's assigned to the specified
+## player. Note that there can be only one `InputSlot` per player.
+static func for_player(player: int) -> InputSlot:
+	for member in StdGroup.with_id(GROUP_INPUT_SLOT).list_members():
+		assert(member is InputSlot, "invalid state; wrong member type")
+
+		if member.player_id == player:
+			return member
+
+	return null
+
+
 ## get_active_device returns the currently (i.e. most recently) active input device. If
 ## no device is active, the returned value will be `null`.
 func get_active_device() -> InputDevice:
@@ -322,6 +342,14 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[InputDevice]:
 
 
 func _enter_tree() -> void:
+	assert(
+		not StdGroup.with_id(GROUP_INPUT_SLOT).list_members().any(
+			func(m): return m.player_id == player_id
+		),
+		"invalid state; duplicate input slot found",
+	)
+	StdGroup.with_id(GROUP_INPUT_SLOT).add_member(self)
+
 	assert(joypad_monitor is JoypadMonitor, "invalid config; missing component")
 
 	Signals.connect_safe(device_activated, _on_Self_device_activated)
@@ -332,6 +360,8 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	StdGroup.with_id(GROUP_INPUT_SLOT).remove_member(self)
+
 	Signals.disconnect_safe(device_activated, _on_Self_device_activated)
 	Signals.disconnect_safe(device_connected, _on_Self_device_connected)
 	Signals.disconnect_safe(device_disconnected, _on_Self_device_disconnected)
