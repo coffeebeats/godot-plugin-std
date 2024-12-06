@@ -112,10 +112,7 @@ func is_matching_event_origin(action: StringName, event: InputEvent) -> bool:
 		var axis: JoyAxis = event.axis
 
 		if axis > JOY_AXIS_INVALID and axis < JOY_AXIS_TRIGGER_LEFT:
-			return (
-				action in actions_analog_2d
-				or action in actions_digital
-			)
+			return action in actions_analog_2d or action in actions_digital
 
 		if axis == JOY_AXIS_TRIGGER_LEFT or axis == JOY_AXIS_TRIGGER_RIGHT:
 			return action in actions_analog_1d

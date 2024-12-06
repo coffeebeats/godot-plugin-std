@@ -120,9 +120,6 @@ func update_configuration(
 			if action not in actions_hide_cursor:
 				actions_hide_cursor.append(action)
 
-	# NOTE: Don't change the visibility of the cursor.
-	actions_hide_cursor = actions_hide_cursor
-
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -134,11 +131,25 @@ func _exit_tree() -> void:
 func _input(event: InputEvent) -> void:
 	if not show_cursor:
 		if event is InputEventMouseMotion:
-			show_cursor = true
+			# FIXME: When the cursor is confined, swapping to confined+hidden emits an
+			# "empty" mouse motion event; ignore this event.
+			if event.relative != Vector2.ZERO:
+				show_cursor = true
 
 		return
 
+	# Mouse is currently visible - no need to check mouse or keyboard events.
+	if (
+		event is InputEventMouseMotion
+		or event is InputEventKey
+		or event is InputEventMouseButton
+	):
+		return
+
 	if not actions_hide_cursor:
+		return
+
+	if event is InputEventJoypadMotion and event.axis_value < 0.1:
 		return
 
 	for action in actions_hide_cursor:
@@ -173,5 +184,6 @@ func _on_properties_changed() -> void:
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
-		_hovered.grab_focus()
-		unset_hovered(_hovered)
+		if _hovered:
+			_hovered.grab_focus()
+			unset_hovered(_hovered)
