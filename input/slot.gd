@@ -83,11 +83,11 @@ class Bindings:
 		return _action_set
 
 	func load_action_set(
-		device: int, device_type: InputDeviceType, action_set: InputActionSet
+		_device: int, _device_type: InputDeviceType, action_set: InputActionSet
 	) -> bool:
 		if not (
 			connected
-			. map(func(d): return d.load_action_set(device, device_type, action_set))
+			. map(func(d): return d.load_action_set(action_set))
 			. any(func(r): return r)
 		):
 			return false
@@ -104,11 +104,11 @@ class Bindings:
 	# Action set layers
 
 	func enable_action_set_layer(
-		device: int, device_type: InputDeviceType, layer: InputActionSetLayer
+		_device: int, _device_type: InputDeviceType, layer: InputActionSetLayer
 	) -> bool:
 		if not (
 			connected
-			. map(func(d): return d.enable_action_set_layer(device, device_type, layer))
+			. map(func(d): return d.enable_action_set_layer(layer))
 			. any(func(r): return r)
 		):
 			return false
@@ -125,13 +125,11 @@ class Bindings:
 	## active layers *for the specified device*. If the action set layer is not active
 	## then no change occurs.
 	func disable_action_set_layer(
-		device: int, device_type: InputDeviceType, layer: InputActionSetLayer
+		_device: int, _device_type: InputDeviceType, layer: InputActionSetLayer
 	) -> bool:
 		if not (
 			connected
-			. map(
-				func(d): return d.disable_action_set_layer(device, device_type, layer)
-			)
+			. map(func(d): return d.disable_action_set_layer(layer))
 			. any(func(r): return r)
 		):
 			return false
@@ -386,6 +384,9 @@ func _exit_tree() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not event.is_action_type() or not event.is_pressed():
+		return
+
 	# Swap to controller
 	if (
 		_active == null

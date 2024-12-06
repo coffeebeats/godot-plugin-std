@@ -44,7 +44,7 @@ func get_action_set(_device: int) -> InputActionSet:
 ## activates the provided action set *for the specified device*. If the action set
 ## is already active for the device then no change occurs.
 func load_action_set(
-	device: int, device_type: InputDeviceType, action_set: InputActionSet
+	_device: int, _device_type: InputDeviceType, action_set: InputActionSet
 ) -> bool:
 	assert(action_set is InputActionSet, "missing argument: action set")
 	assert(
@@ -62,7 +62,8 @@ func load_action_set(
 	for action in InputMap.get_actions():
 		InputMap.action_erase_events(action)
 
-	_apply_action_set(device, device_type, action_set)
+	_apply_action_set(-1, InputDevice.DEVICE_TYPE_UNKNOWN, action_set)
+	_apply_action_set(-1, InputDevice.DEVICE_TYPE_KEYBOARD, action_set)
 
 	return true
 
@@ -74,7 +75,7 @@ func load_action_set(
 ## active layers *for the specified device*. If the action set layer is already
 ## active then no change occurs.
 func enable_action_set_layer(
-	device: int, device_type: InputDeviceType, action_set_layer: InputActionSetLayer
+	_device: int, _device_type: InputDeviceType, action_set_layer: InputActionSetLayer
 ) -> bool:
 	assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
 	assert(_action_set is InputActionSet, "invalid state: missing action set")
@@ -88,7 +89,8 @@ func enable_action_set_layer(
 
 	_action_set_layers.append(action_set_layer)
 
-	_apply_action_set(device, device_type, action_set_layer)
+	_apply_action_set(-1, InputDevice.DEVICE_TYPE_UNKNOWN, action_set_layer)
+	_apply_action_set(-1, InputDevice.DEVICE_TYPE_KEYBOARD, action_set_layer)
 
 	return true
 
@@ -97,7 +99,7 @@ func enable_action_set_layer(
 ## active layers *for the specified device*. If the action set layer is not active
 ## then no change occurs.
 func disable_action_set_layer(
-	device: int, device_type: InputDeviceType, action_set_layer: InputActionSetLayer
+	_device: int, device_type: InputDeviceType, action_set_layer: InputActionSetLayer
 ) -> bool:
 	assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
 	assert(_action_set is InputActionSet, "invalid state: missing action set")
@@ -114,9 +116,9 @@ func disable_action_set_layer(
 
 	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
 	# necessary origins.
-	load_action_set(device, device_type, get_action_set(device))
+	load_action_set(-1, device_type, get_action_set(-1))
 	for layer in _action_set_layers:
-		enable_action_set_layer(device, device_type, layer)
+		enable_action_set_layer(-1, device_type, layer)
 
 	return true
 
@@ -177,18 +179,18 @@ func _apply_action_set(
 			# FIXME: Apply *both* keyboard and mouse events/origins.
 
 			for origin in get_action_origins(device, device_type, action):
-				_bind_action_to_origin(action_set, action, origin)
+				_bind_action_to_origin(device, action_set, action, origin)
 
 
 func _bind_action_to_origin(
-	action_set: InputActionSet, action: StringName, origin: int
+	device: int, action_set: InputActionSet, action: StringName, origin: int
 ) -> void:
 	var event := Origin.decode(origin)
 	assert(event is InputEvent, "invalid state; missing event")
 
-	# NOTE: See https://github.com/godotengine/godot/pull/99449; this value may change
+	# NOTE: See https://github.com/godotengine/godot/pull/99449; '-1' values may change
 	# in the future.
-	event.device = -1
+	event.device = device
 
 	if not action_set.is_matching_event_origin(action, event):
 		assert(false, "invalid state; wrong event type")

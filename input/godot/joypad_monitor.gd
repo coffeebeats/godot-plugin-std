@@ -21,12 +21,6 @@ static var _regex_steam_deck := RegEx.create_from_string(
 )
 static var _regex_xbox := RegEx.create_from_string("(Xbox|X-Box|XBOX)")
 
-# -- CONFIGURATION ------------------------------------------------------------------- #
-
-## broadcast_connected_devices_on_ready controls whether already-connected devices will
-## be broadcasted upon this node's ready status.
-@export var broadcast_connected_devices_on_ready: bool = true
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -61,10 +55,6 @@ func _ready() -> void:
 	var err := Input.joy_connection_changed.connect(_on_Input_joy_connection_changed)
 	assert(err == OK, "failed to connect to signal")
 
-	if broadcast_connected_devices_on_ready:
-		for device in Input.get_connected_joypads():
-			_on_Input_joy_connection_changed(device, true)
-
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
@@ -77,7 +67,8 @@ func _on_Input_joy_connection_changed(device: int, connected: bool) -> void:
 			"]: joypad connection changed: %d (connected=%s)" % [device, connected],
 		)
 
-		return joy_disconnected.emit(device)
+		joy_disconnected.emit(device)
+		return
 
 	var joypad_name := Input.get_joy_name(device)
 
