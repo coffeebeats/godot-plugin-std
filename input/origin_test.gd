@@ -14,17 +14,24 @@ const Origin := preload("origin.gd")
 func test_encode_stores_input_event_key_correctly(
 	params = use_parameters(
 		[
-			[KEY_NONE],
-			[KEY_UNKNOWN],
-			[KEY_0],
-			[KEY_DOWN],
-			[KEY_W],
+			[KEY_NONE, KEY_LOCATION_UNSPECIFIED],
+			[KEY_UNKNOWN, KEY_LOCATION_UNSPECIFIED],
+			[KEY_0, KEY_LOCATION_UNSPECIFIED],
+			[KEY_DOWN, KEY_LOCATION_UNSPECIFIED],
+			[KEY_W, KEY_LOCATION_UNSPECIFIED],
+			[KEY_SHIFT, KEY_LOCATION_UNSPECIFIED],
+			[KEY_SHIFT, KEY_LOCATION_LEFT],
+			[KEY_SHIFT, KEY_LOCATION_RIGHT],
+			[KEY_CTRL, KEY_LOCATION_UNSPECIFIED],
+			[KEY_CTRL, KEY_LOCATION_LEFT],
+			[KEY_CTRL, KEY_LOCATION_RIGHT],
 		]
 	),
 ) -> void:
 	# Given: An input event to encode.
 	var event := InputEventKey.new()
 	event.keycode = params[0]
+	event.location = params[1]
 
 	# Given: The event is encoded.
 	var value_encoded: int = Origin.encode(event)
@@ -38,6 +45,7 @@ func test_encode_stores_input_event_key_correctly(
 
 	# Then: The correct code is set on the event.
 	assert_eq(got.keycode, event.keycode)
+	assert_eq(got.location, event.location)
 
 
 func test_encode_stores_input_event_joypad_motion_correctly(

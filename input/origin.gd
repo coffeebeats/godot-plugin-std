@@ -16,13 +16,15 @@ extends Object
 
 const BITMASK_INDEX_TYPE := 0
 const BITMASK_INDEX_KEY := BITMASK_INDEX_TYPE + 8
-const BITMASK_INDEX_JOY_AXIS := BITMASK_INDEX_KEY + 24
+const BITMASK_INDEX_KEY_LOCATION := BITMASK_INDEX_KEY + 24
+const BITMASK_INDEX_JOY_AXIS := BITMASK_INDEX_KEY_LOCATION + 4
 const BITMASK_INDEX_JOY_AXIS_DIRECTION := BITMASK_INDEX_KEY + 4
 const BITMASK_INDEX_JOY_BUTTON := BITMASK_INDEX_JOY_AXIS_DIRECTION + 2
 const BITMASK_INDEX_MOUSE_BUTTON := BITMASK_INDEX_JOY_BUTTON + 8
 
 const BITMASK_TYPE := (1 << 8) - 1
 const BITMASK_KEY := (1 << 24) - 1
+const BITMASK_KEY_LOCATION := (1 << 4) - 1
 const BITMASK_JOY_AXIS := (1 << 4) - 1
 const BITMASK_JOY_AXIS_DIRECTION := (1 << 2) - 1
 const BITMASK_JOY_BUTTON := (1 << 8) - 1
@@ -51,7 +53,9 @@ static func encode(event: InputEvent) -> int:
 	if event is InputEventKey:
 		var type_encoded: int = (BITMASK_INDEX_KEY & BITMASK_TYPE) << BITMASK_INDEX_TYPE
 		var value_encoded: int = (event.keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
-		return type_encoded | value_encoded
+		var location_encoded: int = (event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
+
+		return type_encoded | value_encoded | location_encoded
 
 	if event is InputEventJoypadMotion:
 		var type_encoded: int = (
@@ -110,9 +114,13 @@ static func decode(value: int) -> InputEvent:
 			var value_decoded: int = (
 				(value & (BITMASK_KEY << BITMASK_INDEX_KEY)) >> (BITMASK_INDEX_KEY)
 			)
+			var location_decoded: int = (
+				(value & (BITMASK_KEY_LOCATION << BITMASK_INDEX_KEY_LOCATION)) >> (BITMASK_INDEX_KEY_LOCATION)
+			)
 
 			var event := InputEventKey.new()
 			event.keycode = value_decoded as Key
+			event.location = location_decoded as KeyLocation
 
 			return event
 
