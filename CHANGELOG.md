@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.0 (2024-12-07)
+
+## What's Changed
+* feat(input): create `InputGlyphSet` for loading input device icon collections by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/85
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.6.0...v1.7.0
+
 ## 1.6.0 (2024-12-06)
 
 ## What's Changed
