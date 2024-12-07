@@ -137,27 +137,27 @@ func _get_origin_glyph(event: InputEvent) -> Texture2D:
 			# Joysticks
 			JOY_AXIS_LEFT_X:
 				match event.axis_value:
-					-1:
+					-1.0:
 						return stick_left_direction_left
-					1:
+					1.0:
 						return stick_left_direction_right
 			JOY_AXIS_LEFT_Y:
 				match event.axis_value:
-					-1:
+					-1.0:
 						return stick_left_direction_up
-					1:
+					1.0:
 						return stick_left_direction_down
 			JOY_AXIS_RIGHT_X:
 				match event.axis_value:
-					-1:
+					-1.0:
 						return stick_right_direction_left
-					1:
+					1.0:
 						return stick_right_direction_right
 			JOY_AXIS_RIGHT_Y:
 				match event.axis_value:
-					-1:
+					-1.0:
 						return stick_right_direction_up
-					1:
+					1.0:
 						return stick_right_direction_down
 
 			# Analog triggers
