@@ -72,6 +72,9 @@ func _ready() -> void:
 		)
 	)
 
+	# Initialize texture on first ready.
+	_on_StdSettingsPropertyInt_value_changed()
+
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
