@@ -53,7 +53,9 @@ static func encode(event: InputEvent) -> int:
 	if event is InputEventKey:
 		var type_encoded: int = (BITMASK_INDEX_KEY & BITMASK_TYPE) << BITMASK_INDEX_TYPE
 		var value_encoded: int = (event.keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
-		var location_encoded: int = (event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
+		var location_encoded: int = (
+			(event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
+		)
 
 		return type_encoded | value_encoded | location_encoded
 
@@ -115,7 +117,8 @@ static func decode(value: int) -> InputEvent:
 				(value & (BITMASK_KEY << BITMASK_INDEX_KEY)) >> (BITMASK_INDEX_KEY)
 			)
 			var location_decoded: int = (
-				(value & (BITMASK_KEY_LOCATION << BITMASK_INDEX_KEY_LOCATION)) >> (BITMASK_INDEX_KEY_LOCATION)
+				(value & (BITMASK_KEY_LOCATION << BITMASK_INDEX_KEY_LOCATION))
+				>> (BITMASK_INDEX_KEY_LOCATION)
 			)
 
 			var event := InputEventKey.new()
