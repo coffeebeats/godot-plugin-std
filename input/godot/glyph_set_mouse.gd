@@ -62,4 +62,4 @@ func _get_origin_glyph(event: InputEvent) -> Texture2D:
 			MOUSE_BUTTON_XBUTTON2:
 				return button_side_2
 
-	return null
+	return null  # gdlint:ignore=max-returns

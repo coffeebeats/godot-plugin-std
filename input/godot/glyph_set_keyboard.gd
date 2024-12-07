@@ -292,4 +292,4 @@ func _get_origin_glyph(event: InputEvent) -> Texture2D:
 			KEY_PLUS:
 				return symbol_plus
 
-	return null
+	return null  # gdlint:ignore=max-returns

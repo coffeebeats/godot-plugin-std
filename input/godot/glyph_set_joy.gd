@@ -166,4 +166,4 @@ func _get_origin_glyph(event: InputEvent) -> Texture2D:
 			JOY_AXIS_TRIGGER_RIGHT:
 				return analog_trigger_right
 
-	return null
+	return null  # gdlint:ignore=max-returns
