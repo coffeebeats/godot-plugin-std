@@ -15,6 +15,7 @@ extends InputGlyphSet
 @export var cmd_tab: Texture2D = null
 @export var cmd_backspace: Texture2D = null
 @export var cmd_enter: Texture2D = null
+@export var cmd_space: Texture2D = null
 @export var cmd_insert: Texture2D = null
 @export var cmd_delete: Texture2D = null
 @export var cmd_home: Texture2D = null
@@ -107,7 +108,7 @@ extends InputGlyphSet
 @export var symbol_bracket_left: Texture2D = null
 @export var symbol_bracket_right: Texture2D = null
 @export var symbol_minus: Texture2D = null
-@export var symbol_plus: Texture2D = null
+@export var symbol_equal: Texture2D = null
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
@@ -129,6 +130,8 @@ func _get_origin_glyph(event: InputEvent) -> Texture2D:
 				return cmd_backspace
 			KEY_ENTER:
 				return cmd_enter
+			KEY_SPACE:
+				return cmd_space
 			KEY_INSERT:
 				return cmd_insert
 			KEY_DELETE:
@@ -289,7 +292,7 @@ func _get_origin_glyph(event: InputEvent) -> Texture2D:
 				return symbol_bracket_right
 			KEY_MINUS:
 				return symbol_minus
-			KEY_PLUS:
-				return symbol_plus
+			KEY_EQUAL:
+				return symbol_equal
 
 	return null  # gdlint:ignore=max-returns
