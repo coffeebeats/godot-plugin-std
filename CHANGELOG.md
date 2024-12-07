@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.2 (2024-12-07)
+
+## What's Changed
+* fix(input): encode axis values along with axis by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/90
+* fix(input): encode `KeyLocation` values for `InputEventKey` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/92
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.7.1...v1.7.2
+
 ## 1.7.1 (2024-12-07)
 
 ## What's Changed
