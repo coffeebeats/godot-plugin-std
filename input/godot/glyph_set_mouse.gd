@@ -31,6 +31,11 @@ extends InputGlyphSet
 
 
 func _get_origin_glyph(event: InputEvent) -> Texture2D:
+	assert(
+		device_type == InputDevice.DEVICE_TYPE_KEYBOARD,
+		"invalid state; wrong device type",
+	)
+
 	if event is InputEventMouseButton:
 		match event.button_index:
 			# Primary
