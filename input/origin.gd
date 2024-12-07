@@ -7,6 +7,8 @@
 ## NOTE: This 'Object' should *not* be instanced and/or added to the 'SceneTree'. It is a
 ## "static" library that can be imported at compile-time using 'preload'.
 ##
+## TODO: Handle joypad axis values and keyboard locations.
+##
 
 extends Object
 

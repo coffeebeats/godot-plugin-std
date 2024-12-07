@@ -1,4 +1,4 @@
-# gdlint:ignore=max-public-methods
+#gdlint:ignore=max-public-methods
 
 ##
 ## std/config/config.gd

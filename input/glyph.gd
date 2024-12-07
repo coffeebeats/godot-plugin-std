@@ -4,6 +4,9 @@
 ## InputGlyph is a `TextureRect` node which displays an icon corresponding to the input
 ## origin which is currently bound to the configured action.
 ##
+##
+## TODO: Handle fallback textures for states like unbound, unknown, and missing.
+##
 
 class_name InputGlyph
 extends TextureRect
