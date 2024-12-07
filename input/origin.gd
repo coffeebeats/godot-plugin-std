@@ -17,12 +17,14 @@ extends Object
 const BITMASK_INDEX_TYPE := 0
 const BITMASK_INDEX_KEY := BITMASK_INDEX_TYPE + 8
 const BITMASK_INDEX_JOY_AXIS := BITMASK_INDEX_KEY + 24
-const BITMASK_INDEX_JOY_BUTTON := BITMASK_INDEX_JOY_AXIS + 4
+const BITMASK_INDEX_JOY_AXIS_DIRECTION := BITMASK_INDEX_KEY + 4
+const BITMASK_INDEX_JOY_BUTTON := BITMASK_INDEX_JOY_AXIS_DIRECTION + 2
 const BITMASK_INDEX_MOUSE_BUTTON := BITMASK_INDEX_JOY_BUTTON + 8
 
 const BITMASK_TYPE := (1 << 8) - 1
 const BITMASK_KEY := (1 << 24) - 1
 const BITMASK_JOY_AXIS := (1 << 4) - 1
+const BITMASK_JOY_AXIS_DIRECTION := (1 << 2) - 1
 const BITMASK_JOY_BUTTON := (1 << 8) - 1
 const BITMASK_MOUSE_BUTTON := (1 << 4) - 1
 
@@ -58,7 +60,18 @@ static func encode(event: InputEvent) -> int:
 		var value_encoded: int = (
 			(event.axis & BITMASK_JOY_AXIS) << BITMASK_INDEX_JOY_AXIS
 		)
-		return type_encoded | value_encoded
+
+		var direction: int = 0
+		match event.axis_value:
+			-1.0:
+				direction = 1
+			1.0:
+				direction = 2
+		var direction_encoded: int = (
+			(direction & BITMASK_JOY_AXIS_DIRECTION) << BITMASK_INDEX_JOY_AXIS_DIRECTION
+		)
+
+		return type_encoded | value_encoded | direction_encoded
 
 	if event is InputEventJoypadButton:
 		var type_encoded: int = (
@@ -111,6 +124,18 @@ static func decode(value: int) -> InputEvent:
 
 			var event := InputEventJoypadMotion.new()
 			event.axis = value_decoded as JoyAxis
+
+			match (
+				(
+					value
+					& (BITMASK_JOY_AXIS_DIRECTION << BITMASK_INDEX_JOY_AXIS_DIRECTION)
+				)
+				>> (BITMASK_INDEX_JOY_AXIS_DIRECTION)
+			):
+				1:
+					event.axis_value = -1.0
+				2:
+					event.axis_value = 1.0
 
 			return event
 

@@ -43,18 +43,31 @@ func test_encode_stores_input_event_key_correctly(
 func test_encode_stores_input_event_joypad_motion_correctly(
 	params = use_parameters(
 		[
-			[JOY_AXIS_LEFT_X],
-			[JOY_AXIS_LEFT_Y],
-			[JOY_AXIS_RIGHT_X],
-			[JOY_AXIS_RIGHT_Y],
-			[JOY_AXIS_TRIGGER_LEFT],
-			[JOY_AXIS_TRIGGER_RIGHT],
+			[JOY_AXIS_LEFT_X, -1.0],
+			[JOY_AXIS_LEFT_X, 0.0],
+			[JOY_AXIS_LEFT_X, 1.0],
+			[JOY_AXIS_LEFT_Y, -1.0],
+			[JOY_AXIS_LEFT_Y, 0.0],
+			[JOY_AXIS_LEFT_Y, 1.0],
+			[JOY_AXIS_RIGHT_X, -1.0],
+			[JOY_AXIS_RIGHT_X, 0.0],
+			[JOY_AXIS_RIGHT_X, 1.0],
+			[JOY_AXIS_RIGHT_Y, -1.0],
+			[JOY_AXIS_RIGHT_Y, 0.0],
+			[JOY_AXIS_RIGHT_Y, 1.0],
+			[JOY_AXIS_TRIGGER_LEFT, -1.0],
+			[JOY_AXIS_TRIGGER_LEFT, 0.0],
+			[JOY_AXIS_TRIGGER_LEFT, 1.0],
+			[JOY_AXIS_TRIGGER_RIGHT, -1.0],
+			[JOY_AXIS_TRIGGER_RIGHT, 0.0],
+			[JOY_AXIS_TRIGGER_RIGHT, 1.0],
 		]
 	),
 ) -> void:
 	# Given: An input event to encode.
 	var event := InputEventJoypadMotion.new()
 	event.axis = params[0]
+	event.axis_value = params[1]
 
 	# Given: The event is encoded.
 	var value_encoded: int = Origin.encode(event)
@@ -68,6 +81,7 @@ func test_encode_stores_input_event_joypad_motion_correctly(
 
 	# Then: The correct code is set on the event.
 	assert_eq(got.axis, event.axis)
+	assert_eq(got.axis_value, event.axis_value)
 
 
 func test_encode_stores_input_event_joypad_button_correctly(
