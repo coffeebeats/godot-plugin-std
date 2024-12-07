@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.1 (2024-12-07)
+
+## What's Changed
+* fix(input): swap glyph slot from "plus" to "equal"; add missing "space" glyph by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/87
+* fix(input): initialize `InputGlyph` texture on ready by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/89
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.7.0...v1.7.1
+
 ## 1.7.0 (2024-12-07)
 
 ## What's Changed
