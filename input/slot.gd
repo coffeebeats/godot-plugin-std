@@ -168,9 +168,7 @@ class Glyphs:
 	var active: InputDevice = null
 	var glyph_type_override_property: StdSettingsPropertyInt = null
 
-	func get_origin_glyph(
-		device: int, device_type: InputDeviceType, origin: int
-	) -> Texture2D:
+	func get_origin_glyph(device_type: InputDeviceType, origin: int) -> Texture2D:
 		if not active:
 			return null
 
@@ -179,8 +177,10 @@ class Glyphs:
 			if value != DEVICE_TYPE_UNKNOWN:
 				device_type = value
 
-		assert(device == active.index, "invalid argument; wrong device index")
-		return active.glyphs.get_origin_glyph(device, device_type, origin)
+		# NOTE: Because bindings were already found via the owning `InputDevice`'s
+		# `get_action_glyph`, delegate directly to the active device's glyph component
+		# to skip a redundant binding lookup.
+		return active.glyphs.get_origin_glyph(device_type, origin)
 
 
 ## Haptics is an implementation of `InputDevice.Haptics` which delegates to the active

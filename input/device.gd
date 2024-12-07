@@ -122,9 +122,7 @@ class Glyphs:
 
 	## get_origin_glyph returns a `Texture2D` containing an input origin glyph icon *for
 	## the specified device*.
-	func get_origin_glyph(
-		_device: int, _device_type: InputDeviceType, _origin: int
-	) -> Texture2D:
+	func get_origin_glyph(_device_type: InputDeviceType, _origin: int) -> Texture2D:
 		return null
 
 
@@ -266,7 +264,7 @@ func get_action_glyph(
 	if device_type_override == DEVICE_TYPE_UNKNOWN:
 		device_type_override = device_type
 
-	return glyphs.get_origin_glyph(index, device_type_override, origins[0])
+	return glyphs.get_origin_glyph(device_type_override, origins[0])
 
 
 # Haptics
