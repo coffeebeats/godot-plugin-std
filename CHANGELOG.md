@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.3 (2024-12-07)
+
+## What's Changed
+* chore(input): remove leftover TODO by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/93
+* fix(input): match axis values correctly by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/95
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.7.2...v1.7.3
+
 ## 1.7.2 (2024-12-07)
 
 ## What's Changed
