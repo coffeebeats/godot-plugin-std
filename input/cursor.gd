@@ -10,6 +10,12 @@
 class_name StdInputCursor
 extends Node
 
+# -- SIGNALS ------------------------------------------------------------------------- #
+
+## cursor_visibility_changed is emitted when the visibility of the application's cursor
+## changes.
+signal cursor_visibility_changed(visible: bool)
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const GROUP_INPUT_CURSOR := "std/input:cursor"
@@ -20,6 +26,11 @@ const GROUP_INPUT_CURSOR := "std/input:cursor"
 ## the cursor to be hidden. Note that this doesn't guarantee that the cursor will be
 ## hidden, as the visibility is dependent on a number of factors.
 @export var actions_hide_cursor := PackedStringArray()
+
+## minimum_reveal_distance defines how much relative motion must be detected for the
+## cursor to be considered "moving". This is used to filter out slight bumps to the
+## cursor which should otherwise not reveal it.
+@export var minimum_reveal_distance: Vector2 = Vector2.ZERO
 
 @export_group("Cursor state")
 
@@ -131,9 +142,7 @@ func _exit_tree() -> void:
 func _input(event: InputEvent) -> void:
 	if not show_cursor:
 		if event is InputEventMouseMotion:
-			# FIXME: When the cursor is confined, swapping to confined+hidden emits an
-			# "empty" mouse motion event; ignore this event.
-			if event.relative != Vector2.ZERO:
+			if event.relative > minimum_reveal_distance:
 				show_cursor = true
 
 		return
@@ -187,3 +196,5 @@ func _on_properties_changed() -> void:
 		if _hovered:
 			_hovered.grab_focus()
 			unset_hovered(_hovered)
+
+	cursor_visibility_changed.emit(show_cursor)
