@@ -1,11 +1,11 @@
 ##
 ## std/input/slot.gd
 ##
-## InputSlot is an abstraction for managing the input of a single player within the
-## game. Each `InputSlot` can be customized to control what input falls within its scope
-## and which input devices are assigned to it.
+## StdInputSlot is an abstraction for managing the input of a single player within the
+## game. Each `StdInputSlot` can be customized to control what input falls within its
+## scope and which input devices are assigned to it.
 ##
-## For a local multiplayer game, one `InputSlot` would be created for each possible
+## For a local multiplayer game, one `StdInputSlot` would be created for each possible
 ## player (and possibly one additional slot for keyboard and mouse controls if those
 ## aren't tied to one player). Single player games should have a single `StdInputSlot`
 ## which defines how to swap between various connected `StdInputDevice`s.
@@ -15,7 +15,7 @@
 ## multiplayer, this is not a priority.
 ##
 
-class_name InputSlot
+class_name StdInputSlot
 extends StdInputDevice
 
 # -- SIGNALS ------------------------------------------------------------------------- #
@@ -41,14 +41,14 @@ const Signals := preload("../event/signal.gd")
 
 const GROUP_INPUT_SLOT := "std/input:slot"
 
-# InputSlot components
+# StdInputSlot components
 
 
 ## JoypadMonitor is an abstract inferface for a `Node` which tracks joypad activity
 ## (i.e. connects and disconnects).
 ##
 ## This should be implemented according to the library used for managing input devices
-## (e.g. Steam Input or Godot) and set on the `InputSlot`.
+## (e.g. Steam Input or Godot) and set on the `StdInputSlot`.
 class JoypadMonitor:
 	extends Node
 
@@ -65,7 +65,7 @@ class JoypadMonitor:
 class Actions:
 	extends StdInputDeviceActions
 
-	var slot: InputSlot = null
+	var slot: StdInputSlot = null
 	var cursor: InputCursor = null
 
 	## _action_set is the currently active action set.
@@ -147,7 +147,7 @@ class Actions:
 class Glyphs:
 	extends StdInputDeviceGlyphs
 
-	var slot: InputSlot = null
+	var slot: StdInputSlot = null
 
 	func _get_action_glyph(
 		_device: int, # Active device ID
@@ -196,7 +196,7 @@ class Glyphs:
 class Haptics:
 	extends StdInputDeviceHaptics
 
-	var slot: InputSlot = null
+	var slot: StdInputSlot = null
 
 	func _start_vibrate_strong(device: int, duration: float, strength: float) -> void:
 		if not slot:
@@ -234,13 +234,14 @@ class Haptics:
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## player_id is the player identifier to which this `InputSlot` is assigned. Player IDs
-## begin from `1` and go up to the maximum local multiplayer player count (e.g. `8`).
+## player_id is the player identifier to which this `StdInputSlot` is assigned. Player
+## IDs begin from `1` and go up to the maximum local multiplayer player count (e.g.
+## `8`).
 @export var player_id: int = 1
 
 @export_group("Configuration")
 
-## claim_kbm_input defines whether this `InputSlot` will consider keyboard and mouse
+## claim_kbm_input defines whether this `StdInputSlot` will consider keyboard and mouse
 ## input as belonging to itself. Depending on certain factors, this will generally
 ## activate the `StdInputDevice` belonging to the keyboard and mouse when that input is
 ## received.
@@ -249,8 +250,8 @@ class Haptics:
 @export var claim_kbm_input: bool = true
 
 ## prefer_activate_joypad_on_ready defines whether a connected controller should be
-## activated upon this `InputSlot` first loading (overriding an active keyboard). Note
-## that the first joypad will always be selected at first.
+## activated upon this `StdInputSlot` first loading (overriding an active keyboard).
+## Note that the first joypad will always be selected at first.
 @export var prefer_activate_joypad_on_ready: bool = true
 
 @export_group("Properties")
@@ -270,11 +271,11 @@ class Haptics:
 @export_group("Components")
 
 ## cursor is a node which manages the visibility state of the game's cursor. This is an
-## optional component, but only one `InputSlot` at most may have one.
+## optional component, but only one `StdInputSlot` at most may have one.
 @export var cursor: InputCursor = null
 
-## joypad_monitor is a node which monitors joypad activity. This `InputSlot` node will
-## manage active input devices based on the monitor's signals.
+## joypad_monitor is a node which monitors joypad activity. This Std`InputSlot` node
+## will manage active input devices based on the monitor's signals.
 @export var joypad_monitor: JoypadMonitor = null
 
 @export_subgroup("Keyboard and mouse")
@@ -310,11 +311,11 @@ var _joypad_devices: Array[StdInputDevice] = []
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## for_player finds the `InputSlot` in the scene tree that's assigned to the specified
-## player. Note that there can be only one `InputSlot` per player.
-static func for_player(player: int) -> InputSlot:
+## for_player finds the `StdInputSlot` in the scene tree that's assigned to the specified
+## player. Note that there can be only one `StdInputSlot` per player.
+static func for_player(player: int) -> StdInputSlot:
 	for member in StdGroup.with_id(GROUP_INPUT_SLOT).list_members():
-		assert(member is InputSlot, "invalid state; wrong member type")
+		assert(member is StdInputSlot, "invalid state; wrong member type")
 
 		if member.player_id == player:
 			return member

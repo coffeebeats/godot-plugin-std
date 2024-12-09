@@ -23,14 +23,14 @@ const Signals := preload("../event/signal.gd")
 @export var action := &""
 
 ## player_id is a player identifier which will be used to look up the action's input
-## origin bindings. Specifically, this is used to find the corresponding `InputSlot`
+## origin bindings. Specifically, this is used to find the corresponding `StdInputSlot`
 ## node, which must be present in the scene tree.
 @export var player_id: int = 1:
 	set(value):
 		player_id = value
 
 		if is_inside_tree():
-			_slot = InputSlot.for_player(player_id)
+			_slot = StdInputSlot.for_player(player_id)
 
 @export_group("Display")
 
@@ -50,7 +50,7 @@ const Signals := preload("../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _slot: InputSlot = null
+var _slot: StdInputSlot = null
 
 @onready var _label: Label = get_node_or_null(label)
 @onready var _texture_rect: TextureRect = get_node_or_null(texture_rect)
@@ -59,7 +59,7 @@ var _slot: InputSlot = null
 
 
 func _exit_tree() -> void:
-	Signals.disconnect_safe(_slot.device_activated, _on_InputSlot_device_activated)
+	Signals.disconnect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 	(
 		Signals
 		.disconnect_safe(
@@ -84,10 +84,10 @@ func _ready() -> void:
 	_texture_rect.visible = false
 
 	# Wire up glyph data connections.
-	_slot = InputSlot.for_player(player_id)
-	assert(_slot is InputSlot, "invalid state; missing input slot")
+	_slot = StdInputSlot.for_player(player_id)
+	assert(_slot is StdInputSlot, "invalid state; missing input slot")
 
-	Signals.connect_safe(_slot.device_activated, _on_InputSlot_device_activated)
+	Signals.connect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 
 	assert(
 		glyph_type_override_property is StdSettingsPropertyInt,
@@ -148,7 +148,7 @@ func _update_texture() -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_InputSlot_device_activated(_device: StdInputDevice) -> void:
+func _on_StdInputSlot_device_activated(_device: StdInputDevice) -> void:
 	_update_texture()
 
 

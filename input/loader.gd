@@ -11,14 +11,14 @@ extends Control
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## player_id is a player identifier which will be used to look up the action's input
-## origin bindings. Specifically, this is used to find the corresponding `InputSlot`
+## origin bindings. Specifically, this is used to find the corresponding `StdInputSlot`
 ## node, which must be present in the scene tree.
 @export var player_id: int = 1:
 	set(value):
 		player_id = value
 
 		if is_inside_tree():
-			_slot = InputSlot.for_player(player_id)
+			_slot = StdInputSlot.for_player(player_id)
 
 @export_group("Action set")
 
@@ -71,14 +71,14 @@ extends Control
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _slot: InputSlot = null
+var _slot: StdInputSlot = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## disable_action_set_layer disables the configured action set layer for the the player.
 func disable_action_set_layer() -> bool:
-	assert(_slot is InputSlot, "invalid state; missing input slot")
+	assert(_slot is StdInputSlot, "invalid state; missing input slot")
 	assert(action_set_layer is StdInputActionSetLayer, "invalid state; missing layer")
 
 	return _slot.disable_action_set_layer(action_set_layer)
@@ -86,7 +86,7 @@ func disable_action_set_layer() -> bool:
 
 ## enable_action_set_layer enables the configured action set layer for the the player.
 func enable_action_set_layer() -> bool:
-	assert(_slot is InputSlot, "invalid state; missing input slot")
+	assert(_slot is StdInputSlot, "invalid state; missing input slot")
 	assert(action_set_layer is StdInputActionSetLayer, "invalid state; missing layer")
 
 	return _slot.enable_action_set_layer(action_set_layer)
@@ -94,7 +94,7 @@ func enable_action_set_layer() -> bool:
 
 ## load_action_set loads the configured action set for the the player.
 func load_action_set() -> bool:
-	assert(_slot is InputSlot, "invalid state; missing input slot")
+	assert(_slot is StdInputSlot, "invalid state; missing input slot")
 	assert(action_set is StdInputActionSet, "invalid state; missing action set")
 
 	return _slot.load_action_set(action_set_layer)
@@ -104,8 +104,8 @@ func load_action_set() -> bool:
 
 
 func _enter_tree() -> void:
-	_slot = InputSlot.for_player(player_id)
-	assert(_slot is InputSlot, "invalid state; missing input slot")
+	_slot = StdInputSlot.for_player(player_id)
+	assert(_slot is StdInputSlot, "invalid state; missing input slot")
 
 	if action_set and load_on_enter:
 		load_action_set()

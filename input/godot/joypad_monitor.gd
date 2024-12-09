@@ -1,11 +1,11 @@
 ##
 ## std/input/godot/joypad_monitor.gd
 ##
-## An implemention of `InputSlot.JoypadMonitor` which uses Godot's built-in device
-## input system to notify the `InputSlot` on joypad connection changes.
+## An implemention of `StdInputSlot.JoypadMonitor` which uses Godot's built-in device
+## input system to notify the `StdInputSlot` on joypad connection changes.
 ##
 
-extends InputSlot.JoypadMonitor
+extends StdInputSlot.JoypadMonitor
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
