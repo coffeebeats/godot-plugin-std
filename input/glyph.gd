@@ -1,15 +1,14 @@
 ##
 ## std/input/glyph.gd
 ##
-## InputGlyph is a `TextureRect` node which displays an icon corresponding to the input
-## origin which is currently bound to the configured action.
-##
+## StdInputGlyph is a `TextureRect` node which displays an icon corresponding to the
+## input origin which is currently bound to the configured action.
 ##
 ## TODO: Handle fallback textures for states like unbound, unknown, and missing.
 ##
 
-class_name InputGlyph
-extends TextureRect
+class_name StdInputGlyph
+extends Control
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -17,18 +16,31 @@ const Signals := preload("../event/signal.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## action_set is an input action set which defines the configured action.
+@export var action_set: StdInputActionSet = null
+
 ## action is the name of the input action which the glyph icon will correspond to.
 @export var action := &""
 
 ## player_id is a player identifier which will be used to look up the action's input
-## origin bindings. Specifically, this is used to find the corresponding `InputSlot`
+## origin bindings. Specifically, this is used to find the corresponding `StdInputSlot`
 ## node, which must be present in the scene tree.
 @export var player_id: int = 1:
 	set(value):
 		player_id = value
 
 		if is_inside_tree():
-			_slot = InputSlot.for_player(player_id)
+			_slot = StdInputSlot.for_player(player_id)
+
+@export_group("Display")
+
+## label is a path to a `Label` node which will render glyph text, if set. A default
+## `Label` will be created if this is unset.
+@export_node_path var label: NodePath = "Label"
+
+## texture_rect is a path to a `TextureRect` node which will render a glyph texture, if
+## set. A default `TextureRect` will be created if this is unset.
+@export_node_path var texture_rect: NodePath = "TextureRect"
 
 @export_group("Properties")
 
@@ -38,13 +50,16 @@ const Signals := preload("../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _slot: InputSlot = null
+var _slot: StdInputSlot = null
+
+@onready var _label: Label = get_node_or_null(label)
+@onready var _texture_rect: TextureRect = get_node_or_null(texture_rect)
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
 func _exit_tree() -> void:
-	Signals.disconnect_safe(_slot.device_activated, _on_InputSlot_device_activated)
+	Signals.disconnect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 	(
 		Signals
 		. disconnect_safe(
@@ -55,10 +70,24 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	_slot = InputSlot.for_player(player_id)
-	assert(_slot is InputSlot, "invalid state; missing input slot")
+	# Create missing child nodes.
+	if not _texture_rect:
+		_texture_rect = _create_texture_rect()
+		add_child(_texture_rect, false, INTERNAL_MODE_BACK)
+		texture_rect = get_path_to(_texture_rect)
+	if not _label:
+		_label = _create_label()
+		add_child(_label, false, INTERNAL_MODE_BACK)
+		label = get_path_to(_label)
 
-	Signals.connect_safe(_slot.device_activated, _on_InputSlot_device_activated)
+	_label.visible = false
+	_texture_rect.visible = false
+
+	# Wire up glyph data connections.
+	_slot = StdInputSlot.for_player(player_id)
+	assert(_slot is StdInputSlot, "invalid state; missing input slot")
+
+	Signals.connect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 
 	assert(
 		glyph_type_override_property is StdSettingsPropertyInt,
@@ -73,19 +102,55 @@ func _ready() -> void:
 	)
 
 	# Initialize texture on first ready.
-	_on_StdSettingsPropertyInt_value_changed()
+	_update_texture()
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _create_label() -> Label:
+	var node := Label.new()
+	node.set_anchors_preset(LayoutPreset.PRESET_CENTER)
+	node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	node.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	return node
+
+
+func _create_texture_rect() -> TextureRect:
+	var node := TextureRect.new()
+	node.set_anchors_preset(LayoutPreset.PRESET_CENTER)
+	node.expand_mode = TextureRect.EXPAND_KEEP_SIZE
+	node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+
+	return node
+
+
+func _update_texture() -> void:
+	var data := _slot.get_action_glyph(action_set.name, action)
+	if not data:
+		_label.text = ""
+		_label.visible = false
+		_texture_rect.texture = null
+		_texture_rect.visible = false
+
+		return
+
+	if data.texture:
+		_texture_rect.texture = data.texture
+		_texture_rect.visible = true
+
+	if data.label:
+		_label.text = data.label
+		_label.visible = true
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_InputSlot_device_activated(device: InputDevice) -> void:
-	texture = device.get_action_glyph(action)
+func _on_StdInputSlot_device_activated(_device: StdInputDevice) -> void:
+	_update_texture()
 
 
 func _on_StdSettingsPropertyInt_value_changed() -> void:
-	var device := _slot.get_active_device()
-	if not device:
-		return
-
-	texture = device.get_action_glyph(action)
+	_update_texture()

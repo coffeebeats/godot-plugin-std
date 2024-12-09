@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.3 (2024-12-09)
+
+## What's Changed
+* chore(input): remove leftover TODO by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/93
+* fix(input): match axis values correctly by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/95
+* refactor(input): streamline `InputDevice` components; update `InputSlot` and `InputGlyph` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/96
+* fix(input): allow `StdInputGlyph` to display plain text labels by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/97
+* chore(input): prefix class names with `Std` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/98
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.7.2...v1.7.3
+
 ## 1.7.2 (2024-12-07)
 
 ## What's Changed

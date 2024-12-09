@@ -1,11 +1,11 @@
 ##
 ## std/input/action_set_mouse.gd
 ##
-## InputGlyphSetMouse is a collections of glyph icon resources for mouse devices.
+## StdInputGlyphSetMouse is a collections of glyph icon resources for mouse devices.
 ##
 
-class_name InputGlyphSetMouse
-extends InputGlyphSet
+class_name StdInputGlyphSetMouse
+extends StdInputGlyphSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -30,36 +30,44 @@ extends InputGlyphSet
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_origin_glyph(event: InputEvent) -> Texture2D:
+func _get_origin_glyph(event: InputEvent) -> GlyphData:
 	assert(
-		device_type == InputDevice.DEVICE_TYPE_KEYBOARD,
+		device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD,
 		"invalid state; wrong device type",
 	)
+
+	var texture: Texture2D = null
 
 	if event is InputEventMouseButton:
 		match event.button_index:
 			# Primary
 			MOUSE_BUTTON_LEFT:
-				return button_left
+				texture = button_left
 			MOUSE_BUTTON_RIGHT:
-				return button_left
+				texture = button_left
 			MOUSE_BUTTON_MIDDLE:
-				return button_middle
+				texture = button_middle
 
 			# Wheel
 			MOUSE_BUTTON_WHEEL_UP:
-				return button_wheel_up
+				texture = button_wheel_up
 			MOUSE_BUTTON_WHEEL_DOWN:
-				return button_wheel_down
+				texture = button_wheel_down
 			MOUSE_BUTTON_WHEEL_LEFT:
-				return button_wheel_left
+				texture = button_wheel_left
 			MOUSE_BUTTON_WHEEL_RIGHT:
-				return button_wheel_right
+				texture = button_wheel_right
 
 			# Side
 			MOUSE_BUTTON_XBUTTON1:
-				return button_side_1
+				texture = button_side_1
 			MOUSE_BUTTON_XBUTTON2:
-				return button_side_2
+				texture = button_side_2
 
-	return null  # gdlint:ignore=max-returns
+	if not texture:
+		return null
+
+	var data := GlyphData.new()
+	data.texture = texture
+
+	return data

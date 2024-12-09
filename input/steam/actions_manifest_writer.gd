@@ -2,7 +2,7 @@
 ## std/input/steam/actions_manifest_writer.gd
 ##
 ## `InputSteamActionsManifestWriter` is a class which, given a list of available
-## `InputActionSet`s and `InputActionSetLayer`s, can output a Steam Input actions
+## `StdInputActionSet`s and `StdInputActionSetLayer`s, can output a Steam Input actions
 ## manifest file.
 ##
 
@@ -23,13 +23,13 @@ const FilePath := preload("../../file/path.gd")
 
 @export_group("Actions")
 
-## action_sets is the complete set of available `InputActionSet`s within the game. This
-## must not include `InputActionSetLayer` types.
-@export var action_sets: Array[InputActionSet] = []
+## action_sets is the complete set of available `StdInputActionSet`s within the game.
+## This must not include `StdInputActionSetLayer` types.
+@export var action_sets: Array[StdInputActionSet] = []
 
-## action_set_layers is the complete set of available `InputActionSetLayers`s within the
-## game. This must not include base `InputActionSet` types.
-@export var action_set_layers: Array[InputActionSetLayer] = []
+## action_set_layers is the complete set of available `StdInputActionSetLayers`s within the
+## game. This must not include base `StdInputActionSet` types.
+@export var action_set_layers: Array[StdInputActionSetLayer] = []
 
 @export_group("Localization")
 
@@ -217,7 +217,7 @@ func _write_close_bracket(newline: bool = true) -> void:
 		_write_newline()
 
 
-func _write_actions_in_action_set(action_set: InputActionSet) -> void:
+func _write_actions_in_action_set(action_set: StdInputActionSet) -> void:
 	for section in ["StickPadGyro", "AnalogTrigger", "Button"]:
 		_write_string(section)
 		write_open_bracket()

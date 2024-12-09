@@ -1,28 +1,29 @@
 ##
 ## std/input/device.gd
 ##
-## InputDevice is a node which provides an interface for a single player input device.
-## Implementations of various features can be specified by overriding its components.
+## StdInputDevice is a node which provides an interface for a single player input
+## device. Implementations of various features can be specified by overriding its
+## components.
 ##
 
-class_name InputDevice
+class_name StdInputDevice
 extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 # action_set_loaded is emitted any time an action set is loaded (i.e. activated).
-signal action_set_loaded(action_set: InputActionSet)
+signal action_set_loaded(action_set: StdInputActionSet)
 
 ## action_set_layer_enabled is emitted when an action set layer is enabled.
-signal action_set_layer_enabled(action_set_layer: InputActionSetLayer)
+signal action_set_layer_enabled(action_set_layer: StdInputActionSetLayer)
 
 ## action_set_layer_disabled is emitted when an action set layer is disabled.
-signal action_set_layer_disabled(action_set_layer: InputActionSetLayer)
+signal action_set_layer_disabled(action_set_layer: StdInputActionSetLayer)
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## InputDeviceType is an enumeration of the categories of player input devices.
-enum InputDeviceType {
+## DeviceType is an enumeration of the categories of player input devices.
+enum DeviceType {
 	UNKNOWN = 0,
 	KEYBOARD = 1,
 	NINTENDO_SWITCH = 2,
@@ -34,128 +35,30 @@ enum InputDeviceType {
 
 ## DEVICE_TYPE_UNKNOWN defines an unknown device type (also represents an unspecified
 ## `InputDeviceType` value).
-const DEVICE_TYPE_UNKNOWN := InputDeviceType.UNKNOWN
+const DEVICE_TYPE_UNKNOWN := DeviceType.UNKNOWN
 
 ## DEVICE_TYPE_KEYBOARD defines a keyboard + mouse device type.
-const DEVICE_TYPE_KEYBOARD := InputDeviceType.KEYBOARD
+const DEVICE_TYPE_KEYBOARD := DeviceType.KEYBOARD
 
 ## DEVICE_TYPE_NINTENDO_SWITCH defines a Nintendo Switch joypad (e.g. pro controller or
 ## joycons).
-const DEVICE_TYPE_NINTENDO_SWITCH := InputDeviceType.NINTENDO_SWITCH
+const DEVICE_TYPE_NINTENDO_SWITCH := DeviceType.NINTENDO_SWITCH
 
 ## DEVICE_TYPE_PLAYSTATION defines a PlayStation joypad.
-const DEVICE_TYPE_PLAYSTATION := InputDeviceType.PLAYSTATION
+const DEVICE_TYPE_PLAYSTATION := DeviceType.PLAYSTATION
 
 ## DEVICE_TYPE_STEAM_DECK defines a Steam deck joypad.
-const DEVICE_TYPE_STEAM_DECK := InputDeviceType.STEAM_DECK
+const DEVICE_TYPE_STEAM_DECK := DeviceType.STEAM_DECK
 
 ## DEVICE_TYPE_STEAM_CONTROLLER defines a Steam controller joypad.
-const DEVICE_TYPE_STEAM_CONTROLLER := InputDeviceType.STEAM_CONTROLLER
+const DEVICE_TYPE_STEAM_CONTROLLER := DeviceType.STEAM_CONTROLLER
 
 ## DEVICE_TYPE_XBOX defines an Xbox joypad.
-const DEVICE_TYPE_XBOX := InputDeviceType.XBOX
-
-
-## Bindings is the interface for the input device bindings component. Set the input
-## device's `bindings` property to an instance of `Bindings` to override.
-##
-## NOTE: All of the methods defined in this class must be cheap to call and idempotent.
-class Bindings:
-	extends Node
-
-	# Action sets
-
-	## get_action_set returns the currently active `InputActionSet` *for the specified
-	## device*, if.
-	func get_action_set(_device: int) -> InputActionSet:
-		return null
-
-	## load_action_set unloads the currently active `InputActionSet`, if any, and then
-	## activates the provided action set *for the specified device*. If the action set
-	## is already active for the device then no change occurs.
-	func load_action_set(
-		_device: int, _device_type: InputDeviceType, _action_set: InputActionSet
-	) -> bool:
-		return true
-
-	# Action set layers
-
-	## enable_action_set_layer pushes the provided action set layer onto the stack of
-	## active layers *for the specified device*. If the action set layer is already
-	## active then no change occurs.
-	func enable_action_set_layer(
-		_device: int,
-		_device_type: InputDeviceType,
-		_action_set_layer: InputActionSetLayer
-	) -> bool:
-		return true
-
-	## disable_action_set_layer removes the provided action set layer from the set of
-	## active layers *for the specified device*. If the action set layer is not active
-	## then no change occurs.
-	func disable_action_set_layer(
-		_device: int,
-		_device_type: InputDeviceType,
-		_action_set_layer: InputActionSetLayer
-	) -> bool:
-		return true
-
-	## list_action_set_layers returns the stack of currently active action set layers
-	## *for the specified device*.
-	func list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
-		return []
-
-	# Action origins
-
-	## get_action_origins returns the set of input origins which are bound to the
-	## specified action *for the specified device*.
-	func get_action_origins(
-		_device: int, _device_type: InputDeviceType, _action: StringName
-	) -> PackedInt64Array:
-		return PackedInt64Array()
-
-
-## Glyphs is the interface for the input device bindings component. Set the input
-## device's `bindings` property to an instance of `Glyphs` to override.
-class Glyphs:
-	extends Node
-
-	## get_origin_glyph returns a `Texture2D` containing an input origin glyph icon *for
-	## the specified device*.
-	func get_origin_glyph(_device_type: InputDeviceType, _origin: int) -> Texture2D:
-		return null
-
-
-## Haptics is the interface for the input device bindings component. Set the input
-## device's `bindings` property to an instance of `Haptics` to override.
-class Haptics:
-	extends Node
-
-	## start_vibrate_weak executes a weak vibration effect for the provided duration
-	## and device.
-	func start_vibrate_weak(
-		_device: int, _duration: float, _strength: float = 1.0
-	) -> bool:
-		return false
-
-	## start_vibrate_strong executes a strong vibration effect for the provided duration
-	## and device
-	func start_vibrate_strong(
-		_device: int, _duration: float, _strength: float = 1.0
-	) -> bool:
-		return false
-
-	## stop_vibrate stops all ongoing vibration effects *for the device*.
-	func stop_vibrate(_device: int) -> void:
-		pass
-
+const DEVICE_TYPE_XBOX := DeviceType.XBOX
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## device_type is the `InputDeviceType` of the `InputDevice`.
-@export var device_type: InputDeviceType = InputDeviceType.UNKNOWN
-
-## index is the device ID, which is unique to the input paradigm; touch, keyboard,
+## device_id is the device ID, which is unique to the input paradigm; touch, keyboard,
 ## mouse and joypads all have separate scopes for the device index.
 ##
 ## NOTE: Despite keyboard device IDs potentially conflicting with mouse IDs, this class
@@ -163,21 +66,22 @@ class Haptics:
 ## under the keyboard+mouse paradigm. The `index` would refer to the keyboard's index in
 ## that case (which is expected to be `0` in all cases because Godot/Windows does not
 ## seem to distinguish between different keyboards).
-@export var index: int = 0
+@export var device_id: int = 0
+
+## device_type is the `DeviceType` of the `StdInputDevice`.
+@export var device_type: DeviceType = DEVICE_TYPE_UNKNOWN
 
 @export_group("Components")
 
-## bindings is the `InputDevice`'s bindings component which will be delegated to for
-## reading/writing input bindings and managing action sets.
-@export var bindings: Bindings = null
+## actions is the input device's component which manages loaded/enabled action sets.
+@export var actions: StdInputDeviceActions = null
 
-## bindings is the `InputDevice`'s glyph component which will be delegated to for
-## fetching glyphs for action origins.
-@export var glyphs: Glyphs = null
+## glyphs is the input device's component which fetches origin glyphs.
+@export var glyphs: StdInputDeviceGlyphs = null
 
-## haptics is the `InputDevice`'s haptics component which will be delegated to for
-## initiating haptic feedback (i.e. vibrations).
-@export var haptics: Haptics = null
+## haptics is the input device's component which provides haptic feedback (i.e.
+## vibrations).
+@export var haptics: StdInputDeviceHaptics = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -187,15 +91,21 @@ class Haptics:
 ## load_action_set unbinds any actions currently bound (including activated layers) and
 ## then binds the actions defined within the action set. Does nothing if the action set
 ## is already activated.
-func load_action_set(action_set: InputActionSet) -> bool:
-	assert(action_set is InputActionSet, "missing argument: action set")
-	assert(not action_set is InputActionSetLayer, "invalid argument: cannot be a layer")
-	assert(bindings is Bindings, "invalid state; missing component")
+func load_action_set(action_set: StdInputActionSet) -> bool:
+	assert(action_set is StdInputActionSet, "missing argument: action set")
+	assert(
+		not action_set is StdInputActionSetLayer, "invalid argument: cannot be a layer"
+	)
+	assert(actions is StdInputDeviceActions, "invalid state; missing component")
 
-	var layers := bindings.list_action_set_layers(index)
+	var layers := actions.list_action_set_layers(device_id)
 
-	if not bindings.load_action_set(index, device_type, action_set):
+	if not actions.load_action_set(device_id, action_set):
 		return false
+
+	assert(
+		not actions.list_action_set_layers(device_id), "invalid state; dangling layers"
+	)
 
 	layers.reverse()
 	for layer in layers:
@@ -216,12 +126,17 @@ func load_action_set(action_set: InputActionSet) -> bool:
 ##
 ## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
 ## taken.
-func enable_action_set_layer(layer: InputActionSetLayer) -> bool:
-	assert(layer is InputActionSetLayer, "invalid argument: layer")
-	assert(bindings is Bindings, "invalid state; missing component")
+func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
+	assert(layer is StdInputActionSetLayer, "invalid argument: layer")
+	assert(actions is StdInputDeviceActions, "invalid state; missing component")
 
-	if not bindings.enable_action_set_layer(index, device_type, layer):
+	if not actions.enable_action_set_layer(device_id, layer):
 		return false
+
+	assert(
+		layer in actions.list_action_set_layers(device_id),
+		"invalid state; missing layer"
+	)
 
 	action_set_layer_enabled.emit(layer)
 
@@ -233,12 +148,17 @@ func enable_action_set_layer(layer: InputActionSetLayer) -> bool:
 ##
 ## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
 ## taken.
-func disable_action_set_layer(layer: InputActionSetLayer) -> bool:
-	assert(layer is InputActionSetLayer, "invalid argument: layer")
-	assert(bindings is Bindings, "invalid state; missing component")
+func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
+	assert(layer is StdInputActionSetLayer, "invalid argument: layer")
+	assert(actions is StdInputDeviceActions, "invalid state; missing component")
 
-	if not bindings.disable_action_set_layer(index, device_type, layer):
+	if not actions.disable_action_set_layer(device_id, layer):
 		return false
+
+	assert(
+		layer not in actions.list_action_set_layers(device_id),
+		"invalid state; dangling layer"
+	)
 
 	action_set_layer_disabled.emit(layer)
 
@@ -251,20 +171,16 @@ func disable_action_set_layer(layer: InputActionSetLayer) -> bool:
 ## get_action_glyph returns a `Texture2D` containing the glyph of the primary (i.e.
 ## first) controller origin which will actuate the specified action.
 func get_action_glyph(
+	action_set: StringName,
 	action: StringName,
-	device_type_override: InputDeviceType = DEVICE_TYPE_UNKNOWN,
-) -> Texture2D:
-	assert(bindings is Bindings, "invalid state; missing component")
-	assert(glyphs is Glyphs, "invalid state; missing component")
-
-	var origins := bindings.get_action_origins(index, device_type, action)
-	if not origins:
-		return null
+	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN,
+) -> StdInputDeviceGlyphs.GlyphData:
+	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
 	if device_type_override == DEVICE_TYPE_UNKNOWN:
 		device_type_override = device_type
 
-	return glyphs.get_origin_glyph(device_type_override, origins[0])
+	return glyphs.get_action_glyph(device_id, device_type_override, action_set, action)
 
 
 # Haptics
@@ -272,39 +188,35 @@ func get_action_glyph(
 
 ## start_vibrate_strong initiates an input device vibration for `duration` seconds using
 ## the device's strong vibration motor, if available.
-func start_vibrate_strong(duration: float, strength: float = 1.0) -> bool:
-	assert(haptics is Haptics, "invalid state; missing component")
+func start_vibrate_strong(duration: float, strength: float = 1.0) -> void:
+	assert(haptics is StdInputDeviceHaptics, "invalid state; missing component")
 
-	return haptics.start_vibrate_strong(index, duration, clampf(strength, 0.0, 1.0))
+	return haptics.start_vibrate_strong(device_id, duration, clampf(strength, 0.0, 1.0))
 
 
 ## start_vibrate_weak initiates an input device vibration for `duration` seconds using
 ## the device's weak vibration motor, if available.
-func start_vibrate_weak(duration: float, strength: float = 1.0) -> bool:
-	assert(haptics is Haptics, "invalid state; missing component")
+func start_vibrate_weak(duration: float, strength: float = 1.0) -> void:
+	assert(haptics is StdInputDeviceHaptics, "invalid state; missing component")
 
-	return haptics.start_vibrate_weak(index, duration, clampf(strength, 0.0, 1.0))
+	return haptics.start_vibrate_weak(device_id, duration, clampf(strength, 0.0, 1.0))
 
 
 ## stop_vibrate terminates all ongoing vibration for the input device.
 func stop_vibrate() -> void:
-	assert(haptics is Haptics, "invalid state; missing component")
+	assert(haptics is StdInputDeviceHaptics, "invalid state; missing component")
 
-	return haptics.stop_vibrate(index)
+	return haptics.stop_vibrate(device_id)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
 func _ready() -> void:
-	if not bindings:
-		bindings = Bindings.new()
-		add_child(bindings, false, INTERNAL_MODE_BACK)
-
-	if not glyphs:
-		glyphs = Glyphs.new()
-		add_child(glyphs, false, INTERNAL_MODE_BACK)
-
 	if not haptics:
-		haptics = Haptics.new()
+		haptics = StdInputDeviceHaptics.NoOp.new()
 		add_child(haptics, false, INTERNAL_MODE_BACK)
+
+	assert(actions is StdInputDeviceActions, "invalid config; missing component")
+	assert(glyphs is StdInputDeviceGlyphs, "invalid config; missing component")
+	assert(haptics is StdInputDeviceHaptics, "invalid config; missing component")

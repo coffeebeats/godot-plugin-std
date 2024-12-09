@@ -1,13 +1,17 @@
 ##
 ## std/input/action_set_keyboard.gd
 ##
-## InputGlyphSetKeyboard is a collections of glyph icon resources for keyboard devices.
+## StdInputGlyphSetKeyboard is a collections of glyph icon resources for keyboard
+## devices.
 ##
 
-class_name InputGlyphSetKeyboard
-extends InputGlyphSet
+class_name StdInputGlyphSetKeyboard
+extends StdInputGlyphSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
+
+## include_label defines whether an origin label is included in the returned glyph data.
+@export var include_label: bool = false
 
 @export_subgroup("Command")
 
@@ -113,186 +117,197 @@ extends InputGlyphSet
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_origin_glyph(event: InputEvent) -> Texture2D:
+func _get_origin_glyph(event: InputEvent) -> GlyphData:
 	assert(
-		device_type == InputDevice.DEVICE_TYPE_KEYBOARD,
+		device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD,
 		"invalid state; wrong device type",
 	)
+
+	var texture: Texture2D = null
 
 	if event is InputEventKey:
 		match event.keycode:
 			# Command
 			KEY_ESCAPE:
-				return cmd_escape
+				texture = cmd_escape
 			KEY_TAB:
-				return cmd_tab
+				texture = cmd_tab
 			KEY_BACKSPACE:
-				return cmd_backspace
+				texture = cmd_backspace
 			KEY_ENTER:
-				return cmd_enter
+				texture = cmd_enter
 			KEY_SPACE:
-				return cmd_space
+				texture = cmd_space
 			KEY_INSERT:
-				return cmd_insert
+				texture = cmd_insert
 			KEY_DELETE:
-				return cmd_delete
+				texture = cmd_delete
 			KEY_HOME:
-				return cmd_home
+				texture = cmd_home
 			KEY_END:
-				return cmd_end
+				texture = cmd_end
 			KEY_PAGEUP:
-				return cmd_page_up
+				texture = cmd_page_up
 			KEY_PAGEDOWN:
-				return cmd_page_down
+				texture = cmd_page_down
 
 			# Arrow
 			KEY_UP:
-				return arrow_up
+				texture = arrow_up
 			KEY_DOWN:
-				return arrow_down
+				texture = arrow_down
 			KEY_LEFT:
-				return arrow_left
+				texture = arrow_left
 			KEY_RIGHT:
-				return arrow_right
+				texture = arrow_right
 
 			# Modifier
 			KEY_SHIFT:
-				return mod_shift
+				texture = mod_shift
 			KEY_CTRL:
-				return mod_control
+				texture = mod_control
 			KEY_META:
-				return mod_meta
+				texture = mod_meta
 			KEY_ALT:
-				return mod_alt
+				texture = mod_alt
 			KEY_CAPSLOCK:
-				return mod_capslock
+				texture = mod_capslock
 			KEY_NUMLOCK:
-				return mod_numlock
+				texture = mod_numlock
 
 			# Letter
 			KEY_A:
-				return letter_a
+				texture = letter_a
 			KEY_B:
-				return letter_b
+				texture = letter_b
 			KEY_C:
-				return letter_c
+				texture = letter_c
 			KEY_D:
-				return letter_d
+				texture = letter_d
 			KEY_E:
-				return letter_e
+				texture = letter_e
 			KEY_F:
-				return letter_f
+				texture = letter_f
 			KEY_G:
-				return letter_g
+				texture = letter_g
 			KEY_H:
-				return letter_h
+				texture = letter_h
 			KEY_I:
-				return letter_i
+				texture = letter_i
 			KEY_J:
-				return letter_j
+				texture = letter_j
 			KEY_K:
-				return letter_k
+				texture = letter_k
 			KEY_L:
-				return letter_l
+				texture = letter_l
 			KEY_M:
-				return letter_m
+				texture = letter_m
 			KEY_N:
-				return letter_n
+				texture = letter_n
 			KEY_O:
-				return letter_o
+				texture = letter_o
 			KEY_P:
-				return letter_p
+				texture = letter_p
 			KEY_Q:
-				return letter_q
+				texture = letter_q
 			KEY_R:
-				return letter_r
+				texture = letter_r
 			KEY_S:
-				return letter_s
+				texture = letter_s
 			KEY_T:
-				return letter_t
+				texture = letter_t
 			KEY_U:
-				return letter_u
+				texture = letter_u
 			KEY_V:
-				return letter_v
+				texture = letter_v
 			KEY_W:
-				return letter_w
+				texture = letter_w
 			KEY_X:
-				return letter_x
+				texture = letter_x
 			KEY_Y:
-				return letter_y
+				texture = letter_y
 			KEY_Z:
-				return letter_z
+				texture = letter_z
 
 			# Number
 			KEY_0:
-				return number_0
+				texture = number_0
 			KEY_1:
-				return number_1
+				texture = number_1
 			KEY_2:
-				return number_2
+				texture = number_2
 			KEY_3:
-				return number_3
+				texture = number_3
 			KEY_4:
-				return number_4
+				texture = number_4
 			KEY_5:
-				return number_5
+				texture = number_5
 			KEY_6:
-				return number_6
+				texture = number_6
 			KEY_7:
-				return number_7
+				texture = number_7
 			KEY_8:
-				return number_8
+				texture = number_8
 			KEY_9:
-				return number_9
+				texture = number_9
 
 			# Function
 			KEY_F1:
-				return fn_1
+				texture = fn_1
 			KEY_F2:
-				return fn_2
+				texture = fn_2
 			KEY_F3:
-				return fn_3
+				texture = fn_3
 			KEY_F4:
-				return fn_4
+				texture = fn_4
 			KEY_F5:
-				return fn_5
+				texture = fn_5
 			KEY_F6:
-				return fn_6
+				texture = fn_6
 			KEY_F7:
-				return fn_7
+				texture = fn_7
 			KEY_F8:
-				return fn_8
+				texture = fn_8
 			KEY_F9:
-				return fn_9
+				texture = fn_9
 			KEY_F10:
-				return fn_10
+				texture = fn_10
 			KEY_F11:
-				return fn_11
+				texture = fn_11
 			KEY_F12:
-				return fn_12
+				texture = fn_12
 
 			# Symbol
 			KEY_ASCIITILDE:
-				return symbol_tilde
+				texture = symbol_tilde
 			KEY_COMMA:
-				return symbol_comma
+				texture = symbol_comma
 			KEY_PERIOD:
-				return symbol_period
+				texture = symbol_period
 			KEY_SLASH:
-				return symbol_slash_forward
+				texture = symbol_slash_forward
 			KEY_BACKSLASH:
-				return symbol_slash_back
+				texture = symbol_slash_back
 			KEY_SEMICOLON:
-				return symbol_semicolon
+				texture = symbol_semicolon
 			KEY_APOSTROPHE:
-				return symbol_apostrophe
+				texture = symbol_apostrophe
 			KEY_BRACKETLEFT:
-				return symbol_bracket_left
+				texture = symbol_bracket_left
 			KEY_BRACKETRIGHT:
-				return symbol_bracket_right
+				texture = symbol_bracket_right
 			KEY_MINUS:
-				return symbol_minus
+				texture = symbol_minus
 			KEY_EQUAL:
-				return symbol_equal
+				texture = symbol_equal
 
-	return null  # gdlint:ignore=max-returns
+	if not texture:
+		return null
+
+	var data := GlyphData.new()
+	data.texture = texture
+
+	if include_label and event is InputEventKey:
+		data.label = event.as_text_key_label()
+
+	return data

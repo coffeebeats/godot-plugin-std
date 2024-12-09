@@ -1,11 +1,11 @@
 ##
 ## std/input/action_set_joy.gd
 ##
-## InputGlyphSetJoy is a collections of glyph icon resources for joypad devices.
+## StdInputGlyphSetJoy is a collections of glyph icon resources for joypad devices.
 ##
 
-class_name InputGlyphSetJoy
-extends InputGlyphSet
+class_name StdInputGlyphSetJoy
+extends StdInputGlyphSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -70,100 +70,108 @@ extends InputGlyphSet
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_origin_glyph(event: InputEvent) -> Texture2D:
+func _get_origin_glyph(event: InputEvent) -> GlyphData:
 	assert(
-		device_type != InputDevice.DEVICE_TYPE_KEYBOARD,
+		device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD,
 		"invalid state; wrong device type",
 	)
+
+	var texture: Texture2D = null
 
 	if event is InputEventJoypadButton:
 		match event.button_index:
 			# Face
 			JOY_BUTTON_A:
-				return button_a
+				texture = button_a
 			JOY_BUTTON_B:
-				return button_b
+				texture = button_b
 			JOY_BUTTON_X:
-				return button_x
+				texture = button_x
 			JOY_BUTTON_Y:
-				return button_y
+				texture = button_y
 
 			# Navigation
 			JOY_BUTTON_BACK:
-				return button_back
+				texture = button_back
 			JOY_BUTTON_GUIDE:
-				return button_guide
+				texture = button_guide
 			JOY_BUTTON_START:
-				return button_start
+				texture = button_start
 
 			# Joystick
 			JOY_BUTTON_LEFT_STICK:
-				return button_stick_left
+				texture = button_stick_left
 			JOY_BUTTON_RIGHT_STICK:
-				return button_stick_right
+				texture = button_stick_right
 
 			# Shoulder
 			JOY_BUTTON_LEFT_SHOULDER:
-				return button_shoulder_left
+				texture = button_shoulder_left
 			JOY_BUTTON_RIGHT_SHOULDER:
-				return button_shoulder_right
+				texture = button_shoulder_right
 
 			# D-pad
 			JOY_BUTTON_DPAD_UP:
-				return button_dpad_up
+				texture = button_dpad_up
 			JOY_BUTTON_DPAD_DOWN:
-				return button_dpad_down
+				texture = button_dpad_down
 			JOY_BUTTON_DPAD_LEFT:
-				return button_dpad_left
+				texture = button_dpad_left
 			JOY_BUTTON_DPAD_RIGHT:
-				return button_dpad_right
+				texture = button_dpad_right
 
 			# Miscellaneous
 			JOY_BUTTON_MISC1:
-				return button_misc
+				texture = button_misc
 			JOY_BUTTON_PADDLE1:
-				return button_paddle_1
+				texture = button_paddle_1
 			JOY_BUTTON_PADDLE2:
-				return button_paddle_2
+				texture = button_paddle_2
 			JOY_BUTTON_PADDLE3:
-				return button_paddle_3
+				texture = button_paddle_3
 			JOY_BUTTON_PADDLE4:
-				return button_paddle_4
+				texture = button_paddle_4
 			JOY_BUTTON_TOUCHPAD:
-				return button_touchpad
+				texture = button_touchpad
 
 	if event is InputEventJoypadMotion:
 		match event.axis:
 			# Joysticks
 			JOY_AXIS_LEFT_X:
 				match event.axis_value:
-					-1:
-						return stick_left_direction_left
-					1:
-						return stick_left_direction_right
+					-1.0:
+						texture = stick_left_direction_left
+					1.0:
+						texture = stick_left_direction_right
 			JOY_AXIS_LEFT_Y:
 				match event.axis_value:
-					-1:
-						return stick_left_direction_up
-					1:
-						return stick_left_direction_down
+					-1.0:
+						texture = stick_left_direction_up
+					1.0:
+						texture = stick_left_direction_down
 			JOY_AXIS_RIGHT_X:
 				match event.axis_value:
-					-1:
-						return stick_right_direction_left
-					1:
-						return stick_right_direction_right
+					-1.0:
+						texture = stick_right_direction_left
+					1.0:
+						texture = stick_right_direction_right
 			JOY_AXIS_RIGHT_Y:
 				match event.axis_value:
-					-1:
-						return stick_right_direction_up
-					1:
-						return stick_right_direction_down
+					-1.0:
+						texture = stick_right_direction_up
+					1.0:
+						texture = stick_right_direction_down
 
 			# Analog triggers
 			JOY_AXIS_TRIGGER_LEFT:
-				return analog_trigger_left
+				texture = analog_trigger_left
 			JOY_AXIS_TRIGGER_RIGHT:
-				return analog_trigger_right
+				texture = analog_trigger_right
 
-	return null  # gdlint:ignore=max-returns
+	if not texture:
+		return null
+
+	var data := GlyphData.new()
+	data.texture = texture
+
+	return data
