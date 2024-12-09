@@ -1,11 +1,11 @@
 ##
 ## std/input/action_set_joy.gd
 ##
-## InputGlyphSetJoy is a collections of glyph icon resources for joypad devices.
+## StdInputGlyphSetJoy is a collections of glyph icon resources for joypad devices.
 ##
 
-class_name InputGlyphSetJoy
-extends InputGlyphSet
+class_name StdInputGlyphSetJoy
+extends StdInputGlyphSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 

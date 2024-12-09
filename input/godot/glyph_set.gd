@@ -1,11 +1,11 @@
 ##
 ## std/input/action_set.gd
 ##
-## `InputGlyphSet` is a base class for collections of glyph icon resources for specific
-## device types.
+## `StdInputGlyphSet` is a base class for collections of glyph icon resources for
+## specific device types.
 ##
 
-class_name InputGlyphSet
+class_name StdInputGlyphSet
 extends Resource
 
 # -- DEFINITIONS --------------------------------------------------------------------- #

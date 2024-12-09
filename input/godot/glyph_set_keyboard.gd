@@ -1,11 +1,12 @@
 ##
 ## std/input/action_set_keyboard.gd
 ##
-## InputGlyphSetKeyboard is a collections of glyph icon resources for keyboard devices.
+## StdInputGlyphSetKeyboard is a collections of glyph icon resources for keyboard
+## devices.
 ##
 
-class_name InputGlyphSetKeyboard
-extends InputGlyphSet
+class_name StdInputGlyphSetKeyboard
+extends StdInputGlyphSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 

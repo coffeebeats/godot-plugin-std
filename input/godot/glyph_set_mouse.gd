@@ -1,11 +1,11 @@
 ##
 ## std/input/action_set_mouse.gd
 ##
-## InputGlyphSetMouse is a collections of glyph icon resources for mouse devices.
+## StdInputGlyphSetMouse is a collections of glyph icon resources for mouse devices.
 ##
 
-class_name InputGlyphSetMouse
-extends InputGlyphSet
+class_name StdInputGlyphSetMouse
+extends StdInputGlyphSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
