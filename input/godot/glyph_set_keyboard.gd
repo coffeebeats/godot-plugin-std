@@ -13,6 +13,10 @@ extends StdInputGlyphSet
 ## include_label defines whether an origin label is included in the returned glyph data.
 @export var include_label: bool = false
 
+## capitalize_label controls whether the returned origin label is capitalized. Only used
+## if `include_label` is `true`.
+@export var capitalize_label: bool = true
+
 @export_subgroup("Command")
 
 @export var cmd_escape: Texture2D = null
@@ -123,191 +127,196 @@ func _get_origin_glyph(event: InputEvent) -> GlyphData:
 		"invalid state; wrong device type",
 	)
 
+	if not event is InputEventKey:
+		return null
+
 	var texture: Texture2D = null
 
-	if event is InputEventKey:
-		match event.keycode:
-			# Command
-			KEY_ESCAPE:
-				texture = cmd_escape
-			KEY_TAB:
-				texture = cmd_tab
-			KEY_BACKSPACE:
-				texture = cmd_backspace
-			KEY_ENTER:
-				texture = cmd_enter
-			KEY_SPACE:
-				texture = cmd_space
-			KEY_INSERT:
-				texture = cmd_insert
-			KEY_DELETE:
-				texture = cmd_delete
-			KEY_HOME:
-				texture = cmd_home
-			KEY_END:
-				texture = cmd_end
-			KEY_PAGEUP:
-				texture = cmd_page_up
-			KEY_PAGEDOWN:
-				texture = cmd_page_down
+	match event.keycode:
+		# Command
+		KEY_ESCAPE:
+			texture = cmd_escape
+		KEY_TAB:
+			texture = cmd_tab
+		KEY_BACKSPACE:
+			texture = cmd_backspace
+		KEY_ENTER:
+			texture = cmd_enter
+		KEY_SPACE:
+			texture = cmd_space
+		KEY_INSERT:
+			texture = cmd_insert
+		KEY_DELETE:
+			texture = cmd_delete
+		KEY_HOME:
+			texture = cmd_home
+		KEY_END:
+			texture = cmd_end
+		KEY_PAGEUP:
+			texture = cmd_page_up
+		KEY_PAGEDOWN:
+			texture = cmd_page_down
 
-			# Arrow
-			KEY_UP:
-				texture = arrow_up
-			KEY_DOWN:
-				texture = arrow_down
-			KEY_LEFT:
-				texture = arrow_left
-			KEY_RIGHT:
-				texture = arrow_right
+		# Arrow
+		KEY_UP:
+			texture = arrow_up
+		KEY_DOWN:
+			texture = arrow_down
+		KEY_LEFT:
+			texture = arrow_left
+		KEY_RIGHT:
+			texture = arrow_right
 
-			# Modifier
-			KEY_SHIFT:
-				texture = mod_shift
-			KEY_CTRL:
-				texture = mod_control
-			KEY_META:
-				texture = mod_meta
-			KEY_ALT:
-				texture = mod_alt
-			KEY_CAPSLOCK:
-				texture = mod_capslock
-			KEY_NUMLOCK:
-				texture = mod_numlock
+		# Modifier
+		KEY_SHIFT:
+			texture = mod_shift
+		KEY_CTRL:
+			texture = mod_control
+		KEY_META:
+			texture = mod_meta
+		KEY_ALT:
+			texture = mod_alt
+		KEY_CAPSLOCK:
+			texture = mod_capslock
+		KEY_NUMLOCK:
+			texture = mod_numlock
 
-			# Letter
-			KEY_A:
-				texture = letter_a
-			KEY_B:
-				texture = letter_b
-			KEY_C:
-				texture = letter_c
-			KEY_D:
-				texture = letter_d
-			KEY_E:
-				texture = letter_e
-			KEY_F:
-				texture = letter_f
-			KEY_G:
-				texture = letter_g
-			KEY_H:
-				texture = letter_h
-			KEY_I:
-				texture = letter_i
-			KEY_J:
-				texture = letter_j
-			KEY_K:
-				texture = letter_k
-			KEY_L:
-				texture = letter_l
-			KEY_M:
-				texture = letter_m
-			KEY_N:
-				texture = letter_n
-			KEY_O:
-				texture = letter_o
-			KEY_P:
-				texture = letter_p
-			KEY_Q:
-				texture = letter_q
-			KEY_R:
-				texture = letter_r
-			KEY_S:
-				texture = letter_s
-			KEY_T:
-				texture = letter_t
-			KEY_U:
-				texture = letter_u
-			KEY_V:
-				texture = letter_v
-			KEY_W:
-				texture = letter_w
-			KEY_X:
-				texture = letter_x
-			KEY_Y:
-				texture = letter_y
-			KEY_Z:
-				texture = letter_z
+		# Letter
+		KEY_A:
+			texture = letter_a
+		KEY_B:
+			texture = letter_b
+		KEY_C:
+			texture = letter_c
+		KEY_D:
+			texture = letter_d
+		KEY_E:
+			texture = letter_e
+		KEY_F:
+			texture = letter_f
+		KEY_G:
+			texture = letter_g
+		KEY_H:
+			texture = letter_h
+		KEY_I:
+			texture = letter_i
+		KEY_J:
+			texture = letter_j
+		KEY_K:
+			texture = letter_k
+		KEY_L:
+			texture = letter_l
+		KEY_M:
+			texture = letter_m
+		KEY_N:
+			texture = letter_n
+		KEY_O:
+			texture = letter_o
+		KEY_P:
+			texture = letter_p
+		KEY_Q:
+			texture = letter_q
+		KEY_R:
+			texture = letter_r
+		KEY_S:
+			texture = letter_s
+		KEY_T:
+			texture = letter_t
+		KEY_U:
+			texture = letter_u
+		KEY_V:
+			texture = letter_v
+		KEY_W:
+			texture = letter_w
+		KEY_X:
+			texture = letter_x
+		KEY_Y:
+			texture = letter_y
+		KEY_Z:
+			texture = letter_z
 
-			# Number
-			KEY_0:
-				texture = number_0
-			KEY_1:
-				texture = number_1
-			KEY_2:
-				texture = number_2
-			KEY_3:
-				texture = number_3
-			KEY_4:
-				texture = number_4
-			KEY_5:
-				texture = number_5
-			KEY_6:
-				texture = number_6
-			KEY_7:
-				texture = number_7
-			KEY_8:
-				texture = number_8
-			KEY_9:
-				texture = number_9
+		# Number
+		KEY_0:
+			texture = number_0
+		KEY_1:
+			texture = number_1
+		KEY_2:
+			texture = number_2
+		KEY_3:
+			texture = number_3
+		KEY_4:
+			texture = number_4
+		KEY_5:
+			texture = number_5
+		KEY_6:
+			texture = number_6
+		KEY_7:
+			texture = number_7
+		KEY_8:
+			texture = number_8
+		KEY_9:
+			texture = number_9
 
-			# Function
-			KEY_F1:
-				texture = fn_1
-			KEY_F2:
-				texture = fn_2
-			KEY_F3:
-				texture = fn_3
-			KEY_F4:
-				texture = fn_4
-			KEY_F5:
-				texture = fn_5
-			KEY_F6:
-				texture = fn_6
-			KEY_F7:
-				texture = fn_7
-			KEY_F8:
-				texture = fn_8
-			KEY_F9:
-				texture = fn_9
-			KEY_F10:
-				texture = fn_10
-			KEY_F11:
-				texture = fn_11
-			KEY_F12:
-				texture = fn_12
+		# Function
+		KEY_F1:
+			texture = fn_1
+		KEY_F2:
+			texture = fn_2
+		KEY_F3:
+			texture = fn_3
+		KEY_F4:
+			texture = fn_4
+		KEY_F5:
+			texture = fn_5
+		KEY_F6:
+			texture = fn_6
+		KEY_F7:
+			texture = fn_7
+		KEY_F8:
+			texture = fn_8
+		KEY_F9:
+			texture = fn_9
+		KEY_F10:
+			texture = fn_10
+		KEY_F11:
+			texture = fn_11
+		KEY_F12:
+			texture = fn_12
 
-			# Symbol
-			KEY_ASCIITILDE:
-				texture = symbol_tilde
-			KEY_COMMA:
-				texture = symbol_comma
-			KEY_PERIOD:
-				texture = symbol_period
-			KEY_SLASH:
-				texture = symbol_slash_forward
-			KEY_BACKSLASH:
-				texture = symbol_slash_back
-			KEY_SEMICOLON:
-				texture = symbol_semicolon
-			KEY_APOSTROPHE:
-				texture = symbol_apostrophe
-			KEY_BRACKETLEFT:
-				texture = symbol_bracket_left
-			KEY_BRACKETRIGHT:
-				texture = symbol_bracket_right
-			KEY_MINUS:
-				texture = symbol_minus
-			KEY_EQUAL:
-				texture = symbol_equal
+		# Symbol
+		KEY_ASCIITILDE:
+			texture = symbol_tilde
+		KEY_COMMA:
+			texture = symbol_comma
+		KEY_PERIOD:
+			texture = symbol_period
+		KEY_SLASH:
+			texture = symbol_slash_forward
+		KEY_BACKSLASH:
+			texture = symbol_slash_back
+		KEY_SEMICOLON:
+			texture = symbol_semicolon
+		KEY_APOSTROPHE:
+			texture = symbol_apostrophe
+		KEY_BRACKETLEFT:
+			texture = symbol_bracket_left
+		KEY_BRACKETRIGHT:
+			texture = symbol_bracket_right
+		KEY_MINUS:
+			texture = symbol_minus
+		KEY_EQUAL:
+			texture = symbol_equal
 
-	if not texture:
+	if not texture and not include_label:
 		return null
 
 	var data := GlyphData.new()
 	data.texture = texture
 
-	if include_label and event is InputEventKey:
-		data.label = event.as_text_key_label()
+	if include_label:
+		data.label = OS.get_keycode_string(event.keycode)
+
+		if capitalize_label:
+			data.label = data.label.to_upper()
 
 	return data
