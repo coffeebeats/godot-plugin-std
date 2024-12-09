@@ -25,7 +25,7 @@ const Origin := preload("../origin.gd")
 
 func _get_action_glyph(
 	_device: int,
-	device_type: InputDeviceType,
+	device_type: StdInputDevice.DeviceType,
 	_action_set: StringName,
 	action: StringName,
 ) -> GlyphData:

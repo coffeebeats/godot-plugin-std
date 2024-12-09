@@ -10,12 +10,12 @@ extends Resource
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const GlyphData := StdInputDeviceGlyphs.GlyphData  # gdlint:ignore=constant-name
+const GlyphData := StdInputDeviceGlyphs.GlyphData # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## device_type is the type of input device to which these glyph icons pertain.
-@export var device_type: InputDevice.InputDeviceType
+@export var device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

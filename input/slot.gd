@@ -7,8 +7,8 @@
 ##
 ## For a local multiplayer game, one `InputSlot` would be created for each possible
 ## player (and possibly one additional slot for keyboard and mouse controls if those
-## aren't tied to one player). Single player games should have a single `InputSlot`
-## which defines how to swap between various connected `InputDevice`s.
+## aren't tied to one player). Single player games should have a single `StdInputSlot`
+## which defines how to swap between various connected `StdInputDevice`s.
 ##
 ## TODO: For now, this class only supports single player because there's no way to
 ## filter out device indices. Given that Godot has limited-at-best support for local
@@ -16,21 +16,22 @@
 ##
 
 class_name InputSlot
-extends InputDevice
+extends StdInputDevice
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-## device_activated is emitted when a new `InputDevice` becomes active.
-signal device_activated(device: InputDevice)
+## device_activated is emitted when a new `StdInputDevice` becomes active.
+signal device_activated(device: StdInputDevice)
 
-## device_connected is emitted when a new `InputDevice` is connected.
+## device_connected is emitted when a new `StdInputDevice` is connected.
 ##
 ## NOTE: This might not be emitted for devices already connected when the game starts.
 ## To change this behavior, alter the `JoypadMonitor` component's behavior.
-signal device_connected(device: InputDevice)
+signal device_connected(device: StdInputDevice)
 
-## device_disconnected is emitted when a previously connected `InputDevice` disconnects.
-signal device_disconnected(device: InputDevice)
+## device_disconnected is emitted when a previously connected `StdInputDevice`
+## disconnects.
+signal device_disconnected(device: StdInputDevice)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -52,13 +53,13 @@ class JoypadMonitor:
 	extends Node
 
 	@warning_ignore("UNUSED_SIGNAL")
-	signal joy_connected(device_id: int, device_type: InputDeviceType)
+	signal joy_connected(device_id: int, device_type: DeviceType)
 
 	@warning_ignore("UNUSED_SIGNAL")
 	signal joy_disconnected(device_id: int)
 
 
-# InputDevice components
+# StdInputDevice components
 
 
 class Actions:
@@ -150,7 +151,7 @@ class Glyphs:
 
 	func _get_action_glyph(
 		_device: int, # Active device ID
-		device_type: InputDeviceType, # Active or overridden device type
+		device_type: DeviceType, # Active or overridden device type
 		action_set: StringName,
 		action: StringName,
 	) -> GlyphData:
@@ -241,7 +242,7 @@ class Haptics:
 
 ## claim_kbm_input defines whether this `InputSlot` will consider keyboard and mouse
 ## input as belonging to itself. Depending on certain factors, this will generally
-## activate the `InputDevice` belonging to the keyboard and mouse when that input is
+## activate the `StdInputDevice` belonging to the keyboard and mouse when that input is
 ## received.
 ##
 ## NOTE: If `true`, the keyboard and mouse device will be activated initially.
@@ -300,11 +301,11 @@ class Haptics:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _active: InputDevice = null
-var _last_active_joypad: InputDevice = null
+var _active: StdInputDevice = null
+var _last_active_joypad: StdInputDevice = null
 
-var _kbm_device: InputDevice = null
-var _joypad_devices: Array[InputDevice] = []
+var _kbm_device: StdInputDevice = null
+var _joypad_devices: Array[StdInputDevice] = []
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -326,19 +327,20 @@ static func for_player(player: int) -> InputSlot:
 
 ## get_active_device returns the currently (i.e. most recently) active input device. If
 ## no device is active, the returned value will be `null`.
-func get_active_device() -> InputDevice:
+func get_active_device() -> StdInputDevice:
 	return _active
 
 
 ## get_connected_devices returns a list of all connected devices. If `include_keyboard`
-## is `true` (the default), then the keyboard and mouse `InputDevice` will be included.
-func get_connected_devices(include_keyboard: bool = true) -> Array[InputDevice]:
+## is `true` (the default), then the keyboard and mouse `StdInputDevice` will be
+## included.
+func get_connected_devices(include_keyboard: bool = true) -> Array[StdInputDevice]:
 	var devices := _joypad_devices.duplicate()
 
 	if include_keyboard and _kbm_device:
-		assert(_kbm_device is InputDevice, "invalid state; missing device")
+		assert(_kbm_device is StdInputDevice, "invalid state; missing device")
 		assert(
-			_kbm_device.device_type == InputDevice.DEVICE_TYPE_KEYBOARD,
+			_kbm_device.device_type == DEVICE_TYPE_KEYBOARD,
 			"invalid state; invalid device type",
 		)
 
@@ -357,16 +359,16 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[InputDevice]:
 func get_action_glyph(
 	action_set: StringName,
 	action: StringName,
-	device_type_override: InputDeviceType = DEVICE_TYPE_UNKNOWN
+	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN
 ) -> StdInputDeviceGlyphs.GlyphData:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
 	# NOTE: Shadowing here prevents using wrong type.
 	@warning_ignore("SHADOWED_VARIABLE")
 	@warning_ignore("CONFUSABLE_LOCAL_USAGE")
-	var device_type: InputDeviceType = device_type
+	var device_type: DeviceType = device_type
 
-	var device_type_property_value: InputDeviceType = (
+	var device_type_property_value: DeviceType = (
 		glyph_type_override_property.get_value()
 	)
 	if device_type_property_value != DEVICE_TYPE_UNKNOWN:
@@ -557,8 +559,8 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _activate_device(device: InputDevice) -> bool:
-	assert(device is InputDevice, "missing argument: device")
+func _activate_device(device: StdInputDevice) -> bool:
+	assert(device is StdInputDevice, "missing argument: device")
 
 	if device and device.device_type != DEVICE_TYPE_KEYBOARD:
 		_last_active_joypad = device
@@ -597,7 +599,7 @@ func _activate_device(device: InputDevice) -> bool:
 
 
 func _connect_joy_device(
-	device: int, joy_device_type: InputDeviceType = DEVICE_TYPE_UNKNOWN
+	device: int, joy_device_type: DeviceType = DEVICE_TYPE_UNKNOWN
 ) -> bool:
 	assert(device >= 0, "invalid argument; device must be >= 0")
 
@@ -630,8 +632,8 @@ func _disconnect_joy_device(device: int) -> bool:
 	assert(device >= 0, "invalid argument; device must be >= 0")
 
 	for i in len(_joypad_devices):
-		var joypad: InputDevice = _joypad_devices[i]
-		assert(joypad is InputDevice, "invalid state; missing device")
+		var joypad: StdInputDevice = _joypad_devices[i]
+		assert(joypad is StdInputDevice, "invalid state; missing device")
 
 		if joypad.device_id != device:
 			continue
@@ -647,12 +649,12 @@ func _disconnect_joy_device(device: int) -> bool:
 	return false
 
 
-func _make_joy(device: int, joy_device_type: InputDeviceType) -> InputDevice:
+func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
 	# NOTE: Shadowing here prevents using wrong type.
 	@warning_ignore("SHADOWED_VARIABLE")
 	var device_type := joy_device_type
 
-	var joy := InputDevice.new()
+	var joy := StdInputDevice.new()
 
 	# Device info
 	joy.device_id = device
@@ -666,8 +668,8 @@ func _make_joy(device: int, joy_device_type: InputDeviceType) -> InputDevice:
 	return joy
 
 
-func _make_kbm(device: int = 0) -> InputDevice:
-	var kbm := InputDevice.new()
+func _make_kbm(device: int = 0) -> StdInputDevice:
+	var kbm := StdInputDevice.new()
 
 	# Device info
 	kbm.device_id = device
@@ -684,7 +686,7 @@ func _make_kbm(device: int = 0) -> InputDevice:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_Self_device_activated(device: InputDevice) -> void:
+func _on_Self_device_activated(device: StdInputDevice) -> void:
 	device_id = device.device_id
 	device_type = device.device_type
 
@@ -694,7 +696,7 @@ func _on_Self_device_activated(device: InputDevice) -> void:
 			joypad.stop_vibrate()
 
 
-func _on_Self_device_connected(device: InputDevice) -> void:
+func _on_Self_device_connected(device: StdInputDevice) -> void:
 	var action_set := actions.get_action_set(device_id)
 	if not action_set:
 		return
@@ -705,5 +707,5 @@ func _on_Self_device_connected(device: InputDevice) -> void:
 		device.enable_action_set_layer(layer)
 
 
-func _on_Self_device_disconnected(_device: InputDevice) -> void:
+func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
 	pass # No need to disable action sets/layers here - the device may reconnect.

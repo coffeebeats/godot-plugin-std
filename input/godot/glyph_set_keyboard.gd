@@ -118,7 +118,7 @@ extends InputGlyphSet
 
 func _get_origin_glyph(event: InputEvent) -> GlyphData:
 	assert(
-		device_type == InputDevice.DEVICE_TYPE_KEYBOARD,
+		device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD,
 		"invalid state; wrong device type",
 	)
 

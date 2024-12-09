@@ -17,7 +17,7 @@ const Binding := preload("../binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const InputDeviceType := InputDevice.InputDeviceType # gdlint:ignore=constant-name
+const DeviceType := StdInputDevice.DeviceType # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -71,8 +71,8 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 	for action in InputMap.get_actions():
 		InputMap.action_erase_events(action)
 
-	_apply_action_set(-1, InputDevice.DEVICE_TYPE_UNKNOWN, action_set)
-	_apply_action_set(-1, InputDevice.DEVICE_TYPE_KEYBOARD, action_set)
+	_apply_action_set(-1, StdInputDevice.DEVICE_TYPE_UNKNOWN, action_set)
+	_apply_action_set(-1, StdInputDevice.DEVICE_TYPE_KEYBOARD, action_set)
 
 	return true
 
@@ -98,8 +98,8 @@ func _enable_action_set_layer(
 
 	_action_set_layers.append(action_set_layer)
 
-	_apply_action_set(-1, InputDevice.DEVICE_TYPE_UNKNOWN, action_set_layer)
-	_apply_action_set(-1, InputDevice.DEVICE_TYPE_KEYBOARD, action_set_layer)
+	_apply_action_set(-1, StdInputDevice.DEVICE_TYPE_UNKNOWN, action_set_layer)
+	_apply_action_set(-1, StdInputDevice.DEVICE_TYPE_KEYBOARD, action_set_layer)
 
 	return true
 
@@ -142,7 +142,7 @@ func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
 
 
 func _apply_action_set(
-	device: int, device_type: InputDeviceType, action_set: StdInputActionSet
+	device: int, device_type: DeviceType, action_set: StdInputActionSet
 ) -> void:
 	for actions in [
 		action_set.actions_analog_1d,
@@ -180,13 +180,13 @@ func _bind_action_to_origin(
 
 
 func _get_action_origins(
-	_device: int, device_type: InputDeviceType, action: StringName
+	_device: int, device_type: DeviceType, action: StringName
 ) -> PackedInt64Array:
 	var origins := PackedInt64Array()
 
 	for event in (
 		Binding.get_kbm(scope, action)
-		if device_type == InputDevice.DEVICE_TYPE_KEYBOARD
+		if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
 		else Binding.get_joy(scope, action)
 	):
 		var value_encoded: int = Origin.encode(event)

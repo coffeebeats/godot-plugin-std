@@ -148,7 +148,7 @@ func _update_texture() -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_InputSlot_device_activated(_device: InputDevice) -> void:
+func _on_InputSlot_device_activated(_device: StdInputDevice) -> void:
 	_update_texture()
 
 

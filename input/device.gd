@@ -1,11 +1,12 @@
 ##
 ## std/input/device.gd
 ##
-## InputDevice is a node which provides an interface for a single player input device.
-## Implementations of various features can be specified by overriding its components.
+## StdInputDevice is a node which provides an interface for a single player input
+## device. Implementations of various features can be specified by overriding its
+## components.
 ##
 
-class_name InputDevice
+class_name StdInputDevice
 extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
@@ -21,8 +22,8 @@ signal action_set_layer_disabled(action_set_layer: StdInputActionSetLayer)
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## InputDeviceType is an enumeration of the categories of player input devices.
-enum InputDeviceType {
+## DeviceType is an enumeration of the categories of player input devices.
+enum DeviceType {
 	UNKNOWN = 0,
 	KEYBOARD = 1,
 	NINTENDO_SWITCH = 2,
@@ -34,26 +35,26 @@ enum InputDeviceType {
 
 ## DEVICE_TYPE_UNKNOWN defines an unknown device type (also represents an unspecified
 ## `InputDeviceType` value).
-const DEVICE_TYPE_UNKNOWN := InputDeviceType.UNKNOWN
+const DEVICE_TYPE_UNKNOWN := DeviceType.UNKNOWN
 
 ## DEVICE_TYPE_KEYBOARD defines a keyboard + mouse device type.
-const DEVICE_TYPE_KEYBOARD := InputDeviceType.KEYBOARD
+const DEVICE_TYPE_KEYBOARD := DeviceType.KEYBOARD
 
 ## DEVICE_TYPE_NINTENDO_SWITCH defines a Nintendo Switch joypad (e.g. pro controller or
 ## joycons).
-const DEVICE_TYPE_NINTENDO_SWITCH := InputDeviceType.NINTENDO_SWITCH
+const DEVICE_TYPE_NINTENDO_SWITCH := DeviceType.NINTENDO_SWITCH
 
 ## DEVICE_TYPE_PLAYSTATION defines a PlayStation joypad.
-const DEVICE_TYPE_PLAYSTATION := InputDeviceType.PLAYSTATION
+const DEVICE_TYPE_PLAYSTATION := DeviceType.PLAYSTATION
 
 ## DEVICE_TYPE_STEAM_DECK defines a Steam deck joypad.
-const DEVICE_TYPE_STEAM_DECK := InputDeviceType.STEAM_DECK
+const DEVICE_TYPE_STEAM_DECK := DeviceType.STEAM_DECK
 
 ## DEVICE_TYPE_STEAM_CONTROLLER defines a Steam controller joypad.
-const DEVICE_TYPE_STEAM_CONTROLLER := InputDeviceType.STEAM_CONTROLLER
+const DEVICE_TYPE_STEAM_CONTROLLER := DeviceType.STEAM_CONTROLLER
 
 ## DEVICE_TYPE_XBOX defines an Xbox joypad.
-const DEVICE_TYPE_XBOX := InputDeviceType.XBOX
+const DEVICE_TYPE_XBOX := DeviceType.XBOX
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -67,8 +68,8 @@ const DEVICE_TYPE_XBOX := InputDeviceType.XBOX
 ## seem to distinguish between different keyboards).
 @export var device_id: int = 0
 
-## device_type is the `InputDeviceType` of the `InputDevice`.
-@export var device_type: InputDeviceType = InputDeviceType.UNKNOWN
+## device_type is the `DeviceType` of the `StdInputDevice`.
+@export var device_type: DeviceType = DEVICE_TYPE_UNKNOWN
 
 @export_group("Components")
 
@@ -170,7 +171,7 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 func get_action_glyph(
 	action_set: StringName,
 	action: StringName,
-	device_type_override: InputDeviceType = DEVICE_TYPE_UNKNOWN,
+	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN,
 ) -> StdInputDeviceGlyphs.GlyphData:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
