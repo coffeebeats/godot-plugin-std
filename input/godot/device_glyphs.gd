@@ -1,11 +1,11 @@
 ##
 ## std/input/godot/device_glyphs.gd
 ##
-## An implemention of `InputDevice.Glyphs` which maps joypad names and origins to custom
+## An implemention of `StdInputDeviceGlyphs` which maps joypad names and origins to custom
 ## glyphs using Godot's built-in `Input` class/SDL controller database.
 ##
 
-extends InputDevice.Glyphs
+extends StdInputDeviceGlyphs
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -20,22 +20,22 @@ const Origin := preload("../origin.gd")
 ## finds or `null` on no match.
 @export var glyph_sets: Array[InputGlyphSet] = []
 
-# -- PUBLIC METHODS ------------------------------------------------------------------ #
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-## get_origin_glyph returns a `Texture2D` containing an input origin glyph icon *for
-## the specified device*. Note that `origin` is an `Origin`-encoded integer value.
-func get_origin_glyph(device_type: InputDeviceType, origin: int) -> Texture2D:
+func _get_action_glyph(
+	_device: int,
+	device_type: InputDeviceType,
+	_action_set: StringName,
+	action: StringName,
+) -> GlyphData:
 	for glyph_set in glyph_sets:
 		if glyph_set.device_type != device_type:
 			continue
 
-		var event := Origin.decode(origin)
-		if not event:
-			return null
-
-		var texture := glyph_set.get_origin_glyph(event)
-		if texture:
-			return texture
+		for event in InputMap.action_get_events(action):
+			var data := glyph_set.get_origin_glyph(event)
+			if data:
+				return data
 
 	return null

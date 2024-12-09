@@ -8,6 +8,10 @@
 class_name InputGlyphSet
 extends Resource
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+const GlyphData := StdInputDeviceGlyphs.GlyphData  # gdlint:ignore=constant-name
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## device_type is the type of input device to which these glyph icons pertain.
@@ -17,13 +21,13 @@ extends Resource
 
 
 ## get_origin_glyph returns the configured resource for the provided input event.
-func get_origin_glyph(event: InputEvent) -> Texture2D:
+func get_origin_glyph(event: InputEvent) -> StdInputDeviceGlyphs.GlyphData:
 	return _get_origin_glyph(event)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_origin_glyph(_event: InputEvent) -> Texture2D:
+func _get_origin_glyph(_event: InputEvent) -> StdInputDeviceGlyphs.GlyphData:
 	assert(false, "unimplemented")
 	return null

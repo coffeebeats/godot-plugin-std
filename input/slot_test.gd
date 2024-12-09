@@ -4,11 +4,6 @@
 
 extends GutTest
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const InputDeviceJoy := preload("godot/input_device_joy.tscn")
-const InputDeviceKBM := preload("godot/input_device_kbm.tscn")
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var slot: InputSlot = null
@@ -98,39 +93,19 @@ func test_input_slot_connects_and_disconnects_joypads() -> void:
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
+func after_each() -> void:
+	slot = null  # Dereference the input slot so it can be freed.
+
+
 func before_all() -> void:
 	# NOTE: Hide unactionable errors when using object doubles.
 	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
 
 
 func before_each() -> void:
-	var scope := StdSettingsScope.new()
-
-	# Create Joypad input device scene.
-
-	var joy := InputDeviceJoy.instantiate()
-	joy.bindings.scope = scope
-
-	var scene_joy := PackedScene.new()
-	scene_joy.pack(joy)
-
-	joy.free()
-
-	# Create Keyboard+mouse input device scene.
-
-	var kbm := InputDeviceKBM.instantiate()
-	kbm.bindings.scope = scope
-
-	var scene_kbm := PackedScene.new()
-	scene_kbm.pack(kbm)
-
-	kbm.free()
-
 	# Construct input slot scene.
 
 	slot = InputSlot.new()
-	slot.joy_device_scene = scene_joy
-	slot.kbm_device_scene = scene_kbm
 	slot.glyph_type_override_property = StdSettingsPropertyInt.new()
 	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
 	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
@@ -138,3 +113,11 @@ func before_each() -> void:
 	joypad_monitor = InputSlot.JoypadMonitor.new()
 	slot.joypad_monitor = joypad_monitor
 	slot.add_child(joypad_monitor, false, INTERNAL_MODE_BACK)
+
+	slot.actions_kbm = add_child_autofree(StdInputDeviceActions.new())
+	slot.glyphs_kbm = add_child_autofree(StdInputDeviceGlyphs.new())
+	slot.haptics_kbm = add_child_autofree(StdInputDeviceHaptics.new())
+
+	slot.actions_joy = add_child_autofree(StdInputDeviceActions.new())
+	slot.glyphs_joy = add_child_autofree(StdInputDeviceGlyphs.new())
+	slot.haptics_joy = add_child_autofree(StdInputDeviceHaptics.new())
