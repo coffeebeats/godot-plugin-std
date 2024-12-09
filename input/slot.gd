@@ -66,7 +66,7 @@ class Actions:
 	extends StdInputDeviceActions
 
 	var slot: StdInputSlot = null
-	var cursor: InputCursor = null
+	var cursor: StdInputCursor = null
 
 	## _action_set is the currently active action set.
 	var _action_set: StdInputActionSet = null
@@ -272,7 +272,7 @@ class Haptics:
 
 ## cursor is a node which manages the visibility state of the game's cursor. This is an
 ## optional component, but only one `StdInputSlot` at most may have one.
-@export var cursor: InputCursor = null
+@export var cursor: StdInputCursor = null
 
 ## joypad_monitor is a node which monitors joypad activity. This Std`InputSlot` node
 ## will manage active input devices based on the monitor's signals.

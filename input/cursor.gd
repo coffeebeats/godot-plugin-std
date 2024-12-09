@@ -1,13 +1,13 @@
 ##
 ## std/input/cursor.gd
 ##
-## InputCursor is a class which manages the application cursor, specifically its
+## StdInputCursor is a class which manages the application cursor, specifically its
 ## visibility and confinement to the window. It also helps the application gracefully
 ## transition between "digital"/focus-based navigation and cursor navigation by keeping
 ## track of recently hovered UI elements and grabbing focus during mode transitions.
 ##
 
-class_name InputCursor
+class_name StdInputCursor
 extends Node
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
