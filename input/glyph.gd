@@ -62,7 +62,7 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(_slot.device_activated, _on_InputSlot_device_activated)
 	(
 		Signals
-		.disconnect_safe(
+		. disconnect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
@@ -95,7 +95,7 @@ func _ready() -> void:
 	)
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
@@ -107,6 +107,7 @@ func _ready() -> void:
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
+
 func _create_label() -> Label:
 	var node := Label.new()
 	node.set_anchors_preset(LayoutPreset.PRESET_CENTER)
@@ -115,6 +116,7 @@ func _create_label() -> Label:
 
 	return node
 
+
 func _create_texture_rect() -> TextureRect:
 	var node := TextureRect.new()
 	node.set_anchors_preset(LayoutPreset.PRESET_CENTER)
@@ -122,6 +124,7 @@ func _create_texture_rect() -> TextureRect:
 	node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 
 	return node
+
 
 func _update_texture() -> void:
 	var data := _slot.get_action_glyph(action_set.name, action)
@@ -140,6 +143,7 @@ func _update_texture() -> void:
 	if data.label:
 		_label.text = data.label
 		_label.visible = true
+
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
