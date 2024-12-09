@@ -18,14 +18,14 @@ const Origin := preload("../origin.gd")
 ## NOTE: Multiple sets can be provided for the same device type; this component will
 ## keep searching glyph sets until it finds a matching resource, returning the first it
 ## finds or `null` on no match.
-@export var glyph_sets: Array[InputGlyphSet] = []
+@export var glyph_sets: Array[StdInputGlyphSet] = []
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
 func _get_action_glyph(
 	_device: int,
-	device_type: InputDeviceType,
+	device_type: StdInputDevice.DeviceType,
 	_action_set: StringName,
 	action: StringName,
 ) -> GlyphData:

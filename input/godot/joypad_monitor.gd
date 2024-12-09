@@ -1,11 +1,11 @@
 ##
 ## std/input/godot/joypad_monitor.gd
 ##
-## An implemention of `InputSlot.JoypadMonitor` which uses Godot's built-in device
-## input system to notify the `InputSlot` on joypad connection changes.
+## An implemention of `StdInputSlot.JoypadMonitor` which uses Godot's built-in device
+## input system to notify the `StdInputSlot` on joypad connection changes.
 ##
 
-extends InputSlot.JoypadMonitor
+extends StdInputSlot.JoypadMonitor
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -26,19 +26,19 @@ static var _regex_xbox := RegEx.create_from_string("(Xbox|X-Box|XBOX)")
 
 ## get_device_type returns the type/category of joypad based on its name. This method is
 ## a best effort attempt and uses the SDL controller database.
-func get_device_type(joypad_name: String) -> InputDevice.InputDeviceType:
-	var device_type := InputDevice.DEVICE_TYPE_UNKNOWN
+func get_device_type(joypad_name: String) -> StdInputDevice.DeviceType:
+	var device_type := StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 	if _regex_xbox.search(joypad_name):
-		device_type = InputDevice.DEVICE_TYPE_XBOX
+		device_type = StdInputDevice.DEVICE_TYPE_XBOX
 	elif _regex_sony.search(joypad_name):
-		device_type = InputDevice.DEVICE_TYPE_PLAYSTATION
+		device_type = StdInputDevice.DEVICE_TYPE_PLAYSTATION
 	elif _regex_nintendo_switch.search(joypad_name):
-		device_type = InputDevice.DEVICE_TYPE_NINTENDO_SWITCH
+		device_type = StdInputDevice.DEVICE_TYPE_NINTENDO_SWITCH
 	elif _regex_steam_deck.search(joypad_name):
-		device_type = InputDevice.DEVICE_TYPE_STEAM_DECK
+		device_type = StdInputDevice.DEVICE_TYPE_STEAM_DECK
 	elif _regex_steam_controller.search(joypad_name):
-		device_type = InputDevice.DEVICE_TYPE_STEAM_CONTROLLER
+		device_type = StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
 
 	return device_type
 

@@ -1,13 +1,13 @@
 ##
 ## std/input/cursor.gd
 ##
-## InputCursor is a class which manages the application cursor, specifically its
+## StdInputCursor is a class which manages the application cursor, specifically its
 ## visibility and confinement to the window. It also helps the application gracefully
 ## transition between "digital"/focus-based navigation and cursor navigation by keeping
 ## track of recently hovered UI elements and grabbing focus during mode transitions.
 ##
 
-class_name InputCursor
+class_name StdInputCursor
 extends Node
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
@@ -75,7 +75,7 @@ func unset_hovered(control: Control) -> bool:
 ## update_configuration changes the cursor state and triggering actions based on the
 ## provided action set and action set layers.
 func update_configuration(
-	action_set: InputActionSet = null, layers: Array[InputActionSetLayer] = []
+	action_set: StdInputActionSet = null, layers: Array[StdInputActionSetLayer] = []
 ) -> void:
 	if not action_set:
 		return

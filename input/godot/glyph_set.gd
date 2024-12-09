@@ -1,11 +1,11 @@
 ##
 ## std/input/action_set.gd
 ##
-## `InputGlyphSet` is a base class for collections of glyph icon resources for specific
-## device types.
+## `StdInputGlyphSet` is a base class for collections of glyph icon resources for
+## specific device types.
 ##
 
-class_name InputGlyphSet
+class_name StdInputGlyphSet
 extends Resource
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
@@ -15,7 +15,7 @@ const GlyphData := StdInputDeviceGlyphs.GlyphData  # gdlint:ignore=constant-name
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## device_type is the type of input device to which these glyph icons pertain.
-@export var device_type: InputDevice.InputDeviceType
+@export var device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

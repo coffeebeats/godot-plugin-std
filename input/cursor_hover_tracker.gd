@@ -1,22 +1,22 @@
 ##
 ## std/input/cursor_hover_tracker.gd
 ##
-## InputCursorHoverTracker is a class which broadcasts hover states for an associated
-## `Control` node to an `InputCursor` singleton.
+## StdInputCursorHoverTracker is a class which broadcasts hover states for an associated
+## `Control` node to an `StdInputCursor` singleton.
 ##
 
-class_name InputCursorHoverTracker
+class_name StdInputCursorHoverTracker
 extends Node
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## control is a path to the `Control` node whose hover status will be reported to the
-## `InputCursor`.
+## `StdInputCursor`.
 @export var control: NodePath = NodePath("..")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _cursor: InputCursor = null
+var _cursor: StdInputCursor = null
 
 @onready var _control: Control = get_node(control)
 
@@ -43,8 +43,8 @@ func _ready() -> void:
 	err = _control.mouse_exited.connect(_on_Control_mouse_exited)
 	assert(err == OK, "failed to connect to signal")
 
-	_cursor = StdGroup.get_sole_member(InputCursor.GROUP_INPUT_CURSOR)
-	assert(_cursor is InputCursor, "invalid state; missing input cursor")
+	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
+	assert(_cursor is StdInputCursor, "invalid state; missing input cursor")
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
