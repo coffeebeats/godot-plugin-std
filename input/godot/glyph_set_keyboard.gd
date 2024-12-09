@@ -9,6 +9,9 @@ extends InputGlyphSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## include_label defines whether an origin label is included in the returned glyph data.
+@export var include_label: bool = false
+
 @export_subgroup("Command")
 
 @export var cmd_escape: Texture2D = null
@@ -302,5 +305,8 @@ func _get_origin_glyph(event: InputEvent) -> GlyphData:
 
 	var data := GlyphData.new()
 	data.texture = texture
+
+	if include_label and event is InputEventKey:
+		data.label = event.as_text_key_label()
 
 	return data

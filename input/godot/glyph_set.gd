@@ -10,7 +10,7 @@ extends Resource
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const GlyphData := StdInputDeviceGlyphs.GlyphData  # gdlint:ignore=constant-name
+const GlyphData := StdInputDeviceGlyphs.GlyphData # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
