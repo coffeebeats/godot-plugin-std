@@ -17,7 +17,7 @@ const Binding := preload("../binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const InputDeviceType := InputDevice.InputDeviceType  # gdlint:ignore=constant-name
+const InputDeviceType := InputDevice.InputDeviceType # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -27,13 +27,13 @@ const InputDeviceType := InputDevice.InputDeviceType  # gdlint:ignore=constant-n
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: InputActionSet = null  # gdlint: ignore=class-definitions-order
+static var _action_set: StdInputActionSet = null # gdlint: ignore=class-definitions-order
 
 ## _action_set_layers is the stack of currently active action set layers.
-static var _action_set_layers: Array[InputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length
+static var _action_set_layers: Array[StdInputActionSetLayer] = [] # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _bindings maps origins (integers) to the actions they are bound to.
-static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
+static var _bindings: Dictionary = {} # gdlint: ignore=class-definitions-order
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -47,17 +47,17 @@ func _ready() -> void:
 
 ## get_action_set returns the currently active `InputActionSet` *for the specified
 ## device*, if.
-func _get_action_set(_device: int) -> InputActionSet:
+func _get_action_set(_device: int) -> StdInputActionSet:
 	return _action_set
 
 
-## load_action_set unloads the currently active `InputActionSet`, if any, and then
+## load_action_set unloads the currently active `StdInputActionSet`, if any, and then
 ## activates the provided action set *for the specified device*. If the action set
 ## is already active for the device then no change occurs.
-func _load_action_set(_device: int, action_set: InputActionSet) -> bool:
-	assert(action_set is InputActionSet, "missing argument: action set")
+func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
+	assert(action_set is StdInputActionSet, "missing argument: action set")
 	assert(
-		not action_set is InputActionSetLayer, "invalid argument: cannot use a layer"
+		not action_set is StdInputActionSetLayer, "invalid argument: cannot use a layer"
 	)
 
 	if action_set == _action_set:
@@ -84,10 +84,10 @@ func _load_action_set(_device: int, action_set: InputActionSet) -> bool:
 ## active layers *for the specified device*. If the action set layer is already
 ## active then no change occurs.
 func _enable_action_set_layer(
-	_device: int, action_set_layer: InputActionSetLayer
+	_device: int, action_set_layer: StdInputActionSetLayer
 ) -> bool:
-	assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
-	assert(_action_set is InputActionSet, "invalid state: missing action set")
+	assert(action_set_layer is StdInputActionSetLayer, "missing argument: layer")
+	assert(_action_set is StdInputActionSet, "invalid state: missing action set")
 	assert(
 		action_set_layer.parent == _action_set,
 		"invalid argument: wrong parent action set",
@@ -108,10 +108,10 @@ func _enable_action_set_layer(
 ## active layers *for the specified device*. If the action set layer is not active
 ## then no change occurs.
 func _disable_action_set_layer(
-	_device: int, action_set_layer: InputActionSetLayer
+	_device: int, action_set_layer: StdInputActionSetLayer
 ) -> bool:
-	assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
-	assert(_action_set is InputActionSet, "invalid state: missing action set")
+	assert(action_set_layer is StdInputActionSetLayer, "missing argument: layer")
+	assert(_action_set is StdInputActionSet, "invalid state: missing action set")
 	assert(
 		action_set_layer.parent == _action_set,
 		"invalid argument: wrong parent action set",
@@ -134,7 +134,7 @@ func _disable_action_set_layer(
 
 ## list_action_set_layers returns the stack of currently active action set layers
 ## *for the specified device*.
-func _list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
+func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
 	return _action_set_layers.duplicate()
 
 
@@ -142,7 +142,7 @@ func _list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
 
 
 func _apply_action_set(
-	device: int, device_type: InputDeviceType, action_set: InputActionSet
+	device: int, device_type: InputDeviceType, action_set: StdInputActionSet
 ) -> void:
 	for actions in [
 		action_set.actions_analog_1d,
@@ -159,7 +159,7 @@ func _apply_action_set(
 
 
 func _bind_action_to_origin(
-	device: int, action_set: InputActionSet, action: StringName, origin: int
+	device: int, action_set: StdInputActionSet, action: StringName, origin: int
 ) -> void:
 	var event := Origin.decode(origin)
 	assert(event is InputEvent, "invalid state; missing event")

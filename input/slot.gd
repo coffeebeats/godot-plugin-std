@@ -68,24 +68,24 @@ class Actions:
 	var cursor: InputCursor = null
 
 	## _action_set is the currently active action set.
-	var _action_set: InputActionSet = null
+	var _action_set: StdInputActionSet = null
 
 	## _action_set_layers is the stack of currently active action set layers.
-	var _action_set_layers: Array[InputActionSetLayer] = []
+	var _action_set_layers: Array[StdInputActionSetLayer] = []
 
-	func _get_action_set(_device: int) -> InputActionSet:
+	func _get_action_set(_device: int) -> StdInputActionSet:
 		return _action_set
 
-	func _load_action_set(_device: int, action_set: InputActionSet) -> bool:
+	func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 		if not slot:
 			assert(false, "invalid state; missing input slot")
 			return false
 
 		if not (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.load_action_set(action_set))
-			. any(func(r): return r)
+			.get_connected_devices()
+			.map(func(d): return d.load_action_set(action_set))
+			.any(func(r): return r)
 		):
 			return false
 
@@ -98,16 +98,16 @@ class Actions:
 
 		return true
 
-	func _disable_action_set_layer(_device: int, layer: InputActionSetLayer) -> bool:
+	func _disable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
 		if not slot:
 			assert(false, "invalid state; missing input slot")
 			return false
 
 		if not (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.enable_action_set_layer(layer))
-			. any(func(r): return r)
+			.get_connected_devices()
+			.map(func(d): return d.enable_action_set_layer(layer))
+			.any(func(r): return r)
 		):
 			return false
 
@@ -119,16 +119,16 @@ class Actions:
 
 		return true
 
-	func _enable_action_set_layer(_device: int, layer: InputActionSetLayer) -> bool:
+	func _enable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
 		if not slot:
 			assert(false, "invalid state; missing input slot")
 			return false
 
 		if not (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.disable_action_set_layer(layer))
-			. any(func(r): return r)
+			.get_connected_devices()
+			.map(func(d): return d.disable_action_set_layer(layer))
+			.any(func(r): return r)
 		):
 			return false
 
@@ -139,7 +139,7 @@ class Actions:
 
 		return true
 
-	func _list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
+	func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
 		return _action_set_layers.duplicate()
 
 
@@ -149,8 +149,8 @@ class Glyphs:
 	var slot: InputSlot = null
 
 	func _get_action_glyph(
-		_device: int,  # Active device ID
-		device_type: InputDeviceType,  # Active or overridden device type
+		_device: int, # Active device ID
+		device_type: InputDeviceType, # Active or overridden device type
 		action_set: StringName,
 		action: StringName,
 	) -> GlyphData:
@@ -706,4 +706,4 @@ func _on_Self_device_connected(device: InputDevice) -> void:
 
 
 func _on_Self_device_disconnected(_device: InputDevice) -> void:
-	pass  # No need to disable action sets/layers here - the device may reconnect.
+	pass # No need to disable action sets/layers here - the device may reconnect.

@@ -1,11 +1,11 @@
 ##
 ## std/input/loader.gd
 ##
-## InputActionSetLoader is a node which facilitates loading and unloading actions sets
-## and layers based on scene tree state.
+## StdInputActionSetLoader is a node which facilitates loading and unloading actions
+## sets and layers based on scene tree state.
 ##
 
-class_name InputActionSetLoader
+class_name StdInputActionSetLoader
 extends Control
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -22,8 +22,8 @@ extends Control
 
 @export_group("Action set")
 
-## action_set is an `InputActionSet` that will be loaded by the configured hooks.
-@export var action_set: InputActionSet = null
+## action_set is an `StdInputActionSet` that will be loaded by the configured hooks.
+@export var action_set: StdInputActionSet = null
 
 @export_subgroup("Scene tree")
 
@@ -42,9 +42,9 @@ extends Control
 
 @export_group("Action set layer")
 
-## action_set_layer is an `InputActionSetLayer` that will be enabled by the configured
-## hooks.
-@export var action_set_layer: InputActionSet = null
+## action_set_layer is an `StdInputActionSetLayer` that will be enabled by the
+## configured hooks.
+@export var action_set_layer: StdInputActionSet = null
 
 @export_subgroup("Scene tree")
 
@@ -79,7 +79,7 @@ var _slot: InputSlot = null
 ## disable_action_set_layer disables the configured action set layer for the the player.
 func disable_action_set_layer() -> bool:
 	assert(_slot is InputSlot, "invalid state; missing input slot")
-	assert(action_set_layer is InputActionSetLayer, "invalid state; missing layer")
+	assert(action_set_layer is StdInputActionSetLayer, "invalid state; missing layer")
 
 	return _slot.disable_action_set_layer(action_set_layer)
 
@@ -87,7 +87,7 @@ func disable_action_set_layer() -> bool:
 ## enable_action_set_layer enables the configured action set layer for the the player.
 func enable_action_set_layer() -> bool:
 	assert(_slot is InputSlot, "invalid state; missing input slot")
-	assert(action_set_layer is InputActionSetLayer, "invalid state; missing layer")
+	assert(action_set_layer is StdInputActionSetLayer, "invalid state; missing layer")
 
 	return _slot.enable_action_set_layer(action_set_layer)
 
@@ -95,7 +95,7 @@ func enable_action_set_layer() -> bool:
 ## load_action_set loads the configured action set for the the player.
 func load_action_set() -> bool:
 	assert(_slot is InputSlot, "invalid state; missing input slot")
-	assert(action_set is InputActionSet, "invalid state; missing action set")
+	assert(action_set is StdInputActionSet, "invalid state; missing action set")
 
 	return _slot.load_action_set(action_set_layer)
 

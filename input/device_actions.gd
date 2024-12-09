@@ -13,16 +13,16 @@ extends Node
 # Action sets
 
 
-## get_action_set returns the currently active `InputActionSet` *for the specified
+## get_action_set returns the currently active `StdInputActionSet` *for the specified
 ## device*.
-func get_action_set(device: int) -> InputActionSet:
+func get_action_set(device: int) -> StdInputActionSet:
 	return _get_action_set(device)
 
 
 ## load_action_set unbinds any actions currently bound (including activated layers) and
 ## then binds the actions defined within the action set. Does nothing if the action set
 ## is already activated.
-func load_action_set(device: int, action_set: InputActionSet) -> bool:
+func load_action_set(device: int, action_set: StdInputActionSet) -> bool:
 	return _load_action_set(device, action_set)
 
 
@@ -34,7 +34,7 @@ func load_action_set(device: int, action_set: InputActionSet) -> bool:
 ##
 ## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
 ## taken.
-func disable_action_set_layer(device: int, layer: InputActionSetLayer) -> bool:
+func disable_action_set_layer(device: int, layer: StdInputActionSetLayer) -> bool:
 	return _disable_action_set_layer(device, layer)
 
 
@@ -45,13 +45,13 @@ func disable_action_set_layer(device: int, layer: InputActionSetLayer) -> bool:
 ##
 ## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
 ## taken.
-func enable_action_set_layer(device: int, layer: InputActionSetLayer) -> bool:
+func enable_action_set_layer(device: int, layer: StdInputActionSetLayer) -> bool:
 	return _enable_action_set_layer(device, layer)
 
 
 ## list_action_set_layers returns the stack of currently active action set layers
 ## *for the specified device*.
-func list_action_set_layers(device: int) -> Array[InputActionSetLayer]:
+func list_action_set_layers(device: int) -> Array[StdInputActionSetLayer]:
 	return _list_action_set_layers(device)
 
 
@@ -60,12 +60,12 @@ func list_action_set_layers(device: int) -> Array[InputActionSetLayer]:
 # Action sets
 
 
-func _get_action_set(_device: int) -> InputActionSet:
+func _get_action_set(_device: int) -> StdInputActionSet:
 	assert(false, "unimplemented")
 	return null
 
 
-func _load_action_set(_device: int, _action_set: InputActionSet) -> bool:
+func _load_action_set(_device: int, _action_set: StdInputActionSet) -> bool:
 	assert(false, "unimplemented")
 	return false
 
@@ -73,16 +73,16 @@ func _load_action_set(_device: int, _action_set: InputActionSet) -> bool:
 # Action set layers
 
 
-func _disable_action_set_layer(_device: int, _layer: InputActionSetLayer) -> bool:
+func _disable_action_set_layer(_device: int, _layer: StdInputActionSetLayer) -> bool:
 	assert(false, "unimplemented")
 	return false
 
 
-func _enable_action_set_layer(_device: int, _layer: InputActionSetLayer) -> bool:
+func _enable_action_set_layer(_device: int, _layer: StdInputActionSetLayer) -> bool:
 	assert(false, "unimplemented")
 	return false
 
 
-func _list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
+func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
 	assert(false, "unimplemented")
 	return []

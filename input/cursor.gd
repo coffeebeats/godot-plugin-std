@@ -75,7 +75,7 @@ func unset_hovered(control: Control) -> bool:
 ## update_configuration changes the cursor state and triggering actions based on the
 ## provided action set and action set layers.
 func update_configuration(
-	action_set: InputActionSet = null, layers: Array[InputActionSetLayer] = []
+	action_set: StdInputActionSet = null, layers: Array[StdInputActionSetLayer] = []
 ) -> void:
 	if not action_set:
 		return

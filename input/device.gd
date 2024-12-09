@@ -11,13 +11,13 @@ extends Node
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 # action_set_loaded is emitted any time an action set is loaded (i.e. activated).
-signal action_set_loaded(action_set: InputActionSet)
+signal action_set_loaded(action_set: StdInputActionSet)
 
 ## action_set_layer_enabled is emitted when an action set layer is enabled.
-signal action_set_layer_enabled(action_set_layer: InputActionSetLayer)
+signal action_set_layer_enabled(action_set_layer: StdInputActionSetLayer)
 
 ## action_set_layer_disabled is emitted when an action set layer is disabled.
-signal action_set_layer_disabled(action_set_layer: InputActionSetLayer)
+signal action_set_layer_disabled(action_set_layer: StdInputActionSetLayer)
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -90,9 +90,9 @@ const DEVICE_TYPE_XBOX := InputDeviceType.XBOX
 ## load_action_set unbinds any actions currently bound (including activated layers) and
 ## then binds the actions defined within the action set. Does nothing if the action set
 ## is already activated.
-func load_action_set(action_set: InputActionSet) -> bool:
-	assert(action_set is InputActionSet, "missing argument: action set")
-	assert(not action_set is InputActionSetLayer, "invalid argument: cannot be a layer")
+func load_action_set(action_set: StdInputActionSet) -> bool:
+	assert(action_set is StdInputActionSet, "missing argument: action set")
+	assert(not action_set is StdInputActionSetLayer, "invalid argument: cannot be a layer")
 	assert(actions is StdInputDeviceActions, "invalid state; missing component")
 
 	var layers := actions.list_action_set_layers(device_id)
@@ -123,8 +123,8 @@ func load_action_set(action_set: InputActionSet) -> bool:
 ##
 ## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
 ## taken.
-func enable_action_set_layer(layer: InputActionSetLayer) -> bool:
-	assert(layer is InputActionSetLayer, "invalid argument: layer")
+func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
+	assert(layer is StdInputActionSetLayer, "invalid argument: layer")
 	assert(actions is StdInputDeviceActions, "invalid state; missing component")
 
 	if not actions.enable_action_set_layer(device_id, layer):
@@ -145,8 +145,8 @@ func enable_action_set_layer(layer: InputActionSetLayer) -> bool:
 ##
 ## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
 ## taken.
-func disable_action_set_layer(layer: InputActionSetLayer) -> bool:
-	assert(layer is InputActionSetLayer, "invalid argument: layer")
+func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
+	assert(layer is StdInputActionSetLayer, "invalid argument: layer")
 	assert(actions is StdInputDeviceActions, "invalid state; missing component")
 
 	if not actions.disable_action_set_layer(device_id, layer):

@@ -1,11 +1,11 @@
 ##
 ## std/input/action_set.gd
 ##
-## `InputActionSet` is a collection of input actions which, collectively, define
+## StdInputActionSet is a collection of input actions which, collectively, define
 ## available player actions during a section of the game.
 ##
 
-class_name InputActionSet
+class_name StdInputActionSet
 extends Resource
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
