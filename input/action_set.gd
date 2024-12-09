@@ -41,6 +41,15 @@ extends Resource
 ## top action set or layer on the stack will be used.
 @export var confine_cursor: bool = false
 
+## activate_kbm_on_cursor_motion defines whether mouse motion should activate the
+## keyboard and mouse input device. This is likely desired for menu-based action sets,
+## but should probably be disabled during gameplay due to the prevalence of gyro controls
+## (which are simulated as mouse input).
+##
+## NOTE: This property must be set for each action set and action set layer, as only the
+## top action set or layer on the stack will be used.
+@export var activate_kbm_on_cursor_motion: bool = true
+
 @export_subgroup("Visibility ")
 
 ## actions_hide_cursor is the list of actions which, when "just" triggered, will trigger

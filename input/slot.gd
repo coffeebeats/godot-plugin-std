@@ -436,6 +436,9 @@ func _enter_tree() -> void:
 
 	assert(joypad_monitor is JoypadMonitor, "invalid config; missing component")
 
+	Signals.connect_safe(
+		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
+	)
 	Signals.connect_safe(device_activated, _on_Self_device_activated)
 	Signals.connect_safe(device_connected, _on_Self_device_connected)
 	Signals.connect_safe(device_disconnected, _on_Self_device_disconnected)
@@ -446,6 +449,9 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_INPUT_SLOT).remove_member(self)
 
+	Signals.disconnect_safe(
+		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
+	)
 	Signals.disconnect_safe(device_activated, _on_Self_device_activated)
 	Signals.disconnect_safe(device_connected, _on_Self_device_connected)
 	Signals.disconnect_safe(device_disconnected, _on_Self_device_disconnected)
@@ -710,3 +716,18 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
 	pass  # No need to disable action sets/layers here - the device may reconnect.
+
+
+func _on_cursor_visibility_changed(visible: bool) -> void:
+	if not visible:
+		return
+
+	if not claim_kbm_input or _active == _kbm_device:
+		return
+
+	var action_set := actions.get_action_set(-1)
+	if not action_set or not action_set.activate_kbm_on_cursor_motion:
+		return
+
+	assert(_kbm_device, "invalid state; missing input device")
+	_activate_device(_kbm_device)
