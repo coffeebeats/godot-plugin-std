@@ -17,6 +17,9 @@ const Signals := preload("../event/signal.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## action_set is an input action set which defines the configured action.
+@export var action_set: InputActionSet = null
+
 ## action is the name of the input action which the glyph icon will correspond to.
 @export var action := &""
 
@@ -47,7 +50,7 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(_slot.device_activated, _on_InputSlot_device_activated)
 	(
 		Signals
-		. disconnect_safe(
+		.disconnect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
@@ -66,26 +69,30 @@ func _ready() -> void:
 	)
 	(
 		Signals
-		. connect_safe(
+		.connect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
 	)
 
 	# Initialize texture on first ready.
-	_on_StdSettingsPropertyInt_value_changed()
+	_update_texture()
 
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+func _update_texture() -> void:
+	var data := _slot.get_action_glyph(action_set.name, action)
+	if not data:
+		texture = null
+		return
+
+	texture = data.texture
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_InputSlot_device_activated(device: InputDevice) -> void:
-	texture = device.get_action_glyph(action)
-
+func _on_InputSlot_device_activated(_device: InputDevice) -> void:
+	_update_texture()
 
 func _on_StdSettingsPropertyInt_value_changed() -> void:
-	var device := _slot.get_active_device()
-	if not device:
-		return
-
-	texture = device.get_action_glyph(action)
+	_update_texture()
