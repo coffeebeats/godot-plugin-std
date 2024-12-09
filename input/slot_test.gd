@@ -1,19 +1,19 @@
 ##
-## Tests pertaining to the `InputSlot` library.
+## Tests pertaining to the `StdInputSlot` library.
 ##
 
 extends GutTest
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var slot: InputSlot = null
-var joypad_monitor: InputSlot.JoypadMonitor = null
+var slot: StdInputSlot = null
+var joypad_monitor: StdInputSlot.JoypadMonitor = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
 func test_input_slot_activates_keyboard_on_ready() -> void:
-	# Given: Theinputslot is configuredtoclaimkeyboard + mouseinput.
+	# Given: The input slot is configured to claim keyboard + mouseinput.
 	slot.claim_kbm_input = true
 
 	# Given: Signals are monitored.
@@ -24,8 +24,8 @@ func test_input_slot_activates_keyboard_on_ready() -> void:
 
 	# Then: The active device is the keyboard.
 	var got := slot.get_active_device()
-	assert_is(got, InputDevice)
-	assert_eq(got.device_type, InputDevice.DEVICE_TYPE_KEYBOARD)
+	assert_is(got, StdInputDevice)
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
 
 	# Then: The keyboard device is connected.
 	assert_signal_emit_count(slot, "device_connected", 1)
@@ -41,8 +41,8 @@ func test_input_slot_activates_keyboard_on_ready() -> void:
 
 
 func test_input_slot_connects_and_disconnects_joypads() -> void:
-	# Given: A new `InputSlot` is instantiated.
-	assert_is(slot, InputSlot)
+	# Given: A new `StdInputSlot` is instantiated.
+	assert_is(slot, StdInputSlot)
 
 	# Given: The input slot is configured to claim keyboard+mouse input.
 	slot.claim_kbm_input = false
@@ -59,13 +59,13 @@ func test_input_slot_connects_and_disconnects_joypads() -> void:
 	assert_signal_not_emitted(slot, "device_connected")
 
 	# When: A newly connected joypad device is broadcast.
-	joypad_monitor.joy_connected.emit(0, InputDevice.DEVICE_TYPE_XBOX)
+	joypad_monitor.joy_connected.emit(0, StdInputDevice.DEVICE_TYPE_XBOX)
 
 	# Then: The joypad is active.
 	var got := slot.get_active_device()
 	assert_not_null(got)
-	assert_is(got, InputDevice)
-	assert_eq(got.device_type, InputDevice.DEVICE_TYPE_XBOX)
+	assert_is(got, StdInputDevice)
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_XBOX)
 
 	# Then: The connect signal was emitted.
 	assert_signal_emit_count(slot, "device_connected", 1)
@@ -94,7 +94,7 @@ func test_input_slot_connects_and_disconnects_joypads() -> void:
 
 
 func after_each() -> void:
-	slot = null  # Dereference the input slot so it can be freed.
+	slot = null # Dereference the input slot so it can be freed.
 
 
 func before_all() -> void:
@@ -105,12 +105,12 @@ func before_all() -> void:
 func before_each() -> void:
 	# Construct input slot scene.
 
-	slot = InputSlot.new()
+	slot = StdInputSlot.new()
 	slot.glyph_type_override_property = StdSettingsPropertyInt.new()
 	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
 	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
 
-	joypad_monitor = InputSlot.JoypadMonitor.new()
+	joypad_monitor = StdInputSlot.JoypadMonitor.new()
 	slot.joypad_monitor = joypad_monitor
 	slot.add_child(joypad_monitor, false, INTERNAL_MODE_BACK)
 
