@@ -83,9 +83,9 @@ class Actions:
 
 		if not (
 			slot
-			.get_connected_devices()
-			.map(func(d): return d.load_action_set(action_set))
-			.any(func(r): return r)
+			. get_connected_devices()
+			. map(func(d): return d.load_action_set(action_set))
+			. any(func(r): return r)
 		):
 			return false
 
@@ -105,9 +105,9 @@ class Actions:
 
 		if not (
 			slot
-			.get_connected_devices()
-			.map(func(d): return d.enable_action_set_layer(layer))
-			.any(func(r): return r)
+			. get_connected_devices()
+			. map(func(d): return d.enable_action_set_layer(layer))
+			. any(func(r): return r)
 		):
 			return false
 
@@ -126,9 +126,9 @@ class Actions:
 
 		if not (
 			slot
-			.get_connected_devices()
-			.map(func(d): return d.disable_action_set_layer(layer))
-			.any(func(r): return r)
+			. get_connected_devices()
+			. map(func(d): return d.disable_action_set_layer(layer))
+			. any(func(r): return r)
 		):
 			return false
 
@@ -149,8 +149,8 @@ class Glyphs:
 	var slot: InputSlot = null
 
 	func _get_action_glyph(
-		_device: int, # Active device ID
-		device_type: InputDeviceType, # Active or overridden device type
+		_device: int,  # Active device ID
+		device_type: InputDeviceType,  # Active or overridden device type
 		action_set: StringName,
 		action: StringName,
 	) -> GlyphData:
@@ -229,6 +229,7 @@ class Haptics:
 
 		assert(device == slot.active.device_id, "invalid argument; wrong device ID")
 		slot.active.stop_vibrate()
+
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -353,7 +354,11 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[InputDevice]:
 
 ## get_action_glyph returns a `Texture2D` containing the glyph of the primary (i.e.
 ## first) controller origin which will actuate the specified action.
-func get_action_glyph(action_set: StringName, action: StringName, device_type_override: InputDeviceType = DEVICE_TYPE_UNKNOWN) -> StdInputDeviceGlyphs.GlyphData:
+func get_action_glyph(
+	action_set: StringName,
+	action: StringName,
+	device_type_override: InputDeviceType = DEVICE_TYPE_UNKNOWN
+) -> StdInputDeviceGlyphs.GlyphData:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
 	# NOTE: Shadowing here prevents using wrong type.
@@ -361,13 +366,15 @@ func get_action_glyph(action_set: StringName, action: StringName, device_type_ov
 	@warning_ignore("CONFUSABLE_LOCAL_USAGE")
 	var device_type: InputDeviceType = device_type
 
-	var device_type_property_value: InputDeviceType = glyph_type_override_property.get_value()
+	var device_type_property_value: InputDeviceType = (
+		glyph_type_override_property.get_value()
+	)
 	if device_type_property_value != DEVICE_TYPE_UNKNOWN:
 		device_type = device_type_property_value
 
 	if device_type_override != DEVICE_TYPE_UNKNOWN:
 		device_type = device_type_override
-		
+
 	return glyphs.get_action_glyph(device_id, device_type, action_set, action)
 
 
@@ -410,6 +417,7 @@ func stop_vibrate() -> void:
 		return
 
 	return haptics.stop_vibrate(device_id)
+
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -541,7 +549,7 @@ func _ready() -> void:
 
 		add_child(kbm, false, INTERNAL_MODE_BACK)
 		device_connected.emit(kbm)
- 
+
 		if not _active or not prefer_activate_joypad_on_ready:
 			_activate_device(kbm)
 
@@ -669,7 +677,7 @@ func _make_kbm(device: int = 0) -> InputDevice:
 	kbm.actions = actions_kbm
 	kbm.glyphs = glyphs_kbm
 	kbm.haptics = haptics_kbm
-	
+
 	return kbm
 
 
@@ -698,4 +706,4 @@ func _on_Self_device_connected(device: InputDevice) -> void:
 
 
 func _on_Self_device_disconnected(_device: InputDevice) -> void:
-	pass # No need to disable action sets/layers here - the device may reconnect.
+	pass  # No need to disable action sets/layers here - the device may reconnect.

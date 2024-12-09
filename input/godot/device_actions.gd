@@ -17,7 +17,7 @@ const Binding := preload("../binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const InputDeviceType := InputDevice.InputDeviceType
+const InputDeviceType := InputDevice.InputDeviceType  # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -27,13 +27,13 @@ const InputDeviceType := InputDevice.InputDeviceType
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: InputActionSet = null # gdlint: ignore=class-definitions-order
+static var _action_set: InputActionSet = null  # gdlint: ignore=class-definitions-order
 
 ## _action_set_layers is the stack of currently active action set layers.
-static var _action_set_layers: Array[InputActionSetLayer] = [] # gdlint: ignore=class-definitions-order,max-line-length
+static var _action_set_layers: Array[InputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _bindings maps origins (integers) to the actions they are bound to.
-static var _bindings: Dictionary = {} # gdlint: ignore=class-definitions-order
+static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -83,7 +83,9 @@ func _load_action_set(_device: int, action_set: InputActionSet) -> bool:
 ## enable_action_set_layer pushes the provided action set layer onto the stack of
 ## active layers *for the specified device*. If the action set layer is already
 ## active then no change occurs.
-func _enable_action_set_layer(_device: int, action_set_layer: InputActionSetLayer) -> bool:
+func _enable_action_set_layer(
+	_device: int, action_set_layer: InputActionSetLayer
+) -> bool:
 	assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
 	assert(_action_set is InputActionSet, "invalid state: missing action set")
 	assert(

@@ -10,7 +10,7 @@ extends Node
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const InputDeviceType := InputDevice.InputDeviceType
+const InputDeviceType := InputDevice.InputDeviceType  # gdlint:ignore=constant-name
 
 
 ## GlyphData contains the data necessary to render the glyph icon.

@@ -6,7 +6,6 @@
 
 extends StdInputDeviceHaptics
 
-
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 

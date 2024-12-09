@@ -50,7 +50,7 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(_slot.device_activated, _on_InputSlot_device_activated)
 	(
 		Signals
-		.disconnect_safe(
+		. disconnect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
@@ -69,7 +69,7 @@ func _ready() -> void:
 	)
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
@@ -78,7 +78,9 @@ func _ready() -> void:
 	# Initialize texture on first ready.
 	_update_texture()
 
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
 
 func _update_texture() -> void:
 	var data := _slot.get_action_glyph(action_set.name, action)
@@ -88,11 +90,13 @@ func _update_texture() -> void:
 
 	texture = data.texture
 
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_InputSlot_device_activated(_device: InputDevice) -> void:
 	_update_texture()
+
 
 func _on_StdSettingsPropertyInt_value_changed() -> void:
 	_update_texture()

@@ -94,7 +94,7 @@ func test_input_slot_connects_and_disconnects_joypads() -> void:
 
 
 func after_each() -> void:
-	slot = null # Dereference the input slot so it can be freed.
+	slot = null  # Dereference the input slot so it can be freed.
 
 
 func before_all() -> void:
@@ -117,7 +117,7 @@ func before_each() -> void:
 	slot.actions_kbm = add_child_autofree(StdInputDeviceActions.new())
 	slot.glyphs_kbm = add_child_autofree(StdInputDeviceGlyphs.new())
 	slot.haptics_kbm = add_child_autofree(StdInputDeviceHaptics.new())
-	
+
 	slot.actions_joy = add_child_autofree(StdInputDeviceActions.new())
 	slot.glyphs_joy = add_child_autofree(StdInputDeviceGlyphs.new())
 	slot.haptics_joy = add_child_autofree(StdInputDeviceHaptics.new())
