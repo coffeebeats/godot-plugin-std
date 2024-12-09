@@ -1,19 +1,23 @@
 ##
 ## std/input/godot/device_bindings.gd
 ##
-## An implemention of `InputDevice.Bindings` which uses Godot's built-in action map
+## An implemention of `StdInputDeviceActions` which uses Godot's built-in action map
 ## (plus custom action set handling) to manage available actions.
 ##
 ## NOTE: This implementation requires that all action sets/bindings apply to all input
 ## devices. Changing action sets for one device thus changes them for all devices.
 ##
 
-extends InputDevice.Bindings
+extends StdInputDeviceActions
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Origin := preload("../origin.gd")
 const Binding := preload("../binding.gd")
+
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+const InputDeviceType := InputDevice.InputDeviceType
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -23,29 +27,34 @@ const Binding := preload("../binding.gd")
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: InputActionSet = null  # gdlint: ignore=class-definitions-order
+static var _action_set: InputActionSet = null # gdlint: ignore=class-definitions-order
 
 ## _action_set_layers is the stack of currently active action set layers.
-static var _action_set_layers: Array[InputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length
+static var _action_set_layers: Array[InputActionSetLayer] = [] # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _bindings maps origins (integers) to the actions they are bound to.
-static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
+static var _bindings: Dictionary = {} # gdlint: ignore=class-definitions-order
 
-# -- PUBLIC METHODS ------------------------------------------------------------------ #
+# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _ready() -> void:
+	assert(scope is StdSettingsScope, "invalid config; missing bindings scope")
+
+
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
 ## get_action_set returns the currently active `InputActionSet` *for the specified
 ## device*, if.
-func get_action_set(_device: int) -> InputActionSet:
+func _get_action_set(_device: int) -> InputActionSet:
 	return _action_set
 
 
 ## load_action_set unloads the currently active `InputActionSet`, if any, and then
 ## activates the provided action set *for the specified device*. If the action set
 ## is already active for the device then no change occurs.
-func load_action_set(
-	_device: int, _device_type: InputDeviceType, action_set: InputActionSet
-) -> bool:
+func _load_action_set(_device: int, action_set: InputActionSet) -> bool:
 	assert(action_set is InputActionSet, "missing argument: action set")
 	assert(
 		not action_set is InputActionSetLayer, "invalid argument: cannot use a layer"
@@ -74,9 +83,7 @@ func load_action_set(
 ## enable_action_set_layer pushes the provided action set layer onto the stack of
 ## active layers *for the specified device*. If the action set layer is already
 ## active then no change occurs.
-func enable_action_set_layer(
-	_device: int, _device_type: InputDeviceType, action_set_layer: InputActionSetLayer
-) -> bool:
+func _enable_action_set_layer(_device: int, action_set_layer: InputActionSetLayer) -> bool:
 	assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
 	assert(_action_set is InputActionSet, "invalid state: missing action set")
 	assert(
@@ -98,8 +105,8 @@ func enable_action_set_layer(
 ## disable_action_set_layer removes the provided action set layer from the set of
 ## active layers *for the specified device*. If the action set layer is not active
 ## then no change occurs.
-func disable_action_set_layer(
-	_device: int, device_type: InputDeviceType, action_set_layer: InputActionSetLayer
+func _disable_action_set_layer(
+	_device: int, action_set_layer: InputActionSetLayer
 ) -> bool:
 	assert(action_set_layer is InputActionSetLayer, "missing argument: layer")
 	assert(_action_set is InputActionSet, "invalid state: missing action set")
@@ -116,55 +123,24 @@ func disable_action_set_layer(
 
 	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
 	# necessary origins.
-	load_action_set(-1, device_type, get_action_set(-1))
+	load_action_set(-1, get_action_set(-1))
 	for layer in _action_set_layers:
-		enable_action_set_layer(-1, device_type, layer)
+		enable_action_set_layer(-1, layer)
 
 	return true
 
 
 ## list_action_set_layers returns the stack of currently active action set layers
 ## *for the specified device*.
-func list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
+func _list_action_set_layers(_device: int) -> Array[InputActionSetLayer]:
 	return _action_set_layers.duplicate()
-
-
-# Action origins
-
-
-## get_action_origins returns the set of input origins which are bound to the
-## specified action *for the specified device*.
-func get_action_origins(
-	_device: int, device_type: InputDeviceType, action: StringName
-) -> PackedInt64Array:
-	var origins := PackedInt64Array()
-
-	for event in (
-		Binding.get_kbm(scope, action)
-		if device_type == InputDevice.DEVICE_TYPE_KEYBOARD
-		else Binding.get_joy(scope, action)
-	):
-		var value_encoded: int = Origin.encode(event)
-		if value_encoded < 0:
-			continue
-
-		origins.append(value_encoded)
-
-	return origins
-
-
-# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
-
-
-func _ready() -> void:
-	assert(scope is StdSettingsScope, "invalid config; missing bindings scope")
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
 func _apply_action_set(
-	device: int, device_type: InputDevice.InputDeviceType, action_set: InputActionSet
+	device: int, device_type: InputDeviceType, action_set: InputActionSet
 ) -> void:
 	for actions in [
 		action_set.actions_analog_1d,
@@ -176,9 +152,7 @@ func _apply_action_set(
 				assert(false, "invalid state; unknown action")
 				InputMap.add_action(action)
 
-			# FIXME: Apply *both* keyboard and mouse events/origins.
-
-			for origin in get_action_origins(device, device_type, action):
+			for origin in _get_action_origins(device, device_type, action):
 				_bind_action_to_origin(device, action_set, action, origin)
 
 
@@ -201,3 +175,22 @@ func _bind_action_to_origin(
 
 	InputMap.action_add_event(action, event)
 	_bindings[origin] = action
+
+
+func _get_action_origins(
+	_device: int, device_type: InputDeviceType, action: StringName
+) -> PackedInt64Array:
+	var origins := PackedInt64Array()
+
+	for event in (
+		Binding.get_kbm(scope, action)
+		if device_type == InputDevice.DEVICE_TYPE_KEYBOARD
+		else Binding.get_joy(scope, action)
+	):
+		var value_encoded: int = Origin.encode(event)
+		if value_encoded < 0:
+			continue
+
+		origins.append(value_encoded)
+
+	return origins
