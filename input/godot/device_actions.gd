@@ -17,7 +17,7 @@ const Binding := preload("../binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const DeviceType := StdInputDevice.DeviceType # gdlint:ignore=constant-name
+const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -27,13 +27,13 @@ const DeviceType := StdInputDevice.DeviceType # gdlint:ignore=constant-name
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: StdInputActionSet = null # gdlint: ignore=class-definitions-order
+static var _action_set: StdInputActionSet = null  # gdlint: ignore=class-definitions-order
 
 ## _action_set_layers is the stack of currently active action set layers.
-static var _action_set_layers: Array[StdInputActionSetLayer] = [] # gdlint: ignore=class-definitions-order,max-line-length
+static var _action_set_layers: Array[StdInputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _bindings maps origins (integers) to the actions they are bound to.
-static var _bindings: Dictionary = {} # gdlint: ignore=class-definitions-order
+static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 

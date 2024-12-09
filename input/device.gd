@@ -93,7 +93,9 @@ const DEVICE_TYPE_XBOX := DeviceType.XBOX
 ## is already activated.
 func load_action_set(action_set: StdInputActionSet) -> bool:
 	assert(action_set is StdInputActionSet, "missing argument: action set")
-	assert(not action_set is StdInputActionSetLayer, "invalid argument: cannot be a layer")
+	assert(
+		not action_set is StdInputActionSetLayer, "invalid argument: cannot be a layer"
+	)
 	assert(actions is StdInputDeviceActions, "invalid state; missing component")
 
 	var layers := actions.list_action_set_layers(device_id)

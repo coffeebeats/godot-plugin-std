@@ -62,7 +62,7 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 	(
 		Signals
-		.disconnect_safe(
+		. disconnect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
@@ -95,7 +95,7 @@ func _ready() -> void:
 	)
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
