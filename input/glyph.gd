@@ -34,6 +34,8 @@ const Signals := preload("../event/signal.gd")
 
 @export_group("Display")
 
+@export_subgroup("Origin info")
+
 ## label is a path to a `Label` node which will render glyph text, if set. A default
 ## `Label` will be created if this is unset.
 @export_node_path var label: NodePath = "Label"
@@ -41,6 +43,17 @@ const Signals := preload("../event/signal.gd")
 ## texture_rect is a path to a `TextureRect` node which will render a glyph texture, if
 ## set. A default `TextureRect` will be created if this is unset.
 @export_node_path var texture_rect: NodePath = "TextureRect"
+
+@export_subgroup("Containers")
+
+## label_container is a path to a node which will be hidden upon the origin label being
+## empty. By default this will be the `Label` used to display the origin label itself.
+@export_node_path var label_container: NodePath = "Label"
+
+## texture_rect_container is a path to a node which will be hidden upon the origin glyph
+## texture being `null`. By default this will be the `TextureRect` used to display the
+## glyph icon itself.
+@export_node_path var texture_rect_container: NodePath = "TextureRect"
 
 @export_group("Properties")
 
@@ -52,8 +65,10 @@ const Signals := preload("../event/signal.gd")
 
 var _slot: StdInputSlot = null
 
-@onready var _label: Label = get_node_or_null(label)
-@onready var _texture_rect: TextureRect = get_node_or_null(texture_rect)
+@onready var _label: Label = get_node(label)
+@onready var _label_container: Control = get_node(label_container)
+@onready var _texture_rect: TextureRect = get_node(texture_rect)
+@onready var _texture_rect_container: Control = get_node(texture_rect_container)
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -70,19 +85,6 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	# Create missing child nodes.
-	if not _texture_rect:
-		_texture_rect = _create_texture_rect()
-		add_child(_texture_rect, false, INTERNAL_MODE_BACK)
-		texture_rect = get_path_to(_texture_rect)
-	if not _label:
-		_label = _create_label()
-		add_child(_label, false, INTERNAL_MODE_BACK)
-		label = get_path_to(_label)
-
-	_label.visible = false
-	_texture_rect.visible = false
-
 	# Wire up glyph data connections.
 	_slot = StdInputSlot.for_player(player_id)
 	assert(_slot is StdInputSlot, "invalid state; missing input slot")
@@ -108,41 +110,26 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _create_label() -> Label:
-	var node := Label.new()
-	node.set_anchors_preset(LayoutPreset.PRESET_CENTER)
-	node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	node.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-
-	return node
-
-
-func _create_texture_rect() -> TextureRect:
-	var node := TextureRect.new()
-	node.set_anchors_preset(LayoutPreset.PRESET_CENTER)
-	node.expand_mode = TextureRect.EXPAND_KEEP_SIZE
-	node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
-
-	return node
-
-
 func _update_texture() -> void:
+	_label.text = ""
+	_label_container.visible = false
+	_texture_rect.texture = null
+	_texture_rect_container.visible = false
+
 	var data := _slot.get_action_glyph(action_set.name, action)
 	if not data:
-		_label.text = ""
-		_label.visible = false
-		_texture_rect.texture = null
-		_texture_rect.visible = false
-
 		return
 
 	if data.texture:
 		_texture_rect.texture = data.texture
-		_texture_rect.visible = true
+		_texture_rect_container.visible = true
+		custom_minimum_size = data.texture.get_size()
 
 	if data.label:
-		_label.text = data.label
-		_label.visible = true
+		_label.text = data.label.to_upper()
+		_label_container.visible = true
+
+	update_minimum_size()
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
