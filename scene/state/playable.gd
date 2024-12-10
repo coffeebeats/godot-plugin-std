@@ -57,6 +57,7 @@ func _on_enter(_previous: State) -> void:
 		for slot in StdInputSlot.all():
 			slot.load_action_set(action_set)
 
+
 ## A virtual method called when leaving this state (prior to entering next state).
 func _on_exit(next: State) -> void:
 	super(next)
