@@ -726,7 +726,19 @@ func _on_cursor_visibility_changed(visible: bool) -> void:
 		return
 
 	var action_set := actions.get_action_set(-1)
-	if not action_set or not action_set.activate_kbm_on_cursor_motion:
+	if not action_set:
+		return
+
+	var should_active_kbm := action_set.activate_kbm_on_cursor_motion
+
+	if not should_active_kbm:
+		for layer in actions.list_action_set_layers(-1):
+			should_active_kbm = layer.activate_kbm_on_cursor_motion
+
+			if should_active_kbm:
+				break
+
+	if not should_active_kbm:
 		return
 
 	assert(_kbm_device, "invalid state; missing input device")
