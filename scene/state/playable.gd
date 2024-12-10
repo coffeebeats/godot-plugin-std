@@ -54,10 +54,8 @@ func _on_enter(_previous: State) -> void:
 		assert(action_set is StdInputActionSet, "invalid config; wrong type")
 		assert(not action_set is StdInputActionSetLayer, "invalid config; wrong type")
 
-		for slot in StdGroup.with_id(StdInputSlot.GROUP_INPUT_SLOT).list_members():
-			assert(slot is StdInputSlot, "invalid state; found wrong member type")
+		for slot in StdInputSlot.all():
 			slot.load_action_set(action_set)
-
 
 ## A virtual method called when leaving this state (prior to entering next state).
 func _on_exit(next: State) -> void:
