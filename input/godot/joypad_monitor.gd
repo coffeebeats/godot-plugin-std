@@ -56,6 +56,33 @@ func _ready() -> void:
 	assert(err == OK, "failed to connect to signal")
 
 
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+
+func _broadcast_connected_joypads() -> void:
+	for device in Input.get_connected_joypads():
+		_broadcast_connected_joypad(device)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _broadcast_connected_joypad(device: int) -> void:
+	var joypad_name := Input.get_joy_name(device)
+	var device_type := get_device_type(joypad_name)
+
+	print(
+		"std/input/godot/joypad_monitor.gd[",
+		get_instance_id(),
+		(
+			"]: joypad connected: %d (name=%s,type=%d)"
+			% [device, joypad_name, device_type]
+		),
+	)
+
+	joy_connected.emit(device, device_type)
+
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
@@ -64,23 +91,10 @@ func _on_Input_joy_connection_changed(device: int, connected: bool) -> void:
 		print(
 			"std/input/godot/joypad_monitor.gd[",
 			get_instance_id(),
-			"]: joypad connection changed: %d (connected=%s)" % [device, connected],
+			"]: joypad disconnected: %d" % [device, connected],
 		)
 
 		joy_disconnected.emit(device)
 		return
 
-	var joypad_name := Input.get_joy_name(device)
-
-	print(
-		"std/input/godot/joypad_monitor.gd[",
-		get_instance_id(),
-		(
-			"]: joypad connection changed: %d (name=%s,connected=%s)"
-			% [device, joypad_name, connected]
-		),
-	)
-
-	var device_type := get_device_type(joypad_name)
-
-	joy_connected.emit(device, device_type)
+	_broadcast_connected_joypad(device)
