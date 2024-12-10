@@ -20,8 +20,10 @@ extends StdSettingsPropertyBool
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 func _can_modify() -> bool:
 	return false
+
 
 func _get_value_from_config(_config: Config) -> Variant:
 	assert(not default, "invalid config; conflicting default value")

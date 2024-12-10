@@ -17,8 +17,10 @@ extends StdSettingsPropertyBool
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 func _can_modify() -> bool:
 	return false
+
 
 func _get_value_from_config(_config: Config) -> Variant:
 	return OS.has_feature(feature)
