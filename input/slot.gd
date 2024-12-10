@@ -58,6 +58,14 @@ class JoypadMonitor:
 	@warning_ignore("UNUSED_SIGNAL")
 	signal joy_disconnected(device_id: int)
 
+	## broadcast_connected_joypads requests the joypad monitor to emit connection
+	## signals for all already connected devices.
+	func broadcast_connected_joypads() -> void:
+		return _broadcast_connected_joypads()
+
+	func _broadcast_connected_joypads() -> void:
+		assert(false, "unimplemented")
+
 
 # StdInputDevice components
 
@@ -274,31 +282,62 @@ class Haptics:
 ## optional component, but only one `StdInputSlot` at most may have one.
 @export var cursor: StdInputCursor = null
 
-## joypad_monitor is a node which monitors joypad activity. This Std`InputSlot` node
+## joypad_monitor is a node which monitors joypad activity. This `StdInputSlot` node
 ## will manage active input devices based on the monitor's signals.
-@export var joypad_monitor: JoypadMonitor = null
+@export var joypad_monitor: JoypadMonitor = null:
+	set = set_joypad_monitor
 
 @export_subgroup("Keyboard and mouse")
 
 ## actions_kbm is the actions component for keyboard and mouse.
-@export var actions_kbm: StdInputDeviceActions = null
+@export var actions_kbm: StdInputDeviceActions = null:
+	set(value):
+		actions_kbm = value
+
+		if _kbm_device:
+			_kbm_device.actions = value
 
 ## glyphs_kbm is the glyphs component for keyboard and mouse.
-@export var glyphs_kbm: StdInputDeviceGlyphs = null
+@export var glyphs_kbm: StdInputDeviceGlyphs = null:
+	set(value):
+		glyphs_kbm = value
+
+		if _kbm_device:
+			_kbm_device.glyphs = value
 
 ## haptics_kbm is the haptics component for keyboard and mouse.
-@export var haptics_kbm: StdInputDeviceHaptics = null
+@export var haptics_kbm: StdInputDeviceHaptics = null:
+	set(value):
+		haptics_kbm = value
+
+		if _kbm_device:
+			_kbm_device.haptics = value
 
 @export_subgroup("Joypad")
 
 ## actions_joy is the actions component for joypads.
-@export var actions_joy: StdInputDeviceActions = null
+@export var actions_joy: StdInputDeviceActions = null:
+	set(value):
+		actions_joy = value
+
+		for joypad in _joypad_devices:
+			joypad.actions_joy = value
 
 ## glyphs_joy is the glyphs component for joypads.
-@export var glyphs_joy: StdInputDeviceGlyphs = null
+@export var glyphs_joy: StdInputDeviceGlyphs = null:
+	set(value):
+		glyphs_joy = value
+
+		for joypad in _joypad_devices:
+			joypad.glyphs_joy = value
 
 ## haptics_joy is the haptics component for joypads.
-@export var haptics_joy: StdInputDeviceHaptics = null
+@export var haptics_joy: StdInputDeviceHaptics = null:
+	set(value):
+		haptics_joy = value
+
+		for joypad in _joypad_devices:
+			joypad.haptics_joy = value
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -309,6 +348,14 @@ var _kbm_device: StdInputDevice = null
 var _joypad_devices: Array[StdInputDevice] = []
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## all lists all `StdInputSlot` instances in the scene tree.
+static func all() -> Array[StdInputSlot]:
+	var members: Array[StdInputSlot] = StdGroup.with_id(GROUP_INPUT_SLOT).list_members()
+	assert(members.all(func(m): return m is StdInputSlot), "invalid state; wrong type")
+
+	return members
 
 
 ## for_player finds the `StdInputSlot` in the scene tree that's assigned to the specified
@@ -434,16 +481,18 @@ func _enter_tree() -> void:
 	)
 	StdGroup.with_id(GROUP_INPUT_SLOT).add_member(self)
 
-	assert(joypad_monitor is JoypadMonitor, "invalid config; missing component")
-
+	assert(cursor is StdInputCursor, "invalid config; missing component")
 	Signals.connect_safe(
 		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
 	)
+
+	assert(joypad_monitor is JoypadMonitor, "invalid config; missing component")
+	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
+	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+
 	Signals.connect_safe(device_activated, _on_Self_device_activated)
 	Signals.connect_safe(device_connected, _on_Self_device_connected)
 	Signals.connect_safe(device_disconnected, _on_Self_device_disconnected)
-	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
-	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
 
 func _exit_tree() -> void:
@@ -467,7 +516,7 @@ func _exit_tree() -> void:
 		device_disconnected.emit(kbm)
 
 		remove_child(kbm)
-		kbm.free()
+		kbm.queue_free()
 
 	for joypad in _joypad_devices:
 		_disconnect_joy_device(joypad.device_id)
@@ -562,6 +611,8 @@ func _ready() -> void:
 		if not _active or not prefer_activate_joypad_on_ready:
 			_activate_device(kbm)
 
+	joypad_monitor.broadcast_connected_joypads()
+
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
@@ -649,7 +700,7 @@ func _disconnect_joy_device(device: int) -> bool:
 		device_disconnected.emit(joypad)
 
 		remove_child(joypad)
-		joypad.free()
+		joypad.queue_free()
 
 		return true
 
@@ -743,3 +794,37 @@ func _on_cursor_visibility_changed(visible: bool) -> void:
 
 	assert(_kbm_device, "invalid state; missing input device")
 	_activate_device(_kbm_device)
+
+
+# -- SETTERS/GETTERS ----------------------------------------------------------------- #
+
+
+## set_joypad_monitor swaps the joypad monitor implementation to the one provided. This
+## will cause all connected joypads to disconnect, at which point they should be
+## reconnected once the new joypad monitor is ready.
+##
+## NOTE: This method will *not* remove the prior `JoypadMonitor` from the scene nor add
+## the new one to the scene.
+func set_joypad_monitor(node: JoypadMonitor) -> void:
+	assert(node is JoypadMonitor, "invalid argument; wrong type")
+
+	if node == joypad_monitor:
+		return
+
+	if joypad_monitor:
+		for joypad in _joypad_devices:
+			if joypad == _active:
+				_active = null
+
+			_disconnect_joy_device(joypad.device_id)
+
+		Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
+		Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+
+	joypad_monitor = node
+
+	if is_inside_tree():
+		Signals.connect_safe(node.joy_connected, _connect_joy_device)
+		Signals.connect_safe(node.joy_disconnected, _disconnect_joy_device)
+
+		node.broadcast_connected_joypads()
