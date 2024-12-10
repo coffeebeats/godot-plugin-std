@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.4 (2024-12-10)
+
+## What's Changed
+* fix(input): update class name in test by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/99
+* fix(input): handle keyboard activation on cursor motion; require user to supply nodes to `StdInputGlyph` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/101
+* fix(input): handle `activate_kbm_on_cursor_motion` set on layers by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/102
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.7.3...v1.7.4
+
 ## 1.7.3 (2024-12-09)
 
 ## What's Changed
