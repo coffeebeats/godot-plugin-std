@@ -16,7 +16,14 @@ extends StdSettingsPropertyBool
 
 ## properties is a list of boolean settings properties which will be evaluated. If all
 ## are `true`, then this settings property evaluates to `true`.
-@export var properties: Array[StdSettingsPropertyBool] = []
+@export var properties: Array[StdSettingsPropertyBool] = []:
+	set(value):
+		for property in properties:
+			unfollow(property)
+
+		properties = value
+		for property in properties:
+			follow(property)
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
