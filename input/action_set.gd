@@ -46,8 +46,8 @@ extends Resource
 ## but should probably be disabled during gameplay due to the prevalence of gyro controls
 ## (which are simulated as mouse input).
 ##
-## NOTE: This property must be set for each action set and action set layer, as only the
-## top action set or layer on the stack will be used.
+## NOTE: This property can be set on any action set or action set layer; only one needs
+## to set this property for it to be observed.
 @export var activate_kbm_on_cursor_motion: bool = true
 
 @export_subgroup("Visibility ")
