@@ -67,6 +67,7 @@ func set_value(value: Variant) -> bool:
 
 	return false
 
+
 ## follow causes this settings property to emit `value_changed` signals whenever the
 ## provided other settings property does so. This is a convenience method to simplify
 ## wiring up dependent properties.
@@ -76,8 +77,9 @@ func follow(other: StdSettingsProperty) -> bool:
 	if not other.value_changed.is_connected(value_changed.emit):
 		other.value_changed.connect(value_changed.emit)
 		return true
-	
+
 	return false
+
 
 ## unfollow removes `value_changed` signal propagation between the provided settings
 ## property and this one.
@@ -87,7 +89,7 @@ func unfollow(other: StdSettingsProperty) -> bool:
 	if other.value_changed.is_connected(value_changed.emit):
 		other.value_changed.disconnect(value_changed.emit)
 		return true
-	
+
 	return false
 
 
