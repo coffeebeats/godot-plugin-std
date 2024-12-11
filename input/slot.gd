@@ -352,8 +352,14 @@ var _joypad_devices: Array[StdInputDevice] = []
 
 ## all lists all `StdInputSlot` instances in the scene tree.
 static func all() -> Array[StdInputSlot]:
-	var members: Array[StdInputSlot] = StdGroup.with_id(GROUP_INPUT_SLOT).list_members()
-	assert(members.all(func(m): return m is StdInputSlot), "invalid state; wrong type")
+	var members: Array[StdInputSlot] = []
+
+	for member in StdGroup.with_id(GROUP_INPUT_SLOT).list_members():
+		if not member is StdInputSlot:
+			assert(false, "invalid state; wrong member type")
+			continue
+
+		members.append(member)
 
 	return members
 
