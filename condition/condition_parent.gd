@@ -30,10 +30,12 @@ func _enter_tree() -> void:
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 func _on_allow() -> void:
 	for child in _children:
 		if not is_ancestor_of(child):
 			add_child(child, false)
+
 
 func _on_block() -> void:
 	for child in get_children(include_internal):

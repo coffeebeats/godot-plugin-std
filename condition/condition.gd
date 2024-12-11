@@ -34,6 +34,7 @@ var _is_enabled: bool = false
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
+
 func _enter_tree() -> void:
 	assert(allow or block, "invalid state; missing at least one settings property")
 
@@ -44,22 +45,31 @@ func _enter_tree() -> void:
 
 	_on_settings_property_value_changed()
 
+
 func _exit_tree() -> void:
 	if allow:
-		Signals.disconnect_safe(allow.value_changed, _on_settings_property_value_changed)
+		Signals.disconnect_safe(
+			allow.value_changed, _on_settings_property_value_changed
+		)
 	if block:
-		Signals.disconnect_safe(block.value_changed, _on_settings_property_value_changed)
+		Signals.disconnect_safe(
+			block.value_changed, _on_settings_property_value_changed
+		)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 func _on_allow() -> void:
 	pass
+
 
 func _on_block() -> void:
 	pass
 
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
 
 func _on_settings_property_value_changed() -> void:
 	var is_enabled := false
@@ -70,6 +80,14 @@ func _on_settings_property_value_changed() -> void:
 	if not is_enabled and allow and allow.get_value():
 		is_enabled = true
 
-	if is_enabled != _is_enabled:
-		_is_enabled = is_enabled
-		condition_changed.emit(_is_enabled)
+	if is_enabled == _is_enabled:
+		return
+
+	_is_enabled = is_enabled
+
+	if is_enabled:
+		_on_allow()
+	else:
+		_on_block()
+
+	condition_changed.emit(_is_enabled)

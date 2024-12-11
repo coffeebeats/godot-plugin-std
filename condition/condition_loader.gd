@@ -19,13 +19,16 @@ extends StdCondition
 var _node: Node = null
 var _packed_scene: PackedScene = null
 
+
 func _enter_tree() -> void:
 	assert(scene, "invalid config; missing scene")
 	_packed_scene = load(scene)
 
 	super._enter_tree()
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
 
 func _on_allow() -> void:
 	assert(not _node, "invalid state; found dangling node")
@@ -33,6 +36,7 @@ func _on_allow() -> void:
 
 	_node = _packed_scene.instantiate()
 	add_child(_node, false)
+
 
 func _on_block() -> void:
 	if not _node:
