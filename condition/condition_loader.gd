@@ -19,6 +19,8 @@ extends StdCondition
 var _node: Node = null
 var _packed_scene: PackedScene = null
 
+# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
 
 func _enter_tree() -> void:
 	assert(scene, "invalid config; missing scene")
