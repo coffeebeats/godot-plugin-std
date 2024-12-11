@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.1 (2024-12-11)
+
+## What's Changed
+* fix(input): correctly return typed array for all input slots by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/109
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.0...v1.8.1
+
 ## 1.8.0 (2024-12-11)
 
 ## What's Changed
