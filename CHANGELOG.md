@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.8.0 (2024-12-11)
+
+## What's Changed
+* fix(input): allow `StdInputSlot` components to be swappable at runtime by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/104
+* feat(scene): allow loading actions for playable scenes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/103
+* feat(setting): add read-only settings properties for boolean logic and feature tracking by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/106
+* feat(setting): allow `StdSettingsProperty` to propagate others' `value_changed` signals by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/107
+* feat(feature,condition): refactor `feature` into `StdCondition` with two implementations by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/108
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.7.4...v1.8.0
+
 ## 1.7.4 (2024-12-10)
 
 ## What's Changed
