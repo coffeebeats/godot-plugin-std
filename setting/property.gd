@@ -39,6 +39,14 @@ const Config := preload("../config/config.gd")
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## can_modify returns whether this settings property can be modified. While this
+## typically returns the `readonly` field state, it can be overridden by certain
+## settings property types. As such, this method should be checked to determine whether
+## a settings property is modifiable.
+func can_modify() -> bool:
+	return readonly
+
+
 ## get_value reads the specified property from the configured `StdSettingsScope`.
 func get_value() -> Variant:
 	assert(scope is StdSettingsScope, "invalid state; missing scope")
@@ -49,7 +57,7 @@ func get_value() -> Variant:
 func set_value(value: Variant) -> bool:
 	assert(scope is StdSettingsScope, "invalid config; missing 'scope'")
 
-	if readonly:
+	if not can_modify():
 		push_warning("tried to write a read-only property: %s::%s" % [category, name])
 		return false
 
@@ -60,7 +68,36 @@ func set_value(value: Variant) -> bool:
 	return false
 
 
+## follow causes this settings property to emit `value_changed` signals whenever the
+## provided other settings property does so. This is a convenience method to simplify
+## wiring up dependent properties.
+func follow(other: StdSettingsProperty) -> bool:
+	assert(other is StdSettingsProperty, "missing argument: other")
+
+	if not other.value_changed.is_connected(value_changed.emit):
+		other.value_changed.connect(value_changed.emit)
+		return true
+
+	return false
+
+
+## unfollow removes `value_changed` signal propagation between the provided settings
+## property and this one.
+func unfollow(other: StdSettingsProperty) -> bool:
+	assert(other is StdSettingsProperty, "missing argument: other")
+
+	if other.value_changed.is_connected(value_changed.emit):
+		other.value_changed.disconnect(value_changed.emit)
+		return true
+
+	return false
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+
+func _can_modify() -> bool:
+	return readonly
 
 
 func _get_value_from_config(_config: Config) -> Variant:

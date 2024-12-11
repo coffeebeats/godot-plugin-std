@@ -12,6 +12,16 @@ extends "instantiable.gd"
 
 const TransitionEvent := preload("../event/transition.gd")
 
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+@export_group("Actions")
+
+## action_set is an action set to load once this playable state is entered.
+##
+## NOTE: This action set will be loaded for *all* input slots that exist. As such, more
+## complex requirements would be better served by in-scene action set loading.
+@export var action_set: StdInputActionSet = null
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _node: Node = null
@@ -39,6 +49,13 @@ func set_node(node: Node) -> void:
 func _on_enter(_previous: State) -> void:
 	if not _node and not scene.is_empty():
 		_load_result = _get_loader().load(scene)
+
+	if action_set:
+		assert(action_set is StdInputActionSet, "invalid config; wrong type")
+		assert(not action_set is StdInputActionSetLayer, "invalid config; wrong type")
+
+		for slot in StdInputSlot.all():
+			slot.load_action_set(action_set)
 
 
 ## A virtual method called when leaving this state (prior to entering next state).
