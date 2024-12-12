@@ -23,7 +23,7 @@ static func make_project_path_absolute(path: String) -> String:
 	path = path.trim_prefix("res://")
 	path = path.trim_prefix("user://")
 
-	return OS.get_executable_path().get_base_dir().path_join("hello.txt")
+	return OS.get_executable_path().get_base_dir().path_join(path)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
