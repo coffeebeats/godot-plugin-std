@@ -1,11 +1,11 @@
 ##
 ## std/feature/condition_parent.gd
 ##
-## StdConditionParent is a node which conditionally allows its children to enter the scene
-## tree based on whether the underlying condition evaluates to `true`.
+## StdConditionParent is an implementation of `StdCondition` which conditionally allows
+## its children to enter the scene tree based on the configured expressions.
 ##
 
-class_name StdConditionalParent
+class_name StdConditionParent
 extends StdCondition
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -18,18 +18,7 @@ extends StdCondition
 
 var _children: Array[Node] = []
 
-# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
-
-
-func _enter_tree() -> void:
-	# Store a reference to all children nodes defined at build time.
-	_children = get_children(include_internal)
-
-	super._enter_tree()
-
-
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
 
 func _on_allow() -> void:
 	for child in _children:
@@ -43,3 +32,6 @@ func _on_block() -> void:
 
 		if is_ancestor_of(child):
 			remove_child(child)
+
+func _should_trigger_allow_action_on_enter() -> bool:
+	return false # No need to add nodes which will already enter the scene.

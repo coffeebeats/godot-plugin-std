@@ -8,91 +8,106 @@
 class_name StdCondition
 extends Node
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
-## condition_changed is emitted when one of the condition's property dependencies has
-## changed.
-signal condition_changed(value: bool)
-
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Signals := preload("../event/signal.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## allow is a settings property which defines what the "allow" condition evaluates to.
-@export var allow: StdSettingsPropertyBool = null
+@export_group("Expressions")
 
-## block is a settings property which defines what the "block" condition evaluates to.
-## Note that if both `block` and `allow` evaluate to `true`, `block` takes priority and
-## the condition fails.
-@export var block: StdSettingsPropertyBool = null
+@export_subgroup("Allow ")
 
-# -- INITIALIZATION ------------------------------------------------------------------ #
+## expressions_allow is a list of expressions which, if *any* are true, allow the
+## configured nodes to enter the scene.
+@export var expressions_allow: Array[StdConditionExpression] = []
 
-var _is_enabled: bool = false
+## expressions_allow_require_all changes the default `allow` evaluation behavior to
+## require that all "allow" expressions must be enabled for the allow action to occur.
+@export var expressions_allow_require_all: bool = false
+
+@export_subgroup("Block ")
+
+## expressions_block is a list of expressions which, if *any* are true, block the
+## configured nodes to enter the scene.
+@export var expressions_block: Array[StdConditionExpression] = []
+
+## expressions_block_require_all changes the default `block` evaluation behavior to
+## require that all "block" expressions must be enabled for the block action to occur.
+@export var expressions_block_require_all: bool = false
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
 func _enter_tree() -> void:
-	assert(allow or block, "invalid state; missing at least one settings property")
+	for expression in expressions_allow:
+		Signals.connect_safe(expression.value_changed, _on_expression_value_changed)
+		expression.setup()
 
-	if allow:
-		Signals.connect_safe(allow.value_changed, _on_settings_property_value_changed)
-	if block:
-		Signals.connect_safe(block.value_changed, _on_settings_property_value_changed)
+	for expression in expressions_block:
+		Signals.disconnect_safe(expression.value_changed, _on_expression_value_changed)
+		expression.setup()
 
-	_on_settings_property_value_changed()
-
-	# NOTE: Because '_is_enabled' starts 'false', a manual block action is required here
-	# because the signal handler won't have detected a change.
-	if not _is_enabled:
-		_on_block()
-
+	_evaluate()
 
 func _exit_tree() -> void:
-	if allow:
-		Signals.disconnect_safe(
-			allow.value_changed, _on_settings_property_value_changed
-		)
-	if block:
-		Signals.disconnect_safe(
-			block.value_changed, _on_settings_property_value_changed
-		)
+	for expression in expressions_allow:
+		expression.teardown()
 
+	for expression in expressions_block:
+		expression.teardown()
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
 
 func _on_allow() -> void:
 	pass
 
-
 func _on_block() -> void:
 	pass
+
+func _should_trigger_allow_action_on_enter() -> bool:
+	assert(false, "unimplemented")
+	return false
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _evaluate(is_entering: bool = true) -> void:
+	if not _is_allowed():
+		_on_block()
+	elif not is_entering or _should_trigger_allow_action_on_enter():
+		_on_allow()
+
+func _is_allowed() -> bool:
+	if expressions_block:
+		for expression in expressions_block:
+			var allowed := expression.is_allowed()
+
+			if allowed and not expressions_block_require_all:
+				return false
+
+			if not allowed and expressions_block_require_all:
+				break
+
+	if expressions_allow:
+		var all_allowed := true
+
+		for expression in expressions_allow:
+			var allowed := expression.is_allowed()
+			all_allowed = all_allowed and allowed
+
+			if allowed and not expressions_allow_require_all:
+				return true
+
+			if expressions_allow_require_all and not all_allowed:
+				return false
+
+		return all_allowed
+
+	return false
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
-
-func _on_settings_property_value_changed() -> void:
-	var is_enabled := false
-
-	if block and not block.get_value():
-		is_enabled = true
-
-	if not is_enabled and allow and allow.get_value():
-		is_enabled = true
-
-	if is_enabled == _is_enabled:
-		return
-
-	_is_enabled = is_enabled
-
-	if is_enabled:
-		_on_allow()
-	else:
-		_on_block()
-
-	condition_changed.emit(_is_enabled)
+func _on_expression_value_changed(_enabled: bool) -> void:
+	_evaluate(false)

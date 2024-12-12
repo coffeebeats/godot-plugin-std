@@ -1,11 +1,12 @@
 ##
 ## std/feature/condition_loader.gd
 ##
-## StdConditionLoader is a node which conditionally instantiates and adds the configured
-## packed scene based on whether the underlying condition evaluates to `true`.
+## StdConditionLoader is an implementation of `StdCondition` which conditionally
+## instantiates and adds the configured scene as a child node based on the configured
+## expressions.
 ##
 
-class_name StdConditionalLoader
+class_name StdConditionLoader
 extends StdCondition
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -21,6 +22,14 @@ var _packed_scene: PackedScene = null
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
+func _exit_tree() -> void:
+	super._exit_tree()
+
+	if _node:
+		_node.free()
+		_node = null
+
+	_packed_scene = null
 
 func _enter_tree() -> void:
 	assert(scene, "invalid config; missing scene")
@@ -33,19 +42,22 @@ func _enter_tree() -> void:
 
 
 func _on_allow() -> void:
-	assert(not _node, "invalid state; found dangling node")
 	assert(_packed_scene is PackedScene, "invalid state; missing packed scene")
+	assert(not _node or not _node.is_inside_tree(), "invalid state; found dangling node")
 
-	_node = _packed_scene.instantiate()
+	if not _node:
+		_node = _packed_scene.instantiate()
+
 	add_child(_node, false)
-
 
 func _on_block() -> void:
 	if not _node:
 		return
 
-	assert(is_ancestor_of(_node), "invalid state; node not in scene")
+	assert(_node.is_inside_tree(), "invalid state; node not in scene")
+	assert(is_ancestor_of(_node), "invalid state; node not a descendent")
 
 	remove_child(_node)
-	_node.free()
-	_node = null
+
+func _should_trigger_allow_action_on_enter() -> bool:
+	return true
