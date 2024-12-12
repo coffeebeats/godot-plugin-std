@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.2 (2024-12-12)
+
+## What's Changed
+* fix(condition): ensure initial block action is taken by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/112
+* refactor(condition): extract expressions into `StdConditionExpression` resource, allowing for simpler `StdCondition` nodes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/114
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.1...v1.8.2
+
 ## 1.8.1 (2024-12-12)
 
 ## What's Changed
