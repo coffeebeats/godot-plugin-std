@@ -45,6 +45,11 @@ func _enter_tree() -> void:
 
 	_on_settings_property_value_changed()
 
+	# NOTE: Because '_is_enabled' starts 'false', a manual block action is required here
+	# because the signal handler won't have detected a change.
+	if not _is_enabled:
+		_on_block()
+
 
 func _exit_tree() -> void:
 	if allow:
