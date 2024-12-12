@@ -44,7 +44,7 @@ const Config := preload("../config/config.gd")
 ## settings property types. As such, this method should be checked to determine whether
 ## a settings property is modifiable.
 func can_modify() -> bool:
-	return readonly
+	return _can_modify()
 
 
 ## get_value reads the specified property from the configured `StdSettingsScope`.
@@ -97,7 +97,7 @@ func unfollow(other: StdSettingsProperty) -> bool:
 
 
 func _can_modify() -> bool:
-	return readonly
+	return not readonly
 
 
 func _get_value_from_config(_config: Config) -> Variant:
