@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.8.3 (2024-12-12)
+
+## What's Changed
+* chore(addons): update `gut` to latest by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/115
+* fix(file): use correct relative path instead of placeholder value by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/117
+* fix(file): correctly form absolute path for exported projects by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/118
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.2...v1.8.3
+
 ## 1.8.2 (2024-12-12)
 
 ## What's Changed
