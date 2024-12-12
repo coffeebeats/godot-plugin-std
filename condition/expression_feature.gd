@@ -8,13 +8,13 @@
 class_name StdConditionExpressionFeature
 extends StdConditionExpression
 
-
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## feature is the name of an application feature to check during evaluation.
 @export var feature: StringName = ""
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
 
 func _is_allowed() -> bool:
 	return OS.has_feature(feature)

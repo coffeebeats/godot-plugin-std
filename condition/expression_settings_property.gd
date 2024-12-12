@@ -28,6 +28,7 @@ var _is_enabled: bool = false
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 func _setup() -> void:
 	assert(allow or block, "invalid state; missing at least one settings property")
 
@@ -47,6 +48,7 @@ func _teardown() -> void:
 			block.value_changed, _on_settings_property_value_changed
 		)
 
+
 func _is_allowed() -> bool:
 	var is_enabled := false
 
@@ -55,8 +57,9 @@ func _is_allowed() -> bool:
 
 	if not is_enabled and allow and allow.get_value():
 		is_enabled = true
-	
+
 	return is_enabled
+
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 

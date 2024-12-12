@@ -50,6 +50,7 @@ func _enter_tree() -> void:
 
 	_evaluate()
 
+
 func _exit_tree() -> void:
 	for expression in expressions_allow:
 		expression.teardown()
@@ -57,17 +58,22 @@ func _exit_tree() -> void:
 	for expression in expressions_block:
 		expression.teardown()
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
 
 func _on_allow() -> void:
 	pass
 
+
 func _on_block() -> void:
 	pass
+
 
 func _should_trigger_allow_action_on_enter() -> bool:
 	assert(false, "unimplemented")
 	return false
+
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
@@ -77,6 +83,7 @@ func _evaluate(is_entering: bool = true) -> void:
 		_on_block()
 	elif not is_entering or _should_trigger_allow_action_on_enter():
 		_on_allow()
+
 
 func _is_allowed() -> bool:
 	if expressions_block:
@@ -108,6 +115,7 @@ func _is_allowed() -> bool:
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
 
 func _on_expression_value_changed(_enabled: bool) -> void:
 	_evaluate(false)

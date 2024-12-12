@@ -20,6 +20,7 @@ var _children: Array[Node] = []
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 func _on_allow() -> void:
 	for child in _children:
 		if not is_ancestor_of(child):
@@ -33,5 +34,6 @@ func _on_block() -> void:
 		if is_ancestor_of(child):
 			remove_child(child)
 
+
 func _should_trigger_allow_action_on_enter() -> bool:
-	return false # No need to add nodes which will already enter the scene.
+	return false  # No need to add nodes which will already enter the scene.
