@@ -1,42 +1,49 @@
 ##
-## std/input/steam/actions_manifest_writer.gd
+## std/input/steam/in_game_actions.gd
 ##
-## `InputSteamActionsManifestWriter` is a class which, given a list of available
-## `StdInputActionSet`s and `StdInputActionSetLayer`s, can output a Steam Input actions
-## manifest file.
+## StdInputSteamInGameActions is a resource which defines a Steam in-game actions (IGA)
+## file. Changes to this resource will automatically write a new manifest file to the
+## project's root directory.
 ##
 
-extends RefCounted
-
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const FilePath := preload("../../file/path.gd")
+@tool
+class_name StdInputSteamInGameActions
+extends Resource
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## dir is a directory in which the actions manifest will be written.
-@export_dir var dir: String
-
 ## app_id is the ID of the Steam application. This is used to determine the manifest
 ## file's name.
-@export var app_id: int = 480
+@export var app_id: int = 480:
+	set(value):
+		app_id = value
+		_write_file()
 
 @export_group("Actions")
 
 ## action_sets is the complete set of available `StdInputActionSet`s within the game.
 ## This must not include `StdInputActionSetLayer` types.
-@export var action_sets: Array[StdInputActionSet] = []
+@export var action_sets: Array[StdInputActionSet] = []:
+	set(value):
+		action_sets = value
+		_write_file()
 
 ## action_set_layers is the complete set of available `StdInputActionSetLayers`s within the
 ## game. This must not include base `StdInputActionSet` types.
-@export var action_set_layers: Array[StdInputActionSetLayer] = []
+@export var action_set_layers: Array[StdInputActionSetLayer] = []:
+	set(value):
+		action_set_layers = value
+		_write_file()
 
 @export_group("Localization")
 
 ## locales is a mapping from Steam locale codes to Godot locale codes.
 @export var locales: Dictionary = {
 	"english": "en",
-}
+}:
+	set(value):
+		locales = value
+		_write_file()
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -51,15 +58,13 @@ func get_filename() -> String:
 	return "res://game_actions_%d.vdf" % app_id
 
 
-## get_filepath returns the absolute filepath to the directory in which the actions
-## manifest will be written.
-func get_filepath() -> String:
-	return dir.path_join(get_filename())
+## get_in_game_actions_file_contents returns the contents of the Steam Input in-game
+## actions file based on the configured settings.
+func get_in_game_actions_file_contents() -> String:
+	# Reset state before starting.
+	_contents = ""
+	_indent = 0
 
-
-## write_actions_manifest outputs a Steam actions manifest to the configured filepath
-## using the configured action sets and action set layers.
-func write_actions_manifest() -> Error:
 	_write_string("In Game Actions")
 
 	write_open_bracket()
@@ -70,6 +75,9 @@ func write_actions_manifest() -> Error:
 	write_open_bracket()
 
 	for action_set in action_sets:
+		if not action_set:
+			continue
+
 		_write_string(action_set.name)
 		write_open_bracket()
 
@@ -77,7 +85,7 @@ func write_actions_manifest() -> Error:
 		write_space()
 		_write_string("#set_%s" % action_set.name, false)
 
-		_write_actions_in_action_set(action_set)
+		_write_game_actions_in_action_set(action_set)
 
 		_write_close_bracket()
 
@@ -87,6 +95,9 @@ func write_actions_manifest() -> Error:
 	write_open_bracket()
 
 	for action_set_layer in action_set_layers:
+		if not action_set_layer:
+			continue
+
 		_write_string(action_set_layer.name)
 		write_open_bracket()
 
@@ -106,7 +117,7 @@ func write_actions_manifest() -> Error:
 		write_space()
 		_write_string(action_set_layer.parent.name, false)
 
-		_write_actions_in_action_set(action_set_layer)
+		_write_game_actions_in_action_set(action_set_layer)
 
 		_write_close_bracket()
 
@@ -124,24 +135,16 @@ func write_actions_manifest() -> Error:
 		write_open_bracket()
 
 		for action_set in action_sets:
-			_write_string("set_" + action_set.name, true, false)
-			write_space()
-			_write_string(action_set.name, false)
+			if not action_set:
+				continue
 
-			for action in action_set.actions:
-				_write_string("action_" + action.name, true, false)
-				write_space()
-				_write_string(action.name, false)
+			_write_locale_actions_in_action_set(action_set)
 
 		for action_set_layer in action_set_layers:
-			_write_string("layer_" + action_set_layer.name, true, false)
-			write_space()
-			_write_string(action_set_layer.name, false)
+			if not action_set_layer:
+				continue
 
-			for action in action_set_layer.actions:
-				_write_string("action_" + action.name, true, false)
-				write_space()
-				_write_string(action.name, false)
+			_write_locale_actions_in_action_set(action_set_layer)
 
 		_write_close_bracket()
 
@@ -151,22 +154,7 @@ func write_actions_manifest() -> Error:
 
 	assert(_indent == 0, "missing bracket!")
 
-	var path := FilePath.make_project_path_absolute(get_filepath())
-
-	if not DirAccess.dir_exists_absolute(path.get_base_dir()):
-		var err := DirAccess.make_dir_recursive_absolute(path.get_base_dir())
-		if err != OK:
-			return err
-
-	var file := FileAccess.open(path, FileAccess.ModeFlags.WRITE)
-	if not file:
-		return FileAccess.get_open_error()
-
-	file.store_string(_contents)
-	file.flush()
-	file.close()
-
-	return OK
+	return _contents
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -177,22 +165,26 @@ func _write_indent() -> void:
 		_contents += "\t"
 
 
-func _write_string(value: String, indent: bool = true, newline: bool = true) -> void:
-	if indent:
-		_write_indent()
+func _write_file() -> void:
+	if not Engine.is_editor_hint():
+		return
 
-	_contents += '"%s"' % value
-	if newline:
-		_write_newline()
+	var contents := get_in_game_actions_file_contents()
+
+	var file := FileAccess.open(get_filename(), FileAccess.ModeFlags.WRITE)
+	if not file:
+		push_error(
+			"failed to write Steam Input IGA file: %d" % FileAccess.get_open_error()
+		)
+		return
+
+	file.store_string(contents)
+	file.flush()
+	file.close()
 
 
 func _write_newline() -> void:
 	_contents += "\n"
-
-
-func write_space() -> void:
-	for _i in range(8 - _indent):
-		_contents += "\t"
 
 
 func write_open_bracket(newline: bool = true) -> void:
@@ -217,7 +209,21 @@ func _write_close_bracket(newline: bool = true) -> void:
 		_write_newline()
 
 
-func _write_actions_in_action_set(action_set: StdInputActionSet) -> void:
+func write_space() -> void:
+	for _i in range(8 - _indent):
+		_contents += "\t"
+
+
+func _write_string(value: String, indent: bool = true, newline: bool = true) -> void:
+	if indent:
+		_write_indent()
+
+	_contents += '"%s"' % value
+	if newline:
+		_write_newline()
+
+
+func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 	for section in ["StickPadGyro", "AnalogTrigger", "Button"]:
 		_write_string(section)
 		write_open_bracket()
@@ -279,3 +285,24 @@ func _write_actions_in_action_set(action_set: StdInputActionSet) -> void:
 					_write_string("#Action_%s" % action, false)
 
 		_write_close_bracket()
+
+
+func _write_locale_actions_in_action_set(action_set: StdInputActionSet) -> void:
+	var prefix := "layer_" if action_set is StdInputActionSetLayer else "set_"
+	_write_string(prefix + action_set.name, true, false)
+	write_space()
+	_write_string(action_set.name, false)
+
+	for action in (
+		action_set.actions_analog_1d
+		+ action_set.actions_analog_2d
+		+ action_set.actions_digital
+		+ (
+			[action_set.action_absolute_mouse]
+			if action_set.action_absolute_mouse
+			else []
+		)
+	):
+		_write_string("action_" + action, true, false)
+		write_space()
+		_write_string(action, false)
