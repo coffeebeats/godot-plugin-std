@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.5 (2024-12-13)
+
+## What's Changed
+* fix(input): add assertions for correctly configuring analog actions by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/121
+* fix(input): create a `StdInputSteamInGameActions` resource to declaratively write the manifest file by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/123
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.4...v1.8.5
+
 ## 1.8.4 (2024-12-12)
 
 ## What's Changed

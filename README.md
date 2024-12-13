@@ -25,6 +25,10 @@ The [fsm](./fsm) directory contains an implementation of a hierarchical [`StateM
 
 Additionally, the [`StateMachine`](./fsm/state_machine.gd) implementation provides a "compaction" process which is enabled by default. The state machine extracts the scripts of all child [`State`](./fsm/state.gd) nodes and stores those objects internally without adding children to the scene tree. This improves performance, especially for state machines which are instantiated often.
 
+### **`input`**
+
+The [input](./input) directory contains types for setting up an action set-based input system, along with abstractions for device and player slot APIs. When used, both Steam and Godot-backed implementations can be easily switched between.
+
 ### **`iter`**
 
 The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
