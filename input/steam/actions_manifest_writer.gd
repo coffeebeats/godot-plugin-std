@@ -245,7 +245,10 @@ func _write_actions_in_action_set(action_set: StdInputActionSet) -> void:
 
 				if action_set.action_absolute_mouse:
 					assert(
-						not action_set.action_absolute_mouse in action_set.actions_analog_2d,
+						not (
+							action_set.action_absolute_mouse
+							in action_set.actions_analog_2d
+						),
 						"invalid action; conflicting definition"
 					)
 
