@@ -95,6 +95,8 @@ extends Resource
 ## action_absolute_mouse is the name of an "absolute mouse"-typed action which will be
 ## defined via the Steam Input API. That action should be converted into normal mouse
 ## mouse input via `Input.parse_input_event`.
+##
+## NOTE: This action must *not* be present in the `actions_analog_2d` array.
 @export var action_absolute_mouse: StringName = ""
 
 @export_subgroup("Version ")

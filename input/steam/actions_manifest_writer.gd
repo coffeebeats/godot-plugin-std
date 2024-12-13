@@ -225,6 +225,11 @@ func _write_actions_in_action_set(action_set: StdInputActionSet) -> void:
 		match section:
 			"StickPadGyro":
 				for action in action_set.actions_analog_2d:
+					assert(
+						action.ends_with("_x") or action.ends_with("_y"),
+						"invalid action; 2D analog action must specify axis"
+					)
+
 					_write_string(action)
 					write_open_bracket()
 
@@ -239,6 +244,14 @@ func _write_actions_in_action_set(action_set: StdInputActionSet) -> void:
 					_write_close_bracket()
 
 				if action_set.action_absolute_mouse:
+					assert(
+						not (
+							action_set.action_absolute_mouse
+							in action_set.actions_analog_2d
+						),
+						"invalid action; conflicting definition"
+					)
+
 					_write_string(action_set.action_absolute_mouse)
 					write_open_bracket()
 
