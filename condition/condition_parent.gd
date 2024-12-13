@@ -18,6 +18,14 @@ extends StdCondition
 
 var _children: Array[Node] = []
 
+# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _enter_tree() -> void:
+	_children = get_children()
+	super._enter_tree()
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 

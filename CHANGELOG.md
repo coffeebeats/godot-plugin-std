@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.4 (2024-12-12)
+
+## What's Changed
+* fix(condition): ensure `StdConditionParent` caches child nodes on enter by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/119
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.3...v1.8.4
+
 ## 1.8.3 (2024-12-12)
 
 ## What's Changed
