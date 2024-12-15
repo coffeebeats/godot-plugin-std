@@ -133,9 +133,21 @@ func _get_origin_glyph(event: InputEvent) -> GlyphData:
 	if not event is InputEventKey:
 		return null
 
+	if (
+		event.keycode != KEY_NONE
+		and event.physical_keycode != KEY_NONE
+		and event.keycode != event.physical_keycode
+	):
+		assert(false, "invalid input; found conflicting keycodes")
+		return null
+
+	# NOTE: Only one of these properties can be set, so take the union of them in order
+	# to handle all of them.
+	var keycode: Key = event.keycode | event.physical_keycode
+
 	var texture: Texture2D = null
 
-	match event.keycode:
+	match keycode:
 		# Command
 		KEY_ESCAPE:
 			texture = cmd_escape

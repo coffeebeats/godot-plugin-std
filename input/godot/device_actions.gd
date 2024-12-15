@@ -67,18 +67,18 @@ static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
 ## configuration changes.
 func reload(device: int = Binding.DEVICE_ID_ALL) -> void:
 	var action_set := get_action_set(device)
-	if not action_set:
-		assert(
-			not list_action_set_layers(device),
-			"invalid state; found dangling layers",
-		)
+	var layers := list_action_set_layers(device)
 
+	_reset(device)
+
+	if not action_set:
+		assert(not layers, "invalid state; found dangling layers")
 		return
 
-	load_action_set(device, action_set)
+	_load_action_set(device, action_set)
 
-	for layer in list_action_set_layers(device):
-		enable_action_set_layer(device, layer)
+	for layer in layers:
+		_enable_action_set_layer(device, layer)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -86,6 +86,9 @@ func reload(device: int = Binding.DEVICE_ID_ALL) -> void:
 
 func _ready() -> void:
 	assert(scope is StdSettingsScope, "invalid config; missing bindings scope")
+
+	# Clear bindings upon initialization.
+	reload(Binding.DEVICE_ID_ALL)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -109,13 +112,8 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 	if action_set == _action_set:
 		return false
 
+	_reset(Binding.DEVICE_ID_ALL)
 	_action_set = action_set
-	_action_set_layers = []
-	_bindings = {}
-
-	# Clear all existing bindings.
-	for action in InputMap.get_actions():
-		InputMap.action_erase_events(action)
 
 	if claim_kbm_input:
 		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set)
@@ -128,6 +126,37 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 # Action set layers
 
 
+## disable_action_set_layer removes the provided action set layer from the set of
+## active layers *for the specified device*. If the action set layer is not active
+## then no change occurs.
+func _disable_action_set_layer(
+	_device: int, action_set_layer: StdInputActionSetLayer
+) -> bool:
+	assert(action_set_layer is StdInputActionSetLayer, "missing argument: layer")
+
+	if not _action_set is StdInputActionSet:
+		assert(false, "invalid state: missing action set")
+		return false
+
+	assert(
+		action_set_layer.parent == _action_set,
+		"invalid argument: wrong parent action set",
+	)
+
+	if action_set_layer not in _action_set_layers:
+		return false
+
+	_action_set_layers.erase(action_set_layer)
+	assert(action_set_layer not in _action_set_layers, "found duplicate layer")
+
+	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
+	# necessary origins.
+
+	reload(Binding.DEVICE_ID_ALL)
+
+	return true
+
+
 ## enable_action_set_layer pushes the provided action set layer onto the stack of
 ## active layers *for the specified device*. If the action set layer is already
 ## active then no change occurs.
@@ -135,7 +164,11 @@ func _enable_action_set_layer(
 	_device: int, action_set_layer: StdInputActionSetLayer
 ) -> bool:
 	assert(action_set_layer is StdInputActionSetLayer, "missing argument: layer")
-	assert(_action_set is StdInputActionSet, "invalid state: missing action set")
+
+	if not _action_set is StdInputActionSet:
+		assert(false, "invalid state: missing action set")
+		return false
+
 	assert(
 		action_set_layer.parent == _action_set,
 		"invalid argument: wrong parent action set",
@@ -150,32 +183,6 @@ func _enable_action_set_layer(
 		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set_layer)
 	if claim_joy_input:
 		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.GENERIC, action_set_layer)
-
-	return true
-
-
-## disable_action_set_layer removes the provided action set layer from the set of
-## active layers *for the specified device*. If the action set layer is not active
-## then no change occurs.
-func _disable_action_set_layer(
-	_device: int, action_set_layer: StdInputActionSetLayer
-) -> bool:
-	assert(action_set_layer is StdInputActionSetLayer, "missing argument: layer")
-	assert(_action_set is StdInputActionSet, "invalid state: missing action set")
-	assert(
-		action_set_layer.parent == _action_set,
-		"invalid argument: wrong parent action set",
-	)
-
-	if action_set_layer not in _action_set_layers:
-		return false
-
-	_action_set_layers.erase(action_set_layer)
-	assert(action_set_layer not in _action_set_layers, "found duplicate layer")
-
-	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
-	# necessary origins.
-	reload()
 
 	return true
 
@@ -220,6 +227,7 @@ func _bind_action_to_origin(
 
 	if origin in _bindings:
 		InputMap.action_erase_event(_bindings[origin], event)
+		assert(not InputMap.action_has_event(action, event), "failed to erase binding")
 
 	InputMap.action_add_event(action, event)
 	_bindings[origin] = action
@@ -242,3 +250,17 @@ func _get_action_origins(
 		origins.append(value_encoded)
 
 	return origins
+
+
+func _reset(_device: int) -> void:
+	# Clear all existing bindings.
+	for action in InputMap.get_actions():
+		InputMap.action_erase_events(action)
+
+	if _action_set:
+		_action_set = null
+
+	if _action_set_layers:
+		_action_set_layers = []
+
+	_bindings = {}

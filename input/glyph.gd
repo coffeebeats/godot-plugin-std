@@ -74,6 +74,9 @@ var _slot: StdInputSlot = null
 
 
 func _exit_tree() -> void:
+	Signals.disconnect_safe(
+		_slot.actions.configuration_changed, _on_StdInputSlot_configuration_changed
+	)
 	Signals.disconnect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 	(
 		Signals
@@ -85,10 +88,15 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
+	assert(action_set is StdInputActionSet, "invalid config; missing action set")
+
 	# Wire up glyph data connections.
 	_slot = StdInputSlot.for_player(player_id)
 	assert(_slot is StdInputSlot, "invalid state; missing input slot")
 
+	Signals.connect_safe(
+		_slot.actions.configuration_changed, _on_StdInputSlot_configuration_changed
+	)
 	Signals.connect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 
 	assert(
@@ -133,6 +141,10 @@ func _update_texture() -> void:
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_StdInputSlot_configuration_changed() -> void:
+	_update_texture()
 
 
 func _on_StdInputSlot_device_activated(_device: StdInputDevice) -> void:
