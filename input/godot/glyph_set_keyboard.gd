@@ -135,7 +135,9 @@ func _get_origin_glyph(event: InputEvent) -> GlyphData:
 
 	var texture: Texture2D = null
 
-	match event.keycode:
+	# NOTE: Only one of these properties can be set, so take the union of them in order
+	# to handle all of them.
+	match event.keycode | event.physical_keycode:
 		# Command
 		KEY_ESCAPE:
 			texture = cmd_escape
@@ -317,7 +319,7 @@ func _get_origin_glyph(event: InputEvent) -> GlyphData:
 	data.texture = texture
 
 	if include_label:
-		data.label = OS.get_keycode_string(event.keycode)
+		data.label = OS.get_keycode_string(event.physical_keycode)
 
 		if capitalize_label:
 			data.label = data.label.to_upper()

@@ -14,11 +14,12 @@ const Origin := preload("origin.gd")
 func test_encode_stores_input_event_key_correctly(
 	params = use_parameters(
 		[
-			[KEY_NONE, KEY_LOCATION_UNSPECIFIED],
 			[KEY_UNKNOWN, KEY_LOCATION_UNSPECIFIED],
 			[KEY_0, KEY_LOCATION_UNSPECIFIED],
 			[KEY_DOWN, KEY_LOCATION_UNSPECIFIED],
 			[KEY_W, KEY_LOCATION_UNSPECIFIED],
+			[KEY_Q, KEY_LOCATION_UNSPECIFIED],
+			[KEY_E, KEY_LOCATION_UNSPECIFIED],
 			[KEY_SHIFT, KEY_LOCATION_UNSPECIFIED],
 			[KEY_SHIFT, KEY_LOCATION_LEFT],
 			[KEY_SHIFT, KEY_LOCATION_RIGHT],
@@ -30,7 +31,7 @@ func test_encode_stores_input_event_key_correctly(
 ) -> void:
 	# Given: An input event to encode.
 	var event := InputEventKey.new()
-	event.keycode = params[0]
+	event.physical_keycode = params[0]
 	event.location = params[1]
 
 	# Given: The event is encoded.
@@ -44,7 +45,7 @@ func test_encode_stores_input_event_key_correctly(
 	assert_is(got, InputEventKey)
 
 	# Then: The correct code is set on the event.
-	assert_eq(got.keycode, event.keycode)
+	assert_eq(got.physical_keycode, event.physical_keycode)
 	assert_eq(got.location, event.location)
 
 

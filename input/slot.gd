@@ -115,13 +115,12 @@ class Actions:
 		if not (
 			slot
 			. get_connected_devices()
-			. map(func(d): return d.enable_action_set_layer(layer))
+			. map(func(d): return d.disable_action_set_layer(layer))
 			. any(func(r): return r)
 		):
 			return false
 
-		if not layer in _action_set_layers:
-			_action_set_layers.append(layer)
+		_action_set_layers.erase(layer)
 
 		if cursor:
 			cursor.update_configuration(_action_set, _action_set_layers)
@@ -136,12 +135,13 @@ class Actions:
 		if not (
 			slot
 			. get_connected_devices()
-			. map(func(d): return d.disable_action_set_layer(layer))
+			. map(func(d): return d.enable_action_set_layer(layer))
 			. any(func(r): return r)
 		):
 			return false
 
-		_action_set_layers.erase(layer)
+		if not layer in _action_set_layers:
+			_action_set_layers.append(layer)
 
 		if cursor:
 			cursor.update_configuration(_action_set, _action_set_layers)

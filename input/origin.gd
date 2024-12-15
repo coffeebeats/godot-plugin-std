@@ -49,8 +49,16 @@ static var bitmask_indices_kbm := PackedInt64Array(
 ## NOTE: No value information (e.g. pressed state or strength) will be retained.
 static func encode(event: InputEvent) -> int:
 	if event is InputEventKey:
+		# TODO: Add support for storing physical vs. non-physical 'Key' bindings.
+		assert(
+			event.physical_keycode != KEY_NONE,
+			"invalid argument; must use physical keycode",
+		)
+
 		var type_encoded: int = (BITMASK_INDEX_KEY & BITMASK_TYPE) << BITMASK_INDEX_TYPE
-		var value_encoded: int = (event.keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
+		var value_encoded: int = (
+			(event.physical_keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
+		)
 		var location_encoded: int = (
 			(event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
 		)
@@ -120,7 +128,7 @@ static func decode(value: int) -> InputEvent:
 			)
 
 			var event := InputEventKey.new()
-			event.keycode = value_decoded as Key
+			event.physical_keycode = value_decoded as Key
 			event.location = location_decoded as KeyLocation
 
 			return event
