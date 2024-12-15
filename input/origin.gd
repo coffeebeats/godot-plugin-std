@@ -51,17 +51,13 @@ static var bitmask_indices_kbm := PackedInt64Array(
 ## NOTE: No value information (e.g. pressed state or strength) will be retained.
 static func encode(event: InputEvent) -> int:
 	if event is InputEventKey:
-		assert(
-			event.keycode != KEY_NONE or event.physical_keycode != KEY_NONE,
-			"invalid argument; must set one of keycode or physical_keycode",
-		)
-		assert(
-			(
-				(event.keycode != KEY_NONE and event.physical_keycode == KEY_NONE)
-				or (event.physical_keycode != KEY_NONE and event.keycode == KEY_NONE)
-			),
-			"invalid argument; cannot specify both keycode and physical_keycode",
-		)
+		if (
+			event.keycode != KEY_NONE
+			and event.physical_keycode != KEY_NONE
+			and event.keycode != event.physical_keycode
+		):
+			assert(false, "invalid input; found conflicting keycodes")
+			return -1
 
 		var type_encoded: int = (BITMASK_INDEX_KEY & BITMASK_TYPE) << BITMASK_INDEX_TYPE
 		var physical_encoded: int = (
@@ -72,11 +68,10 @@ static func encode(event: InputEvent) -> int:
 			(event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
 		)
 
-		var value_encoded: int = 0
-		if physical_encoded != 0:
-			value_encoded = (event.physical_keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
-		else:
-			value_encoded = (event.keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
+		var value_encoded: int = (
+			((event.keycode | event.physical_keycode) & BITMASK_KEY)
+			<< BITMASK_INDEX_KEY
+		)
 
 		return type_encoded | value_encoded | physical_encoded | location_encoded
 
