@@ -101,6 +101,9 @@ static func set_kbm(
 	action: StringName,
 	events: Array[InputEvent],
 ) -> bool:
+	if events.any(func(e): return e.physical_keycode == KEY_NONE):
+		assert(false, "invalid input; missing physical keycode")
+		return false
 	if events.any(func(e): return e.device != DEVICE_ID_ALL):
 		assert(false, "invalid input; unsupport device ID found")
 		return false
@@ -199,7 +202,7 @@ static func _get_events(
 				# it maintains consistency with other input event stores.
 				if not (
 					Origin
-					. is_encoded_value_type(
+					.is_encoded_value_type(
 						Origin.encode(event),
 						origin_bitmask_indices,
 					)
@@ -231,7 +234,7 @@ static func _set_events(
 
 			if not (
 				Origin
-				. is_encoded_value_type(
+				.is_encoded_value_type(
 					value_encoded,
 					origin_bitmask_indices,
 				)
