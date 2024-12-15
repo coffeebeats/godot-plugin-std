@@ -77,7 +77,7 @@ func get_device_type(joypad_name: String) -> StdInputDevice.DeviceType:
 	if _regex_steam_controller.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
 
-	return StdInputDevice.DEVICE_TYPE_GENERIC
+	return StdInputDevice.DEVICE_TYPE_GENERIC  # gdlint:ignore=max-returns
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
