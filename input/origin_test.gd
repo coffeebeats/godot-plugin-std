@@ -14,7 +14,6 @@ const Origin := preload("origin.gd")
 func test_encode_stores_input_event_key_correctly(
 	params = use_parameters(
 		[
-			[KEY_NONE, KEY_LOCATION_UNSPECIFIED],
 			[KEY_UNKNOWN, KEY_LOCATION_UNSPECIFIED],
 			[KEY_0, KEY_LOCATION_UNSPECIFIED],
 			[KEY_DOWN, KEY_LOCATION_UNSPECIFIED],

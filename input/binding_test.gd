@@ -24,7 +24,7 @@ func test_get_unset_joy_binding_reads_from_project_settings() -> void:
 
 	# Given: An input event for a keyboard.
 	var event_kbm := InputEventKey.new()
-	event_kbm.keycode = KEY_ENTER
+	event_kbm.physical_keycode = KEY_ENTER
 	event_kbm.device = Binding.DEVICE_ID_ALL
 
 	# Given: Default settings are defined in project settings.
@@ -48,7 +48,7 @@ func test_get_unset_kbm_binding_reads_from_project_settings() -> void:
 
 	# Given: An input event for a keyboard.
 	var event_kbm := InputEventKey.new()
-	event_kbm.keycode = KEY_ENTER
+	event_kbm.physical_keycode = KEY_ENTER
 	event_kbm.device = Binding.DEVICE_ID_ALL
 
 	# Given: Default settings are defined in project settings.
@@ -72,7 +72,7 @@ func test_get_set_joy_binding_reads_from_scope() -> void:
 
 	# Given: An input event for a keyboard.
 	var event_kbm := InputEventKey.new()
-	event_kbm.keycode = KEY_ENTER
+	event_kbm.physical_keycode = KEY_ENTER
 	event_kbm.device = Binding.DEVICE_ID_ALL
 
 	# Given: An override input event for a joypad.
@@ -105,12 +105,12 @@ func test_get_set_kbm_binding_reads_from_scope() -> void:
 
 	# Given: An input event for a keyboard.
 	var event_kbm := InputEventKey.new()
-	event_kbm.keycode = KEY_ENTER
+	event_kbm.physical_keycode = KEY_ENTER
 	event_kbm.device = Binding.DEVICE_ID_ALL
 
 	# Given: An override input event for a keyboard.
 	var event_kbm_override := InputEventKey.new()
-	event_kbm_override.keycode = KEY_1
+	event_kbm_override.physical_keycode = KEY_1
 	event_kbm_override.device = Binding.DEVICE_ID_ALL
 
 	# Given: Default settings are defined in project settings.
@@ -138,7 +138,7 @@ func test_set_empty_joy_binding_resets_value() -> void:
 
 	# Given: An input event for a keyboard.
 	var event_kbm := InputEventKey.new()
-	event_kbm.keycode = KEY_ENTER
+	event_kbm.physical_keycode = KEY_ENTER
 	event_kbm.device = Binding.DEVICE_ID_ALL
 
 	# Given: An override input event for a joypad.
@@ -175,12 +175,12 @@ func test_set_empty_kbm_binding_resets_value() -> void:
 
 	# Given: An input event for a keyboard.
 	var event_kbm := InputEventKey.new()
-	event_kbm.keycode = KEY_ENTER
+	event_kbm.physical_keycode = KEY_ENTER
 	event_kbm.device = Binding.DEVICE_ID_ALL
 
 	# Given: An override input event for a keyboard.
 	var event_kbm_override := InputEventKey.new()
-	event_kbm_override.keycode = KEY_1
+	event_kbm_override.physical_keycode = KEY_1
 	event_kbm_override.device = Binding.DEVICE_ID_ALL
 
 	# Given: Default settings are defined in project settings.
