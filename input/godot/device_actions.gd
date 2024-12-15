@@ -24,6 +24,30 @@ const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
 ## scope is the settings scope in which binding overrides will be stored.
 @export var scope: StdSettingsScope = null
 
+@export_group("Device types")
+
+## claim_kbm_input defines whether this implementation should manage bindings for the
+## keyboard and mouse input device.
+@export var claim_kbm_input: bool = true:
+	set(value):
+		if value == claim_kbm_input:
+			return
+
+		claim_kbm_input = value
+
+		reload()
+
+## claim_joy_input defines whether this implementation should manage bindings for joypad
+## input devices.
+@export var claim_joy_input: bool = true:
+	set(value):
+		if value == claim_joy_input:
+			return
+
+		claim_joy_input = value
+
+		reload()
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
@@ -34,6 +58,28 @@ static var _action_set_layers: Array[StdInputActionSetLayer] = []  # gdlint: ign
 
 ## _bindings maps origins (integers) to the actions they are bound to.
 static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
+
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## reload refreshes the state of all input bindings for the specified device (defaults
+## to updating all devices). This is helpful for rebuilding Godot's input map after
+## configuration changes.
+func reload(device: int = Binding.DEVICE_ID_ALL) -> void:
+	var action_set := get_action_set(device)
+	if not action_set:
+		assert(
+			not list_action_set_layers(device),
+			"invalid state; found dangling layers",
+		)
+
+		return
+
+	load_action_set(device, action_set)
+
+	for layer in list_action_set_layers(device):
+		enable_action_set_layer(device, layer)
+
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -71,8 +117,10 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 	for action in InputMap.get_actions():
 		InputMap.action_erase_events(action)
 
-	_apply_action_set(-1, StdInputDevice.DEVICE_TYPE_UNKNOWN, action_set)
-	_apply_action_set(-1, StdInputDevice.DEVICE_TYPE_KEYBOARD, action_set)
+	if claim_kbm_input:
+		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set)
+	if claim_joy_input:
+		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.GENERIC, action_set)
 
 	return true
 
@@ -98,8 +146,10 @@ func _enable_action_set_layer(
 
 	_action_set_layers.append(action_set_layer)
 
-	_apply_action_set(-1, StdInputDevice.DEVICE_TYPE_UNKNOWN, action_set_layer)
-	_apply_action_set(-1, StdInputDevice.DEVICE_TYPE_KEYBOARD, action_set_layer)
+	if claim_kbm_input:
+		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set_layer)
+	if claim_joy_input:
+		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.GENERIC, action_set_layer)
 
 	return true
 
@@ -125,9 +175,7 @@ func _disable_action_set_layer(
 
 	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
 	# necessary origins.
-	load_action_set(-1, get_action_set(-1))
-	for layer in _action_set_layers:
-		enable_action_set_layer(-1, layer)
+	reload()
 
 	return true
 
@@ -164,8 +212,6 @@ func _bind_action_to_origin(
 	var event := Origin.decode(origin)
 	assert(event is InputEvent, "invalid state; missing event")
 
-	# NOTE: See https://github.com/godotengine/godot/pull/99449; '-1' values may change
-	# in the future.
 	event.device = device
 
 	if not action_set.is_matching_event_origin(action, event):
@@ -186,7 +232,7 @@ func _get_action_origins(
 
 	for event in (
 		Binding.get_kbm(scope, action)
-		if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
+		if device_type == DeviceType.KEYBOARD
 		else Binding.get_joy(scope, action)
 	):
 		var value_encoded: int = Origin.encode(event)
