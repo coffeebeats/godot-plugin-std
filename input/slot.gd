@@ -663,7 +663,7 @@ func _activate_device(device: StdInputDevice) -> bool:
 
 
 func _connect_joy_device(
-	device: int, joy_device_type: DeviceType = DEVICE_TYPE_UNKNOWN
+	device: int, joy_device_type: DeviceType = DEVICE_TYPE_GENERIC
 ) -> bool:
 	assert(device >= 0, "invalid argument; device must be >= 0")
 

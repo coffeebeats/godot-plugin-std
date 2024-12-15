@@ -73,14 +73,14 @@ func test_input_slot_connects_and_disconnects_joypads() -> void:
 
 	# When: A newly connected joypad device is broadcast.
 	slot.joypad_monitor.connected = [0] as Array[int]
-	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_XBOX
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
 	slot.joypad_monitor.broadcast_connected_joypads()
 
 	# Then: The joypad is active.
 	var got: StdInputDevice = autofree(slot.get_active_device())
 	assert_not_null(got)
 	assert_is(got, StdInputDevice)
-	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_XBOX)
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
 
 	# Then: The connect signal was emitted.
 	assert_signal_emit_count(slot, "device_connected", 1)
@@ -120,7 +120,7 @@ func test_input_slot_swap_reconnects_joypads() -> void:
 
 	# When: A newly connected joypad device is broadcast.
 	slot.joypad_monitor.connected = [device_id] as Array[int]
-	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_XBOX
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
 	slot.joypad_monitor.broadcast_connected_joypads()
 
 	# Then: The joypad is active.
@@ -128,7 +128,7 @@ func test_input_slot_swap_reconnects_joypads() -> void:
 	assert_not_null(got)
 	assert_is(got, StdInputDevice)
 	assert_eq(got.device_id, device_id)
-	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_XBOX)
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
 
 	# Then: The joypad is in the list of connected devices.
 	assert_eq(len(slot.get_connected_devices()), 1)
@@ -137,7 +137,7 @@ func test_input_slot_swap_reconnects_joypads() -> void:
 	# Given: A new joypad monitor is created and 1 device is already connected.
 	var joypad_monitor := JoypadMonitor.new()
 	joypad_monitor.connected = [device_id]
-	joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_XBOX
+	joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
 	add_child_autofree(joypad_monitor)
 
 	# Given: Signals are monitored.
@@ -153,7 +153,7 @@ func test_input_slot_swap_reconnects_joypads() -> void:
 	assert_not_null(got_next)
 	assert_is(got_next, StdInputDevice)
 	assert_eq(got_next.device_id, device_id)
-	assert_eq(got_next.device_type, StdInputDevice.DEVICE_TYPE_XBOX)
+	assert_eq(got_next.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
 
 	# Then: The disconnect signal was emitted.
 	assert_signal_emit_count(slot, "device_disconnected", 1)
