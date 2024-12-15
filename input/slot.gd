@@ -92,9 +92,9 @@ class Actions:
 
 		if not (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.load_action_set(action_set))
-			. any(func(r): return r)
+			.get_connected_devices()
+			.map(func(d): return d.load_action_set(action_set))
+			.any(func(r): return r)
 		):
 			return false
 
@@ -114,14 +114,13 @@ class Actions:
 
 		if not (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.enable_action_set_layer(layer))
-			. any(func(r): return r)
+			.get_connected_devices()
+			.map(func(d): return d.disable_action_set_layer(layer))
+			.any(func(r): return r)
 		):
 			return false
 
-		if not layer in _action_set_layers:
-			_action_set_layers.append(layer)
+		_action_set_layers.erase(layer)
 
 		if cursor:
 			cursor.update_configuration(_action_set, _action_set_layers)
@@ -135,13 +134,14 @@ class Actions:
 
 		if not (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.disable_action_set_layer(layer))
-			. any(func(r): return r)
+			.get_connected_devices()
+			.map(func(d): return d.enable_action_set_layer(layer))
+			.any(func(r): return r)
 		):
 			return false
 
-		_action_set_layers.erase(layer)
+		if not layer in _action_set_layers:
+			_action_set_layers.append(layer)
 
 		if cursor:
 			cursor.update_configuration(_action_set, _action_set_layers)
@@ -158,8 +158,8 @@ class Glyphs:
 	var slot: StdInputSlot = null
 
 	func _get_action_glyph(
-		_device: int,  # Active device ID
-		device_type: DeviceType,  # Active or overridden device type
+		_device: int, # Active device ID
+		device_type: DeviceType, # Active or overridden device type
 		action_set: StringName,
 		action: StringName,
 	) -> GlyphData:
@@ -772,7 +772,7 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
-	pass  # No need to disable action sets/layers here - the device may reconnect.
+	pass # No need to disable action sets/layers here - the device may reconnect.
 
 
 func _on_cursor_visibility_changed(visible: bool) -> void:
