@@ -101,9 +101,6 @@ static func set_kbm(
 	action: StringName,
 	events: Array[InputEvent],
 ) -> bool:
-	if events.any(func(e): return e.physical_keycode == KEY_NONE):
-		assert(false, "invalid input; missing physical keycode")
-		return false
 	if events.any(func(e): return e.device != DEVICE_ID_ALL):
 		assert(false, "invalid input; unsupport device ID found")
 		return false
