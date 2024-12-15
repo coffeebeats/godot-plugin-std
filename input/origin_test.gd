@@ -14,25 +14,31 @@ const Origin := preload("origin.gd")
 func test_encode_stores_input_event_key_correctly(
 	params = use_parameters(
 		[
-			[KEY_UNKNOWN, KEY_LOCATION_UNSPECIFIED],
-			[KEY_0, KEY_LOCATION_UNSPECIFIED],
-			[KEY_DOWN, KEY_LOCATION_UNSPECIFIED],
-			[KEY_W, KEY_LOCATION_UNSPECIFIED],
-			[KEY_Q, KEY_LOCATION_UNSPECIFIED],
-			[KEY_E, KEY_LOCATION_UNSPECIFIED],
-			[KEY_SHIFT, KEY_LOCATION_UNSPECIFIED],
-			[KEY_SHIFT, KEY_LOCATION_LEFT],
-			[KEY_SHIFT, KEY_LOCATION_RIGHT],
-			[KEY_CTRL, KEY_LOCATION_UNSPECIFIED],
-			[KEY_CTRL, KEY_LOCATION_LEFT],
-			[KEY_CTRL, KEY_LOCATION_RIGHT],
+			[KEY_UNKNOWN, KEY_LOCATION_UNSPECIFIED, true],
+			[KEY_0, KEY_LOCATION_UNSPECIFIED, true],
+			[KEY_DOWN, KEY_LOCATION_UNSPECIFIED, true],
+			[KEY_W, KEY_LOCATION_UNSPECIFIED, true],
+			[KEY_Q, KEY_LOCATION_UNSPECIFIED, false],
+			[KEY_SHIFT, KEY_LOCATION_UNSPECIFIED, true],
+			[KEY_SHIFT, KEY_LOCATION_UNSPECIFIED, false],
+			[KEY_SHIFT, KEY_LOCATION_LEFT, true],
+			[KEY_SHIFT, KEY_LOCATION_LEFT, false],
+			[KEY_SHIFT, KEY_LOCATION_RIGHT, true],
+			[KEY_SHIFT, KEY_LOCATION_RIGHT, false],
+			[KEY_ESCAPE, KEY_LOCATION_RIGHT, false],
+			[KEY_CTRL, KEY_LOCATION_UNSPECIFIED, true],
+			[KEY_CTRL, KEY_LOCATION_LEFT, true],
+			[KEY_CTRL, KEY_LOCATION_RIGHT, true],
 		]
 	),
 ) -> void:
 	# Given: An input event to encode.
 	var event := InputEventKey.new()
-	event.physical_keycode = params[0]
 	event.location = params[1]
+	if params[2]:
+		event.physical_keycode = params[0]
+	else:
+		event.keycode = params[0]
 
 	# Given: The event is encoded.
 	var value_encoded: int = Origin.encode(event)

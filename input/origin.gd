@@ -14,7 +14,8 @@ extends Object
 
 const BITMASK_INDEX_TYPE := 0
 const BITMASK_INDEX_KEY := BITMASK_INDEX_TYPE + 8
-const BITMASK_INDEX_KEY_LOCATION := BITMASK_INDEX_KEY + 24
+const BITMASK_INDEX_KEY_PHYSICAL := BITMASK_INDEX_KEY + 24
+const BITMASK_INDEX_KEY_LOCATION := BITMASK_INDEX_KEY_PHYSICAL + 1
 const BITMASK_INDEX_JOY_AXIS := BITMASK_INDEX_KEY_LOCATION + 4
 const BITMASK_INDEX_JOY_AXIS_DIRECTION := BITMASK_INDEX_KEY + 4
 const BITMASK_INDEX_JOY_BUTTON := BITMASK_INDEX_JOY_AXIS_DIRECTION + 2
@@ -22,6 +23,7 @@ const BITMASK_INDEX_MOUSE_BUTTON := BITMASK_INDEX_JOY_BUTTON + 8
 
 const BITMASK_TYPE := (1 << 8) - 1
 const BITMASK_KEY := (1 << 24) - 1
+const BITMASK_KEY_PHYSICAL := 1
 const BITMASK_KEY_LOCATION := (1 << 4) - 1
 const BITMASK_JOY_AXIS := (1 << 4) - 1
 const BITMASK_JOY_AXIS_DIRECTION := (1 << 2) - 1
@@ -49,21 +51,34 @@ static var bitmask_indices_kbm := PackedInt64Array(
 ## NOTE: No value information (e.g. pressed state or strength) will be retained.
 static func encode(event: InputEvent) -> int:
 	if event is InputEventKey:
-		# TODO: Add support for storing physical vs. non-physical 'Key' bindings.
 		assert(
-			event.physical_keycode != KEY_NONE,
-			"invalid argument; must use physical keycode",
+			event.keycode != KEY_NONE or event.physical_keycode != KEY_NONE,
+			"invalid argument; must set one of keycode or physical_keycode",
+		)
+		assert(
+			(
+				(event.keycode != KEY_NONE and event.physical_keycode == KEY_NONE)
+				or (event.physical_keycode != KEY_NONE and event.keycode == KEY_NONE)
+			),
+			"invalid argument; cannot specify both keycode and physical_keycode",
 		)
 
 		var type_encoded: int = (BITMASK_INDEX_KEY & BITMASK_TYPE) << BITMASK_INDEX_TYPE
-		var value_encoded: int = (
-			(event.physical_keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
+		var physical_encoded: int = (
+			(int(event.physical_keycode != KEY_NONE) & BITMASK_KEY_PHYSICAL)
+			<< BITMASK_INDEX_KEY_PHYSICAL
 		)
 		var location_encoded: int = (
 			(event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
 		)
 
-		return type_encoded | value_encoded | location_encoded
+		var value_encoded: int = 0
+		if physical_encoded != 0:
+			value_encoded = (event.physical_keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
+		else:
+			value_encoded = (event.keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
+
+		return type_encoded | value_encoded | physical_encoded | location_encoded
 
 	if event is InputEventJoypadMotion:
 		var type_encoded: int = (
@@ -119,17 +134,26 @@ static func decode(value: int) -> InputEvent:
 
 	match type_decoded:
 		BITMASK_INDEX_KEY:
-			var value_decoded: int = (
-				(value & (BITMASK_KEY << BITMASK_INDEX_KEY)) >> (BITMASK_INDEX_KEY)
+			var physical_decoded: int = (
+				(value & (BITMASK_KEY_PHYSICAL << BITMASK_INDEX_KEY_PHYSICAL))
+				>> (BITMASK_INDEX_KEY_PHYSICAL)
 			)
 			var location_decoded: int = (
 				(value & (BITMASK_KEY_LOCATION << BITMASK_INDEX_KEY_LOCATION))
 				>> (BITMASK_INDEX_KEY_LOCATION)
 			)
 
+			var value_decoded: int = (
+				(value & (BITMASK_KEY << BITMASK_INDEX_KEY)) >> (BITMASK_INDEX_KEY)
+			)
+
 			var event := InputEventKey.new()
-			event.physical_keycode = value_decoded as Key
 			event.location = location_decoded as KeyLocation
+
+			if physical_decoded != 0:
+				event.physical_keycode = value_decoded as Key
+			else:
+				event.keycode = value_decoded as Key
 
 			return event
 
