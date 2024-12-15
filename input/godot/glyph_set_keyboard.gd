@@ -137,7 +137,7 @@ func _get_origin_glyph(event: InputEvent) -> GlyphData:
 
 	# NOTE: Only one of these properties can be set, so take the union of them in order
 	# to handle all of them.
-	match (event.keycode | event.physical_keycode):
+	match event.keycode | event.physical_keycode:
 		# Command
 		KEY_ESCAPE:
 			texture = cmd_escape

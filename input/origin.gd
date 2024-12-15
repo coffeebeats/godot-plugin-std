@@ -56,7 +56,9 @@ static func encode(event: InputEvent) -> int:
 		)
 
 		var type_encoded: int = (BITMASK_INDEX_KEY & BITMASK_TYPE) << BITMASK_INDEX_TYPE
-		var value_encoded: int = (event.physical_keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
+		var value_encoded: int = (
+			(event.physical_keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
+		)
 		var location_encoded: int = (
 			(event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
 		)

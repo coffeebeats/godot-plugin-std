@@ -17,7 +17,7 @@ const Binding := preload("../binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const DeviceType := StdInputDevice.DeviceType # gdlint:ignore=constant-name
+const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -51,13 +51,13 @@ const DeviceType := StdInputDevice.DeviceType # gdlint:ignore=constant-name
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: StdInputActionSet = null # gdlint: ignore=class-definitions-order
+static var _action_set: StdInputActionSet = null  # gdlint: ignore=class-definitions-order
 
 ## _action_set_layers is the stack of currently active action set layers.
-static var _action_set_layers: Array[StdInputActionSetLayer] = [] # gdlint: ignore=class-definitions-order,max-line-length
+static var _action_set_layers: Array[StdInputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _bindings maps origins (integers) to the actions they are bound to.
-static var _bindings: Dictionary = {} # gdlint: ignore=class-definitions-order
+static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -79,6 +79,7 @@ func reload(device: int = Binding.DEVICE_ID_ALL) -> void:
 
 	for layer in layers:
 		_enable_action_set_layer(device, layer)
+
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -249,6 +250,7 @@ func _get_action_origins(
 		origins.append(value_encoded)
 
 	return origins
+
 
 func _reset(_device: int) -> void:
 	# Clear all existing bindings.

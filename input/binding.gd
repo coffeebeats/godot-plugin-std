@@ -202,7 +202,7 @@ static func _get_events(
 				# it maintains consistency with other input event stores.
 				if not (
 					Origin
-					.is_encoded_value_type(
+					. is_encoded_value_type(
 						Origin.encode(event),
 						origin_bitmask_indices,
 					)
@@ -234,7 +234,7 @@ static func _set_events(
 
 			if not (
 				Origin
-				.is_encoded_value_type(
+				. is_encoded_value_type(
 					value_encoded,
 					origin_bitmask_indices,
 				)
