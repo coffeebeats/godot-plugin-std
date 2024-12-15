@@ -30,7 +30,7 @@ func _get_action_glyph(
 	action: StringName,
 ) -> GlyphData:
 	for glyph_set in glyph_sets:
-		if glyph_set.device_type != device_type:
+		if not glyph_set.matches(device_type):
 			continue
 
 		for event in InputMap.action_get_events(action):

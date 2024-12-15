@@ -25,36 +25,59 @@ signal action_set_layer_disabled(action_set_layer: StdInputActionSetLayer)
 ## DeviceType is an enumeration of the categories of player input devices.
 enum DeviceType {
 	UNKNOWN = 0,
-	KEYBOARD = 1,
-	NINTENDO_SWITCH = 2,
-	PLAYSTATION = 3,
-	STEAM_DECK = 4,
+	GENERIC = 1,
+	KEYBOARD = 2,  # Includes mouse devices.
+	PS_4 = 3,
+	PS_5 = 4,
 	STEAM_CONTROLLER = 5,
-	XBOX = 6,
+	STEAM_DECK = 6,
+	SWITCH_JOY_CON_PAIR = 7,
+	SWITCH_JOY_CON_SINGLE = 8,
+	SWITCH_PRO = 9,
+	TOUCH = 10,
+	XBOX_360 = 11,
+	XBOX_ONE = 12,
 }
 
-## DEVICE_TYPE_UNKNOWN defines an unknown device type (also represents an unspecified
-## `InputDeviceType` value).
+## DEVICE_TYPE_UNKNOWN defines an unknown device type.
 const DEVICE_TYPE_UNKNOWN := DeviceType.UNKNOWN
+
+## DEVICE_TYPE_GENERIC defines an unspecified joypad device type (suitable for XInput
+## devices and as a fallback).
+const DEVICE_TYPE_GENERIC := DeviceType.GENERIC
 
 ## DEVICE_TYPE_KEYBOARD defines a keyboard + mouse device type.
 const DEVICE_TYPE_KEYBOARD := DeviceType.KEYBOARD
 
-## DEVICE_TYPE_NINTENDO_SWITCH defines a Nintendo Switch joypad (e.g. pro controller or
-## joycons).
-const DEVICE_TYPE_NINTENDO_SWITCH := DeviceType.NINTENDO_SWITCH
+## DEVICE_TYPE_PS_4 defines a PlayStation 4 joypad.
+const DEVICE_TYPE_PS_4 := DeviceType.PS_4
 
-## DEVICE_TYPE_PLAYSTATION defines a PlayStation joypad.
-const DEVICE_TYPE_PLAYSTATION := DeviceType.PLAYSTATION
-
-## DEVICE_TYPE_STEAM_DECK defines a Steam deck joypad.
-const DEVICE_TYPE_STEAM_DECK := DeviceType.STEAM_DECK
+## DEVICE_TYPE_PS_5 defines a PlayStation 5 joypad.
+const DEVICE_TYPE_PS_5 := DeviceType.PS_5
 
 ## DEVICE_TYPE_STEAM_CONTROLLER defines a Steam controller joypad.
 const DEVICE_TYPE_STEAM_CONTROLLER := DeviceType.STEAM_CONTROLLER
 
-## DEVICE_TYPE_XBOX defines an Xbox joypad.
-const DEVICE_TYPE_XBOX := DeviceType.XBOX
+## DEVICE_TYPE_STEAM_DECK defines a Steam deck joypad.
+const DEVICE_TYPE_STEAM_DECK := DeviceType.STEAM_DECK
+
+## DEVICE_TYPE_SWITCH_JOY_CON_PAIR defines a pair of Nintendo Switch Joy-Con devices.
+const DEVICE_TYPE_SWITCH_JOY_CON_PAIR := DeviceType.SWITCH_JOY_CON_PAIR
+
+## DEVICE_TYPE_SWITCH_JOY_CON_SINGLE defines a single Nintendo Switch Joy-Con device.
+const DEVICE_TYPE_SWITCH_JOY_CON_SINGLE := DeviceType.SWITCH_JOY_CON_SINGLE
+
+## DEVICE_TYPE_SWITCH_PRO defines a Nintendo Switch Pro controller.
+const DEVICE_TYPE_SWITCH_PRO := DeviceType.SWITCH_PRO
+
+## DEVICE_TYPE_TOUCH defines touchscreen input.
+const DEVICE_TYPE_TOUCH := DeviceType.TOUCH
+
+## DEVICE_TYPE_XBOX_360 defines an Xbox 360 joypad.
+const DEVICE_TYPE_XBOX_360 := DeviceType.XBOX_360
+
+## DEVICE_TYPE_XBOX_ONE defines an Xbox ONE joypad.
+const DEVICE_TYPE_XBOX_ONE := DeviceType.XBOX_ONE
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 

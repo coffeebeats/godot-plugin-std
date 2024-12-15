@@ -9,38 +9,75 @@ extends StdInputSlot.JoypadMonitor
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-# NOTE: Match the supported device types to regular expression patterns using the SDL
-# controller database [1].
+# NOTE: Match the supported device types to regular expression patterns using Godot's
+# version of the SDL controller database [1].
 #
-# [1] https://github.com/libsdl-org/SDL/blob/main/src/joystick/SDL_gamepad_db.h
-static var _regex_nintendo_switch := RegEx.create_from_string("Switch")
-static var _regex_sony := RegEx.create_from_string("(Sony|PS[0-9]+)")
-static var _regex_steam_controller := RegEx.create_from_string("Steam Controller")
+# [1] https://github.com/godotengine/godot/blob/master/core/input/gamecontrollerdb.txt
+static var _regex_generic := RegEx.create_from_string(
+	"(Adapter|Joystick|Fightstick|Arcade Stick|Fight Pad)"
+)
+static var _regex_ps4 := RegEx.create_from_string("(PS[2-4]|DualShock [2-4])")
+static var _regex_ps5 := RegEx.create_from_string("(DualSense|PS5)")
+static var _regex_steam_controller := RegEx.create_from_string(
+	"(Steam Controller|Horipad Steam)"
+)
 static var _regex_steam_deck := RegEx.create_from_string(
 	"(Steam Deck|Steam Virtual Gamepad)"
 )
-static var _regex_xbox := RegEx.create_from_string("(Xbox|X-Box|XBOX)")
+static var _regex_switch_joy_con_pair := RegEx.create_from_string(
+	"(Joy-Con \\(L/R\\)|Joy-Cons)"
+)
+static var _regex_switch_joy_con_single := RegEx.create_from_string(
+	"(Joy-Con \\([LR]\\)|Left Joy-Con|Right Joy-Con)"
+)
+static var _regex_switch_pro := RegEx.create_from_string(
+	"(Switch (Controller|Pro)|Horipad Switch)"
+)
+static var _regex_xbox_360 := RegEx.create_from_string("Xbox 360")
+static var _regex_xbox_one := RegEx.create_from_string("Xbox(?!( 360))")
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## get_device_type returns the type/category of joypad based on its name. This method is
 ## a best effort attempt and uses the SDL controller database.
+##
+## FIXME(https://github.com/godotengine/godot/issues/98008): This does not work on macOS
+## at the moment.
 func get_device_type(joypad_name: String) -> StdInputDevice.DeviceType:
-	var device_type := StdInputDevice.DEVICE_TYPE_UNKNOWN
+	# NOTE: Exclude generic matches first so that they don't match with any of the other
+	# device patterns.
+	if _regex_generic.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_GENERIC
 
-	if _regex_xbox.search(joypad_name):
-		device_type = StdInputDevice.DEVICE_TYPE_XBOX
-	elif _regex_sony.search(joypad_name):
-		device_type = StdInputDevice.DEVICE_TYPE_PLAYSTATION
-	elif _regex_nintendo_switch.search(joypad_name):
-		device_type = StdInputDevice.DEVICE_TYPE_NINTENDO_SWITCH
-	elif _regex_steam_deck.search(joypad_name):
-		device_type = StdInputDevice.DEVICE_TYPE_STEAM_DECK
-	elif _regex_steam_controller.search(joypad_name):
-		device_type = StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
+	if _regex_xbox_360.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_XBOX_360
 
-	return device_type
+	if _regex_xbox_one.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_XBOX_ONE
+
+	if _regex_ps4.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_PS_4
+
+	if _regex_ps5.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_PS_5
+
+	if _regex_switch_joy_con_pair.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR
+
+	if _regex_switch_joy_con_single.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE
+
+	if _regex_switch_pro.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_SWITCH_PRO
+
+	if _regex_steam_deck.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_STEAM_DECK
+
+	if _regex_steam_controller.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
+
+	return StdInputDevice.DEVICE_TYPE_GENERIC  # gdlint:ignore=max-returns
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
