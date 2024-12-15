@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.6 (2024-12-15)
+
+## What's Changed
+* fix(input): revamp device type handling by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/124
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.5...v1.8.6
+
 ## 1.8.5 (2024-12-13)
 
 ## What's Changed

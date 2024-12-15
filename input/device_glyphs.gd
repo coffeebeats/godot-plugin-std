@@ -30,6 +30,11 @@ func get_action_glyph(
 	action_set: StringName,
 	action: StringName,
 ) -> GlyphData:
+	assert(
+		device_type != StdInputDevice.DEVICE_TYPE_UNKNOWN,
+		"invalid argument; unknown device type",
+	)
+
 	return _get_action_glyph(device, device_type, action_set, action)
 
 

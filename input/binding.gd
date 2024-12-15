@@ -15,6 +15,12 @@ const Origin := preload("origin.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+## DEVICE_ID_ALL is a special identifier for matching all device ID's within InputMap.
+##
+## NOTE: See https://github.com/godotengine/godot/pull/99449; '-1' values may change in
+## the future.
+const DEVICE_ID_ALL := -1
+
 const _CATEGORY_JOY := &"joy"
 const _CATEGORY_KBM := &"kbm"
 
@@ -28,12 +34,19 @@ static func get_joy(
 	scope: StdSettingsScope,
 	action: StringName,
 ) -> Array[InputEvent]:
-	return _get_events(
+	var events := _get_events(
 		scope,
 		_CATEGORY_JOY,
 		action,
 		Origin.bitmask_indices_joy,
 	)
+
+	# This library does not support storing specific device IDs, so set a "match all"
+	# device ID for returned events.
+	for event in events:
+		event.device = DEVICE_ID_ALL
+
+	return events
 
 
 ## get_kbm reads the list of stored keyboard+mouse-typed input events for the provided
@@ -44,12 +57,19 @@ static func get_kbm(
 	scope: StdSettingsScope,
 	action: StringName,
 ) -> Array[InputEvent]:
-	return _get_events(
+	var events := _get_events(
 		scope,
 		_CATEGORY_KBM,
 		action,
 		Origin.bitmask_indices_kbm,
 	)
+
+	# This library does not support storing specific device IDs, so set a "match all"
+	# device ID for returned events.
+	for event in events:
+		event.device = DEVICE_ID_ALL
+
+	return events
 
 
 ## set_joy stores the provided input events as bindings for the specified action. Only
@@ -60,6 +80,10 @@ static func set_joy(
 	action: StringName,
 	events: Array[InputEvent],
 ) -> bool:
+	if events.any(func(e): return e.device != DEVICE_ID_ALL):
+		assert(false, "invalid input; unsupport device ID found")
+		return false
+
 	return _set_events(
 		scope,
 		_CATEGORY_JOY,
@@ -77,6 +101,10 @@ static func set_kbm(
 	action: StringName,
 	events: Array[InputEvent],
 ) -> bool:
+	if events.any(func(e): return e.device != DEVICE_ID_ALL):
+		assert(false, "invalid input; unsupport device ID found")
+		return false
+
 	return _set_events(
 		scope,
 		_CATEGORY_KBM,
