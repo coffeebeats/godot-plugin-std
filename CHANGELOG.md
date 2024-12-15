@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.7 (2024-12-15)
+
+## What's Changed
+* fix(input): temporarily restrict keycodes on bound `InputEvenKey`s, update `StdInputGlyph` when action configuration changes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/126
+* fix(input): add support for both `keycode` and `physical_keycode` on encoded input events by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/128
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.6...v1.8.7
+
 ## 1.8.6 (2024-12-15)
 
 ## What's Changed
