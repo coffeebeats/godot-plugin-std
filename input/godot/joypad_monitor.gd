@@ -13,16 +13,26 @@ extends StdInputSlot.JoypadMonitor
 # version of the SDL controller database [1].
 #
 # [1] https://github.com/godotengine/godot/blob/master/core/input/gamecontrollerdb.txt
-static var _regex_generic := RegEx.create_from_string("(Adapter|Joystick|Fightstick|Arcade Stick|Fight Pad)")
+static var _regex_generic := RegEx.create_from_string(
+	"(Adapter|Joystick|Fightstick|Arcade Stick|Fight Pad)"
+)
 static var _regex_ps4 := RegEx.create_from_string("(PS[2-4]|DualShock [2-4])")
 static var _regex_ps5 := RegEx.create_from_string("(DualSense|PS5)")
-static var _regex_steam_controller := RegEx.create_from_string("(Steam Controller|Horipad Steam)")
+static var _regex_steam_controller := RegEx.create_from_string(
+	"(Steam Controller|Horipad Steam)"
+)
 static var _regex_steam_deck := RegEx.create_from_string(
 	"(Steam Deck|Steam Virtual Gamepad)"
 )
-static var _regex_switch_joy_con_pair := RegEx.create_from_string("(Joy-Con \\(L/R\\)|Joy-Cons)")
-static var _regex_switch_joy_con_single := RegEx.create_from_string("(Joy-Con \\([LR]\\)|Left Joy-Con|Right Joy-Con)")
-static var _regex_switch_pro := RegEx.create_from_string("(Switch (Controller|Pro)|Horipad Switch)")
+static var _regex_switch_joy_con_pair := RegEx.create_from_string(
+	"(Joy-Con \\(L/R\\)|Joy-Cons)"
+)
+static var _regex_switch_joy_con_single := RegEx.create_from_string(
+	"(Joy-Con \\([LR]\\)|Left Joy-Con|Right Joy-Con)"
+)
+static var _regex_switch_pro := RegEx.create_from_string(
+	"(Switch (Controller|Pro)|Horipad Switch)"
+)
 static var _regex_xbox_360 := RegEx.create_from_string("Xbox 360")
 static var _regex_xbox_one := RegEx.create_from_string("Xbox(?!( 360))")
 
@@ -42,28 +52,28 @@ func get_device_type(joypad_name: String) -> StdInputDevice.DeviceType:
 
 	if _regex_xbox_360.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_XBOX_360
-	
+
 	if _regex_xbox_one.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_XBOX_ONE
-	
+
 	if _regex_ps4.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_PS_4
 
 	if _regex_ps5.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_PS_5
-	
+
 	if _regex_switch_joy_con_pair.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR
-	
+
 	if _regex_switch_joy_con_single.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE
-	
+
 	if _regex_switch_pro.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_SWITCH_PRO
-	
+
 	if _regex_steam_deck.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_STEAM_DECK
-	
+
 	if _regex_steam_controller.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
 

@@ -26,7 +26,7 @@ signal action_set_layer_disabled(action_set_layer: StdInputActionSetLayer)
 enum DeviceType {
 	UNKNOWN = 0,
 	GENERIC = 1,
-	KEYBOARD = 2, # Includes mouse devices.
+	KEYBOARD = 2,  # Includes mouse devices.
 	PS_4 = 3,
 	PS_5 = 4,
 	STEAM_CONTROLLER = 5,
