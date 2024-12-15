@@ -23,7 +23,6 @@ const BITMASK_INDEX_MOUSE_BUTTON := BITMASK_INDEX_JOY_BUTTON + 8
 
 const BITMASK_TYPE := (1 << 8) - 1
 const BITMASK_KEY := (1 << 24) - 1
-const BITMASK_KEY_PHYSICAL := 1
 const BITMASK_KEY_LOCATION := (1 << 4) - 1
 const BITMASK_JOY_AXIS := (1 << 4) - 1
 const BITMASK_JOY_AXIS_DIRECTION := (1 << 2) - 1
@@ -61,8 +60,7 @@ static func encode(event: InputEvent) -> int:
 
 		var type_encoded: int = (BITMASK_INDEX_KEY & BITMASK_TYPE) << BITMASK_INDEX_TYPE
 		var physical_encoded: int = (
-			(int(event.physical_keycode != KEY_NONE) & BITMASK_KEY_PHYSICAL)
-			<< BITMASK_INDEX_KEY_PHYSICAL
+			int(event.physical_keycode != KEY_NONE) << BITMASK_INDEX_KEY_PHYSICAL
 		)
 		var location_encoded: int = (
 			(event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
@@ -130,7 +128,7 @@ static func decode(value: int) -> InputEvent:
 	match type_decoded:
 		BITMASK_INDEX_KEY:
 			var physical_decoded: int = (
-				(value & (BITMASK_KEY_PHYSICAL << BITMASK_INDEX_KEY_PHYSICAL))
+				(value & (1 << BITMASK_INDEX_KEY_PHYSICAL))
 				>> (BITMASK_INDEX_KEY_PHYSICAL)
 			)
 			var location_decoded: int = (
