@@ -72,8 +72,8 @@ extends StdInputGlyphSet
 
 func _get_origin_glyph(event: InputEvent) -> GlyphData:
 	assert(
-		device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD,
-		"invalid state; wrong device type",
+		StdInputDevice.DEVICE_TYPE_KEYBOARD not in device_types,
+		"invalid state; found incompatible device type",
 	)
 
 	var texture: Texture2D = null
