@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.8 (2024-12-16)
+
+## What's Changed
+* fix(input): improve focus management when swapping navigation modes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/129
+* chore(input): ignore `class-definitions-order` linter error by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/131
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.7...v1.8.8
+
 ## 1.8.7 (2024-12-15)
 
 ## What's Changed
