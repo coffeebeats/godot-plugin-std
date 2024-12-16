@@ -71,7 +71,7 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(_control.mouse_exited, _on_Control_mouse_exited)
 	(
 		Signals
-		.disconnect_safe(
+		. disconnect_safe(
 			_cursor.cursor_visibility_changed,
 			_on_cursor_visibility_changed,
 		)
@@ -100,7 +100,7 @@ func _ready() -> void:
 
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			_cursor.cursor_visibility_changed,
 			_on_cursor_visibility_changed,
 		)
