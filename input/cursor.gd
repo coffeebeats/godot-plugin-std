@@ -18,7 +18,7 @@ signal cursor_visibility_changed(visible: bool)
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const GROUP_INPUT_CURSOR := "std/input:cursor"
+const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -37,14 +37,20 @@ const GROUP_INPUT_CURSOR := "std/input:cursor"
 ## confined controls whether the cursor is confined to the application window.
 @export var confined: bool = false:
 	set(value):
+		var confined_prev := confined
 		confined = (value as bool)
-		_on_properties_changed()
+
+		if confined != confined_prev:
+			_on_properties_changed()
 
 ## show_cursor controls whether the cursor is currently visible.
 @export var show_cursor: bool = true:
 	set(value):
+		var show_cursor_prev := show_cursor
 		show_cursor = (value as bool)
-		_on_properties_changed()
+
+		if show_cursor != show_cursor_prev:
+			_on_properties_changed()
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -194,7 +200,16 @@ func _on_properties_changed() -> void:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
 		if _hovered:
+			# NOTE: Don't use a deferred call so that the current input event applies
+			# as if the previously-hovered node was already focused.
 			_hovered.grab_focus()
 			unset_hovered(_hovered)
+		else:
+			var focus_target := StdInputCursorFocusHandler.get_focus_target()
+			if focus_target:
+				# NOTE: Use a deferred call here so that the current input event gets
+				# swallowed. That ensures the anchor is focused and not a potential
+				# neighbor (depending on what input triggered the change).
+				focus_target.call_deferred(&"grab_focus")
 
 	cursor_visibility_changed.emit(show_cursor)
