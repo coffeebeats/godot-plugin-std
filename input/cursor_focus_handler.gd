@@ -25,10 +25,11 @@ const Signals := preload("../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+# gdlint:ignore=class-definitions-order
 static var _anchors: Array[StdInputCursorFocusHandler] = []
 
-var _cursor: StdInputCursor = null
 var _control_mouse_filter: Control.MouseFilter = Control.MOUSE_FILTER_IGNORE
+var _cursor: StdInputCursor = null
 
 @onready var _control: Control = get_node(control)
 
