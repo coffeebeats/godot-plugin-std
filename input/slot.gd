@@ -39,7 +39,7 @@ const Signals := preload("../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const GROUP_INPUT_SLOT := "std/input:slot"
+const GROUP_INPUT_SLOT := &"std/input:slot"
 
 # StdInputSlot components
 

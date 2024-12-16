@@ -329,7 +329,7 @@ func _get_origin_glyph(event: InputEvent) -> GlyphData:
 	data.texture = texture
 
 	if include_label:
-		data.label = OS.get_keycode_string(event.keycode)
+		data.label = OS.get_keycode_string(keycode)
 
 		if capitalize_label:
 			data.label = data.label.to_upper()
