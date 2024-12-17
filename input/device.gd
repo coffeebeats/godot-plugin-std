@@ -11,7 +11,10 @@ extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-# action_set_loaded is emitted any time an action set is loaded (i.e. activated).
+## action_configuration_changed is emitted any time an action set-related change occurs.
+signal action_configuration_changed
+
+## action_set_loaded is emitted any time an action set is loaded (i.e. activated).
 signal action_set_loaded(action_set: StdInputActionSet)
 
 ## action_set_layer_enabled is emitted when an action set layer is enabled.
@@ -135,6 +138,7 @@ func load_action_set(action_set: StdInputActionSet) -> bool:
 		action_set_layer_disabled.emit(layer)
 
 	action_set_loaded.emit(action_set)
+	action_configuration_changed.emit()
 
 	return true
 
@@ -162,6 +166,7 @@ func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	)
 
 	action_set_layer_enabled.emit(layer)
+	action_configuration_changed.emit()
 
 	return true
 
@@ -184,6 +189,7 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	)
 
 	action_set_layer_disabled.emit(layer)
+	action_configuration_changed.emit()
 
 	return true
 

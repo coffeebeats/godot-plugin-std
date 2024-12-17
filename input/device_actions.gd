@@ -8,12 +8,6 @@
 class_name StdInputDeviceActions
 extends Node
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
-## configuration_changed is emitted whenever the current action set or activated action
-## set layers have changed.
-signal configuration_changed
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 # Action sets
@@ -29,11 +23,7 @@ func get_action_set(device: int) -> StdInputActionSet:
 ## then binds the actions defined within the action set. Does nothing if the action set
 ## is already activated.
 func load_action_set(device: int, action_set: StdInputActionSet) -> bool:
-	if _load_action_set(device, action_set):
-		configuration_changed.emit()
-		return true
-
-	return false
+	return _load_action_set(device, action_set)
 
 
 # Action set layers
@@ -45,11 +35,7 @@ func load_action_set(device: int, action_set: StdInputActionSet) -> bool:
 ## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
 ## taken.
 func disable_action_set_layer(device: int, layer: StdInputActionSetLayer) -> bool:
-	if _disable_action_set_layer(device, layer):
-		configuration_changed.emit()
-		return true
-
-	return false
+	return _disable_action_set_layer(device, layer)
 
 
 ## enable_action_set_layer binds all of the actions defined within the layer. All
@@ -60,11 +46,7 @@ func disable_action_set_layer(device: int, layer: StdInputActionSetLayer) -> boo
 ## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
 ## taken.
 func enable_action_set_layer(device: int, layer: StdInputActionSetLayer) -> bool:
-	if _enable_action_set_layer(device, layer):
-		configuration_changed.emit()
-		return true
-
-	return false
+	return _enable_action_set_layer(device, layer)
 
 
 ## list_action_set_layers returns the stack of currently active action set layers
