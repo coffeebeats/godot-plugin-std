@@ -140,7 +140,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		_time_since_mouse_motion = 0.0
 		return
-	
+
 	# The cursor is not eligible to be hidden yet.
 	if _time_since_mouse_motion < _hide_delay:
 		return
