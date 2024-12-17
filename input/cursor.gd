@@ -20,41 +20,18 @@ signal cursor_visibility_changed(visible: bool)
 
 const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
-# -- CONFIGURATION ------------------------------------------------------------------- #
-
-## actions_hide_cursor is the list of actions which, when "just" triggered, will trigger
-## the cursor to be hidden. Note that this doesn't guarantee that the cursor will be
-## hidden, as the visibility is dependent on a number of factors.
-@export var actions_hide_cursor := PackedStringArray()
-
-## minimum_reveal_distance defines how much relative motion must be detected for the
-## cursor to be considered "moving". This is used to filter out slight bumps to the
-## cursor which should otherwise not reveal it.
-@export var minimum_reveal_distance: Vector2 = Vector2.ZERO
-
-@export_group("Cursor state")
-
-## confined controls whether the cursor is confined to the application window.
-@export var confined: bool = false:
-	set(value):
-		var confined_prev := confined
-		confined = (value as bool)
-
-		if confined != confined_prev:
-			_on_properties_changed()
-
-## show_cursor controls whether the cursor is currently visible.
-@export var show_cursor: bool = true:
-	set(value):
-		var show_cursor_prev := show_cursor
-		show_cursor = (value as bool)
-
-		if show_cursor != show_cursor_prev:
-			_on_properties_changed()
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var _cursor_captured: bool = false
+var _cursor_confined: bool = false
+var _cursor_visible: bool = true
+var _hide_actions := PackedStringArray()
+var _hide_actions_if_hovered := PackedStringArray()
+var _hide_delay: float = 0.0
 var _hovered: Control = null
+var _reveal_distance_minimum: Vector2 = Vector2.ZERO
+var _reveal_mouse_buttons: Array[MouseButton] = []
+var _time_since_mouse_motion: float = 0.0
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -91,51 +68,56 @@ func unset_hovered(control: Control) -> bool:
 
 ## update_configuration changes the cursor state and triggering actions based on the
 ## provided action set and action set layers.
-func update_configuration(
-	action_set: StdInputActionSet = null, layers: Array[StdInputActionSetLayer] = []
-) -> void:
-	if not action_set:
+func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
+	if not action_sets:
 		return
 
-	confined = (layers[-1].confine_cursor if layers else action_set.confine_cursor)
+	# First, determine cursor show/hide properties.
 
-	var always_hide_cursor := (
-		action_set.always_hide_cursor
-		or layers.any(func(s): return s.always_hide_cursor)
-	)
-	var always_show_cursor := (
-		action_set.always_show_cursor
-		or layers.any(func(s): return s.always_show_cursor)
+	_hide_delay = action_sets.reduce(
+		func(d, s): return max(d, s.cursor_hide_delay), 0.0
 	)
 
-	assert(
-		(
-			not (always_hide_cursor or always_show_cursor)
-			or (always_hide_cursor != always_show_cursor)
-		),
-		"invalid state; conflicting cursor states"
-	)
-
-	actions_hide_cursor = PackedStringArray()
-
-	if always_hide_cursor:
-		show_cursor = false
-		return
-
-	if always_show_cursor:
-		show_cursor = true
-		return
-
-	for action in action_set.actions_hide_cursor:
-		# NOTE: This operation makes this O(n^2), but arrays should be small.
-		if action not in actions_hide_cursor:
-			actions_hide_cursor.append(action)
-
-	for layer in layers:
-		for action in layer.actions_hide_cursor:
+	_hide_actions = PackedStringArray()
+	for action_set in action_sets:
+		for action in action_set.cursor_hide_actions:
 			# NOTE: This operation makes this O(n^2), but arrays should be small.
-			if action not in actions_hide_cursor:
-				actions_hide_cursor.append(action)
+			if action not in _hide_actions:
+				_hide_actions.append(action)
+
+	_hide_actions_if_hovered = PackedStringArray()
+	for action_set in action_sets:
+		for action in action_set.cursor_hide_actions_if_hovered:
+			# NOTE: This operation makes this O(n^2), but arrays should be small.
+			if action not in _hide_actions_if_hovered:
+				assert(action not in _hide_actions, "found duplicate action")
+				_hide_actions_if_hovered.append(action)
+
+	_reveal_distance_minimum = action_sets.reduce(
+		func(v, s): return v.max(s.cursor_reveal_distance_minimum), Vector2.ZERO
+	)
+
+	_reveal_mouse_buttons = []
+	for action_set in action_sets:
+		for button in action_set.cursor_reveal_mouse_buttons:
+			# NOTE: This operation makes this O(n^2), but arrays should be small.
+			if button not in _reveal_mouse_buttons:
+				_reveal_mouse_buttons.append(button)
+
+	# Then, determine cursor mode.
+
+	var has_changed: bool = false
+
+	var captured := action_sets.any(func(s): return s.cursor_captured)
+	has_changed = has_changed or captured != _cursor_captured
+	_cursor_captured = captured
+
+	var confined := action_sets.any(func(s): return s.cursor_confined)
+	has_changed = has_changed or confined != _cursor_confined
+	_cursor_confined = confined
+
+	if has_changed:
+		_on_properties_changed()
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -146,34 +128,55 @@ func _exit_tree() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not show_cursor:
-		if event is InputEventMouseMotion:
-			if event.relative > minimum_reveal_distance:
-				show_cursor = true
+	if not _cursor_visible:
+		if (
+			(
+				event is InputEventMouseMotion
+				and event.relative > _reveal_distance_minimum
+			)
+			or (
+				event is InputEventMouseButton
+				and event.button_index in _reveal_mouse_buttons
+			)
+		):
+			_cursor_visible = true
+			_time_since_mouse_motion = 0.0
+			_on_properties_changed()
 
 		return
 
-	# Mouse is currently visible - no need to check mouse or keyboard events.
-	if (
-		event is InputEventMouseMotion
-		or event is InputEventKey
-		or event is InputEventMouseButton
-	):
+	# Mouse is currently visible - no need to check mouse motion.
+	if event is InputEventMouseMotion:
+		_time_since_mouse_motion = 0.0
 		return
 
-	if not actions_hide_cursor:
+	# The cursor is not eligible to be hidden yet.
+	if _time_since_mouse_motion < _hide_delay:
 		return
 
-	if event is InputEventJoypadMotion and event.axis_value < 0.1:
-		return
+	# Finally, check if any of the hide actions have just been pressed.
 
-	for action in actions_hide_cursor:
+	if _hovered:
+		for action in _hide_actions_if_hovered:
+			if Input.is_action_just_pressed(action):
+				_cursor_visible = false
+				_on_properties_changed()
+
+	for action in _hide_actions:
 		if Input.is_action_just_pressed(action):
-			show_cursor = false
-			break
+			_cursor_visible = false
+			_on_properties_changed()
+
+
+func _process(delta: float) -> void:
+	if _cursor_visible:
+		_time_since_mouse_motion += delta
 
 
 func _ready() -> void:
+	_hovered = null
+	_time_since_mouse_motion = 0.0
+
 	assert(StdGroup.is_empty(GROUP_INPUT_CURSOR), "invalid state; duplicate node found")
 	StdGroup.with_id(GROUP_INPUT_CURSOR).add_member(self)
 
@@ -185,16 +188,24 @@ func _ready() -> void:
 
 
 func _on_properties_changed() -> void:
-	if show_cursor:
-		if not confined:
+	if _cursor_captured:
+		_cursor_visible = false
+
+		DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CAPTURED)
+
+	if _cursor_visible:
+		if _cursor_captured:
+			assert(false, "invalid state; found conflicting cursor state")
+		elif not _cursor_confined:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_VISIBLE)
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED)
 
 		get_viewport().gui_release_focus()
-
 	else:
-		if not confined:
+		if _cursor_captured:
+			pass
+		elif not _cursor_confined:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_HIDDEN)
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
@@ -212,4 +223,4 @@ func _on_properties_changed() -> void:
 				# neighbor (depending on what input triggered the change).
 				focus_target.call_deferred(&"grab_focus")
 
-	cursor_visibility_changed.emit(show_cursor)
+	cursor_visibility_changed.emit(_cursor_visible)

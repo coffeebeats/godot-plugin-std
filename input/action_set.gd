@@ -33,57 +33,84 @@ extends Resource
 ## (i.e. on/off) input origins.
 @export var actions_digital: Array[StringName] = []
 
-@export_group("Cursor ")
+@export_group("Cursor")
 
-## confine_cursor defines whether the cursor is confined to the game window.
+@export_subgroup("Mode")
+
+## cursor_confined defines whether the cursor is confined to the game window.
 ##
-## NOTE: This property must be set for each action set and action set layer, as only the
-## top action set or layer on the stack will be used.
-@export var confine_cursor: bool = false
+## NOTE: This property will be true if the current action set or any activated action
+## set layer enables it.
+@export var cursor_confined: bool = false
 
-## activate_kbm_on_cursor_motion defines whether mouse motion should activate the
-## keyboard and mouse input device. This is likely desired for menu-based action sets,
-## but should probably be disabled during gameplay due to the prevalence of gyro controls
-## (which are simulated as mouse input).
+## cursor_captured defines whether the cursor is captured.
 ##
-## NOTE: This property can be set on any action set or action set layer; only one needs
-## to set this property for it to be observed.
-@export var activate_kbm_on_cursor_motion: bool = true
+## NOTE: This property will be true if the current action set or any activated action
+## set layer enables it.
+@export var cursor_captured: bool = false
 
-@export_subgroup("Visibility ")
-
-## actions_hide_cursor is the list of actions which, when "just" triggered, will trigger
-## the cursor to be hidden. Note that this doesn't guarantee that the cursor will be
-## hidden, as the visibility is dependent on a number of factors.
+## cursor_activates_kbm defines whether revealing the cursor will activate the keyboard
+## and mouse input device. This is likely desired for menu-based action sets, but should
+## probably be disabled during gameplay due to the prevalence of gyro controls (which
+## are simulated as mouse input).
 ##
-## If `always_hide_cursor` or `always_show_cursor` are true, then this property will be
-## ignored.
+## NOTE: This property will be true if the current action set or any activated action
+## set layer enables it.
+@export var cursor_activates_kbm: bool = false
+
+@export_subgroup("Hide")
+
+## cursor_hide_actions is a list of actions which, when "just" triggered by a non-KBM
+## device, will request the cursor to be hidden. Note that this doesn't guarantee that
+## the cursor will be hidden, as the visibility is dependent on a number of factors.
 ##
 ## NOTE: Actions defined in layers will add to the total set of actions which will hide
-## layers. As such, there's no need to include actions from parent layers.
-@export var actions_hide_cursor: Array[StringName] = []
-
-## always_hide_cursor defines whether to always hide the cursor when this action set is
-## active. Only one of `always_hide_cursor` and `always_show_cursor` may be `true`.
+## the cursor. As such, there's no need to include actions from parent layers.
 ##
-## NOTE: This property does *not* override action sets and layers lower in the stack. If
-## any action set or layer sets this to `true`, then it will resolve to `true`.
-@export var always_hide_cursor: bool = false:
-	set(value):
-		always_hide_cursor = value
-		if value and always_show_cursor != false:
-			always_show_cursor = false
+## NOTE: This property will be ignored if `cursor_captured` is `true`.
+@export var cursor_hide_actions: Array[StringName] = []
 
-## always_show_cursor defines whether to always show the cursor when this action set is
-## active. Only one of `always_hide_cursor` and `always_show_cursor` may be `true`.\
+## cursor_hide_actions_if_hovered is a list of actions (like `cursor_hide_actions`)
+## which will request the cursor to be hidden, but only if there's currently a node
+## being hovered which is tracked by a `StdInputCursorFocusHandler`. This can be used to
+## seamlessly "accept" mouse-hovered UI elements with a joypad.
 ##
-## NOTE: This property does *not* override action sets and layers lower in the stack. If
-## any action set or layer sets this to `true`, then it will resolve to `true`.
-@export var always_show_cursor: bool = false:
-	set(value):
-		always_show_cursor = value
-		if value and always_hide_cursor != false:
-			always_hide_cursor = false
+## NOTE: Actions defined in layers will add to the total set of actions which will hide
+## the cursor. As such, there's no need to include actions from parent layers.
+##
+## NOTE: This property will be ignored if `cursor_captured` is `true`.
+@export var cursor_hide_actions_if_hovered: Array[StringName] = []
+
+## cursor_hide_delay is a delay (in seconds) before the hiding the cursor after a
+## request to hide it. During this delay, further mouse motion will cancel the hide
+## effect. This can be used to limit rapid/distracting visibility changes when both
+## mouse motion and the `cursor_hide_actions` are anticipated to be used together.
+##
+## NOTE: The maximum delay value across all active action sets and layers will be used.
+@export var cursor_hide_delay: float = 0.0
+
+@export_subgroup("Reveal")
+
+## cursor_reveal_mouse_buttons is a list of mouse buttons which, when "just" pressed,
+## will trigger the cursor to be shown. Note that this doesn't guarantee that the cursor
+## will be shown, as the visibility is dependent on a number of factors.
+##
+## NOTE: Mouse buttons defined in layers will add to the total set of buttons which will
+## reveal the cursor. As such, there's no need to include actions from parent layers.
+##
+## NOTE: This property will be ignored if `cursor_captured` is `true`.
+@export var cursor_reveal_mouse_buttons: Array[MouseButton] = [
+	MOUSE_BUTTON_LEFT,
+	MOUSE_BUTTON_RIGHT,
+]
+
+## cursor_reveal_distance_minimum defines how much relative motion must be detected for
+## the cursor to be considered "moving". This is used to filter out slight bumps to the
+## cursor which should otherwise not reveal it.
+##
+## NOTE: The maximum reveal distance threshold value across all active action sets and
+## layers will be used.
+@export var cursor_reveal_distance_minimum: Vector2 = Vector2.ZERO
 
 # NOTE: Unfortunately, due to Steam Input offering a far richer API for defining action
 # sets, this abstraction must leak some Steam-related details.
