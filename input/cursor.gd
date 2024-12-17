@@ -26,6 +26,7 @@ var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = true
 var _hide_actions := PackedStringArray()
+var _hide_actions_if_hovered := PackedStringArray()
 var _hide_delay: float = 0.0
 var _hovered: Control = null
 var _reveal_distance_minimum: Vector2 = Vector2.ZERO
@@ -83,6 +84,14 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 			# NOTE: This operation makes this O(n^2), but arrays should be small.
 			if action not in _hide_actions:
 				_hide_actions.append(action)
+
+	_hide_actions_if_hovered = PackedStringArray()
+	for action_set in action_sets:
+		for action in action_set.cursor_hide_actions_if_hovered:
+			# NOTE: This operation makes this O(n^2), but arrays should be small.
+			if action not in _hide_actions_if_hovered:
+				assert(action not in _hide_actions, "found duplicate action")
+				_hide_actions_if_hovered.append(action)
 
 	_reveal_distance_minimum = action_sets.reduce(
 		func(v, s): return v.max(s.cursor_reveal_distance_minimum), Vector2.ZERO
@@ -146,6 +155,13 @@ func _input(event: InputEvent) -> void:
 		return
 
 	# Finally, check if any of the hide actions have just been pressed.
+
+	if _hovered:
+		for action in _hide_actions_if_hovered:
+			if Input.is_action_just_pressed(action):
+				_cursor_visible = false
+				_on_properties_changed()
+
 	for action in _hide_actions:
 		if Input.is_action_just_pressed(action):
 			_cursor_visible = false

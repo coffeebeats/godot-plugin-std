@@ -60,7 +60,7 @@ extends Resource
 
 @export_subgroup("Hide")
 
-## cursor_hide_actions is the list of actions which, when "just" triggered by a non-KBM
+## cursor_hide_actions is a list of actions which, when "just" triggered by a non-KBM
 ## device, will request the cursor to be hidden. Note that this doesn't guarantee that
 ## the cursor will be hidden, as the visibility is dependent on a number of factors.
 ##
@@ -69,6 +69,17 @@ extends Resource
 ##
 ## NOTE: This property will be ignored if `cursor_captured` is `true`.
 @export var cursor_hide_actions: Array[StringName] = []
+
+## cursor_hide_actions_if_hovered is a list of actions (like `cursor_hide_actions`)
+## which will request the cursor to be hidden, but only if there's currently a node
+## being hovered which is tracked by a `StdInputCursorFocusHandler`. This can be used to
+## seamlessly "accept" mouse-hovered UI elements with a joypad.
+##
+## NOTE: Actions defined in layers will add to the total set of actions which will hide
+## the cursor. As such, there's no need to include actions from parent layers.
+##
+## NOTE: This property will be ignored if `cursor_captured` is `true`.
+@export var cursor_hide_actions_if_hovered: Array[StringName] = []
 
 ## cursor_hide_delay is a delay (in seconds) before the hiding the cursor after a
 ## request to hide it. During this delay, further mouse motion will cancel the hide
