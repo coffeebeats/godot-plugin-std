@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.9 (2024-12-17)
+
+## What's Changed
+* refactor(input): add more granular cursor controls to `StdInputActionSet`; only swap devices on action presses by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/132
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.8...v1.8.9
+
 ## 1.8.8 (2024-12-16)
 
 ## What's Changed
