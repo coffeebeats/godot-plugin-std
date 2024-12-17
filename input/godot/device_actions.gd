@@ -12,6 +12,7 @@ extends StdInputDeviceActions
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const Signals := preload("../../event/signal.gd")
 const Origin := preload("../origin.gd")
 const Binding := preload("../binding.gd")
 
@@ -84,8 +85,14 @@ func reload(device: int = Binding.DEVICE_ID_ALL) -> void:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _exit_tree() -> void:
+	Signals.disconnect_safe(scope.config.changed, reload)
+
+
 func _ready() -> void:
 	assert(scope is StdSettingsScope, "invalid config; missing bindings scope")
+
+	Signals.connect_safe(scope.config.changed, reload)
 
 	# Clear bindings upon initialization.
 	reload(Binding.DEVICE_ID_ALL)

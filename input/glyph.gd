@@ -75,7 +75,7 @@ var _slot: StdInputSlot = null
 
 func _exit_tree() -> void:
 	Signals.disconnect_safe(
-		_slot.actions.configuration_changed, _on_StdInputSlot_configuration_changed
+		_slot.action_configuration_changed, _on_StdInputSlot_configuration_changed
 	)
 	Signals.disconnect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 	(
@@ -95,7 +95,7 @@ func _ready() -> void:
 	assert(_slot is StdInputSlot, "invalid state; missing input slot")
 
 	Signals.connect_safe(
-		_slot.actions.configuration_changed, _on_StdInputSlot_configuration_changed
+		_slot.action_configuration_changed, _on_StdInputSlot_configuration_changed
 	)
 	Signals.connect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 
