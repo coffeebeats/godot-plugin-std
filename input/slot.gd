@@ -36,6 +36,7 @@ signal device_disconnected(device: StdInputDevice)
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Signals := preload("../event/signal.gd")
+const Binding := preload("binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -74,7 +75,6 @@ class Actions:
 	extends StdInputDeviceActions
 
 	var slot: StdInputSlot = null
-	var cursor: StdInputCursor = null
 
 	## _action_set is the currently active action set.
 	var _action_set: StdInputActionSet = null
@@ -102,9 +102,6 @@ class Actions:
 			_action_set = action_set
 			_action_set_layers = []
 
-		if cursor:
-			cursor.update_configuration(action_set)
-
 		return true
 
 	func _disable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
@@ -121,9 +118,6 @@ class Actions:
 			return false
 
 		_action_set_layers.erase(layer)
-
-		if cursor:
-			cursor.update_configuration(_action_set, _action_set_layers)
 
 		return true
 
@@ -142,9 +136,6 @@ class Actions:
 
 		if not layer in _action_set_layers:
 			_action_set_layers.append(layer)
-
-		if cursor:
-			cursor.update_configuration(_action_set, _action_set_layers)
 
 		return true
 
@@ -341,11 +332,12 @@ class Haptics:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var _actions: Array[String] = []
 var _active: StdInputDevice = null
-var _last_active_joypad: StdInputDevice = null
-
-var _kbm_device: StdInputDevice = null
+var _cursor_activates_kbm: bool = false
 var _joypad_devices: Array[StdInputDevice] = []
+var _kbm_device: StdInputDevice = null
+var _last_active_joypad: StdInputDevice = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -496,6 +488,9 @@ func _enter_tree() -> void:
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
+	Signals.connect_safe(
+		action_configuration_changed, _on_Self_action_configuration_changed
+	)
 	Signals.connect_safe(device_activated, _on_Self_device_activated)
 	Signals.connect_safe(device_connected, _on_Self_device_connected)
 	Signals.connect_safe(device_disconnected, _on_Self_device_disconnected)
@@ -506,6 +501,9 @@ func _exit_tree() -> void:
 
 	Signals.disconnect_safe(
 		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
+	)
+	Signals.disconnect_safe(
+		action_configuration_changed, _on_Self_action_configuration_changed
 	)
 	Signals.disconnect_safe(device_activated, _on_Self_device_activated)
 	Signals.disconnect_safe(device_connected, _on_Self_device_connected)
@@ -543,6 +541,7 @@ func _input(event: InputEvent) -> void:
 				or _active.device_id != event.device
 			)
 			and (event is InputEventJoypadButton or event is InputEventJoypadMotion)
+			and (_actions.any(func(a): return Input.is_action_just_pressed(a)))
 		)
 	):
 		for joypad in _joypad_devices:
@@ -562,6 +561,7 @@ func _input(event: InputEvent) -> void:
 		and (_active == null or _active.device_type != DEVICE_TYPE_KEYBOARD)
 		# NOTE: Do not swap based on mouse motion as that might be emulated from a gyro sensor.
 		and (event is InputEventKey or event is InputEventMouseButton)
+		and (_actions.any(func(a): return Input.is_action_just_pressed(a)))
 	):
 		_activate_device(_kbm_device)
 
@@ -583,7 +583,6 @@ func _ready() -> void:
 	if not actions:
 		actions = Actions.new()
 		actions.slot = self
-		actions.cursor = cursor
 		add_child(actions, false, INTERNAL_MODE_BACK)
 
 	if not glyphs:
@@ -713,6 +712,27 @@ func _disconnect_joy_device(device: int) -> bool:
 	return false
 
 
+func _list_action_sets(
+	device: int = Binding.DEVICE_ID_ALL, reverse: bool = false
+) -> Array[StdInputActionSet]:
+	var out: Array[StdInputActionSet] = []
+
+	for layer in actions.list_action_set_layers(device):
+		out.append(layer)
+
+	if reverse:
+		out.reverse()
+
+	var action_set := actions.get_action_set(device)
+	if action_set:
+		if reverse:
+			out.append(action_set)
+		else:
+			out.push_front(action_set)
+
+	return out as Array[StdInputActionSet]
+
+
 func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
 	# NOTE: Shadowing here prevents using wrong type.
 	@warning_ignore("SHADOWED_VARIABLE")
@@ -750,14 +770,47 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
+func _on_cursor_visibility_changed(visible: bool) -> void:
+	if not visible:
+		return
+
+	if not claim_kbm_input or not _cursor_activates_kbm or _active == _kbm_device:
+		return
+
+	assert(_kbm_device, "invalid state; missing input device")
+	_activate_device(_kbm_device)
+
+
+func _on_Self_action_configuration_changed() -> void:
+	var action_sets := _list_action_sets()
+
+	_actions = []
+	_cursor_activates_kbm = false
+
+	for action_set in action_sets:
+		# Update cursor properties.
+
+		_cursor_activates_kbm = _cursor_activates_kbm or action_set.cursor_activates_kbm
+
+		# Update active actions.
+
+		for action in action_set.actions_analog_1d:
+			assert(action not in _actions, "found duplicate action")
+			_actions.append(action)
+		for action in action_set.actions_analog_2d:
+			assert(action not in _actions, "found duplicate action")
+			_actions.append(action)
+		for action in action_set.actions_digital:
+			assert(action not in _actions, "found duplicate action")
+			_actions.append(action)
+
+	if cursor is StdInputCursor:
+		cursor.update_configuration(action_sets)
+
+
 func _on_Self_device_activated(device: StdInputDevice) -> void:
 	device_id = device.device_id
 	device_type = device.device_type
-
-	# Stop haptic effects upon deactivation.
-	for joypad in _joypad_devices:
-		if joypad != device:
-			joypad.stop_vibrate()
 
 
 func _on_Self_device_connected(device: StdInputDevice) -> void:
@@ -773,33 +826,6 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
 	pass  # No need to disable action sets/layers here - the device may reconnect.
-
-
-func _on_cursor_visibility_changed(visible: bool) -> void:
-	if not visible:
-		return
-
-	if not claim_kbm_input or _active == _kbm_device:
-		return
-
-	var action_set := actions.get_action_set(-1)
-	if not action_set:
-		return
-
-	var should_active_kbm := action_set.activate_kbm_on_cursor_motion
-
-	if not should_active_kbm:
-		for layer in actions.list_action_set_layers(-1):
-			should_active_kbm = layer.activate_kbm_on_cursor_motion
-
-			if should_active_kbm:
-				break
-
-	if not should_active_kbm:
-		return
-
-	assert(_kbm_device, "invalid state; missing input device")
-	_activate_device(_kbm_device)
 
 
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #
