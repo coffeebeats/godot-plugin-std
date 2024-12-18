@@ -85,6 +85,10 @@ func get_in_game_actions_file_contents() -> String:
 		write_space()
 		_write_string("#set_%s" % action_set.name, false)
 
+		_write_string("legacy_set", true, false)
+		write_space()
+		_write_string("0", false)
+
 		_write_game_actions_in_action_set(action_set)
 
 		_write_close_bracket()
@@ -225,11 +229,16 @@ func _write_string(value: String, indent: bool = true, newline: bool = true) -> 
 
 func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 	for section in ["StickPadGyro", "AnalogTrigger", "Button"]:
-		_write_string(section)
-		write_open_bracket()
-
 		match section:
 			"StickPadGyro":
+				if not (
+					action_set.actions_analog_2d or action_set.action_absolute_mouse
+				):
+					continue
+
+				_write_string(section)
+				write_open_bracket()
+
 				for action in action_set.actions_analog_2d:
 					assert(
 						action.ends_with("_x") or action.ends_with("_y"),
@@ -241,7 +250,7 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 
 					_write_string("title", true, false)
 					write_space()
-					_write_string("#Action_%s" % action, false, true)
+					_write_string("#action_%s" % action, false, true)
 
 					_write_string("input_mode", true, false)
 					write_space()
@@ -264,7 +273,7 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 					_write_string("title", true, false)
 					write_space()
 					_write_string(
-						"#Action_%s" % action_set.action_absolute_mouse, false, true
+						"#action_%s" % action_set.action_absolute_mouse, false, true
 					)
 
 					_write_string("input_mode", true, false)
@@ -273,18 +282,34 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 
 					_write_close_bracket()
 
+				_write_close_bracket()
+
 			"AnalogTrigger":
+				if not action_set.actions_analog_1d:
+					continue
+
+				_write_string(section)
+				write_open_bracket()
+
 				for action in action_set.actions_analog_1d:
 					_write_string(action, true, false)
 					write_space()
-					_write_string("#Action_%s" % action, false)
+					_write_string("#action_%s" % action, false)
+
+				_write_close_bracket()
 			"Button":
+				if not action_set.actions_digital:
+					continue
+
+				_write_string(section)
+				write_open_bracket()
+
 				for action in action_set.actions_digital:
 					_write_string(action, true, false)
 					write_space()
-					_write_string("#Action_%s" % action, false)
+					_write_string("#action_%s" % action, false)
 
-		_write_close_bracket()
+				_write_close_bracket()
 
 
 func _write_locale_actions_in_action_set(action_set: StdInputActionSet) -> void:
