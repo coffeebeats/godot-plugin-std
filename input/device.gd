@@ -129,6 +129,7 @@ func load_action_set(action_set: StdInputActionSet) -> bool:
 	if not actions.load_action_set(device_id, action_set):
 		return false
 
+	assert(actions.get_action_set(device_id), "invalid state; missing action set")
 	assert(
 		not actions.list_action_set_layers(device_id), "invalid state; dangling layers"
 	)
