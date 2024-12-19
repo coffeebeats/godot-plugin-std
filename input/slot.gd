@@ -246,7 +246,7 @@ func get_action_glyph(
 	action: StringName,
 	target_size: Vector2 = Vector2.ZERO,
 	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN
-) -> StdInputDeviceGlyphs.GlyphData:
+) -> Texture2D:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
 	# NOTE: Shadowing here prevents using wrong type.

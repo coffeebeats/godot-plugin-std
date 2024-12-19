@@ -43,7 +43,7 @@ func _get_action_glyph(
 	action_set: StringName,
 	action: StringName,
 	target_size: Vector2,
-) -> GlyphData:
+) -> Texture2D:
 	for origin in _list_action_origins(slot, device_type, action_set, action):
 		if origin in _glyphs:
 			return _glyphs[origin]
@@ -56,13 +56,9 @@ func _get_action_glyph(
 			continue
 
 		var texture := ImageTexture.create_from_image(Image.load_from_file(path))
+		_glyphs[origin] = texture
 
-		var data := GlyphData.new()
-		data.texture = texture
-
-		_glyphs[origin] = data
-
-		return data
+		return texture
 
 	return null
 

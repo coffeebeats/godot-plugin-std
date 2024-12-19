@@ -8,10 +8,6 @@
 class_name StdInputGlyphSet
 extends Resource
 
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
-const GlyphData := StdInputDeviceGlyphs.GlyphData  # gdlint:ignore=constant-name
-
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## device_types is a list of input device types to which these glyph icons pertain.
@@ -24,7 +20,7 @@ const GlyphData := StdInputDeviceGlyphs.GlyphData  # gdlint:ignore=constant-name
 func get_origin_glyph(
 	event: InputEvent,
 	target_size: Vector2 = Vector2.ZERO,
-) -> StdInputDeviceGlyphs.GlyphData:
+) -> Texture2D:
 	assert(device_types, "invalid config; missing device type")
 	return _get_origin_glyph(event, target_size)
 
@@ -46,6 +42,6 @@ func matches(device_type: StdInputDevice.DeviceType) -> bool:
 func _get_origin_glyph(
 	_event: InputEvent,
 	_target_size: Vector2,
-) -> StdInputDeviceGlyphs.GlyphData:
+) -> Texture2D:
 	assert(false, "unimplemented")
 	return null

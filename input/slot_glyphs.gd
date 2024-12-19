@@ -24,7 +24,7 @@ func _get_action_glyph(
 	action_set: StringName,
 	action: StringName,
 	target_size: Vector2,
-) -> GlyphData:
+) -> Texture2D:
 	if not slot:
 		assert(false, "invalid state; missing input slot")
 		return null

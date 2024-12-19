@@ -117,7 +117,7 @@ extends StdInputGlyphSet
 func _get_origin_glyph(
 	event: InputEvent,
 	_target_size: Vector2,
-) -> GlyphData:
+) -> Texture2D:
 	assert(
 		(
 			len(device_types) == 1
@@ -318,10 +318,4 @@ func _get_origin_glyph(
 		KEY_EQUAL:
 			texture = symbol_equal
 
-	if not texture:
-		return null
-
-	var data := GlyphData.new()
-	data.texture = texture
-
-	return data
+	return texture
