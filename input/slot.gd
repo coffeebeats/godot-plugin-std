@@ -748,7 +748,7 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
-	pass # No need to disable action sets/layers here - the device may reconnect.
+	pass  # No need to disable action sets/layers here - the device may reconnect.
 
 
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #

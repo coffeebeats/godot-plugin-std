@@ -107,7 +107,7 @@ func _exit_tree() -> void:
 
 	(
 		Signals
-		.disconnect_safe(
+		. disconnect_safe(
 			device_type_override.value_changed,
 			_on_device_type_override_value_changed,
 		)
@@ -132,7 +132,7 @@ func _ready() -> void:
 		"invalid config; missing target node"
 	)
 
-	player_id = player_id # Trigger '_slot' update.
+	player_id = player_id  # Trigger '_slot' update.
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
 
 	Signals.connect_safe(_slot.action_configuration_changed, _on_configuration_changed)
@@ -144,7 +144,7 @@ func _ready() -> void:
 	)
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			device_type_override.value_changed,
 			_on_device_type_override_value_changed,
 		)
