@@ -73,7 +73,7 @@ extends StdInputGlyphSet
 func _get_origin_glyph(
 	event: InputEvent,
 	_target_size: Vector2,
-) -> GlyphData:
+) -> Texture2D:
 	assert(
 		StdInputDevice.DEVICE_TYPE_KEYBOARD not in device_types,
 		"invalid state; found incompatible device type",
@@ -171,10 +171,4 @@ func _get_origin_glyph(
 			JOY_AXIS_TRIGGER_RIGHT:
 				texture = analog_trigger_right
 
-	if not texture:
-		return null
-
-	var data := GlyphData.new()
-	data.texture = texture
-
-	return data
+	return texture

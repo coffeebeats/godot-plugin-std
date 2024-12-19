@@ -12,14 +12,6 @@ extends Node
 
 const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
 
-
-## GlyphData contains the data necessary to render the glyph icon.
-class GlyphData:
-	var device_type: DeviceType = DeviceType.UNKNOWN
-	var label: String = ""
-	var texture: Texture2D = null
-
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -31,7 +23,7 @@ func get_action_glyph(
 	action_set: StringName,
 	action: StringName,
 	target_size: Vector2 = Vector2.ZERO,
-) -> GlyphData:
+) -> Texture2D:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_UNKNOWN,
 		"invalid argument; unknown device type",
@@ -65,7 +57,7 @@ func _get_action_glyph(
 	_action_set: StringName,
 	_action: StringName,
 	_target_size: Vector2,
-) -> GlyphData:
+) -> Texture2D:
 	assert(false, "unimplemented")
 	return null
 

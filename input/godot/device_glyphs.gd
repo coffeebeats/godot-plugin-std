@@ -29,15 +29,15 @@ func _get_action_glyph(
 	_action_set: StringName,
 	action: StringName,
 	_target_size: Vector2,
-) -> GlyphData:
+) -> Texture2D:
 	for glyph_set in glyph_sets:
 		if not glyph_set.matches(device_type):
 			continue
 
 		for event in InputMap.action_get_events(action):
-			var data := glyph_set.get_origin_glyph(event)
-			if data:
-				return data
+			var texture := glyph_set.get_origin_glyph(event)
+			if texture:
+				return texture
 
 	return null
 
