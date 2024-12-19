@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.9.0 (2024-12-19)
+
+## What's Changed
+* fix(input): add support for `InputEventAction` handling; various bug fixes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/134
+* feat(addons): add `GodotSteam` as a peer dependency by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/136
+* feat(input): create Steam-backed `StdInputDevice`/`StdInputSlot` components by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/137
+* feat(input): allow requesting custom glyph sizes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/138
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.8.9...v1.9.0
+
 ## 1.8.9 (2024-12-17)
 
 ## What's Changed
