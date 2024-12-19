@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.9.1 (2024-12-19)
+
+## What's Changed
+* refactor(input): add ability to query for origin labels by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/139
+* refactor(input): remove now-unused `GlyphData` container by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/141
+* refactor(input): replace `StdInputGlyph` with `StdInputGlyphController` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/142
+* fix(input): restructure `StdInputGlyph`; create subclasses for `Label`, `TextureRect`s and `TextureButton`s by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/143
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.0...v1.9.1
+
 ## 1.9.0 (2024-12-19)
 
 ## What's Changed
