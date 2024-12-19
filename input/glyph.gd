@@ -34,6 +34,20 @@ const Signals := preload("../event/signal.gd")
 
 @export_group("Display")
 
+## use_size_as_target controls whether this `Glyph` node's size should be used as the
+## target size to pass to the device.
+@export var use_size_as_target: bool = false:
+	set(value):
+		use_size_as_target = value
+
+		if use_size_as_target and target_size_override != Vector2.ZERO:
+			target_size_override = Vector2.ZERO
+
+## target_size_override is a specific target size for the rendered origin glyph. This
+## will be ignored if `use_size_as_target` is `true`. A zero value will not constrain
+## the texture's size.
+@export var target_size_override: Vector2 = Vector2.ZERO
+
 @export_subgroup("Origin info")
 
 ## label is a path to a `Label` node which will render glyph text, if set. A default
@@ -124,7 +138,9 @@ func _update_texture() -> void:
 	_texture_rect.texture = null
 	_texture_rect_container.visible = false
 
-	var data := _slot.get_action_glyph(action_set.name, action)
+	var target_size := size if use_size_as_target else target_size_override
+
+	var data := _slot.get_action_glyph(action_set.name, action, target_size)
 	if not data:
 		return
 

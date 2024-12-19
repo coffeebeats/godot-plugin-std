@@ -42,6 +42,7 @@ func _get_action_glyph(
 	device_type: DeviceType,
 	action_set: StringName,
 	action: StringName,
+	target_size: Vector2,
 ) -> GlyphData:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD,
@@ -95,8 +96,10 @@ func _get_action_glyph(
 		if origin in _glyphs:
 			return _glyphs[origin]
 
+		var glyph_size := _map_target_size_to_glyph_size(target_size)
+
 		@warning_ignore("INT_AS_ENUM_WITHOUT_CAST")
-		var path := Steam.getGlyphPNGForActionOrigin(origin, 1, 0)
+		var path := Steam.getGlyphPNGForActionOrigin(origin, glyph_size, 0)
 		if not path:
 			continue
 
@@ -110,6 +113,22 @@ func _get_action_glyph(
 		return data
 
 	return null  # gdlint:ignore=max-returns
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _map_target_size_to_glyph_size(target_size: Vector2) -> int:
+	if target_size == Vector2.ZERO:
+		return 1
+
+	if target_size.x <= 32 or target_size.y <= 32:
+		return 0  # 32 x 32 px
+
+	if target_size.x <= 128 or target_size.y <= 128:
+		return 1  # 128 x 128 px
+
+	return 2  # 256 x 256 px
 
 
 ## _translate_origin maps the provided origin to the specified Steam Input device type.

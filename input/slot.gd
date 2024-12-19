@@ -153,6 +153,7 @@ class Glyphs:
 		device_type: DeviceType,  # Active or overridden device type
 		action_set: StringName,
 		action: StringName,
+		target_size: Vector2,
 	) -> GlyphData:
 		if not slot:
 			assert(false, "invalid state; missing input slot")
@@ -171,8 +172,16 @@ class Glyphs:
 					"invalid state; missing component",
 				)
 
-				return slot.glyphs_kbm.get_action_glyph(
-					device, DEVICE_TYPE_KEYBOARD, action_set, action
+				return (
+					slot
+					. glyphs_kbm
+					. get_action_glyph(
+						device,
+						DEVICE_TYPE_KEYBOARD,
+						action_set,
+						action,
+						target_size,
+					)
 				)
 
 			_:
@@ -187,8 +196,16 @@ class Glyphs:
 					"invalid state; missing component",
 				)
 
-				return slot.glyphs_joy.get_action_glyph(
-					device, device_type, action_set, action
+				return (
+					slot
+					. glyphs_joy
+					. get_action_glyph(
+						device,
+						device_type,
+						action_set,
+						action,
+						target_size,
+					)
 				)
 
 
@@ -406,6 +423,7 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[StdInputDevic
 func get_action_glyph(
 	action_set: StringName,
 	action: StringName,
+	target_size: Vector2 = Vector2.ZERO,
 	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN
 ) -> StdInputDeviceGlyphs.GlyphData:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
@@ -424,7 +442,9 @@ func get_action_glyph(
 	if device_type_override != DEVICE_TYPE_UNKNOWN:
 		device_type = device_type_override
 
-	return glyphs.get_action_glyph(device_id, device_type, action_set, action)
+	return glyphs.get_action_glyph(
+		device_id, device_type, action_set, action, target_size
+	)
 
 
 # Haptics

@@ -21,9 +21,12 @@ const GlyphData := StdInputDeviceGlyphs.GlyphData  # gdlint:ignore=constant-name
 
 
 ## get_origin_glyph returns the configured resource for the provided input event.
-func get_origin_glyph(event: InputEvent) -> StdInputDeviceGlyphs.GlyphData:
+func get_origin_glyph(
+	event: InputEvent,
+	target_size: Vector2 = Vector2.ZERO,
+) -> StdInputDeviceGlyphs.GlyphData:
 	assert(device_types, "invalid config; missing device type")
-	return _get_origin_glyph(event)
+	return _get_origin_glyph(event, target_size)
 
 
 ## matches returns whether this glyph set can be used for the specified device type.
@@ -40,6 +43,9 @@ func matches(device_type: StdInputDevice.DeviceType) -> bool:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_origin_glyph(_event: InputEvent) -> StdInputDeviceGlyphs.GlyphData:
+func _get_origin_glyph(
+	_event: InputEvent,
+	_target_size: Vector2,
+) -> StdInputDeviceGlyphs.GlyphData:
 	assert(false, "unimplemented")
 	return null

@@ -70,7 +70,10 @@ extends StdInputGlyphSet
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_origin_glyph(event: InputEvent) -> GlyphData:
+func _get_origin_glyph(
+	event: InputEvent,
+	_target_size: Vector2,
+) -> GlyphData:
 	assert(
 		StdInputDevice.DEVICE_TYPE_KEYBOARD not in device_types,
 		"invalid state; found incompatible device type",
