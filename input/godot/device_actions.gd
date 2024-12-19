@@ -102,7 +102,7 @@ func _ready() -> void:
 
 
 ## get_action_set returns the currently active `InputActionSet` *for the specified
-## device*, if.
+## device*.
 func _get_action_set(_device: int) -> StdInputActionSet:
 	return _action_set
 
