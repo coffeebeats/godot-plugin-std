@@ -15,25 +15,28 @@ To use this plugin, add this repository as a submodule of a Godot project (typic
 
 ### Plugin API
 
-### **`config`**
+#### **`config`**
 
 The [config](./config) directory contains replacement classes for `ConfigFile`, [which shouldn't be used due to security issues](https://github.com/godotengine/godot/issues/80562). The [`Config`](./config/config.gd) class is an in-memory, typed, categorized key-value store. To synchronize the configuration data to the file system, use [`ConfigWithFileSync`](./config/file.gd) instead.
 
-### **`fsm`**
+#### **`fsm`**
 
 The [fsm](./fsm) directory contains an implementation of a hierarchical [`StateMachine`](./fsm/state_machine.gd) suited for most applications. State machines are constructed as a scene with the node hierarchy used to define the level of state nesting. Each state should utilize a custom script to implement its behavior, and users can input events into the state machine to trigger transitions or update states.
 
 Additionally, the [`StateMachine`](./fsm/state_machine.gd) implementation provides a "compaction" process which is enabled by default. The state machine extracts the scripts of all child [`State`](./fsm/state.gd) nodes and stores those objects internally without adding children to the scene tree. This improves performance, especially for state machines which are instantiated often.
 
-### **`input`**
+#### **`input`**
+
+> [!NOTE]  
+> [GodotSteam](https://github.com/GodotSteam/GodotSteam) is a peer-dependency for Steam-backed implementations of certain classes (e.g. `JoypadMonitor` and multiple `StdInputDevice` components). The `GodotSteam` addon must be installed alongside this one; use a version targeting the same version of Godot as this addon.
 
 The [input](./input) directory contains types for setting up an action set-based input system, along with abstractions for device and player slot APIs. When used, both Steam and Godot-backed implementations can be easily switched between.
 
-### **`iter`**
+#### **`iter`**
 
 The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
 
-### **`scene`**
+#### **`scene`**
 
 The [scene](./scene) directory contains an implementation of a [`StateMachine`](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
 
