@@ -201,7 +201,7 @@ func get_action_glyph(
 	action: StringName,
 	target_size: Vector2 = Vector2.ZERO,
 	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN,
-) -> StdInputDeviceGlyphs.GlyphData:
+) -> Texture2D:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
 	if device_type_override == DEVICE_TYPE_UNKNOWN:
@@ -209,6 +209,29 @@ func get_action_glyph(
 
 	return glyphs.get_action_glyph(
 		device_id, device_type_override, action_set, action, target_size
+	)
+
+
+## get_action_origin_label returns a localized display name for the first origin bound
+## to the specified action.
+func get_action_origin_label(
+	action_set: StringName,
+	action: StringName,
+	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN,
+) -> String:
+	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
+
+	if device_type_override == DEVICE_TYPE_UNKNOWN:
+		device_type_override = device_type
+
+	return (
+		glyphs
+		. get_action_origin_label(
+			device_id,
+			device_type_override,
+			action_set,
+			action,
+		)
 	)
 
 

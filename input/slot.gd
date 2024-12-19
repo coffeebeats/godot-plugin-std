@@ -37,12 +37,13 @@ signal device_disconnected(device: StdInputDevice)
 
 const Signals := preload("../event/signal.gd")
 const Binding := preload("binding.gd")
+const StdInputSlotDeviceActions := preload("slot_actions.gd")
+const StdInputSlotDeviceGlyphs := preload("slot_glyphs.gd")
+const StdInputSlotDeviceHaptics := preload("slot_haptics.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const GROUP_INPUT_SLOT := &"std/input:slot"
-
-# StdInputSlot components
 
 
 ## JoypadMonitor is an abstract inferface for a `Node` which tracks joypad activity
@@ -66,186 +67,6 @@ class JoypadMonitor:
 
 	func _broadcast_connected_joypads() -> void:
 		assert(false, "unimplemented")
-
-
-# StdInputDevice components
-
-
-class Actions:
-	extends StdInputDeviceActions
-
-	var slot: StdInputSlot = null
-
-	## _action_set is the currently active action set.
-	var _action_set: StdInputActionSet = null
-
-	## _action_set_layers is the stack of currently active action set layers.
-	var _action_set_layers: Array[StdInputActionSetLayer] = []
-
-	func _get_action_set(_device: int) -> StdInputActionSet:
-		return _action_set
-
-	func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return false
-
-		if (
-			slot
-			. get_connected_devices()
-			. map(func(d): return d.load_action_set(action_set))
-			. all(func(r): return not r)
-		):
-			return false
-
-		if _action_set != action_set:
-			_action_set = action_set
-			_action_set_layers = []
-
-		return true
-
-	func _disable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return false
-
-		if (
-			slot
-			. get_connected_devices()
-			. map(func(d): return d.disable_action_set_layer(layer))
-			. all(func(r): return not r)
-		):
-			return false
-
-		_action_set_layers.erase(layer)
-
-		return true
-
-	func _enable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return false
-
-		if (
-			slot
-			. get_connected_devices()
-			. map(func(d): return d.enable_action_set_layer(layer))
-			. all(func(r): return not r)
-		):
-			return false
-
-		if not layer in _action_set_layers:
-			_action_set_layers.append(layer)
-
-		return true
-
-	func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
-		return _action_set_layers.duplicate()
-
-
-class Glyphs:
-	extends StdInputDeviceGlyphs
-
-	var slot: StdInputSlot = null
-
-	func _get_action_glyph(
-		_device: int,  # Active device ID
-		device_type: DeviceType,  # Active or overridden device type
-		action_set: StringName,
-		action: StringName,
-		target_size: Vector2,
-	) -> GlyphData:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return null
-
-		match device_type:
-			DEVICE_TYPE_KEYBOARD:
-				if not slot._kbm_device:
-					assert(not slot.claim_kbm_input, "invalid state; missing device")
-					return null
-
-				var device := slot._kbm_device.device_id
-
-				assert(
-					slot.glyphs_kbm is StdInputDeviceGlyphs,
-					"invalid state; missing component",
-				)
-
-				return (
-					slot
-					. glyphs_kbm
-					. get_action_glyph(
-						device,
-						DEVICE_TYPE_KEYBOARD,
-						action_set,
-						action,
-						target_size,
-					)
-				)
-
-			_:
-				# Cannot display glyphs for a joypad that's never been connected.
-				if not slot._last_active_joypad:
-					return null
-
-				var device := slot._last_active_joypad.device_id
-
-				assert(
-					slot.glyphs_joy is StdInputDeviceGlyphs,
-					"invalid state; missing component",
-				)
-
-				return (
-					slot
-					. glyphs_joy
-					. get_action_glyph(
-						device,
-						device_type,
-						action_set,
-						action,
-						target_size,
-					)
-				)
-
-
-class Haptics:
-	extends StdInputDeviceHaptics
-
-	var slot: StdInputSlot = null
-
-	func _start_vibrate_strong(device: int, duration: float, strength: float) -> void:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return
-
-		if not slot.active:
-			return
-
-		assert(device == slot.active.device_id, "invalid argument; wrong device ID")
-		slot.active.start_vibrate_strong(duration, strength)
-
-	func _start_vibrate_weak(device: int, duration: float, strength: float) -> void:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return
-
-		if not slot.active:
-			return
-
-		assert(device == slot.active.device_id, "invalid argument; wrong device ID")
-		slot.active.start_vibrate_weak(duration, strength)
-
-	func _stop_vibrate(device: int) -> void:
-		if not slot:
-			assert(false, "invalid state; missing input slot")
-			return
-
-		if not slot.active:
-			return
-
-		assert(device == slot.active.device_id, "invalid argument; wrong device ID")
-		slot.active.stop_vibrate()
 
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -425,7 +246,7 @@ func get_action_glyph(
 	action: StringName,
 	target_size: Vector2 = Vector2.ZERO,
 	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN
-) -> StdInputDeviceGlyphs.GlyphData:
+) -> Texture2D:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
 	# NOTE: Shadowing here prevents using wrong type.
@@ -445,6 +266,32 @@ func get_action_glyph(
 	return glyphs.get_action_glyph(
 		device_id, device_type, action_set, action, target_size
 	)
+
+
+## get_action_origin_label returns the localized display name for the first origin bound
+## to the specified action.
+func get_action_origin_label(
+	action_set: StringName,
+	action: StringName,
+	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN
+) -> String:
+	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
+
+	# NOTE: Shadowing here prevents using wrong type.
+	@warning_ignore("SHADOWED_VARIABLE")
+	@warning_ignore("CONFUSABLE_LOCAL_USAGE")
+	var device_type: DeviceType = device_type
+
+	var device_type_property_value: DeviceType = (
+		glyph_type_override_property.get_value()
+	)
+	if device_type_property_value != DEVICE_TYPE_UNKNOWN:
+		device_type = device_type_property_value
+
+	if device_type_override != DEVICE_TYPE_UNKNOWN:
+		device_type = device_type_override
+
+	return glyphs.get_action_origin_label(device_id, device_type, action_set, action)
 
 
 # Haptics
@@ -631,17 +478,17 @@ func _ready() -> void:
 	)
 
 	if not actions:
-		actions = Actions.new()
+		actions = StdInputSlotDeviceActions.new()
 		actions.slot = self
 		add_child(actions, false, INTERNAL_MODE_BACK)
 
 	if not glyphs:
-		glyphs = Glyphs.new()
+		glyphs = StdInputSlotDeviceGlyphs.new()
 		glyphs.slot = self
 		add_child(glyphs, false, INTERNAL_MODE_BACK)
 
 	if not haptics:
-		haptics = Haptics.new()
+		haptics = StdInputSlotDeviceHaptics.new()
 		haptics.slot = self
 		add_child(haptics, false, INTERNAL_MODE_BACK)
 
