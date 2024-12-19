@@ -94,7 +94,7 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(_slot.device_activated, _on_StdInputSlot_device_activated)
 	(
 		Signals
-		. disconnect_safe(
+		.disconnect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
@@ -119,7 +119,7 @@ func _ready() -> void:
 	)
 	(
 		Signals
-		. connect_safe(
+		.connect_safe(
 			glyph_type_override_property.value_changed,
 			_on_StdSettingsPropertyInt_value_changed,
 		)
@@ -149,8 +149,9 @@ func _update_texture() -> void:
 		_texture_rect_container.visible = true
 		custom_minimum_size = data.texture.get_size()
 
-	if data.label:
-		_label.text = data.label.to_upper()
+	var origin_label := _slot.get_action_origin_label(action_set.name, action)
+	if origin_label:
+		_label.text = origin_label.to_upper()
 		_label_container.visible = true
 
 	update_minimum_size()
