@@ -10,13 +10,6 @@ extends StdInputGlyphSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## include_label defines whether an origin label is included in the returned glyph data.
-@export var include_label: bool = false
-
-## capitalize_label controls whether the returned origin label is capitalized. Only used
-## if `include_label` is `true`.
-@export var capitalize_label: bool = true
-
 @export_subgroup("Command")
 
 @export var cmd_escape: Texture2D = null
@@ -325,16 +318,10 @@ func _get_origin_glyph(
 		KEY_EQUAL:
 			texture = symbol_equal
 
-	if not texture and not include_label:
+	if not texture:
 		return null
 
 	var data := GlyphData.new()
 	data.texture = texture
-
-	if include_label:
-		data.label = OS.get_keycode_string(keycode)
-
-		if capitalize_label:
-			data.label = data.label.to_upper()
 
 	return data
