@@ -15,10 +15,6 @@ extends Node
 
 const Signals := preload("../event/signal.gd")
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 @export_group("Binding")
@@ -53,48 +49,15 @@ const Signals := preload("../event/signal.gd")
 
 @export_subgroup("Origin data")
 
-## target_label is an optional node path to a `Label` element which this node will
-## update with the latest bound origin label information.
-@export var target_label: NodePath = ""
-
-## target_glyph is an optional node path to a `Control` element which this node will
-## update with the latest bound origin glyph.
-@export var target_glyph: NodePath = ""
-
-@export_subgroup("Node containers")
-
-## target_label_container is a path to a node which will be hidden upon the origin label
-## being empty. If this property is empty then no node will be hidden.
-@export_node_path var target_label_container: NodePath = ""
-
-## texture_rect_container is a path to a node which will be hidden upon the origin glyph
-## texture being `null`. If this property is empty then no node will be hidden.
-@export_node_path var target_glyph_container: NodePath = ""
-
-@export_subgroup("Display")
-
-## use_target_size controls whether the glyph target `Control` node's size is used as
-## the requested glyph icon size.
-@export var use_target_size: bool = false:
-	set(value):
-		use_target_size = value
-
-		if use_target_size and target_size_override != Vector2.ZERO:
-			target_size_override = Vector2.ZERO
-
-## target_size_override is a specific target size for the rendered origin glyph. This
-## will be ignored if `use_target_size` is `true`. A zero value will not constrain the
-## texture's size.
-@export var target_size_override: Vector2 = Vector2.ZERO
+## target is a node path to a `Control` element which this node will update with the
+## latest bound origin label information.
+@export var target: NodePath = ".."
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _slot: StdInputSlot = null
 
-@onready var _target_glyph: Control = get_node_or_null(target_glyph)
-@onready var _target_glyph_container: Control = get_node_or_null(target_glyph_container)
-@onready var _target_label: Label = get_node_or_null(target_label)
-@onready var _target_label_container: Control = get_node_or_null(target_label_container)
+@onready var _target: Control = get_node_or_null(target)
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -107,7 +70,7 @@ func _exit_tree() -> void:
 
 	(
 		Signals
-		.disconnect_safe(
+		. disconnect_safe(
 			device_type_override.value_changed,
 			_on_device_type_override_value_changed,
 		)
@@ -115,24 +78,9 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	assert(
-		not target_glyph or _target_glyph is Control,
-		"invalid config; missing target node"
-	)
-	assert(
-		not target_glyph_container or _target_glyph_container is Control,
-		"invalid config; missing target node"
-	)
-	assert(
-		not target_label or _target_label is Label,
-		"invalid config; missing target node"
-	)
-	assert(
-		not target_label_container or _target_label_container is Control,
-		"invalid config; missing target node"
-	)
+	assert(_target is Control, "invalid config; missing target node")
 
-	player_id = player_id # Trigger '_slot' update.
+	player_id = player_id  # Trigger '_slot' update.
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
 
 	Signals.connect_safe(_slot.action_configuration_changed, _on_configuration_changed)
@@ -144,61 +92,33 @@ func _ready() -> void:
 	)
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			device_type_override.value_changed,
 			_on_device_type_override_value_changed,
 		)
 	)
 
 	# Initialize targets on first ready.
-	_handle_update()
+	_update_target()
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _update_target_glyph(_texture: Texture2D) -> void:
+func _update_target() -> void:
 	assert(false, "unimplemented")
-
-
-func _update_target_label(label: String) -> void:
-	_target_label.text = label.to_upper()
-
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-func _handle_update() -> void:
-	if _target_glyph:
-		var target_size := (
-			_target_glyph.size if use_target_size else target_size_override
-		)
-		var texture := _slot.get_action_glyph(action_set.name, action, target_size)
-		_update_target_glyph(texture)
-
-		if _target_glyph_container:
-			_target_glyph_container.visible = texture != null
-
-	if _target_label:
-		var origin_label := _slot.get_action_origin_label(action_set.name, action)
-		_update_target_label(origin_label)
-
-		if _target_label_container:
-			_target_label_container.visible = origin_label != ""
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_configuration_changed() -> void:
-	_handle_update()
+	_update_target()
 
 
 func _on_device_activated(_device: StdInputDevice) -> void:
-	_handle_update()
+	_update_target()
 
 
 func _on_device_type_override_value_changed() -> void:
-	_handle_update()
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
+	_update_target()
