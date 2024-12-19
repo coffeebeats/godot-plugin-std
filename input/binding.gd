@@ -178,7 +178,8 @@ static func _get_events(
 		for value_encoded in values:
 			# NOTE: This makes this function O(n^2), but array sizes will be small and
 			# integer comparisons are fast.
-			if value_encoded in seen:
+			# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
+			if seen.has(value_encoded):
 				continue
 
 			if not Origin.is_encoded_value_type(value_encoded, origin_bitmask_indices):

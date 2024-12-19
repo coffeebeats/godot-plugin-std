@@ -90,11 +90,11 @@ class Actions:
 			assert(false, "invalid state; missing input slot")
 			return false
 
-		if not (
+		if (
 			slot
 			. get_connected_devices()
 			. map(func(d): return d.load_action_set(action_set))
-			. any(func(r): return r)
+			. all(func(r): return not r)
 		):
 			return false
 
@@ -109,11 +109,11 @@ class Actions:
 			assert(false, "invalid state; missing input slot")
 			return false
 
-		if not (
+		if (
 			slot
 			. get_connected_devices()
 			. map(func(d): return d.disable_action_set_layer(layer))
-			. any(func(r): return r)
+			. all(func(r): return not r)
 		):
 			return false
 
@@ -126,11 +126,11 @@ class Actions:
 			assert(false, "invalid state; missing input slot")
 			return false
 
-		if not (
+		if (
 			slot
 			. get_connected_devices()
 			. map(func(d): return d.enable_action_set_layer(layer))
-			. any(func(r): return r)
+			. all(func(r): return not r)
 		):
 			return false
 
@@ -338,6 +338,7 @@ var _cursor_activates_kbm: bool = false
 var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
 var _last_active_joypad: StdInputDevice = null
+var _pressed: Array[String] = []
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -527,9 +528,22 @@ func _exit_tree() -> void:
 
 	_joypad_devices = []
 
+	# NOTE: Connect after initializing devices to avoid inadvertent device activation.
+	assert(cursor is StdInputCursor, "invalid config; missing component")
+	Signals.connect_safe(
+		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
+	)
+
 
 func _input(event: InputEvent) -> void:
-	if not event.is_action_type() or not event.is_pressed():
+	if not event.is_action_type():
+		return
+
+	if not event.is_pressed():
+		for action in _pressed:
+			if not event.is_action_pressed(action):
+				_pressed.erase(action)
+
 		return
 
 	# Swap to controller
@@ -540,10 +554,26 @@ func _input(event: InputEvent) -> void:
 				_active.device_type == DEVICE_TYPE_KEYBOARD
 				or _active.device_id != event.device
 			)
-			and (event is InputEventJoypadButton or event is InputEventJoypadMotion)
-			and (_actions.any(func(a): return Input.is_action_just_pressed(a)))
+			and (
+				event is InputEventJoypadButton
+				or event is InputEventJoypadMotion
+				or event is InputEventAction
+			)
 		)
 	):
+		var is_match := false
+		for action in _actions:
+			if not event.is_action_pressed(action):
+				continue
+
+			if action not in _pressed:
+				_pressed.append(action)
+				is_match = true
+				break
+
+		if not is_match:
+			return
+
 		for joypad in _joypad_devices:
 			if not joypad:
 				assert(false, "invalid state; missing device")
@@ -604,6 +634,8 @@ func _ready() -> void:
 		"invalid config; missing joypad connection monitor"
 	)
 
+	joypad_monitor.broadcast_connected_joypads()
+
 	if claim_kbm_input:
 		var kbm := _make_kbm()
 
@@ -615,8 +647,7 @@ func _ready() -> void:
 
 		if not _active or not prefer_activate_joypad_on_ready:
 			_activate_device(kbm)
-
-	joypad_monitor.broadcast_connected_joypads()
+			cursor.show_cursor()
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -642,6 +673,15 @@ func _activate_device(device: StdInputDevice) -> bool:
 		_active = _kbm_device
 		device_activated.emit(_kbm_device)
 
+		print(
+			"std/input/slot.gd[",
+			get_instance_id(),
+			(
+				"]: activated keyboard device: %d (type=%d)"
+				% [_active.device_id, _active.device_type]
+			),
+		)
+
 		return true
 
 	for joypad in _joypad_devices:
@@ -655,6 +695,15 @@ func _activate_device(device: StdInputDevice) -> bool:
 
 		_active = joypad
 		device_activated.emit(joypad)
+
+		print(
+			"std/input/slot.gd[",
+			get_instance_id(),
+			(
+				"]: activated joypad device: %d (type=%d)"
+				% [_active.device_id, _active.device_type]
+			),
+		)
 
 		return true
 
@@ -684,9 +733,9 @@ func _connect_joy_device(
 	add_child(joypad, false, INTERNAL_MODE_BACK)
 	device_connected.emit(joypad)
 
-	if not _active:
-		_active = joypad
-		device_activated.emit(joypad)
+	if not _active or (_active == _kbm_device and prefer_activate_joypad_on_ready):
+		_activate_device(joypad)
+		cursor.hide_cursor()
 
 	return true
 
@@ -771,6 +820,12 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 
 
 func _on_cursor_visibility_changed(visible: bool) -> void:
+	print(
+		"std/input/slot.gd[",
+		get_instance_id(),
+		"]: cursor visibility changed: %s" % visible,
+	)
+
 	if not visible:
 		return
 
@@ -818,7 +873,8 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 	if not action_set:
 		return
 
-	device.load_action_set(action_set)
+	if not device.load_action_set(action_set):
+		return
 
 	for layer in actions.list_action_set_layers(device_id):
 		device.enable_action_set_layer(layer)

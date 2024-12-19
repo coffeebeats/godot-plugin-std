@@ -129,6 +129,7 @@ func load_action_set(action_set: StdInputActionSet) -> bool:
 	if not actions.load_action_set(device_id, action_set):
 		return false
 
+	assert(actions.get_action_set(device_id), "invalid state; missing action set")
 	assert(
 		not actions.list_action_set_layers(device_id), "invalid state; dangling layers"
 	)
@@ -160,10 +161,8 @@ func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	if not actions.enable_action_set_layer(device_id, layer):
 		return false
 
-	assert(
-		layer in actions.list_action_set_layers(device_id),
-		"invalid state; missing layer"
-	)
+	# NOTE: Some implementations (e.g. Steam) may not have their state updated until
+	# player input is received, so do not assert the layer is present.
 
 	action_set_layer_enabled.emit(layer)
 	action_configuration_changed.emit()
@@ -183,10 +182,8 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	if not actions.disable_action_set_layer(device_id, layer):
 		return false
 
-	assert(
-		layer not in actions.list_action_set_layers(device_id),
-		"invalid state; dangling layer"
-	)
+	# NOTE: Some implementations (e.g. Steam) may not have their state updated until
+	# player input is received, so do not assert the layer is removed.
 
 	action_set_layer_disabled.emit(layer)
 	action_configuration_changed.emit()
