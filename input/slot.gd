@@ -92,9 +92,9 @@ class Actions:
 
 		if (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.load_action_set(action_set))
-			. all(func(r): return not r)
+			.get_connected_devices()
+			.map(func(d): return d.load_action_set(action_set))
+			.all(func(r): return not r)
 		):
 			return false
 
@@ -111,9 +111,9 @@ class Actions:
 
 		if (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.disable_action_set_layer(layer))
-			. all(func(r): return not r)
+			.get_connected_devices()
+			.map(func(d): return d.disable_action_set_layer(layer))
+			.all(func(r): return not r)
 		):
 			return false
 
@@ -128,9 +128,9 @@ class Actions:
 
 		if (
 			slot
-			. get_connected_devices()
-			. map(func(d): return d.enable_action_set_layer(layer))
-			. all(func(r): return not r)
+			.get_connected_devices()
+			.map(func(d): return d.enable_action_set_layer(layer))
+			.all(func(r): return not r)
 		):
 			return false
 
@@ -149,8 +149,8 @@ class Glyphs:
 	var slot: StdInputSlot = null
 
 	func _get_action_glyph(
-		_device: int,  # Active device ID
-		device_type: DeviceType,  # Active or overridden device type
+		_device: int, # Active device ID
+		device_type: DeviceType, # Active or overridden device type
 		action_set: StringName,
 		action: StringName,
 	) -> GlyphData:
@@ -528,7 +528,7 @@ func _exit_tree() -> void:
 
 	_joypad_devices = []
 
-	# NOTE: Connect after initializing devices to avoid inadvertent
+	# NOTE: Connect after initializing devices to avoid inadvertent device activation.
 	assert(cursor is StdInputCursor, "invalid config; missing component")
 	Signals.connect_safe(
 		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
@@ -881,7 +881,7 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
-	pass  # No need to disable action sets/layers here - the device may reconnect.
+	pass # No need to disable action sets/layers here - the device may reconnect.
 
 
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #
