@@ -28,11 +28,11 @@ extends StdInputGlyph
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _update_target() -> void:
+func _update_target() -> bool:
 	var texture_rect := _target as TextureRect
 	if not texture_rect:
 		assert(false, "invalid state; wrong target node type")
-		return
+		return false
 
 	texture_rect.texture = (
 		_slot
@@ -42,3 +42,5 @@ func _update_target() -> void:
 			texture_rect.size if use_target_size else target_size_override,
 		)
 	)
+
+	return texture_rect.texture != null

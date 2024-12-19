@@ -26,11 +26,11 @@ extends StdInputGlyphTextureRect
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _update_target() -> void:
+func _update_target() -> bool:
 	var button := _target as TextureButton
 	if not button:
 		assert(false, "invalid state; wrong target node type")
-		return
+		return false
 
 	var texture := (
 		_slot
@@ -49,3 +49,5 @@ func _update_target() -> void:
 		button.texture_normal = texture
 	if update_texture_pressed:
 		button.texture_pressed = texture
+
+	return texture != null

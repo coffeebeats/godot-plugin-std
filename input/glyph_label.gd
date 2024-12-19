@@ -12,10 +12,12 @@ extends StdInputGlyph
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _update_target() -> void:
+func _update_target() -> bool:
 	var label := _target as Label
 	if not label:
 		assert(false, "invalid state; wrong target node type")
-		return
+		return false
 
 	label.text = _slot.get_action_origin_label(action_set.name, action)
+
+	return label.text != ""
