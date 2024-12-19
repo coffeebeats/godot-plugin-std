@@ -16,7 +16,7 @@ extends Node
 ## glyph_updated is emitted when the contents of the glyph information have _possibly_
 ## changed (i.e. this may fire even if no change was made). Use this to react to
 ## contents changes to the target node.
-signal glyph_updated
+signal glyph_updated(has_contents: bool)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -114,23 +114,24 @@ func _ready() -> void:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _update_target() -> void:
+func _update_target() -> bool:
 	assert(false, "unimplemented")
+	return false
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_configuration_changed() -> void:
-	_update_target()
-	glyph_updated.emit()
+	var has_contents: bool = _update_target()
+	glyph_updated.emit(has_contents)
 
 
 func _on_device_activated(_device: StdInputDevice) -> void:
-	_update_target()
-	glyph_updated.emit()
+	var has_contents: bool = _update_target()
+	glyph_updated.emit(has_contents)
 
 
 func _on_device_type_override_value_changed() -> void:
-	_update_target()
-	glyph_updated.emit()
+	var has_contents: bool = _update_target()
+	glyph_updated.emit(has_contents)
