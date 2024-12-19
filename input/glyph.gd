@@ -34,6 +34,10 @@ const Signals := preload("../event/signal.gd")
 
 @export_group("Display")
 
+## show_label defines whether the bound origin's display name should be shown if one
+## is defined.
+@export var show_label: bool = false
+
 ## use_size_as_target controls whether this `Glyph` node's size should be used as the
 ## target size to pass to the device.
 @export var use_size_as_target: bool = false:
@@ -149,10 +153,11 @@ func _update_texture() -> void:
 		_texture_rect_container.visible = true
 		custom_minimum_size = data.texture.get_size()
 
-	var origin_label := _slot.get_action_origin_label(action_set.name, action)
-	if origin_label:
-		_label.text = origin_label.to_upper()
-		_label_container.visible = true
+	if show_label:
+		var origin_label := _slot.get_action_origin_label(action_set.name, action)
+		if origin_label:
+			_label.text = origin_label.to_upper()
+			_label_container.visible = true
 
 	update_minimum_size()
 
