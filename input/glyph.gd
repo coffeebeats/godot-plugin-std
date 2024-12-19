@@ -13,6 +13,13 @@ extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
+## glyph_updated is emitted when the contents of the glyph information have _possibly_
+## changed (i.e. this may fire even if no change was made). Use this to react to
+## contents changes to the target node.
+signal glyph_updated
+
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
 const Signals := preload("../event/signal.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -78,6 +85,8 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
+	assert(action, "invalid config; missing action")
+	assert(action_set is StdInputActionSet, "invalid config; missing action set")
 	assert(_target is Control, "invalid config; missing target node")
 
 	player_id = player_id  # Trigger '_slot' update.
@@ -114,11 +123,14 @@ func _update_target() -> void:
 
 func _on_configuration_changed() -> void:
 	_update_target()
+	glyph_updated.emit()
 
 
 func _on_device_activated(_device: StdInputDevice) -> void:
 	_update_target()
+	glyph_updated.emit()
 
 
 func _on_device_type_override_value_changed() -> void:
 	_update_target()
+	glyph_updated.emit()
