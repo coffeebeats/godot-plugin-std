@@ -199,6 +199,7 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 func get_action_glyph(
 	action_set: StringName,
 	action: StringName,
+	target_size: Vector2 = Vector2.ZERO,
 	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN,
 ) -> StdInputDeviceGlyphs.GlyphData:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
@@ -206,7 +207,9 @@ func get_action_glyph(
 	if device_type_override == DEVICE_TYPE_UNKNOWN:
 		device_type_override = device_type
 
-	return glyphs.get_action_glyph(device_id, device_type_override, action_set, action)
+	return glyphs.get_action_glyph(
+		device_id, device_type_override, action_set, action, target_size
+	)
 
 
 # Haptics

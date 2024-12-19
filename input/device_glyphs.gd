@@ -29,13 +29,14 @@ func get_action_glyph(
 	device_type: DeviceType,
 	action_set: StringName,
 	action: StringName,
+	target_size: Vector2 = Vector2.ZERO,
 ) -> GlyphData:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_UNKNOWN,
 		"invalid argument; unknown device type",
 	)
 
-	return _get_action_glyph(device, device_type, action_set, action)
+	return _get_action_glyph(device, device_type, action_set, action, target_size)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -46,6 +47,7 @@ func _get_action_glyph(
 	_device_type: DeviceType,
 	_action_set: StringName,
 	_action: StringName,
+	_target_size: Vector2,
 ) -> GlyphData:
 	assert(false, "unimplemented")
 	return null
