@@ -149,8 +149,9 @@ func _update_texture() -> void:
 		_texture_rect_container.visible = true
 		custom_minimum_size = data.texture.get_size()
 
-	if data.label:
-		_label.text = data.label.to_upper()
+	var origin_label := _slot.get_action_origin_label(action_set.name, action)
+	if origin_label:
+		_label.text = origin_label.to_upper()
 		_label_container.visible = true
 
 	update_minimum_size()

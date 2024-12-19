@@ -44,24 +44,70 @@ func _get_action_glyph(
 	action: StringName,
 	target_size: Vector2,
 ) -> GlyphData:
+	for origin in _list_action_origins(slot, device_type, action_set, action):
+		if origin in _glyphs:
+			return _glyphs[origin]
+
+		var glyph_size := _map_target_size_to_glyph_size(target_size)
+
+		@warning_ignore("INT_AS_ENUM_WITHOUT_CAST")
+		var path := Steam.getGlyphPNGForActionOrigin(origin, glyph_size, 0)
+		if not path:
+			continue
+
+		var texture := ImageTexture.create_from_image(Image.load_from_file(path))
+
+		var data := GlyphData.new()
+		data.texture = texture
+
+		_glyphs[origin] = data
+
+		return data
+
+	return null
+
+
+func _get_action_origin_label(
+	slot: int,
+	device_type: DeviceType,
+	action_set: StringName,
+	action: StringName,
+) -> String:
+	for origin in _list_action_origins(slot, device_type, action_set, action):
+		var label := Steam.getStringForActionOrigin(origin)
+		if label:
+			return label
+
+	return ""
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _list_action_origins(
+	slot: int,
+	device_type: DeviceType,
+	action_set: StringName,
+	action: StringName,
+) -> PackedInt64Array:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD,
 		"invalid argument; unsupported device type",
 	)
 
+	var origins := PackedInt64Array()
+
 	if not device_actions.is_action_set_enabled(slot, action_set):
-		return null
+		return origins
 
 	var action_set_handle := SteamDeviceActions.get_action_set_handle(action_set)
 	if not action_set_handle:
-		return null
+		return origins
 
 	var device: int = joypad_monitor.get_device_id_for_slot(slot)
 	if device == -1:
 		assert(false, "invalid argument; failed to find device for slot")
-		return null
-
-	var origins := PackedInt64Array()
+		return origins
 
 	# TODO: Find some means of specifying ahead of time which action type this is.
 
@@ -89,33 +135,7 @@ func _get_action_glyph(
 		if origin:
 			origins.append(origin)
 
-	if not origins:
-		return null
-
-	for origin in origins:
-		if origin in _glyphs:
-			return _glyphs[origin]
-
-		var glyph_size := _map_target_size_to_glyph_size(target_size)
-
-		@warning_ignore("INT_AS_ENUM_WITHOUT_CAST")
-		var path := Steam.getGlyphPNGForActionOrigin(origin, glyph_size, 0)
-		if not path:
-			continue
-
-		var texture := ImageTexture.create_from_image(Image.load_from_file(path))
-
-		var data := GlyphData.new()
-		data.texture = texture
-
-		_glyphs[origin] = data
-
-		return data
-
-	return null  # gdlint:ignore=max-returns
-
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
+	return origins
 
 
 func _map_target_size_to_glyph_size(target_size: Vector2) -> int:
