@@ -28,6 +28,7 @@ func _get_action_glyph(
 	device_type: StdInputDevice.DeviceType,
 	_action_set: StringName,
 	action: StringName,
+	_target_size: Vector2,
 ) -> GlyphData:
 	for glyph_set in glyph_sets:
 		if not glyph_set.matches(device_type):

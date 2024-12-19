@@ -222,7 +222,8 @@ static func is_encoded_value_type(value: int, indices: PackedInt64Array) -> bool
 		(value & (BITMASK_TYPE << BITMASK_INDEX_TYPE)) >> BITMASK_INDEX_TYPE
 	)
 
-	return type_decoded in indices
+	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
+	return indices.has(type_decoded)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #

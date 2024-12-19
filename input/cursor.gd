@@ -24,16 +24,31 @@ const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
 var _cursor_captured: bool = false
 var _cursor_confined: bool = false
-var _cursor_visible: bool = true
+var _cursor_visible: bool = false
 var _hide_actions := PackedStringArray()
 var _hide_actions_if_hovered := PackedStringArray()
 var _hide_delay: float = 0.0
 var _hovered: Control = null
+var _pressed: Array[String] = []
 var _reveal_distance_minimum: Vector2 = Vector2.ZERO
 var _reveal_mouse_buttons: Array[MouseButton] = []
 var _time_since_mouse_motion: float = 0.0
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## hide_cursor hides the cursor and transitions to focus-based navigation. If the cursor
+## is already hidden, then nothing happens.
+##
+## NOTE: This method doesn't change configuration, so there's no guarantee the cursor
+## will remain hidden.
+func hide_cursor() -> void:
+	if not _cursor_visible:
+		return
+
+	_cursor_visible = false
+	_time_since_mouse_motion = 0.0
+	_on_properties_changed()
 
 
 ## set_hovered registers the provided `Control` node as the most recently hovered UI
@@ -52,6 +67,20 @@ func set_hovered(control: Control) -> bool:
 	_hovered = control
 
 	return true
+
+
+## show_cursor reveals the cursor and transitions to mouse-based navigation. If the
+## cursor is already visible, then nothing happens.
+##
+## NOTE: This method doesn't change configuration, so there's no guarantee the cursor
+## will remain visible.
+func show_cursor() -> void:
+	if _cursor_visible:
+		return
+
+	_cursor_visible = false
+	_time_since_mouse_motion = 0.0
+	_on_properties_changed()
 
 
 ## unset_hovered clears the specified `Control` node as the last hovered UI element. If
@@ -90,7 +119,6 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 		for action in action_set.cursor_hide_actions_if_hovered:
 			# NOTE: This operation makes this O(n^2), but arrays should be small.
 			if action not in _hide_actions_if_hovered:
-				assert(action not in _hide_actions, "found duplicate action")
 				_hide_actions_if_hovered.append(action)
 
 	_reveal_distance_minimum = action_sets.reduce(
@@ -158,19 +186,35 @@ func _input(event: InputEvent) -> void:
 
 	if _hovered:
 		for action in _hide_actions_if_hovered:
-			if Input.is_action_just_pressed(action):
+			if not event.is_action_pressed(action):
+				_pressed.erase(action)
+				continue
+
+			if action not in _pressed:
+				_pressed.append(action)
 				_cursor_visible = false
 				_on_properties_changed()
+				break
 
 	for action in _hide_actions:
-		if Input.is_action_just_pressed(action):
+		if not event.is_action_pressed(action):
+			_pressed.erase(action)
+			continue
+
+		if action not in _pressed:
+			_pressed.append(action)
 			_cursor_visible = false
 			_on_properties_changed()
+			break
 
 
 func _process(delta: float) -> void:
 	if _cursor_visible:
 		_time_since_mouse_motion += delta
+
+	for action in _pressed:
+		if not Input.is_action_pressed(action):
+			_pressed.erase(action)
 
 
 func _ready() -> void:
@@ -179,6 +223,11 @@ func _ready() -> void:
 
 	assert(StdGroup.is_empty(GROUP_INPUT_CURSOR), "invalid state; duplicate node found")
 	StdGroup.with_id(GROUP_INPUT_CURSOR).add_member(self)
+
+	_cursor_visible = (
+		DisplayServer.mouse_get_mode()
+		in [DisplayServer.MOUSE_MODE_VISIBLE, DisplayServer.MOUSE_MODE_CONFINED]
+	)
 
 	# Trigger the initial state.
 	_on_properties_changed()

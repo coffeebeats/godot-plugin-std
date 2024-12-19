@@ -128,7 +128,7 @@ func _on_Input_joy_connection_changed(device: int, connected: bool) -> void:
 		print(
 			"std/input/godot/joypad_monitor.gd[",
 			get_instance_id(),
-			"]: joypad disconnected: %d" % [device, connected],
+			"]: joypad disconnected: %d" % device,
 		)
 
 		joy_disconnected.emit(device)

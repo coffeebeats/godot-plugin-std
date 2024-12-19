@@ -30,7 +30,10 @@ extends StdInputGlyphSet
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _get_origin_glyph(event: InputEvent) -> GlyphData:
+func _get_origin_glyph(
+	event: InputEvent,
+	_target_size: Vector2,
+) -> GlyphData:
 	assert(
 		(
 			len(device_types) == 1
