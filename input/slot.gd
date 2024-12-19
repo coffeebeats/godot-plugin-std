@@ -208,6 +208,63 @@ class Glyphs:
 					)
 				)
 
+	func _get_action_origin_label(
+		_device: int,  # Active device ID
+		device_type: DeviceType,  # Active or overridden device type
+		action_set: StringName,
+		action: StringName,
+	) -> String:
+		if not slot:
+			assert(false, "invalid state; missing input slot")
+			return ""
+
+		match device_type:
+			DEVICE_TYPE_KEYBOARD:
+				if not slot._kbm_device:
+					assert(not slot.claim_kbm_input, "invalid state; missing device")
+					return ""
+
+				var device := slot._kbm_device.device_id
+
+				assert(
+					slot.glyphs_kbm is StdInputDeviceGlyphs,
+					"invalid state; missing component",
+				)
+
+				return (
+					slot
+					. glyphs_kbm
+					. get_action_origin_label(
+						device,
+						DEVICE_TYPE_KEYBOARD,
+						action_set,
+						action,
+					)
+				)
+
+			_:
+				# Cannot display glyphs for a joypad that's never been connected.
+				if not slot._last_active_joypad:
+					return ""
+
+				var device := slot._last_active_joypad.device_id
+
+				assert(
+					slot.glyphs_joy is StdInputDeviceGlyphs,
+					"invalid state; missing component",
+				)
+
+				return (
+					slot
+					. glyphs_joy
+					. get_action_origin_label(
+						device,
+						device_type,
+						action_set,
+						action,
+					)
+				)
+
 
 class Haptics:
 	extends StdInputDeviceHaptics
@@ -445,6 +502,32 @@ func get_action_glyph(
 	return glyphs.get_action_glyph(
 		device_id, device_type, action_set, action, target_size
 	)
+
+
+## get_action_origin_label returns the localized display name for the first origin bound
+## to the specified action.
+func get_action_origin_label(
+	action_set: StringName,
+	action: StringName,
+	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN
+) -> String:
+	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
+
+	# NOTE: Shadowing here prevents using wrong type.
+	@warning_ignore("SHADOWED_VARIABLE")
+	@warning_ignore("CONFUSABLE_LOCAL_USAGE")
+	var device_type: DeviceType = device_type
+
+	var device_type_property_value: DeviceType = (
+		glyph_type_override_property.get_value()
+	)
+	if device_type_property_value != DEVICE_TYPE_UNKNOWN:
+		device_type = device_type_property_value
+
+	if device_type_override != DEVICE_TYPE_UNKNOWN:
+		device_type = device_type_override
+
+	return glyphs.get_action_origin_label(device_id, device_type, action_set, action)
 
 
 # Haptics
