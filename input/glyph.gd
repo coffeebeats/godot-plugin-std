@@ -1,15 +1,15 @@
 ##
 ## std/input/glyph.gd
 ##
-## StdInputGlyph is a base class for a node which drives the contents of a
-## `Control` node used to display origin information (i.e. glyph icons and labels).
-##
-## TODO: Handle fallback textures for states like unbound, unknown, and missing.
+## StdInputGlyph is a base class for a node which drives the contents of another used
+## to display origin information (i.e. glyph icons and labels). This node does not have
+## any opinions about how to display the information, it just provides the hooks and
+## configuration needed to do so.
 ##
 
 @tool
 class_name StdInputGlyph
-extends Node
+extends Control
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
@@ -52,48 +52,29 @@ const Signals := preload("../event/signal.gd")
 ## device type when determining which glyph set to display for an origin.
 @export var device_type_override: StdSettingsPropertyInt = null
 
-@export_group("Targets")
-
-@export_subgroup("Origin data")
-
-## target is a node path to a `Control` element which this node will update with the
-## latest bound origin label information.
-@export var target: NodePath = ".."
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _slot: StdInputSlot = null
 
-@onready var _target: Control = get_node_or_null(target)
-
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	Signals.disconnect_safe(
-		_slot.action_configuration_changed, _on_configuration_changed
-	)
-	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
-
-	(
-		Signals
-		. disconnect_safe(
-			device_type_override.value_changed,
-			_on_device_type_override_value_changed,
-		)
-	)
-
-
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
+
 	assert(action, "invalid config; missing action")
 	assert(action_set is StdInputActionSet, "invalid config; missing action set")
-	assert(_target is Control, "invalid config; missing target node")
 
 	player_id = player_id  # Trigger '_slot' update.
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
 
-	Signals.connect_safe(_slot.action_configuration_changed, _on_configuration_changed)
-	Signals.connect_safe(_slot.device_activated, _on_device_activated)
+	# NOTE: Defer connection so that subclasses can do their setup in '_ready' first.
+
+	Signals.connect_safe(
+		_slot.action_configuration_changed, _handle_update, CONNECT_DEFERRED
+	)
+	Signals.connect_safe(_slot.device_activated, _handle_update, CONNECT_DEFERRED)
 
 	assert(
 		device_type_override is StdSettingsPropertyInt,
@@ -103,35 +84,73 @@ func _ready() -> void:
 		Signals
 		. connect_safe(
 			device_type_override.value_changed,
-			_on_device_type_override_value_changed,
+			_handle_update,
+			CONNECT_DEFERRED,
 		)
 	)
 
-	# Initialize targets on first ready.
-	_update_target()
+	_handle_update()
+
+
+func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		return
+
+	Signals.disconnect_safe(_slot.action_configuration_changed, _handle_update)
+	Signals.disconnect_safe(_slot.device_activated, _handle_update)
+
+	(
+		Signals
+		. disconnect_safe(
+			device_type_override.value_changed,
+			_handle_update,
+		)
+	)
+
+
+func _get_configuration_warnings() -> PackedStringArray:
+	var warnings := PackedStringArray()
+
+	if not action_set is StdInputActionSet:
+		warnings.append("missing action set")
+
+	elif not action:
+		warnings.append("missing action")
+
+	elif not (
+		action in action_set.actions_analog_1d
+		or action in action_set.actions_analog_2d
+		or action in action_set.actions_digital
+		or action == action_set.action_absolute_mouse
+	):
+		warnings.append("invalid action; not in action set")
+
+	elif player_id < 0:
+		warnings.append("invalid action; missing player")
+
+	elif not device_type_override is StdSettingsPropertyInt:
+		warnings.append("missing device type override")
+
+	return warnings
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _handle_update(_device: StdInputDevice = null) -> void:
+	var has_contents: bool = _update_glyph()
+	glyph_updated.emit(has_contents)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _update_target() -> bool:
+## _update_glyph should be overridden by a subclass to actually enact the content
+## changes required. The return value should indicate whether the contents are populated
+## so that consumers can react to changes.
+##
+## NOTE: The `glyph_updated` signal will automatically be emitted after this method is
+## called.
+func _update_glyph() -> bool:
 	assert(false, "unimplemented")
 	return false
-
-
-# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
-
-
-func _on_configuration_changed() -> void:
-	var has_contents: bool = _update_target()
-	glyph_updated.emit(has_contents)
-
-
-func _on_device_activated(_device: StdInputDevice) -> void:
-	var has_contents: bool = _update_target()
-	glyph_updated.emit(has_contents)
-
-
-func _on_device_type_override_value_changed() -> void:
-	var has_contents: bool = _update_target()
-	glyph_updated.emit(has_contents)
