@@ -59,7 +59,7 @@ var _slot: StdInputSlot = null
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _ready() -> void:
+func _enter_tree() -> void:
 	if Engine.is_editor_hint():
 		return
 
@@ -68,6 +68,22 @@ func _ready() -> void:
 
 	player_id = player_id  # Trigger '_slot' update.
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
+
+
+func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		return
+
+	Signals.disconnect_safe(
+		_slot.action_configuration_changed, _on_action_configuration_changed
+	)
+	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
+	Signals.disconnect_safe(device_type_override.value_changed, _handle_update)
+
+
+func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 
 	# NOTE: Defer connection so that subclasses can do their setup in '_ready' first.
 
@@ -95,17 +111,6 @@ func _ready() -> void:
 	)
 
 	_handle_update()
-
-
-func _exit_tree() -> void:
-	if Engine.is_editor_hint():
-		return
-
-	Signals.disconnect_safe(
-		_slot.action_configuration_changed, _on_action_configuration_changed
-	)
-	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
-	Signals.disconnect_safe(device_type_override.value_changed, _handle_update)
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -148,7 +153,7 @@ func _handle_update() -> void:
 ## _action_configuration_changed can be overridden by a subclass to react to changes to
 ## the specified player's action configuration.
 ##
-## NOTE: This will be called after the glyph is updated.
+## NOTE: This will be called *before* the glyph is updated.
 func _action_configuration_changed() -> void:
 	pass
 
@@ -156,7 +161,7 @@ func _action_configuration_changed() -> void:
 ## _device_activated can be overridden by a subclass to react to changes to the
 ## specified player's input device.
 ##
-## NOTE: This will be called after the glyph is updated.
+## NOTE: This will be called *before* the glyph is updated.
 func _device_activated(_device: StdInputDevice) -> void:
 	pass
 
@@ -176,10 +181,10 @@ func _update_glyph() -> bool:
 
 
 func _on_action_configuration_changed() -> void:
-	_handle_update()
 	_action_configuration_changed()
+	_handle_update()
 
 
 func _on_device_activated(device: StdInputDevice) -> void:
-	_handle_update()
 	_device_activated(device)
+	_handle_update()
