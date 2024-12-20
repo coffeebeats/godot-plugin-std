@@ -71,10 +71,15 @@ func _ready() -> void:
 
 	# NOTE: Defer connection so that subclasses can do their setup in '_ready' first.
 
-	Signals.connect_safe(
-		_slot.action_configuration_changed, _handle_update, CONNECT_DEFERRED
+	(
+		Signals
+		. connect_safe(
+			_slot.action_configuration_changed,
+			_on_action_configuration_changed,
+			CONNECT_DEFERRED,
+		)
 	)
-	Signals.connect_safe(_slot.device_activated, _handle_update, CONNECT_DEFERRED)
+	Signals.connect_safe(_slot.device_activated, _on_device_activated, CONNECT_DEFERRED)
 
 	assert(
 		device_type_override is StdSettingsPropertyInt,
@@ -96,16 +101,11 @@ func _exit_tree() -> void:
 	if Engine.is_editor_hint():
 		return
 
-	Signals.disconnect_safe(_slot.action_configuration_changed, _handle_update)
-	Signals.disconnect_safe(_slot.device_activated, _handle_update)
-
-	(
-		Signals
-		. disconnect_safe(
-			device_type_override.value_changed,
-			_handle_update,
-		)
+	Signals.disconnect_safe(
+		_slot.action_configuration_changed, _on_action_configuration_changed
 	)
+	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
+	Signals.disconnect_safe(device_type_override.value_changed, _handle_update)
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -137,12 +137,28 @@ func _get_configuration_warnings() -> PackedStringArray:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _handle_update(_device: StdInputDevice = null) -> void:
+func _handle_update() -> void:
 	var has_contents: bool = _update_glyph()
 	glyph_updated.emit(has_contents)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+
+## _action_configuration_changed can be overridden by a subclass to react to changes to
+## the specified player's action configuration.
+##
+## NOTE: This will be called after the glyph is updated.
+func _action_configuration_changed() -> void:
+	pass
+
+
+## _device_activated can be overridden by a subclass to react to changes to the
+## specified player's input device.
+##
+## NOTE: This will be called after the glyph is updated.
+func _device_activated(_device: StdInputDevice) -> void:
+	pass
 
 
 ## _update_glyph should be overridden by a subclass to actually enact the content
@@ -154,3 +170,16 @@ func _handle_update(_device: StdInputDevice = null) -> void:
 func _update_glyph() -> bool:
 	assert(false, "unimplemented")
 	return false
+
+
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_action_configuration_changed() -> void:
+	_handle_update()
+	_action_configuration_changed()
+
+
+func _on_device_activated(device: StdInputDevice) -> void:
+	_handle_update()
+	_device_activated(device)
