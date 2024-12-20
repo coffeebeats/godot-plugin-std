@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.9.2 (2024-12-20)
+
+## What's Changed
+* refactor(input): remove all display behavior from `StdInputGlyph` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/144
+* fix(input): allow `StdInputGlyph` subclasses to react to configured events by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/146
+* fix(input): reorganize the configuration setup in `StdInputGlyph` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/147
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.1...v1.9.2
+
 ## 1.9.1 (2024-12-19)
 
 ## What's Changed
