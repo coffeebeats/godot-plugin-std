@@ -37,6 +37,11 @@ var _time_since_mouse_motion: float = 0.0
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## get_is_visible returns whether the cursor is currently visible.
+func get_is_visible() -> bool:
+	return _cursor_visible
+
+
 ## hide_cursor hides the cursor and transitions to focus-based navigation. If the cursor
 ## is already hidden, then nothing happens.
 ##
@@ -100,6 +105,12 @@ func unset_hovered(control: Control) -> bool:
 func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 	if not action_sets:
 		return
+
+	print(
+		"std/input/cursor.gd[",
+		get_instance_id(),
+		"]: updating cursor configuration",
+	)
 
 	# First, determine cursor show/hide properties.
 
@@ -259,17 +270,18 @@ func _on_properties_changed() -> void:
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
-		if _hovered:
-			# NOTE: Don't use a deferred call so that the current input event applies
-			# as if the previously-hovered node was already focused.
-			_hovered.grab_focus()
-			unset_hovered(_hovered)
-		else:
-			var focus_target := StdInputCursorFocusHandler.get_focus_target()
-			if focus_target:
-				# NOTE: Use a deferred call here so that the current input event gets
-				# swallowed. That ensures the anchor is focused and not a potential
-				# neighbor (depending on what input triggered the change).
-				focus_target.call_deferred(&"grab_focus")
+		if not get_viewport().gui_get_focus_owner():
+			if _hovered:
+				# NOTE: Don't use a deferred call so that the current input event applies
+				# as if the previously-hovered node was already focused.
+				_hovered.grab_focus()
+				unset_hovered(_hovered)
+			else:
+				var focus_target := StdInputCursorFocusHandler.get_focus_target()
+				if focus_target:
+					# NOTE: Use a deferred call here so that the current input event gets
+					# swallowed. That ensures the anchor is focused and not a potential
+					# neighbor (depending on what input triggered the change).
+					focus_target.call_deferred(&"grab_focus")
 
 	cursor_visibility_changed.emit(_cursor_visible)
