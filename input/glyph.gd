@@ -56,6 +56,15 @@ const Signals := preload("../event/signal.gd")
 
 var _slot: StdInputSlot = null
 
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## update forces the glyph icon to update itself; this should be called after changing
+## the action configuration.
+func update() -> void:
+	_handle_update()
+
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
