@@ -72,9 +72,6 @@ func _enter_tree() -> void:
 	if Engine.is_editor_hint():
 		return
 
-	assert(action, "invalid config; missing action")
-	assert(action_set is StdInputActionSet, "invalid config; missing action set")
-
 	player_id = player_id  # Trigger '_slot' update.
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
 
@@ -119,7 +116,7 @@ func _ready() -> void:
 		)
 	)
 
-	_handle_update()
+	call_deferred(&"_handle_update")
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -152,6 +149,9 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 func _handle_update() -> void:
+	assert(action, "invalid config; missing action")
+	assert(action_set is StdInputActionSet, "invalid config; missing action set")
+
 	var has_contents: bool = _update_glyph()
 	glyph_updated.emit(has_contents)
 
