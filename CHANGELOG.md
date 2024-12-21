@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.3 (2024-12-21)
+
+## What's Changed
+* fix(input): improve cursor visibility and focus handling by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/148
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.2...v1.9.3
+
 ## 1.9.2 (2024-12-20)
 
 ## What's Changed
