@@ -111,6 +111,35 @@ const DEVICE_TYPE_XBOX_ONE := DeviceType.XBOX_ONE
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+# Events
+
+
+## is_matching_event_origin returns whether the provided input event originated from
+## this input device.
+func is_matching_event_origin(event: InputEvent) -> bool:
+	match device_type:
+		DEVICE_TYPE_UNKNOWN:
+			assert(false, "invalid state; missing device type")
+			return false
+		DEVICE_TYPE_KEYBOARD:
+			assert(event.device == device_id, "invalid state; conflicting device ID")
+
+			return event is InputEventKey or event is InputEventMouse
+		DEVICE_TYPE_TOUCH:
+			assert(event.device == device_id, "invalid state; conflicting device ID")
+
+			return (
+				event is InputEventScreenTouch
+				or event is InputEventScreenDrag
+				or event is InputEventGesture
+			)
+		_:
+			return (
+				event.device == device_id
+				and (event is InputEventJoypadButton or event is InputEventJoypadMotion)
+			)
+
+
 # Action sets
 
 
@@ -141,6 +170,15 @@ func load_action_set(action_set: StdInputActionSet) -> bool:
 	action_set_loaded.emit(action_set)
 	action_configuration_changed.emit()
 
+	print(
+		"std/input/device.gd[",
+		get_instance_id(),
+		(
+			"]: device %d (type=%d): loaded action set: %s"
+			% [device_id, device_type, action_set.name]
+		),
+	)
+
 	return true
 
 
@@ -167,6 +205,15 @@ func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	action_set_layer_enabled.emit(layer)
 	action_configuration_changed.emit()
 
+	print(
+		"std/input/device.gd[",
+		get_instance_id(),
+		(
+			"]: device %d (type=%d): enabled action set layer: %s"
+			% [device_id, device_type, layer.name]
+		),
+	)
+
 	return true
 
 
@@ -187,6 +234,15 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 
 	action_set_layer_disabled.emit(layer)
 	action_configuration_changed.emit()
+
+	print(
+		"std/input/device.gd[",
+		get_instance_id(),
+		(
+			"]: device %d (type=%d): disabled action set layer: %s"
+			% [device_id, device_type, layer.name]
+		),
+	)
 
 	return true
 
