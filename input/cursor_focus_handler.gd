@@ -107,6 +107,9 @@ func _ready() -> void:
 		)
 	)
 
+	# Ensure the initial mouse filter state is set.
+	_on_cursor_visibility_changed(_cursor.get_is_visible())
+
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
@@ -124,5 +127,7 @@ func _on_cursor_visibility_changed(visible: bool) -> void:
 	# mouse filter property; see https://github.com/godotengine/godot/issues/56783.
 	if not visible:
 		_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_control.focus_mode = Control.FOCUS_ALL
 	else:
 		_control.mouse_filter = _control_mouse_filter
+		_control.focus_mode = Control.FOCUS_NONE
