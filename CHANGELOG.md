@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.4 (2024-12-21)
+
+## What's Changed
+* fix(input): support fetching glyphs for unbound actions by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/150
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.3...v1.9.4
+
 ## 1.9.3 (2024-12-21)
 
 ## What's Changed

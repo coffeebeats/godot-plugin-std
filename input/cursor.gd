@@ -65,9 +65,6 @@ func set_hovered(control: Control) -> bool:
 	if not control or control == _hovered:
 		return false
 
-	if control.focus_mode != Control.FOCUS_ALL:
-		return false
-
 	assert(_hovered == null, "duplicate hovered node registered")
 	_hovered = control
 
@@ -274,6 +271,7 @@ func _on_properties_changed() -> void:
 			if _hovered:
 				# NOTE: Don't use a deferred call so that the current input event applies
 				# as if the previously-hovered node was already focused.
+				_hovered.focus_mode = Control.FOCUS_ALL
 				_hovered.grab_focus()
 				unset_hovered(_hovered)
 			else:

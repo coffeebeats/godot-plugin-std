@@ -9,9 +9,12 @@ extends StdInputDeviceGlyphs
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Origin := preload("../origin.gd")
+const Binding := preload("../binding.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
+
+## scope is the settings scope in which binding overrides will be stored.
+@export var scope: StdSettingsScope = null
 
 ## glyph_sets defines the list of supported glyph icon sets for any device type.
 ##
@@ -34,7 +37,14 @@ func _get_action_glyph(
 		if not glyph_set.matches(device_type):
 			continue
 
-		for event in InputMap.action_get_events(action):
+		var events: Array[InputEvent]
+		match device_type:
+			StdInputDevice.DEVICE_TYPE_KEYBOARD:
+				events = Binding.get_kbm(scope, action)
+			_:
+				events = Binding.get_joy(scope, action)
+
+		for event in events:
 			var texture := glyph_set.get_origin_glyph(event)
 			if texture:
 				return texture

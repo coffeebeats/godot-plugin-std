@@ -18,9 +18,6 @@ const SteamJoypadMonitor := preload("joypad_monitor.gd")
 ## translations.
 @export var joypad_monitor: StdInputSlot.JoypadMonitor = null
 
-## device_actions is a reference to the Steam-backed `StdInputDeviceActions` component.
-@export var device_actions: StdInputDeviceActions = null
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _glyphs is a mapping from device origin to the loaded texture resource.
@@ -31,7 +28,6 @@ static var _glyphs: Dictionary = {}  # gdlint:ignore=class-definitions-order
 
 func _ready() -> void:
 	assert(joypad_monitor is SteamJoypadMonitor, "invalid state; missing node")
-	assert(device_actions is SteamDeviceActions, "invalid state; missing node")
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -92,9 +88,6 @@ func _list_action_origins(
 	)
 
 	var origins := PackedInt64Array()
-
-	if not device_actions.is_action_set_enabled(slot, action_set):
-		return origins
 
 	var action_set_handle := SteamDeviceActions.get_action_set_handle(action_set)
 	if not action_set_handle:
