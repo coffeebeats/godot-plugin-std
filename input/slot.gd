@@ -44,6 +44,8 @@ const StdInputSlotDeviceHaptics := preload("slot_haptics.gd")
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const GROUP_INPUT_SLOT := &"std/input:slot"
+const PROPERTY_STATUS_ON := StdInputActionSet.PROPERTY_STATUS_ON
+const PROPERTY_STATUS_OFF := StdInputActionSet.PROPERTY_STATUS_OFF
 
 
 ## JoypadMonitor is an abstract inferface for a `Node` which tracks joypad activity
@@ -514,7 +516,7 @@ func _ready() -> void:
 
 		if not _active or not prefer_activate_joypad_on_ready:
 			_activate_device(kbm)
-			cursor.show_cursor()
+			cursor.call_deferred(&"show_cursor")
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -602,7 +604,7 @@ func _connect_joy_device(
 
 	if not _active or (_active == _kbm_device and prefer_activate_joypad_on_ready):
 		_activate_device(joypad)
-		cursor.hide_cursor()
+		cursor.call_deferred(&"hide_cursor")
 
 	return true
 
@@ -704,15 +706,24 @@ func _on_cursor_visibility_changed(visible: bool) -> void:
 
 
 func _on_Self_action_configuration_changed() -> void:
-	var action_sets := _list_action_sets()
+	var action_sets := _list_action_sets(device_id, false)
 
 	_actions = []
 	_cursor_activates_kbm = false
 
+	# NOTE: These must be iterated in forward order so that later action set layers can
+	# override properties set in earlier action sets.
 	for action_set in action_sets:
 		# Update cursor properties.
 
-		_cursor_activates_kbm = _cursor_activates_kbm or action_set.cursor_activates_kbm
+		_cursor_activates_kbm = (
+			false
+			if action_set.cursor_activates_kbm == PROPERTY_STATUS_OFF
+			else (
+				_cursor_activates_kbm
+				or action_set.cursor_activates_kbm == PROPERTY_STATUS_ON
+			)
+		)
 
 		# Update active actions.
 
@@ -728,6 +739,17 @@ func _on_Self_action_configuration_changed() -> void:
 
 	if cursor is StdInputCursor:
 		cursor.update_configuration(action_sets)
+
+	# NOTE: It's possible that removed action set layers had changed the cursor/keyboard
+	# activation state; reconcile that now.
+	if (
+		# The cursor is visible despite the keyboard not being active; a layer was
+		# removed that previously disabled 'cursor_activates_kbm'.
+		_cursor_activates_kbm
+		and device_type != DEVICE_TYPE_KEYBOARD
+		and cursor.get_is_visible()
+	):
+		cursor.call_deferred(&"hide_cursor")
 
 
 func _on_Self_device_activated(device: StdInputDevice) -> void:

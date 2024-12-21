@@ -8,6 +8,20 @@
 class_name StdInputActionSet
 extends Resource
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## PropertyStatus is a type which represents a boolean value that can also be inherited.
+## This allows distinguishing between `false` and "not set".
+enum PropertyStatus {
+	INHERIT = 0,
+	ON = 1,
+	OFF = 2,
+}
+
+const PROPERTY_STATUS_INHERIT := PropertyStatus.INHERIT
+const PROPERTY_STATUS_ON := PropertyStatus.ON
+const PROPERTY_STATUS_OFF := PropertyStatus.OFF
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## name is the name of the identifier for the action set. It must be unique among all
@@ -50,13 +64,13 @@ extends Resource
 @export var cursor_captured: bool = false
 
 ## cursor_activates_kbm defines whether revealing the cursor will activate the keyboard
-## and mouse input device. This is likely desired for menu-based action sets, but should
-## probably be disabled during gameplay due to the prevalence of gyro controls (which
-## are simulated as mouse input).
+## and mouse input device (defaults to "off" / not enabled). This is likely desired for
+## menu-based action sets, but should probably be disabled during gameplay due to the
+## prevalence of gyro controls (which are simulated as mouse input).
 ##
 ## NOTE: This property will be true if the current action set or any activated action
 ## set layer enables it.
-@export var cursor_activates_kbm: bool = false
+@export var cursor_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
 
 @export_subgroup("Hide")
 
