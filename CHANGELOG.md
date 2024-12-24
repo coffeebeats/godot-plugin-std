@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.5 (2024-12-24)
+
+## What's Changed
+* refactor(input): make glyph type selection in `StdInputSlot` and `StdInputDevice` more flexible by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/152
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.4...v1.9.5
+
 ## 1.9.4 (2024-12-21)
 
 ## What's Changed
