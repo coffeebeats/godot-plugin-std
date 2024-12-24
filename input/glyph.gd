@@ -22,6 +22,12 @@ signal glyph_updated(has_contents: bool)
 
 const Signals := preload("../event/signal.gd")
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+const DeviceType := StdInputDevice.DeviceType
+const DEVICE_TYPE_KEYBOARD := StdInputDevice.DEVICE_TYPE_KEYBOARD
+const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 @export_group("Binding")
@@ -48,8 +54,8 @@ const Signals := preload("../event/signal.gd")
 
 @export_subgroup("Device")
 
-## device_type_override is a settings property which specifies an override for the
-## device type when determining which glyph set to display for an origin.
+## device_type_override is an optional settings property which specifies an override for
+## the device type when determining which glyph set to display for an origin.
 @export var device_type_override: StdSettingsPropertyInt = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -72,7 +78,7 @@ func _enter_tree() -> void:
 	if Engine.is_editor_hint():
 		return
 
-	player_id = player_id  # Trigger '_slot' update.
+	player_id = player_id # Trigger '_slot' update.
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
 
 
@@ -95,7 +101,7 @@ func _ready() -> void:
 
 	(
 		Signals
-		. connect_safe(
+		.connect_safe(
 			_slot.action_configuration_changed,
 			_on_action_configuration_changed,
 			CONNECT_DEFERRED,
@@ -103,18 +109,15 @@ func _ready() -> void:
 	)
 	Signals.connect_safe(_slot.device_activated, _on_device_activated, CONNECT_DEFERRED)
 
-	assert(
-		device_type_override is StdSettingsPropertyInt,
-		"invalid state; missing settings property"
-	)
-	(
-		Signals
-		. connect_safe(
-			device_type_override.value_changed,
-			_handle_update,
-			CONNECT_DEFERRED,
+	if device_type_override is StdSettingsPropertyInt:
+		(
+			Signals
+			.connect_safe(
+				device_type_override.value_changed,
+				_handle_update,
+				CONNECT_DEFERRED,
+			)
 		)
-	)
 
 	call_deferred(&"_handle_update")
 
@@ -139,9 +142,6 @@ func _get_configuration_warnings() -> PackedStringArray:
 	elif player_id < 0:
 		warnings.append("invalid action; missing player")
 
-	elif not device_type_override is StdSettingsPropertyInt:
-		warnings.append("missing device type override")
-
 	return warnings
 
 
@@ -152,7 +152,9 @@ func _handle_update() -> void:
 	assert(action, "invalid config; missing action")
 	assert(action_set is StdInputActionSet, "invalid config; missing action set")
 
-	var has_contents: bool = _update_glyph()
+	var device_type := _get_device_type()
+	var has_contents: bool = _update_glyph(device_type)
+
 	glyph_updated.emit(has_contents)
 
 
@@ -175,13 +177,24 @@ func _device_activated(_device: StdInputDevice) -> void:
 	pass
 
 
+## _get_device_type can be overridden by a subclass to change how this instance
+## determines which device type to request glyph information for.
+func _get_device_type() -> DeviceType:
+	if device_type_override:
+		var property_value: DeviceType = device_type_override.get_value()
+		if property_value != DEVICE_TYPE_UNKNOWN:
+			return property_value
+
+	return _slot.device_type
+
+
 ## _update_glyph should be overridden by a subclass to actually enact the content
 ## changes required. The return value should indicate whether the contents are populated
 ## so that consumers can react to changes.
 ##
 ## NOTE: The `glyph_updated` signal will automatically be emitted after this method is
 ## called.
-func _update_glyph() -> bool:
+func _update_glyph(_device_type: DeviceType) -> bool:
 	assert(false, "unimplemented")
 	return false
 
