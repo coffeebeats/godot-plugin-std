@@ -95,10 +95,6 @@ class JoypadMonitor:
 
 @export_group("Properties")
 
-## glyph_type_override_property is a settings property which specifies an override for
-## the device type when determining which glyph set to display for an origin.
-@export var glyph_type_override_property: StdSettingsPropertyInt = null
-
 ## haptics_disabled_property is a settings property which controls whether haptics are
 ## completely disabled.
 @export var haptics_disabled_property: StdSettingsPropertyBool = null
@@ -218,6 +214,12 @@ func get_active_device() -> StdInputDevice:
 	return _active
 
 
+## get_last_active_joypad_device returns the last joypad device that was used. If no
+## joypad device has been activated, then this will return `null`.
+func get_last_active_joypad_device() -> StdInputDevice:
+	return _last_active_joypad
+
+
 ## get_connected_devices returns a list of all connected devices. If `include_keyboard`
 ## is `true` (the default), then the keyboard and mouse `StdInputDevice` will be
 ## included.
@@ -251,22 +253,11 @@ func get_action_glyph(
 ) -> Texture2D:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
-	# NOTE: Shadowing here prevents using wrong type.
-	@warning_ignore("SHADOWED_VARIABLE")
-	@warning_ignore("CONFUSABLE_LOCAL_USAGE")
-	var device_type: DeviceType = device_type
-
-	var device_type_property_value: DeviceType = (
-		glyph_type_override_property.get_value()
-	)
-	if device_type_property_value != DEVICE_TYPE_UNKNOWN:
-		device_type = device_type_property_value
-
-	if device_type_override != DEVICE_TYPE_UNKNOWN:
-		device_type = device_type_override
+	if device_type_override == DEVICE_TYPE_UNKNOWN:
+		device_type_override = device_type
 
 	return glyphs.get_action_glyph(
-		device_id, device_type, action_set, action, target_size
+		device_id, device_type_override, action_set, action, target_size
 	)
 
 
@@ -279,21 +270,18 @@ func get_action_origin_label(
 ) -> String:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
 
-	# NOTE: Shadowing here prevents using wrong type.
-	@warning_ignore("SHADOWED_VARIABLE")
-	@warning_ignore("CONFUSABLE_LOCAL_USAGE")
-	var device_type: DeviceType = device_type
+	if device_type_override == DEVICE_TYPE_UNKNOWN:
+		device_type_override = device_type
 
-	var device_type_property_value: DeviceType = (
-		glyph_type_override_property.get_value()
+	return (
+		glyphs
+		. get_action_origin_label(
+			device_id,
+			device_type_override,
+			action_set,
+			action,
+		)
 	)
-	if device_type_property_value != DEVICE_TYPE_UNKNOWN:
-		device_type = device_type_property_value
-
-	if device_type_override != DEVICE_TYPE_UNKNOWN:
-		device_type = device_type_override
-
-	return glyphs.get_action_origin_label(device_id, device_type, action_set, action)
 
 
 # Haptics
@@ -466,10 +454,6 @@ func _input(event: InputEvent) -> void:
 
 
 func _ready() -> void:
-	assert(
-		glyph_type_override_property is StdSettingsPropertyInt,
-		"invalid config; missing property",
-	)
 	assert(
 		haptics_disabled_property is StdSettingsPropertyBool,
 		"invalid config; missing property",
