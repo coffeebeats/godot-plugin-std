@@ -31,11 +31,7 @@ func _get_action_glyph(
 
 	match device_type:
 		DEVICE_TYPE_KEYBOARD:
-			if not slot._kbm_device:
-				assert(not slot.claim_kbm_input, "invalid state; missing device")
-				return null
-
-			var device := slot._kbm_device.device_id
+			var device := slot._kbm_device.device_id if slot._kbm_device else -1
 
 			assert(
 				slot.glyphs_kbm is StdInputDeviceGlyphs,
@@ -55,11 +51,9 @@ func _get_action_glyph(
 			)
 
 		_:
-			# Cannot display glyphs for a joypad that's never been connected.
-			if not slot._last_active_joypad:
-				return null
-
-			var device := slot._last_active_joypad.device_id
+			var device := (
+				slot._last_active_joypad.device_id if slot._last_active_joypad else -1
+			)
 
 			assert(
 				slot.glyphs_joy is StdInputDeviceGlyphs,
@@ -91,11 +85,7 @@ func _get_action_origin_label(
 
 	match device_type:
 		DEVICE_TYPE_KEYBOARD:
-			if not slot._kbm_device:
-				assert(not slot.claim_kbm_input, "invalid state; missing device")
-				return ""
-
-			var device := slot._kbm_device.device_id
+			var device := slot._kbm_device.device_id if slot._kbm_device else -1
 
 			assert(
 				slot.glyphs_kbm is StdInputDeviceGlyphs,
@@ -114,11 +104,9 @@ func _get_action_origin_label(
 			)
 
 		_:
-			# Cannot display glyphs for a joypad that's never been connected.
-			if not slot._last_active_joypad:
-				return ""
-
-			var device := slot._last_active_joypad.device_id
+			var device := (
+				slot._last_active_joypad.device_id if slot._last_active_joypad else -1
+			)
 
 			assert(
 				slot.glyphs_joy is StdInputDeviceGlyphs,

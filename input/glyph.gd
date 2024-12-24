@@ -78,7 +78,7 @@ func _enter_tree() -> void:
 	if Engine.is_editor_hint():
 		return
 
-	player_id = player_id # Trigger '_slot' update.
+	player_id = player_id  # Trigger '_slot' update.
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
 
 
@@ -101,7 +101,7 @@ func _ready() -> void:
 
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			_slot.action_configuration_changed,
 			_on_action_configuration_changed,
 			CONNECT_DEFERRED,
@@ -112,7 +112,7 @@ func _ready() -> void:
 	if device_type_override is StdSettingsPropertyInt:
 		(
 			Signals
-			.connect_safe(
+			. connect_safe(
 				device_type_override.value_changed,
 				_handle_update,
 				CONNECT_DEFERRED,
