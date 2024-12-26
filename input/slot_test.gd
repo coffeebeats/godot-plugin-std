@@ -179,7 +179,6 @@ func before_each() -> void:
 	# Construct input slot scene.
 
 	slot = StdInputSlot.new()
-	slot.glyph_type_override_property = StdSettingsPropertyInt.new()
 	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
 	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
 
