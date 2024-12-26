@@ -18,7 +18,7 @@ const Binding := preload("../binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
+const DeviceType := StdInputDevice.DeviceType # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -52,13 +52,13 @@ const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: StdInputActionSet = null  # gdlint: ignore=class-definitions-order
+static var _action_set: StdInputActionSet = null # gdlint: ignore=class-definitions-order
 
 ## _action_set_layers is the stack of currently active action set layers.
-static var _action_set_layers: Array[StdInputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length
+static var _action_set_layers: Array[StdInputActionSetLayer] = [] # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _bindings maps origins (integers) to the actions they are bound to.
-static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
+static var _bindings: Dictionary = {} # gdlint: ignore=class-definitions-order
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -246,15 +246,25 @@ func _get_action_origins(
 	var origins := PackedInt64Array()
 
 	for event in (
-		Binding.get_kbm(scope, action)
+		[
+			Binding.get_kbm(scope, action, Binding.BINDING_INDEX_PRIMARY),
+			Binding.get_kbm(scope, action, Binding.BINDING_INDEX_SECONDARY),
+		]
 		if device_type == DeviceType.KEYBOARD
-		else Binding.get_joy(scope, action)
+		else [
+			Binding.get_joy(scope, action, Binding.BINDING_INDEX_PRIMARY),
+			Binding.get_joy(scope, action, Binding.BINDING_INDEX_SECONDARY),
+		]
 	):
+		if not event:
+			continue
+
 		var value_encoded: int = Origin.encode(event)
 		if value_encoded < 0:
 			continue
 
-		origins.append(value_encoded)
+		if value_encoded not in origins:
+			origins.append(value_encoded)
 
 	return origins
 
