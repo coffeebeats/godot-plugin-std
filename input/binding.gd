@@ -24,127 +24,146 @@ const DEVICE_ID_ALL := -1
 const _CATEGORY_JOY := &"joy"
 const _CATEGORY_KBM := &"kbm"
 
+## BindingIndex is an enumeration of "ranks"/"indices" in which a binding can occupy.
+enum BindingIndex {
+	PRIMARY = 0,
+	SECONDARY = 1,
+	TERTIARY = 2,
+}
+
+## BINDING_INDEX_PRIMARY is the primary device type-specific binding for an action.
+const BINDING_INDEX_PRIMARY := BindingIndex.PRIMARY
+
+## BINDING_INDEX_SECONDARY is the secondary device type-specific binding for an action.
+const BINDING_INDEX_SECONDARY := BindingIndex.SECONDARY
+
+## BINDING_INDEX_TERTIARY is the tertiary device type-specific binding for an action.
+const BINDING_INDEX_TERTIARY := BindingIndex.TERTIARY
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_joy reads the list of stored joypad-typed input events for the provided action.
-## Bound events are first read from the provided scope and then from project settings,
-## taking the first set found. If no values are found an empty array is returned.
+## get_joy reads a stored joypad-typed input event for the provided action at the
+## specified binding index/rank. Bound events are first read from the provided scope and
+## then from project settings, taking the first set found. If no values are found `null`
+## is returned.
+##
+## NOTE: An existing binding does not guarantee a higher-priority `BindingIndex` is
+## bound. Additionally, it's possible that the returned origin is bound to the same
+## action at a different `BindingIndex` rank.
 static func get_joy(
 	scope: StdSettingsScope,
 	action: StringName,
-) -> Array[InputEvent]:
-	var events := _get_events(
+	index: BindingIndex = BINDING_INDEX_PRIMARY,
+) -> InputEvent:
+	var event := _get_event_from_scope(
 		scope,
 		_CATEGORY_JOY,
 		action,
 		Origin.bitmask_indices_joy,
+		index,
 	)
 
-	# This library does not support storing specific device IDs, so set a "match all"
-	# device ID for returned events.
-	for event in events:
-		event.device = DEVICE_ID_ALL
+	if not event:
+		event = _get_event_from_project_settings(
+			action, Origin.bitmask_indices_joy, index,
+		)
 
-	return events
+	if not event:
+		return null
+	
+	# This library does not support storing specific device IDs, so set a "match
+	# all" device ID for returned events.
+	event.device = DEVICE_ID_ALL
+
+	return event
 
 
-## get_kbm reads the list of stored keyboard+mouse-typed input events for the provided
-## action. Bound events are first read from the provided scope and then from project
-## settings, taking the first set found. If no values are found an empty array is
-## returned.
+## get_kbm reads a stored keyboard+mouse-typed input event for the provided action at
+## the specified binding index/rank. Bound events are first read from the provided scope
+## and then from project settings, taking the first set found. If no values are found
+## `null` is returned.
+##
+## NOTE: An existing binding does not guarantee a higher-priority `BindingIndex` is
+## bound. Additionally, it's possible that the returned origin is bound to the same
+## action at a different `BindingIndex` rank.
 static func get_kbm(
 	scope: StdSettingsScope,
 	action: StringName,
-) -> Array[InputEvent]:
-	var events := _get_events(
+	index: BindingIndex = BINDING_INDEX_PRIMARY,
+) -> InputEvent:
+	var event := _get_event_from_scope(
 		scope,
 		_CATEGORY_KBM,
 		action,
 		Origin.bitmask_indices_kbm,
+		index,
 	)
 
-	# This library does not support storing specific device IDs, so set a "match all"
-	# device ID for returned events.
-	for event in events:
-		event.device = DEVICE_ID_ALL
+	if not event:
+		event = _get_event_from_project_settings(
+			action, Origin.bitmask_indices_kbm, index,
+		)
 
-	return events
+	if not event:
+		return null
+
+	# This library does not support storing specific device IDs, so set a "match
+	# all" device ID for returned events.
+	event.device = DEVICE_ID_ALL
+	
+	return event
 
 
-## set_joy stores the provided input events as bindings for the specified action. Only
-## joypad-typed events will be stored. If `events` is null or empty, the bindings will
-## be erased.
+## set_joy stores the provided input event as a binding for the specified action at the
+## specified binding index/rank. Only joypad-typed events will be stored. If `event` is
+## `null`, the binding will be erased.
+##
+## NOTE: Each `BindingIndex` rank is independent of one another; duplicates must be
+## managed by the caller.
 static func set_joy(
 	scope: StdSettingsScope,
 	action: StringName,
-	events: Array[InputEvent],
+	event: InputEvent,
+	index: BindingIndex = BINDING_INDEX_PRIMARY,
 ) -> bool:
-	if events.any(func(e): return e.device != DEVICE_ID_ALL):
+	if event and event.device != DEVICE_ID_ALL:
 		assert(false, "invalid input; unsupport device ID found")
 		return false
 
-	return _set_events(
+	return _set_event_on_scope(
 		scope,
 		_CATEGORY_JOY,
 		action,
 		Origin.bitmask_indices_joy,
-		events,
+		event,
+		index,
 	)
 
-
-## set_kbm stores the provided input events as bindings for the specified action. Only
-## keyboard and mouse-typed events will be stored. If `events` is null or empty, the
-## bindings will be erased.
+## set_kbm stores the provided input event as a binding for the specified action at the
+## specified binding index/rank. Only keyboard and mouse-typed events will be stored.
+## If `event` is `null`, the binding will be erased.
+##
+## NOTE: Each `BindingIndex` rank is independent of one another; duplicates must be
+## managed by the caller.
 static func set_kbm(
 	scope: StdSettingsScope,
 	action: StringName,
-	events: Array[InputEvent],
+	event: InputEvent,
+	index: BindingIndex = BINDING_INDEX_PRIMARY,
 ) -> bool:
-	if events.any(func(e): return e.device != DEVICE_ID_ALL):
+	if event and event.device != DEVICE_ID_ALL:
 		assert(false, "invalid input; unsupport device ID found")
 		return false
 
-	return _set_events(
+	return _set_event_on_scope(
 		scope,
 		_CATEGORY_KBM,
 		action,
 		Origin.bitmask_indices_kbm,
-		events,
+		event,
+		index,
 	)
-
-
-## store_joy adds the provided input event as a binding for the specified action, if it
-## does not yet exist. Only joypad-typed events will be stored.
-static func store_joy(
-	scope: StdSettingsScope,
-	action: StringName,
-	event: InputEvent,
-) -> bool:
-	if not event:
-		return false
-
-	var events := get_joy(scope, action)
-	events.append(event)
-
-	return set_joy(scope, action, events)
-
-
-## store_kbm adds the provided input event as a binding for the specified action, if it
-## does not yet exist. Only keyboard and mouse-typed events will be stored.
-static func store_kbm(
-	scope: StdSettingsScope,
-	action: StringName,
-	event: InputEvent,
-) -> bool:
-	if not event:
-		return false
-
-	var events := get_kbm(scope, action)
-	events.append(event)
-
-	return set_kbm(scope, action, events)
-
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -159,87 +178,90 @@ func _init() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-static func _get_events(
+static func _get_event_from_scope(
 	scope: StdSettingsScope,
 	category: StringName,
 	action: StringName,
 	origin_bitmask_indices: PackedInt64Array,
-) -> Array[InputEvent]:
+	index: BindingIndex,
+) -> InputEvent:
 	assert(scope is StdSettingsScope, "missing input: scope")
 	assert(action, "missing input: action name")
+	assert(index >= 0, "invalid argument: unsupported index")
 
-	var events: Array[InputEvent] = []
+	var value_encoded := scope.config.get_int(category, action + "/%d" % index, -1)
+	if value_encoded == -1:
+		return null
 
-	var values := scope.config.get_int_list(category, action, PackedInt64Array())
+	if not Origin.is_encoded_value_type(value_encoded, origin_bitmask_indices):
+		assert(false, "invalid input; wrong event type")
+		return null
 
-	if values:
-		var seen := PackedInt64Array()
+	return Origin.decode(value_encoded)
 
-		for value_encoded in values:
-			# NOTE: This makes this function O(n^2), but array sizes will be small and
-			# integer comparisons are fast.
-			# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-			if seen.has(value_encoded):
-				continue
+static func _get_event_from_project_settings(
+	action: StringName,
+	origin_bitmask_indices: PackedInt64Array,
+	index: BindingIndex,
+) -> InputEvent:
+	assert(action, "missing input: action name")
+	assert(index >= 0, "invalid argument: unsupported index")
 
-			if not Origin.is_encoded_value_type(value_encoded, origin_bitmask_indices):
-				assert(false, "invalid input; wrong event type")
-				continue
+	var info = ProjectSettings.get_setting_with_override(&"input/" + action)
+	if not info is Dictionary:
+		return null
 
-			var event := Origin.decode(value_encoded)
-			if not event:
-				continue
+	var i: int = 0
+	for event in info["events"]:
+		# NOTE: This is a less efficient means of checking compatibility, but
+		# it maintains consistency with other input event stores.
+		if not (
+			Origin
+			.is_encoded_value_type(
+				Origin.encode(event),
+				origin_bitmask_indices,
+			)
+		):
+			continue
 
-			seen.append(value_encoded)
-			events.append(event)
-	else:
-		var info = ProjectSettings.get_setting_with_override(&"input/" + action)
-		if info is Dictionary:
-			for event in info["events"]:
-				# NOTE: This is a less efficient means of checking compatibility, but
-				# it maintains consistency with other input event stores.
-				if not (
-					Origin
-					. is_encoded_value_type(
-						Origin.encode(event),
-						origin_bitmask_indices,
-					)
-				):
-					continue
+		## NOTE: This assumes that project settings are ordered according to
+		## `BindingIndex` rank.
+		if i == index:
+			return event
 
-				events.append(event)
+		i += 1
 
-	return events
+	return null
 
-
-static func _set_events(
+static func _set_event_on_scope(
 	scope: StdSettingsScope,
 	category: StringName,
 	action: StringName,
 	origin_bitmask_indices: PackedInt64Array,
-	events: Array[InputEvent],
+	event: InputEvent,
+	index: BindingIndex,
 ) -> bool:
 	assert(scope is StdSettingsScope, "missing input: scope")
 	assert(action, "missing input: action name")
+	assert(index >= 0, "invalid argument: unsupported index")
 
-	var next := PackedInt64Array()
+	action = action + "/%d" % index
 
-	if events and events is Array[InputEvent]:
-		for event in events:
-			var value_encoded := Origin.encode(event)
-			if value_encoded < 0 or value_encoded in next:
-				continue
+	if event == null:
+		return scope.config.erase(category, action)
 
-			if not (
-				Origin
-				. is_encoded_value_type(
-					value_encoded,
-					origin_bitmask_indices,
-				)
-			):
-				assert(false, "invalid input; wrong event type")
-				continue
+	var value_encoded := Origin.encode(event)
+	if value_encoded < 0:
+		return false
 
-			next.append(value_encoded)
+	if not (
+		Origin
+		.is_encoded_value_type(
+			value_encoded,
+			origin_bitmask_indices,
+		)
+	):
+		assert(false, "invalid input; wrong event type")
+		return false
 
-	return scope.config.set_int_list(category, action, next)
+	return scope.config.set_int(category, action, value_encoded)
