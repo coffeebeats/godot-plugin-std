@@ -91,9 +91,9 @@ static func bind_action(
 				):
 					continue
 
-				var c := scope.config.set_int(category, key, value_encoded)
-
-				changed = (c or changed)
+				changed = (
+					scope.config.set_int(category, key, value_encoded) or changed
+				)
 
 				continue
 
