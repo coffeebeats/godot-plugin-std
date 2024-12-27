@@ -14,7 +14,7 @@ extends StdInputDeviceActions
 
 const Signals := preload("../../event/signal.gd")
 const Origin := preload("../origin.gd")
-const Binding := preload("../binding.gd")
+const Binding := preload("binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -217,7 +217,7 @@ func _apply_action_set(
 				assert(false, "invalid state; unknown action")
 				InputMap.add_action(action)
 
-			for origin in _get_action_origins(device, device_type, action):
+			for origin in _get_action_origins(device, device_type, action_set, action):
 				_bind_action_to_origin(device, action_set, action, origin)
 
 
@@ -242,26 +242,35 @@ func _bind_action_to_origin(
 
 
 func _get_action_origins(
-	_device: int, device_type: DeviceType, action: StringName
+	_device: int,
+	device_type: DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
 ) -> PackedInt64Array:
 	var origins := PackedInt64Array()
 
-	for event in (
-		[
-			Binding.get_kbm(scope, action, Binding.BINDING_INDEX_PRIMARY),
-			Binding.get_kbm(scope, action, Binding.BINDING_INDEX_SECONDARY),
-		]
-		if device_type == DeviceType.KEYBOARD
-		else [
-			Binding.get_joy(scope, action, Binding.BINDING_INDEX_PRIMARY),
-			Binding.get_joy(scope, action, Binding.BINDING_INDEX_SECONDARY),
-		]
-	):
+	for index in Binding.BindingIndex.values():
+		var event := (
+			Binding
+			. get_action_binding(
+				scope,
+				action_set,
+				action,
+				(
+					StdInputDevice.DEVICE_TYPE_KEYBOARD
+					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
+					else StdInputDevice.DEVICE_TYPE_GENERIC
+				),
+				index,
+			)
+		)
+
 		if not event:
 			continue
 
 		var value_encoded: int = Origin.encode(event)
 		if value_encoded < 0:
+			assert(false, "invalid state; failed to encode origin")
 			continue
 
 		if value_encoded not in origins:
