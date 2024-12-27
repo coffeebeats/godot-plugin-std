@@ -16,7 +16,7 @@ const Origin := preload("../origin.gd")
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## BindingIndex is an enumeration of "ranks"/"indices" in which a binding can occupy.
-enum BindingIndex {
+enum BindingIndex { # gdlint:ignore=class-definitions-order
 	PRIMARY = 0,
 	SECONDARY = 1,
 }

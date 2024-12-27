@@ -126,7 +126,7 @@ class TestBindAction:
 		# When: The action is bound to the default event.
 		var changed := (
 			Binding
-			.bind_action(
+			. bind_action(
 				scope,
 				action_set,
 				action,
@@ -183,7 +183,7 @@ class TestBindAction:
 		)
 		var changed := (
 			Binding
-			.bind_action(
+			. bind_action(
 				scope,
 				action_set,
 				action,
@@ -228,7 +228,7 @@ class TestBindAction:
 		)
 		var changed := (
 			Binding
-			.bind_action(
+			. bind_action(
 				scope,
 				action_set,
 				action,
@@ -242,7 +242,7 @@ class TestBindAction:
 		# When: The secondary index is bound to the same origin.
 		changed = (
 			Binding
-			.bind_action(
+			. bind_action(
 				scope,
 				action_set,
 				action,
@@ -257,7 +257,7 @@ class TestBindAction:
 		assert_null(
 			(
 				Binding
-				.get_action_binding(
+				. get_action_binding(
 					scope,
 					action_set,
 					action,
@@ -272,7 +272,7 @@ class TestBindAction:
 			event,
 			(
 				Binding
-				.get_action_binding(
+				. get_action_binding(
 					scope,
 					action_set,
 					action,
@@ -295,7 +295,6 @@ class TestBindAction:
 		var action1 := &"test-action1"
 		var action2 := &"test-action2"
 
-
 		# Given: An action set with two digital actions.
 		action_set.actions_digital.append(action1)
 		action_set.actions_digital.append(action2)
@@ -312,7 +311,7 @@ class TestBindAction:
 		)
 		var changed := (
 			Binding
-			.bind_action(
+			. bind_action(
 				scope,
 				action_set,
 				action1,
@@ -326,7 +325,7 @@ class TestBindAction:
 		# When: The second action is bound to that same origin.
 		changed = (
 			Binding
-			.bind_action(
+			. bind_action(
 				scope,
 				action_set,
 				action2,
@@ -341,7 +340,7 @@ class TestBindAction:
 		assert_null(
 			(
 				Binding
-				.get_action_binding(
+				. get_action_binding(
 					scope,
 					action_set,
 					action1,
@@ -356,7 +355,7 @@ class TestBindAction:
 			event,
 			(
 				Binding
-				.get_action_binding(
+				. get_action_binding(
 					scope,
 					action_set,
 					action2,
@@ -365,6 +364,7 @@ class TestBindAction:
 				)
 			),
 		)
+
 
 class TestResetAction:
 	extends TestBindingBase
@@ -403,7 +403,8 @@ class TestResetAction:
 
 		# When: The action's binding is reset.
 		var changed := (
-			Binding.reset_action(
+			Binding
+			. reset_action(
 				scope,
 				action_set,
 				action,
@@ -459,7 +460,7 @@ class TestResetAction:
 		)
 		var changed := (
 			Binding
-			.bind_action(
+			. bind_action(
 				scope,
 				action_set,
 				action,
@@ -472,7 +473,8 @@ class TestResetAction:
 
 		# When: The action's binding is reset.
 		changed = (
-			Binding.reset_action(
+			Binding
+			. reset_action(
 				scope,
 				action_set,
 				action,
@@ -497,6 +499,7 @@ class TestResetAction:
 	# func test_unbinds_default_origin_from_other_actions_in_action_set() -> void:
 	# 	pass
 
+
 class TestResetAllActions:
 	extends TestBindingBase
 
@@ -512,7 +515,6 @@ class TestResetAllActions:
 		# Given: Two digital action names.
 		var action1 := &"test-action1"
 		var action2 := &"test-action2"
-
 
 		# Given: An action set with two digital actions.
 		action_set.actions_digital.append(action1)
@@ -532,7 +534,9 @@ class TestResetAllActions:
 				return (
 					_create_kbm_event(KEY_A + Binding.BindingIndex.size() + i)
 					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
-					else _create_joypad_event(JOY_BUTTON_A + Binding.BindingIndex.size() + i)
+					else _create_joypad_event(
+						JOY_BUTTON_A + Binding.BindingIndex.size() + i
+					)
 				)
 		)
 
@@ -549,7 +553,7 @@ class TestResetAllActions:
 			events_default1[index],
 			(
 				Binding
-				.get_action_binding(
+				. get_action_binding(
 					scope,
 					action_set,
 					action1,
@@ -562,7 +566,7 @@ class TestResetAllActions:
 			events_default2[index],
 			(
 				Binding
-				.get_action_binding(
+				. get_action_binding(
 					scope,
 					action_set,
 					action2,
@@ -603,7 +607,9 @@ class TestResetAllActions:
 				return (
 					_create_kbm_event(KEY_A + Binding.BindingIndex.size() + i)
 					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
-					else _create_joypad_event(JOY_BUTTON_A + Binding.BindingIndex.size() + i)
+					else _create_joypad_event(
+						JOY_BUTTON_A + Binding.BindingIndex.size() + i
+					)
 				)
 		)
 
@@ -625,14 +631,16 @@ class TestResetAllActions:
 
 		# Given: Both actions are bound to non-default events.
 		assert_true(
-			Binding
-			.bind_action(
-				scope,
-				action_set,
-				action1,
-				event1,
-				device_type,
-				index,
+			(
+				Binding
+				. bind_action(
+					scope,
+					action_set,
+					action1,
+					event1,
+					device_type,
+					index,
+				)
 			)
 		)
 		_assert_events_eq(
@@ -640,14 +648,16 @@ class TestResetAllActions:
 			event1,
 		)
 		assert_true(
-			Binding
-			.bind_action(
-				scope,
-				action_set,
-				action2,
-				event2,
-				device_type,
-				index,
+			(
+				Binding
+				. bind_action(
+					scope,
+					action_set,
+					action2,
+					event2,
+					device_type,
+					index,
+				)
 			)
 		)
 		_assert_events_eq(
@@ -663,7 +673,7 @@ class TestResetAllActions:
 		_assert_events_eq(
 			(
 				Binding
-				.get_action_binding(
+				. get_action_binding(
 					scope,
 					action_set,
 					action1,
@@ -676,7 +686,7 @@ class TestResetAllActions:
 		_assert_events_eq(
 			(
 				Binding
-				.get_action_binding(
+				. get_action_binding(
 					scope,
 					action_set,
 					action2,
