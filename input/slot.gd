@@ -36,7 +36,6 @@ signal device_disconnected(device: StdInputDevice)
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Signals := preload("../event/signal.gd")
-const Binding := preload("binding.gd")
 const StdInputSlotDeviceActions := preload("slot_actions.gd")
 const StdInputSlotDeviceGlyphs := preload("slot_glyphs.gd")
 const StdInputSlotDeviceHaptics := preload("slot_haptics.gd")
@@ -275,7 +274,7 @@ func get_action_origin_label(
 
 	return (
 		glyphs
-		. get_action_origin_label(
+		.get_action_origin_label(
 			device_id,
 			device_type_override,
 			action_set,
@@ -754,7 +753,7 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
-	pass  # No need to disable action sets/layers here - the device may reconnect.
+	pass # No need to disable action sets/layers here - the device may reconnect.
 
 
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #
