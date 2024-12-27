@@ -153,6 +153,27 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## list_action_names returns a list of all actions included in the action set. There is
+## no guarantee on the order of returned items.
+func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArray:
+	var names := PackedStringArray()
+
+	for action in actions_analog_1d:
+		assert(action not in names, "invalid config; duplicate action")
+		names.append(action)
+	for action in actions_analog_2d:
+		assert(action not in names, "invalid config; duplicate action")
+		names.append(action)
+	for action in actions_digital:
+		assert(action not in names, "invalid config; duplicate action")
+		names.append(action)
+	if include_absolute_mouse and action_absolute_mouse:
+		assert(action_absolute_mouse not in names, "invalid config; duplicate action")
+		names.append(action_absolute_mouse)
+
+	return names
+
+
 ## is_matching_event_origin returns whether the provided `InputEvent` is a valid type
 ## for the specified input action.
 func is_matching_event_origin(action: StringName, event: InputEvent) -> bool:

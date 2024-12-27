@@ -14,11 +14,12 @@ extends StdInputDeviceActions
 
 const Signals := preload("../../event/signal.gd")
 const Origin := preload("../origin.gd")
-const Binding := preload("../binding.gd")
+const Binding := preload("binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
+const DEVICE_ID_ALL := StdInputDevice.DEVICE_ID_ALL
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -66,7 +67,7 @@ static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
 ## reload refreshes the state of all input bindings for the specified device (defaults
 ## to updating all devices). This is helpful for rebuilding Godot's input map after
 ## configuration changes.
-func reload(device: int = Binding.DEVICE_ID_ALL) -> void:
+func reload(device: int = DEVICE_ID_ALL) -> void:
 	var action_set := get_action_set(device)
 	var layers := list_action_set_layers(device)
 
@@ -95,7 +96,7 @@ func _ready() -> void:
 	Signals.connect_safe(scope.config.changed, reload)
 
 	# Clear bindings upon initialization.
-	reload(Binding.DEVICE_ID_ALL)
+	reload(DEVICE_ID_ALL)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -119,13 +120,13 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 	if action_set == _action_set:
 		return false
 
-	_reset(Binding.DEVICE_ID_ALL)
+	_reset(DEVICE_ID_ALL)
 	_action_set = action_set
 
 	if claim_kbm_input:
-		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set)
+		_apply_action_set(DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set)
 	if claim_joy_input:
-		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.GENERIC, action_set)
+		_apply_action_set(DEVICE_ID_ALL, DeviceType.GENERIC, action_set)
 
 	return true
 
@@ -159,7 +160,7 @@ func _disable_action_set_layer(
 	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
 	# necessary origins.
 
-	reload(Binding.DEVICE_ID_ALL)
+	reload(DEVICE_ID_ALL)
 
 	return true
 
@@ -187,9 +188,9 @@ func _enable_action_set_layer(
 	_action_set_layers.append(action_set_layer)
 
 	if claim_kbm_input:
-		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set_layer)
+		_apply_action_set(DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set_layer)
 	if claim_joy_input:
-		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.GENERIC, action_set_layer)
+		_apply_action_set(DEVICE_ID_ALL, DeviceType.GENERIC, action_set_layer)
 
 	return true
 
@@ -216,7 +217,7 @@ func _apply_action_set(
 				assert(false, "invalid state; unknown action")
 				InputMap.add_action(action)
 
-			for origin in _get_action_origins(device, device_type, action):
+			for origin in _get_action_origins(device, device_type, action_set, action):
 				_bind_action_to_origin(device, action_set, action, origin)
 
 
@@ -241,20 +242,39 @@ func _bind_action_to_origin(
 
 
 func _get_action_origins(
-	_device: int, device_type: DeviceType, action: StringName
+	_device: int,
+	device_type: DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
 ) -> PackedInt64Array:
 	var origins := PackedInt64Array()
 
-	for event in (
-		Binding.get_kbm(scope, action)
-		if device_type == DeviceType.KEYBOARD
-		else Binding.get_joy(scope, action)
-	):
-		var value_encoded: int = Origin.encode(event)
-		if value_encoded < 0:
+	for index in Binding.BindingIndex.values():
+		var event := (
+			Binding
+			. get_action_binding(
+				scope,
+				action_set,
+				action,
+				(
+					StdInputDevice.DEVICE_TYPE_KEYBOARD
+					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
+					else StdInputDevice.DEVICE_TYPE_GENERIC
+				),
+				index,
+			)
+		)
+
+		if not event:
 			continue
 
-		origins.append(value_encoded)
+		var value_encoded: int = Origin.encode(event)
+		if value_encoded < 0:
+			assert(false, "invalid state; failed to encode origin")
+			continue
+
+		if value_encoded not in origins:
+			origins.append(value_encoded)
 
 	return origins
 

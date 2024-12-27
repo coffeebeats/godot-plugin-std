@@ -36,7 +36,6 @@ signal device_disconnected(device: StdInputDevice)
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Signals := preload("../event/signal.gd")
-const Binding := preload("binding.gd")
 const StdInputSlotDeviceActions := preload("slot_actions.gd")
 const StdInputSlotDeviceGlyphs := preload("slot_glyphs.gd")
 const StdInputSlotDeviceHaptics := preload("slot_haptics.gd")
@@ -615,7 +614,7 @@ func _disconnect_joy_device(device: int) -> bool:
 
 
 func _list_action_sets(
-	device: int = Binding.DEVICE_ID_ALL, reverse: bool = false
+	device: int = DEVICE_ID_ALL, reverse: bool = false
 ) -> Array[StdInputActionSet]:
 	var out: Array[StdInputActionSet] = []
 

@@ -82,6 +82,12 @@ const DEVICE_TYPE_XBOX_360 := DeviceType.XBOX_360
 ## DEVICE_TYPE_XBOX_ONE defines an Xbox ONE joypad.
 const DEVICE_TYPE_XBOX_ONE := DeviceType.XBOX_ONE
 
+## DEVICE_ID_ALL is a special identifier for matching all device ID's within InputMap.
+##
+## NOTE: See https://github.com/godotengine/godot/pull/99449; '-1' values may change in
+## the future.
+const DEVICE_ID_ALL := -1
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## device_id is the device ID, which is unique to the input paradigm; touch, keyboard,
