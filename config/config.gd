@@ -26,6 +26,11 @@ var _data: Dictionary = {}
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## clear removes all values in `category`.
+func clear(category: StringName) -> bool:
+	return _delete_category(category)
+
+
 ## erase clears the value associated with the `key` in `category`.
 func erase(category: StringName, key: StringName) -> bool:
 	return _delete_key(category, key)
@@ -207,6 +212,25 @@ func set_vector2_list(
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _delete_category(
+	category: StringName,
+	emit: bool = true,
+) -> bool:
+	assert(category != "", "invalid argument: missing category")
+
+	if category not in _data:
+		return false
+
+	var was_updated: bool = false
+	for key in _data[category].keys():
+		was_updated = (_delete_key(category, key, emit) or was_updated)
+
+	# NOTE: Ignore this result because changed status is determined by keys deleted.
+	_data.erase(category)
+
+	return was_updated
 
 
 func _delete_key(
