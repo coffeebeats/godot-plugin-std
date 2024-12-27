@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.9.6 (2024-12-27)
+
+## What's Changed
+* fix(input): correctly handle hidden loaders; use bindings when looking up origin label by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/154
+* fix(ci): ensure failing tests fail the CI run by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/156
+* refactor(input): model `Binding` API after required actions; make `Binding` Godot-specific by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/157
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.5...v1.9.6
+
 ## 1.9.5 (2024-12-24)
 
 ## What's Changed

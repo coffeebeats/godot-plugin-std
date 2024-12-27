@@ -68,7 +68,7 @@ func _get_action_origin_label(
 	if device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD:
 		return ""
 
-	for event in InputMap.action_get_events(action):
+	for event in Binding.get_kbm(scope, action):
 		if not event is InputEventKey:
 			continue
 

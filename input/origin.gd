@@ -199,16 +199,20 @@ static func decode(value: int) -> InputEvent:
 	return null
 
 
-## is_encoded_joy_value returns whether the provided `int` value is an encoded input
-## event for the joypad control paradigm.
-static func is_encoded_joy_value(value: int) -> bool:
+## is_encoded_value_for_device returns whether the provided `int` value is an encoded
+## input event for the specified device type.
+static func is_encoded_value_for_device(
+	value: int,
+	device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN,
+) -> bool:
+	if device_type <= StdInputDevice.DEVICE_TYPE_UNKNOWN:
+		assert(false, "invalid argument: device type")
+		return false
+
+	if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD:
+		return is_encoded_value_type(value, bitmask_indices_kbm)
+
 	return is_encoded_value_type(value, bitmask_indices_joy)
-
-
-## is_encoded_kbm_value returns whether the provided `int` value is an encoded input
-## event for the keyboard and mouse control paradigm.
-static func is_encoded_kbm_value(value: int) -> bool:
-	return is_encoded_value_type(value, bitmask_indices_kbm)
 
 
 ## is_encoded_value_type returns whether the provided `int` value is an encoded input

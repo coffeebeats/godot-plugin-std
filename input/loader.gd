@@ -115,7 +115,7 @@ func _exit_tree() -> void:
 func _notification(what) -> void:
 	match what:
 		NOTIFICATION_VISIBILITY_CHANGED:
-			if visible:
+			if is_visible_in_tree():
 				if action_set and load_on_visible:
 					load_action_set()
 				elif action_set_layer and enable_on_visible:

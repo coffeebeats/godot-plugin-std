@@ -56,8 +56,10 @@ static func get_focus_target() -> Control:
 			continue
 
 		var target := anchor._control
-		if anchor._control.is_visible_in_tree():
+		if target.is_visible_in_tree():
 			return target
+
+		i -= 1
 
 	return null
 
