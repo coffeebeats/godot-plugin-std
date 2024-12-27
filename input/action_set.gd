@@ -155,7 +155,7 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
 ## list_action_names returns a list of all actions included in the action set. There is
 ## no guarantee on the order of returned items.
-func list_action_names() -> PackedStringArray:
+func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArray:
 	var names := PackedStringArray()
 
 	for action in actions_analog_1d:
@@ -167,7 +167,7 @@ func list_action_names() -> PackedStringArray:
 	for action in actions_digital:
 		assert(action not in names, "invalid config; duplicate action")
 		names.append(action)
-	if action_absolute_mouse:
+	if include_absolute_mouse and action_absolute_mouse:
 		assert(action_absolute_mouse not in names, "invalid config; duplicate action")
 		names.append(action_absolute_mouse)
 
