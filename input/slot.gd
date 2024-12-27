@@ -615,7 +615,7 @@ func _disconnect_joy_device(device: int) -> bool:
 
 
 func _list_action_sets(
-	device: int = Binding.DEVICE_ID_ALL, reverse: bool = false
+	device: int = DEVICE_ID_ALL, reverse: bool = false
 ) -> Array[StdInputActionSet]:
 	var out: Array[StdInputActionSet] = []
 

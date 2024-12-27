@@ -25,6 +25,12 @@ signal action_set_layer_disabled(action_set_layer: StdInputActionSetLayer)
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+## DEVICE_ID_ALL is a special identifier for matching all device ID's within InputMap.
+##
+## NOTE: See https://github.com/godotengine/godot/pull/99449; '-1' values may change in
+## the future.
+const DEVICE_ID_ALL := -1
+
 ## DeviceType is an enumeration of the categories of player input devices.
 enum DeviceType {
 	UNKNOWN = 0,

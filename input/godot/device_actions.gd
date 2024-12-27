@@ -18,7 +18,8 @@ const Binding := preload("../binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const DeviceType := StdInputDevice.DeviceType # gdlint:ignore=constant-name
+const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
+const DEVICE_ID_ALL := StdInputDevice.DEVICE_ID_ALL
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -52,13 +53,13 @@ const DeviceType := StdInputDevice.DeviceType # gdlint:ignore=constant-name
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: StdInputActionSet = null # gdlint: ignore=class-definitions-order
+static var _action_set: StdInputActionSet = null  # gdlint: ignore=class-definitions-order
 
 ## _action_set_layers is the stack of currently active action set layers.
-static var _action_set_layers: Array[StdInputActionSetLayer] = [] # gdlint: ignore=class-definitions-order,max-line-length
+static var _action_set_layers: Array[StdInputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _bindings maps origins (integers) to the actions they are bound to.
-static var _bindings: Dictionary = {} # gdlint: ignore=class-definitions-order
+static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -66,7 +67,7 @@ static var _bindings: Dictionary = {} # gdlint: ignore=class-definitions-order
 ## reload refreshes the state of all input bindings for the specified device (defaults
 ## to updating all devices). This is helpful for rebuilding Godot's input map after
 ## configuration changes.
-func reload(device: int = Binding.DEVICE_ID_ALL) -> void:
+func reload(device: int = DEVICE_ID_ALL) -> void:
 	var action_set := get_action_set(device)
 	var layers := list_action_set_layers(device)
 
@@ -95,7 +96,7 @@ func _ready() -> void:
 	Signals.connect_safe(scope.config.changed, reload)
 
 	# Clear bindings upon initialization.
-	reload(Binding.DEVICE_ID_ALL)
+	reload(DEVICE_ID_ALL)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -119,13 +120,13 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 	if action_set == _action_set:
 		return false
 
-	_reset(Binding.DEVICE_ID_ALL)
+	_reset(DEVICE_ID_ALL)
 	_action_set = action_set
 
 	if claim_kbm_input:
-		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set)
+		_apply_action_set(DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set)
 	if claim_joy_input:
-		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.GENERIC, action_set)
+		_apply_action_set(DEVICE_ID_ALL, DeviceType.GENERIC, action_set)
 
 	return true
 
@@ -159,7 +160,7 @@ func _disable_action_set_layer(
 	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
 	# necessary origins.
 
-	reload(Binding.DEVICE_ID_ALL)
+	reload(DEVICE_ID_ALL)
 
 	return true
 
@@ -187,9 +188,9 @@ func _enable_action_set_layer(
 	_action_set_layers.append(action_set_layer)
 
 	if claim_kbm_input:
-		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set_layer)
+		_apply_action_set(DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set_layer)
 	if claim_joy_input:
-		_apply_action_set(Binding.DEVICE_ID_ALL, DeviceType.GENERIC, action_set_layer)
+		_apply_action_set(DEVICE_ID_ALL, DeviceType.GENERIC, action_set_layer)
 
 	return true
 
