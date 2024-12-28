@@ -36,11 +36,18 @@ func _ready() -> void:
 func _get_action_glyph(
 	slot: int,
 	device_type: DeviceType,
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int,
 	target_size: Vector2,
 ) -> Texture2D:
-	for origin in _list_action_origins(slot, device_type, action_set, action):
+	for origin in _list_action_origins(
+		slot,
+		device_type,
+		action_set.name,
+		action,
+		index,
+	):
 		if origin in _glyphs:
 			return _glyphs[origin]
 
@@ -62,10 +69,17 @@ func _get_action_glyph(
 func _get_action_origin_label(
 	slot: int,
 	device_type: DeviceType,
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int,
 ) -> String:
-	for origin in _list_action_origins(slot, device_type, action_set, action):
+	for origin in _list_action_origins(
+		slot,
+		device_type,
+		action_set.name,
+		action,
+		index,
+	):
 		var label := Steam.getStringForActionOrigin(origin)
 		if label:
 			return label
@@ -81,6 +95,7 @@ func _list_action_origins(
 	device_type: DeviceType,
 	action_set: StringName,
 	action: StringName,
+	index: int,
 ) -> PackedInt64Array:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD,
@@ -101,10 +116,14 @@ func _list_action_origins(
 	# TODO: Find some means of specifying ahead of time which action type this is.
 
 	# First, consider digital actions.
+	var i: int = 0
 	var action_handle: int = SteamDeviceActions.get_digital_action_handle(action)
 	for origin in Steam.getDigitalActionOrigins(
 		device, action_set_handle, action_handle
 	):
+		if i != index:
+			continue
+
 		var translated_origin := _translate_origin(origin, device_type)
 		if translated_origin:
 			origin = translated_origin
@@ -113,10 +132,14 @@ func _list_action_origins(
 			origins.append(origin)
 
 	# Next, consider analog actions.
+	i = 0
 	action_handle = SteamDeviceActions.get_analog_action_handle(action)
 	for origin in Steam.getAnalogActionOrigins(
 		device, action_set_handle, action_handle
 	):
+		if i != index:
+			continue
+
 		var translated_origin := _translate_origin(origin, device_type)
 		if translated_origin:
 			origin = translated_origin
