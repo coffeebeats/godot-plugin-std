@@ -15,13 +15,14 @@ const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_action_glyphs returns the glyph icon for the first origin bound to the specified
-## action.
+## get_action_glyphs returns the glyph icon for the origin bound to the specified
+## action and "binding index" (e.g. primary or secondary).
 func get_action_glyph(
 	device: int,
 	device_type: DeviceType,
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int = 0,
 	target_size: Vector2 = Vector2.ZERO,
 ) -> Texture2D:
 	assert(
@@ -29,7 +30,14 @@ func get_action_glyph(
 		"invalid argument; unknown device type",
 	)
 
-	return _get_action_glyph(device, device_type, action_set, action, target_size)
+	return _get_action_glyph(
+		device,
+		device_type,
+		action_set,
+		action,
+		index,
+		target_size,
+	)
 
 
 ## get_action_origin_label returns the localized display name for the first origin bound
@@ -37,15 +45,16 @@ func get_action_glyph(
 func get_action_origin_label(
 	device: int,
 	device_type: DeviceType,
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int = 0,
 ) -> String:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_UNKNOWN,
 		"invalid argument; unknown device type",
 	)
 
-	return _get_action_origin_label(device, device_type, action_set, action)
+	return _get_action_origin_label(device, device_type, action_set, action, index)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -54,8 +63,9 @@ func get_action_origin_label(
 func _get_action_glyph(
 	_device: int,
 	_device_type: DeviceType,
-	_action_set: StringName,
+	_action_set: StdInputActionSet,
 	_action: StringName,
+	_index: int,
 	_target_size: Vector2,
 ) -> Texture2D:
 	assert(false, "unimplemented")
@@ -65,8 +75,9 @@ func _get_action_glyph(
 func _get_action_origin_label(
 	_device: int,
 	_device_type: DeviceType,
-	_action_set: StringName,
+	_action_set: StdInputActionSet,
 	_action: StringName,
+	_index: int,
 ) -> String:
 	assert(false, "unimplemented")
 	return ""

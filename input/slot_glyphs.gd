@@ -21,8 +21,9 @@ var slot: StdInputSlot = null
 func _get_action_glyph(
 	_device: int,  # Active device ID
 	device_type: DeviceType,  # Active or overridden device type
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int,
 	target_size: Vector2,
 ) -> Texture2D:
 	if not slot:
@@ -46,6 +47,7 @@ func _get_action_glyph(
 					DEVICE_TYPE_KEYBOARD,
 					action_set,
 					action,
+					index,
 					target_size,
 				)
 			)
@@ -68,6 +70,7 @@ func _get_action_glyph(
 					device_type,
 					action_set,
 					action,
+					index,
 					target_size,
 				)
 			)
@@ -76,8 +79,9 @@ func _get_action_glyph(
 func _get_action_origin_label(
 	_device: int,  # Active device ID
 	device_type: DeviceType,  # Active or overridden device type
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int,
 ) -> String:
 	if not slot:
 		assert(false, "invalid state; missing input slot")
@@ -100,6 +104,7 @@ func _get_action_origin_label(
 					DEVICE_TYPE_KEYBOARD,
 					action_set,
 					action,
+					index,
 				)
 			)
 
@@ -121,5 +126,6 @@ func _get_action_origin_label(
 					device_type,
 					action_set,
 					action,
+					index,
 				)
 			)

@@ -259,8 +259,9 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 ## get_action_glyph returns a `Texture2D` containing the glyph of the primary (i.e.
 ## first) controller origin which will actuate the specified action.
 func get_action_glyph(
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int = 0,
 	target_size: Vector2 = Vector2.ZERO,
 	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN,
 ) -> Texture2D:
@@ -270,15 +271,16 @@ func get_action_glyph(
 		device_type_override = device_type
 
 	return glyphs.get_action_glyph(
-		device_id, device_type_override, action_set, action, target_size
+		device_id, device_type_override, action_set, action, index, target_size
 	)
 
 
 ## get_action_origin_label returns a localized display name for the first origin bound
 ## to the specified action.
 func get_action_origin_label(
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int = 0,
 	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN,
 ) -> String:
 	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
@@ -293,6 +295,7 @@ func get_action_origin_label(
 			device_type_override,
 			action_set,
 			action,
+			index,
 		)
 	)
 
