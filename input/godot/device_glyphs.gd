@@ -9,7 +9,7 @@ extends StdInputDeviceGlyphs
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Binding := preload("../binding.gd")
+const Bindings := preload("binding.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -29,25 +29,36 @@ const Binding := preload("../binding.gd")
 func _get_action_glyph(
 	_device: int,
 	device_type: StdInputDevice.DeviceType,
-	_action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int,
 	_target_size: Vector2,
 ) -> Texture2D:
 	for glyph_set in glyph_sets:
 		if not glyph_set.matches(device_type):
 			continue
 
-		var events: Array[InputEvent]
-		match device_type:
-			StdInputDevice.DEVICE_TYPE_KEYBOARD:
-				events = Binding.get_kbm(scope, action)
-			_:
-				events = Binding.get_joy(scope, action)
+		var event := (
+			Bindings
+			. get_action_binding(
+				scope,
+				action_set,
+				action,
+				(
+					StdInputDevice.DEVICE_TYPE_KEYBOARD
+					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
+					else StdInputDevice.DEVICE_TYPE_GENERIC
+				),
+				index,
+			)
+		)
 
-		for event in events:
-			var texture := glyph_set.get_origin_glyph(event)
-			if texture:
-				return texture
+		if not event:
+			return null
+
+		var texture := glyph_set.get_origin_glyph(event)
+		if texture:
+			return texture
 
 	return null
 
@@ -55,8 +66,9 @@ func _get_action_glyph(
 func _get_action_origin_label(
 	_device: int,
 	device_type: DeviceType,
-	_action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
+	index: int,
 ) -> String:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_UNKNOWN,
@@ -68,21 +80,29 @@ func _get_action_origin_label(
 	if device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD:
 		return ""
 
-	for event in Binding.get_kbm(scope, action):
-		if not event is InputEventKey:
-			continue
+	var event := (
+		Bindings
+		. get_action_binding(
+			scope,
+			action_set,
+			action,
+			StdInputDevice.DEVICE_TYPE_KEYBOARD,
+			index,
+		)
+	)
 
-		if (
-			event.keycode != KEY_NONE
-			and event.physical_keycode != KEY_NONE
-			and event.keycode != event.physical_keycode
-		):
-			assert(false, "invalid input; found conflicting keycodes")
-			continue
+	if not event is InputEventKey:
+		return ""
 
-		# NOTE: Only one of these properties can be set, so take the union of them in order
-		# to handle all of them.
-		var keycode: Key = event.keycode | event.physical_keycode
-		return OS.get_keycode_string(keycode).to_upper()
+	if (
+		event.keycode != KEY_NONE
+		and event.physical_keycode != KEY_NONE
+		and event.keycode != event.physical_keycode
+	):
+		assert(false, "invalid input; found conflicting keycodes")
+		return ""
 
-	return ""
+	# NOTE: Only one of these properties can be set, so take the union of them in order
+	# to handle all of them.
+	var keycode: Key = event.keycode | event.physical_keycode
+	return OS.get_keycode_string(keycode).to_upper()
