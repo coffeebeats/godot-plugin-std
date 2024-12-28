@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.7 (2024-12-28)
+
+## What's Changed
+* fix(input): use new `Binding` library in Godot-backed `StdInputDevice` glyph component by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/158
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.6...v1.9.7
+
 ## 1.9.6 (2024-12-27)
 
 ## What's Changed
