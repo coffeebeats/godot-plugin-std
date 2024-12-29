@@ -32,6 +32,16 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 @export_group("Binding")
 
+## scope is the settings scope in which binding overrides will be stored.
+@export var scope: StdSettingsScope = null:
+	set(value):
+		if scope is StdSettingsScope:
+			Signals.disconnect_safe(scope.config.changed, _on_bindings_changed)
+
+		scope = value
+		if is_node_ready() and not Engine.is_editor_hint():
+			Signals.connect_safe(scope.config.changed, _on_bindings_changed)
+
 @export_subgroup("Action")
 
 ## action_set is an input action set which defines the configured action.
@@ -39,6 +49,9 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 ## action is the name of the input action which the glyph icon will correspond to.
 @export var action := &""
+
+## binding_index is the index/rank (e.g. primary or secondary) of the action binding.
+@export var binding_index: int = 0
 
 @export_subgroup("Player")
 
@@ -49,7 +62,7 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 	set(value):
 		player_id = value
 
-		if is_inside_tree():
+		if is_node_ready() and not Engine.is_editor_hint():
 			_slot = StdInputSlot.for_player(player_id)
 
 @export_subgroup("Device")
@@ -74,36 +87,33 @@ func update() -> void:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _enter_tree() -> void:
-	if Engine.is_editor_hint():
-		return
-
-	player_id = player_id  # Trigger '_slot' update.
-	assert(_slot is StdInputSlot, "invalid state; missing player slot")
-
-
 func _exit_tree() -> void:
 	if Engine.is_editor_hint():
 		return
 
-	Signals.disconnect_safe(
-		_slot.action_configuration_changed, _on_action_configuration_changed
-	)
+	Signals.disconnect_safe(_slot.action_configuration_changed, _on_actions_changed)
 	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
 	Signals.disconnect_safe(device_type_override.value_changed, _handle_update)
+	Signals.disconnect_safe(scope.config.changed, _on_bindings_changed)
 
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 
+	_slot = StdInputSlot.for_player(player_id)
+	assert(_slot is StdInputSlot, "invalid state; missing player slot")
+
 	# NOTE: Defer connection so that subclasses can do their setup in '_ready' first.
+
+	assert(scope is StdSettingsScope, "invalid config; missing settings scope")
+	Signals.connect_safe(scope.config.changed, _on_bindings_changed)
 
 	(
 		Signals
 		. connect_safe(
 			_slot.action_configuration_changed,
-			_on_action_configuration_changed,
+			_on_actions_changed,
 			CONNECT_DEFERRED,
 		)
 	)
@@ -169,6 +179,14 @@ func _action_configuration_changed() -> void:
 	pass
 
 
+## _config_changed can be overridden by a subclass to react to changes to stored
+## bindings for the action associated with this glyph.
+##
+## NOTE: This will be called *before* the glyph is updated.
+func _config_changed() -> void:
+	pass
+
+
 ## _device_activated can be overridden by a subclass to react to changes to the
 ## specified player's input device.
 ##
@@ -180,7 +198,7 @@ func _device_activated(_device: StdInputDevice) -> void:
 ## _get_device_type can be overridden by a subclass to change how this instance
 ## determines which device type to request glyph information for.
 func _get_device_type() -> DeviceType:
-	if device_type_override:
+	if device_type_override is StdSettingsPropertyInt:
 		var property_value: DeviceType = device_type_override.get_value()
 		if property_value != DEVICE_TYPE_UNKNOWN:
 			return property_value
@@ -202,8 +220,18 @@ func _update_glyph(_device_type: DeviceType) -> bool:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_action_configuration_changed() -> void:
+func _on_actions_changed() -> void:
 	_action_configuration_changed()
+	_handle_update()
+
+
+func _on_bindings_changed(category: StringName, key: StringName) -> void:
+	if not category.begins_with(action_set.name + "/"):
+		return
+	if key != "%s/%d" % [action, binding_index]:
+		return
+
+	_config_changed()
 	_handle_update()
 
 
