@@ -7,7 +7,7 @@
 ##
 
 class_name StdInputCursorFocusHandler
-extends Node
+extends Control
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -28,7 +28,8 @@ const Signals := preload("../event/signal.gd")
 # gdlint:ignore=class-definitions-order
 static var _anchors: Array[StdInputCursorFocusHandler] = []
 
-var _control_mouse_filter: Control.MouseFilter = Control.MOUSE_FILTER_IGNORE
+var _control_focus_mode: FocusMode = FOCUS_NONE
+var _control_mouse_filter: MouseFilter = MOUSE_FILTER_IGNORE
 var _cursor: StdInputCursor = null
 
 @onready var _control: Control = get_node(control)
@@ -74,7 +75,7 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(_control.mouse_exited, _on_Control_mouse_exited)
 	(
 		Signals
-		. disconnect_safe(
+		.disconnect_safe(
 			_cursor.cursor_visibility_changed,
 			_on_cursor_visibility_changed,
 		)
@@ -88,11 +89,8 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	assert(_control is Control, "invalid state; missing Control node")
-	assert(
-		_control.focus_mode == Control.FOCUS_ALL,
-		"invalid config; target UI element cannot be focused",
-	)
 
+	_control_focus_mode = _control.focus_mode
 	_control_mouse_filter = _control.mouse_filter
 
 	Signals.connect_safe(_control.mouse_entered, _on_Control_mouse_entered)
@@ -103,7 +101,7 @@ func _ready() -> void:
 
 	(
 		Signals
-		. connect_safe(
+		.connect_safe(
 			_cursor.cursor_visibility_changed,
 			_on_cursor_visibility_changed,
 		)
@@ -117,19 +115,21 @@ func _ready() -> void:
 
 
 func _on_Control_mouse_entered() -> void:
-	_cursor.set_hovered(_control)
+	if _control_focus_mode != FOCUS_NONE:
+		_cursor.set_hovered(_control)
 
 
 func _on_Control_mouse_exited() -> void:
-	_cursor.unset_hovered(_control)
+	if _control_focus_mode != FOCUS_NONE:
+		_cursor.unset_hovered(_control)
 
 
-func _on_cursor_visibility_changed(visible: bool) -> void:
+func _on_cursor_visibility_changed(is_cursor_visible: bool) -> void:
 	# NOTE: In order to stop a hidden cursor from hovering a UI element, disable its
 	# mouse filter property; see https://github.com/godotengine/godot/issues/56783.
-	if not visible:
-		_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_control.focus_mode = Control.FOCUS_ALL
+	if not is_cursor_visible:
+		_control.mouse_filter = MOUSE_FILTER_IGNORE
+		_control.focus_mode = _control_focus_mode
 	else:
 		_control.mouse_filter = _control_mouse_filter
-		_control.focus_mode = Control.FOCUS_NONE
+		_control.focus_mode = FOCUS_NONE
