@@ -87,13 +87,13 @@ func reload(device: int = DEVICE_ID_ALL) -> void:
 
 
 func _exit_tree() -> void:
-	Signals.disconnect_safe(scope.config.changed, reload)
+	Signals.disconnect_safe(scope.config.changed, _on_config_changed)
 
 
 func _ready() -> void:
 	assert(scope is StdSettingsScope, "invalid config; missing bindings scope")
 
-	Signals.connect_safe(scope.config.changed, reload)
+	Signals.connect_safe(scope.config.changed, _on_config_changed)
 
 	# Clear bindings upon initialization.
 	reload(DEVICE_ID_ALL)
@@ -291,3 +291,10 @@ func _reset(_device: int) -> void:
 		_action_set_layers = []
 
 	_bindings = {}
+
+
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_config_changed(_category: StringName, _key: StringName) -> void:
+	reload()

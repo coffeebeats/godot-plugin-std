@@ -4,6 +4,10 @@
 ## A shared library for encoding and decoding input events, suitable for action
 ## bindings, within a 64-bit integer.
 ##
+## TODO: Restructure how event data is stored by encoding "type" as an enum and using
+## all of the remaining bits for each type (rather than sequentially arranging chunks
+## for each event type to use).
+##
 ## NOTE: This 'Object' should *not* be instanced and/or added to the 'SceneTree'. It is a
 ## "static" library that can be imported at compile-time using 'preload'.
 ##
@@ -14,8 +18,7 @@ extends Object
 
 const BITMASK_INDEX_TYPE := 0
 const BITMASK_INDEX_KEY := BITMASK_INDEX_TYPE + 8
-const BITMASK_INDEX_KEY_PHYSICAL := BITMASK_INDEX_KEY + 24
-const BITMASK_INDEX_KEY_LOCATION := BITMASK_INDEX_KEY_PHYSICAL + 1
+const BITMASK_INDEX_KEY_LOCATION := BITMASK_INDEX_KEY + 24
 const BITMASK_INDEX_JOY_AXIS := BITMASK_INDEX_KEY_LOCATION + 4
 const BITMASK_INDEX_JOY_AXIS_DIRECTION := BITMASK_INDEX_KEY + 4
 const BITMASK_INDEX_JOY_BUTTON := BITMASK_INDEX_JOY_AXIS_DIRECTION + 2
@@ -50,28 +53,23 @@ static var bitmask_indices_kbm := PackedInt64Array(
 ## NOTE: No value information (e.g. pressed state or strength) will be retained.
 static func encode(event: InputEvent) -> int:
 	if event is InputEventKey:
-		if (
-			event.keycode != KEY_NONE
-			and event.physical_keycode != KEY_NONE
-			and event.keycode != event.physical_keycode
-		):
-			assert(false, "invalid input; found conflicting keycodes")
-			return -1
+		# Normalize the event by ensuring physical keycode is always set. This allows
+		# encoding "keycode" events (e.g. from project settings), but they will always
+		# be decoded as physical - matching what the user generates.
+		if event.physical_keycode == KEY_NONE:
+			assert(event.keycode != KEY_NONE, "invalid config; missing keycode")
+			event.physical_keycode = event.keycode
 
 		var type_encoded: int = (BITMASK_INDEX_KEY & BITMASK_TYPE) << BITMASK_INDEX_TYPE
-		var physical_encoded: int = (
-			int(event.physical_keycode != KEY_NONE) << BITMASK_INDEX_KEY_PHYSICAL
-		)
 		var location_encoded: int = (
 			(event.location & BITMASK_KEY_LOCATION) << BITMASK_INDEX_KEY_LOCATION
 		)
 
 		var value_encoded: int = (
-			((event.keycode | event.physical_keycode) & BITMASK_KEY)
-			<< BITMASK_INDEX_KEY
+			(event.physical_keycode & BITMASK_KEY) << BITMASK_INDEX_KEY
 		)
 
-		return type_encoded | value_encoded | physical_encoded | location_encoded
+		return type_encoded | value_encoded | location_encoded
 
 	if event is InputEventJoypadMotion:
 		var type_encoded: int = (
@@ -127,10 +125,6 @@ static func decode(value: int) -> InputEvent:
 
 	match type_decoded:
 		BITMASK_INDEX_KEY:
-			var physical_decoded: int = (
-				(value & (1 << BITMASK_INDEX_KEY_PHYSICAL))
-				>> (BITMASK_INDEX_KEY_PHYSICAL)
-			)
 			var location_decoded: int = (
 				(value & (BITMASK_KEY_LOCATION << BITMASK_INDEX_KEY_LOCATION))
 				>> (BITMASK_INDEX_KEY_LOCATION)
@@ -141,12 +135,9 @@ static func decode(value: int) -> InputEvent:
 			)
 
 			var event := InputEventKey.new()
+			event.keycode = value_decoded as Key
 			event.location = location_decoded as KeyLocation
-
-			if physical_decoded != 0:
-				event.physical_keycode = value_decoded as Key
-			else:
-				event.keycode = value_decoded as Key
+			event.physical_keycode = value_decoded as Key
 
 			return event
 

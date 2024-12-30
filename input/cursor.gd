@@ -16,6 +16,10 @@ extends Node
 ## changes.
 signal cursor_visibility_changed(visible: bool)
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Signals := preload("../event/signal.gd")
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const GROUP_INPUT_CURSOR := &"std/input:cursor"
@@ -161,6 +165,7 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_INPUT_CURSOR).remove_member(self)
+	Signals.disconnect_safe(get_viewport().gui_focus_changed, _on_gui_focus_changed)
 
 
 func _input(event: InputEvent) -> void:
@@ -237,14 +242,48 @@ func _ready() -> void:
 		in [DisplayServer.MOUSE_MODE_VISIBLE, DisplayServer.MOUSE_MODE_CONFINED]
 	)
 
+	Signals.connect_safe(get_viewport().gui_focus_changed, _on_gui_focus_changed)
+
 	# Trigger the initial state.
 	_on_properties_changed()
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _update_focus() -> void:
+	if _cursor_visible:
+		get_viewport().gui_release_focus()
+		return
+
+	if get_viewport().gui_get_focus_owner():
+		return
+
+	if _hovered:
+		# NOTE: Don't use a deferred call so that the current input event applies
+		# as if the previously-hovered node was already focused.
+		_hovered.focus_mode = Control.FOCUS_ALL
+		_hovered.grab_focus()
+		unset_hovered(_hovered)
+	else:
+		var focus_target := StdInputCursorFocusHandler.get_focus_target()
+		if focus_target:
+			# NOTE: Use a deferred call here so that the current input event gets
+			# swallowed. That ensures the anchor is focused and not a potential
+			# neighbor (depending on what input triggered the change).
+			focus_target.call_deferred(&"grab_focus")
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_properties_changed() -> void:
+func _on_gui_focus_changed(control: Control) -> void:
+	control.focus_exited.connect(
+		func(): call_deferred(&"_update_focus"), CONNECT_ONE_SHOT
+	)
+
+
+func _on_properties_changed(should_emit: bool = true) -> void:
 	if _cursor_captured:
 		_cursor_visible = false
 
@@ -257,8 +296,6 @@ func _on_properties_changed() -> void:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_VISIBLE)
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED)
-
-		get_viewport().gui_release_focus()
 	else:
 		if _cursor_captured:
 			pass
@@ -267,19 +304,7 @@ func _on_properties_changed() -> void:
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
-		if not get_viewport().gui_get_focus_owner():
-			if _hovered:
-				# NOTE: Don't use a deferred call so that the current input event applies
-				# as if the previously-hovered node was already focused.
-				_hovered.focus_mode = Control.FOCUS_ALL
-				_hovered.grab_focus()
-				unset_hovered(_hovered)
-			else:
-				var focus_target := StdInputCursorFocusHandler.get_focus_target()
-				if focus_target:
-					# NOTE: Use a deferred call here so that the current input event gets
-					# swallowed. That ensures the anchor is focused and not a potential
-					# neighbor (depending on what input triggered the change).
-					focus_target.call_deferred(&"grab_focus")
+	_update_focus()
 
-	cursor_visibility_changed.emit(_cursor_visible)
+	if should_emit:
+		cursor_visibility_changed.emit(_cursor_visible)
