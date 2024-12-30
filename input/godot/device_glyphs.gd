@@ -94,15 +94,18 @@ func _get_action_origin_label(
 	if not event is InputEventKey:
 		return ""
 
-	if (
-		event.keycode != KEY_NONE
-		and event.physical_keycode != KEY_NONE
-		and event.keycode != event.physical_keycode
-	):
-		assert(false, "invalid input; found conflicting keycodes")
-		return ""
+	var physical_keycode: Key = event.physical_keycode
+	if physical_keycode == KEY_NONE:
+		assert(false, "invalid input; missing keycodes")
+		physical_keycode = event.keycode
 
-	# NOTE: Only one of these properties can be set, so take the union of them in order
-	# to handle all of them.
-	var keycode: Key = event.keycode | event.physical_keycode
-	return OS.get_keycode_string(keycode).to_upper()
+	var keycode := DisplayServer.keyboard_get_label_from_physical(physical_keycode)
+
+	if not OS.is_keycode_unicode(keycode):
+		return OS.get_keycode_string(keycode)
+
+	var label := char(keycode).strip_edges()
+	if not label:
+		return OS.get_keycode_string(keycode)
+
+	return label

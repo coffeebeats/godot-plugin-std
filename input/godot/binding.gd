@@ -91,15 +91,52 @@ static func bind_action(
 				):
 					continue
 
-				changed = (
-					scope.config.set_int(category, key, value_encoded) or changed
-				)
+				if scope.config.set_int(category, key, value_encoded):
+					print(
+						"std/input/godot/binding.gd",
+						(
+							": bound action to event: %s/%s: %s"
+							% [
+								action_set.name,
+								a,
+								event,
+							]
+						),
+					)
+
+					changed = true
 
 				continue
 
-			changed = (
-				_compare_and_swap(scope, category, key, value_encoded, EMPTY) or changed
+			var action_changed := _compare_and_swap(
+				scope, category, key, value_encoded, EMPTY
 			)
+			if (
+				not action_changed
+				and (
+					value_encoded
+					== _get_origin_from_project_settings(
+						a,
+						device_type,
+						i,
+					)
+				)
+			):
+				action_changed = scope.config.set_int(category, key, EMPTY)
+
+			if action_changed:
+				print(
+					"std/input/godot/binding.gd",
+					(
+						": unbound action: %s/%s"
+						% [
+							action_set.name,
+							a,
+						]
+					),
+				)
+
+			changed = action_changed or changed
 
 	return changed
 
@@ -131,7 +168,17 @@ static func get_action_binding(
 	var category := _get_action_set_category(action_set, device_type)
 	var key := _get_action_key(action, index)
 
-	var event := _get_event_from_scope(scope, category, key, device_type)
+	var value_encoded := scope.config.get_int(category, key, UNSET)
+	if value_encoded == EMPTY:
+		return null
+
+	var event: InputEvent
+	if value_encoded != UNSET:
+		if not Origin.is_encoded_value_for_device(value_encoded, device_type):
+			assert(false, "invalid input; wrong event type")
+			return null
+
+		event = Origin.decode(value_encoded)
 
 	if not event:
 		event = _get_event_from_project_settings(action, device_type, index)
@@ -180,7 +227,14 @@ static func reset_action(
 		var category := _get_action_set_category(action_set, device_type)
 		var key := _get_action_key(action, index)
 
-		return scope.config.erase(category, key)
+		var changed := scope.config.erase(category, key)
+		if changed:
+			print(
+				"std/input/godot/binding.gd",
+				": reset action binding: %s/%s" % [action_set.name, action],
+			)
+
+		return changed
 
 	return bind_action(
 		scope,
@@ -208,7 +262,15 @@ static func reset_all_actions(
 	)
 
 	var category := _get_action_set_category(action_set, device_type)
-	return scope.config.clear(category)
+
+	var changed := scope.config.clear(category)
+	if changed:
+		print(
+			"std/input/godot/binding.gd",
+			": reset all bindings in action set: %s" % [action_set.name],
+		)
+
+	return changed
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -297,20 +359,3 @@ static func _get_origin_from_project_settings(
 		i += 1
 
 	return UNSET
-
-
-static func _get_event_from_scope(
-	scope: StdSettingsScope,
-	category: StringName,
-	key: StringName,
-	device_type: StdInputDevice.DeviceType,
-) -> InputEvent:
-	var value_encoded := scope.config.get_int(category, key, EMPTY)
-	if value_encoded == EMPTY:
-		return null
-
-	if not Origin.is_encoded_value_for_device(value_encoded, device_type):
-		assert(false, "invalid input; wrong event type")
-		return null
-
-	return Origin.decode(value_encoded)
