@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.8 (2024-12-30)
+
+## What's Changed
+* fix(input): utilize keyboard layout when reporting key labels; binding fixes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/160
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.7...v1.9.8
+
 ## 1.9.7 (2024-12-28)
 
 ## What's Changed
