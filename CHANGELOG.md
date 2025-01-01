@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.9.9 (2025-01-01)
+
+## What's Changed
+* chore(addons): update `GodotSteam` to `v4.12` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/162
+* fix(input): improve `Bindings` implementation and define a standard "device category" by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/164
+* fix(condition): add a new `StdConditionTarget2D` for controlling target nodes' visibility by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/165
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.8...v1.9.9
+
 ## 1.9.8 (2024-12-30)
 
 ## What's Changed
