@@ -79,12 +79,10 @@ static func encode(event: InputEvent) -> int:
 			(event.axis & BITMASK_JOY_AXIS) << BITMASK_INDEX_JOY_AXIS
 		)
 
-		var direction: int = 0
-		match event.axis_value:
-			-1.0:
-				direction = 1
-			1.0:
-				direction = 2
+		var direction: int = (
+			1 if event.axis_value < 0 else 2 if event.axis_value > 0 else 0
+		)
+
 		var direction_encoded: int = (
 			(direction & BITMASK_JOY_AXIS_DIRECTION) << BITMASK_INDEX_JOY_AXIS_DIRECTION
 		)

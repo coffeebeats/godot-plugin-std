@@ -5,6 +5,7 @@
 ## available player actions during a section of the game.
 ##
 
+@tool
 class_name StdInputActionSet
 extends Resource
 
