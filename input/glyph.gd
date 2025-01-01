@@ -30,18 +30,6 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-@export_group("Binding")
-
-## scope is the settings scope in which binding overrides will be stored.
-@export var scope: StdSettingsScope = null:
-	set(value):
-		if scope is StdSettingsScope:
-			Signals.disconnect_safe(scope.config.changed, _on_bindings_changed)
-
-		scope = value
-		if is_node_ready() and not Engine.is_editor_hint():
-			Signals.connect_safe(scope.config.changed, _on_bindings_changed)
-
 @export_subgroup("Action")
 
 ## action_set is an input action set which defines the configured action.
@@ -58,12 +46,7 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 ## player_id is a player identifier which will be used to look up the action's input
 ## origin bindings. Specifically, this is used to find the corresponding `StdInputSlot`
 ## node, which must be present in the scene tree.
-@export var player_id: int = 1:
-	set(value):
-		player_id = value
-
-		if is_node_ready() and not Engine.is_editor_hint():
-			_slot = StdInputSlot.for_player(player_id)
+@export var player_id: int = 1
 
 @export_subgroup("Device")
 
@@ -73,6 +56,7 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var _keyboard_language: String = _get_keyboard_language()
 var _slot: StdInputSlot = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -87,49 +71,23 @@ func update() -> void:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	if Engine.is_editor_hint():
-		return
-
-	Signals.disconnect_safe(_slot.action_configuration_changed, _on_actions_changed)
-	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
-	Signals.disconnect_safe(device_type_override.value_changed, _handle_update)
-	Signals.disconnect_safe(scope.config.changed, _on_bindings_changed)
-
-
-func _ready() -> void:
+func _enter_tree() -> void:
 	if Engine.is_editor_hint():
 		return
 
 	_slot = StdInputSlot.for_player(player_id)
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
 
-	# NOTE: Defer connection so that subclasses can do their setup in '_ready' first.
 
-	assert(scope is StdSettingsScope, "invalid config; missing settings scope")
-	Signals.connect_safe(scope.config.changed, _on_bindings_changed)
+func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		return
 
-	(
-		Signals
-		. connect_safe(
-			_slot.action_configuration_changed,
-			_on_actions_changed,
-			CONNECT_DEFERRED,
-		)
-	)
-	Signals.connect_safe(_slot.device_activated, _on_device_activated, CONNECT_DEFERRED)
+	Signals.disconnect_safe(_slot.action_configuration_changed, _on_actions_changed)
+	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
 
 	if device_type_override is StdSettingsPropertyInt:
-		(
-			Signals
-			. connect_safe(
-				device_type_override.value_changed,
-				_handle_update,
-				CONNECT_DEFERRED,
-			)
-		)
-
-	call_deferred(&"_handle_update")
+		Signals.disconnect_safe(device_type_override.value_changed, _handle_update)
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -155,6 +113,30 @@ func _get_configuration_warnings() -> PackedStringArray:
 	return warnings
 
 
+func _process(_delta: float) -> void:
+	var keyboard_language := _get_keyboard_language()
+
+	if keyboard_language != _keyboard_language:
+		_keyboard_language = keyboard_language
+		_handle_update()
+
+
+func _ready() -> void:
+	if Engine.is_editor_hint():
+		set_process(false)
+		return
+
+	set_process(_slot.device_type == DeviceType.KEYBOARD)
+
+	Signals.connect_safe(_slot.action_configuration_changed, _on_actions_changed)
+	Signals.connect_safe(_slot.device_activated, _on_device_activated)
+
+	if device_type_override is StdSettingsPropertyInt:
+		Signals.connect_safe(device_type_override.value_changed, _handle_update)
+
+	_handle_update()
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
@@ -176,14 +158,6 @@ func _handle_update() -> void:
 ##
 ## NOTE: This will be called *before* the glyph is updated.
 func _action_configuration_changed() -> void:
-	pass
-
-
-## _config_changed can be overridden by a subclass to react to changes to stored
-## bindings for the action associated with this glyph.
-##
-## NOTE: This will be called *before* the glyph is updated.
-func _config_changed() -> void:
 	pass
 
 
@@ -217,6 +191,14 @@ func _update_glyph(_device_type: DeviceType) -> bool:
 	return false
 
 
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+static func _get_keyboard_language() -> String:
+	var index := DisplayServer.keyboard_get_current_layout()
+	return DisplayServer.keyboard_get_layout_language(index)
+
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
@@ -225,16 +207,7 @@ func _on_actions_changed() -> void:
 	_handle_update()
 
 
-func _on_bindings_changed(category: StringName, key: StringName) -> void:
-	if not category.begins_with(action_set.name + "/"):
-		return
-	if key != "%s/%d" % [action, binding_index]:
-		return
-
-	_config_changed()
-	_handle_update()
-
-
 func _on_device_activated(device: StdInputDevice) -> void:
+	set_process(device.device_type == DeviceType.KEYBOARD)
 	_device_activated(device)
 	_handle_update()
