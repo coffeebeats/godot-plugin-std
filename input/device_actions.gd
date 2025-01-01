@@ -8,6 +8,24 @@
 class_name StdInputDeviceActions
 extends Node
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## BindingIndex is an enumeration of "ranks"/"indices" in which a binding can occupy.
+enum BindingIndex {  # gdlint:ignore=class-definitions-order
+	PRIMARY = 0,
+	SECONDARY = 1,
+	TERTIARY = 2,
+}
+
+## BINDING_INDEX_PRIMARY is the primary device type-specific binding for an action.
+const BINDING_INDEX_PRIMARY := BindingIndex.PRIMARY
+
+## BINDING_INDEX_SECONDARY is the secondary device type-specific binding for an action.
+const BINDING_INDEX_SECONDARY := BindingIndex.SECONDARY
+
+## BINDING_INDEX_TERTIARY is the tertiary device type-specific binding for an action.
+const BINDING_INDEX_TERTIARY := BindingIndex.TERTIARY
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 # Action sets

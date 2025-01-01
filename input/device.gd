@@ -103,6 +103,12 @@ const DEVICE_ID_ALL := -1
 ## device_type is the `DeviceType` of the `StdInputDevice`.
 @export var device_type: DeviceType = DEVICE_TYPE_UNKNOWN
 
+## device_category is a `DeviceType` representing which category of controller the input
+## device falls under. This can be one of `DEVICE_TYPE_KEYBOARD`, `DEVICE_TYPE_GENERIC`,
+## or `DEVICE_TYPE_UNKNOWN`.
+@export var device_category: DeviceType:
+	get = _get_device_category
+
 @export_group("Components")
 
 ## actions is the input device's component which manages loaded/enabled action sets.
@@ -116,6 +122,24 @@ const DEVICE_ID_ALL := -1
 @export var haptics: StdInputDeviceHaptics = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+@warning_ignore("SHADOWED_VARIABLE")
+
+
+## get_device_category returns the category of input device for the specified device
+## type. This can be one of `DEVICE_TYPE_KEYBOARD`, `DEVICE_TYPE_GENERIC`, or
+## `DEVICE_TYPE_UNKNOWN`.
+static func get_device_category(
+	device_type: DeviceType,
+) -> DeviceType:
+	if device_type == DEVICE_TYPE_UNKNOWN:
+		return DEVICE_TYPE_UNKNOWN
+
+	if device_type == DEVICE_TYPE_KEYBOARD:
+		return DEVICE_TYPE_KEYBOARD
+
+	return DEVICE_TYPE_GENERIC
+
 
 # Events
 
@@ -337,3 +361,10 @@ func _ready() -> void:
 	assert(actions is StdInputDeviceActions, "invalid config; missing component")
 	assert(glyphs is StdInputDeviceGlyphs, "invalid config; missing component")
 	assert(haptics is StdInputDeviceHaptics, "invalid config; missing component")
+
+
+# -- SETTERS/GETTERS ----------------------------------------------------------------- #
+
+
+func _get_device_category() -> StdInputDevice.DeviceType:
+	return get_device_category(device_type)

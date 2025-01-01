@@ -35,7 +35,7 @@ func _ready() -> void:
 
 func _get_action_glyph(
 	slot: int,
-	device_type: DeviceType,
+	device_type: StdInputDevice.DeviceType,
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,
@@ -68,7 +68,7 @@ func _get_action_glyph(
 
 func _get_action_origin_label(
 	slot: int,
-	device_type: DeviceType,
+	device_type: StdInputDevice.DeviceType,
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,
@@ -92,7 +92,7 @@ func _get_action_origin_label(
 
 func _list_action_origins(
 	slot: int,
-	device_type: DeviceType,
+	device_type: StdInputDevice.DeviceType,
 	action_set: StringName,
 	action: StringName,
 	index: int,

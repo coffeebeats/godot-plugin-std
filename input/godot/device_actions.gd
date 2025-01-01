@@ -14,7 +14,7 @@ extends StdInputDeviceActions
 
 const Signals := preload("../../event/signal.gd")
 const Origin := preload("../origin.gd")
-const Binding := preload("binding.gd")
+const Bindings := preload("binding.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -249,18 +249,14 @@ func _get_action_origins(
 ) -> PackedInt64Array:
 	var origins := PackedInt64Array()
 
-	for index in Binding.BindingIndex.values():
+	for index in StdInputDeviceActions.BindingIndex.values():
 		var event := (
-			Binding
+			Bindings
 			. get_action_binding(
 				scope,
 				action_set,
 				action,
-				(
-					StdInputDevice.DEVICE_TYPE_KEYBOARD
-					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
-					else StdInputDevice.DEVICE_TYPE_GENERIC
-				),
+				StdInputDevice.get_device_category(device_type),
 				index,
 			)
 		)

@@ -20,7 +20,7 @@ var slot: StdInputSlot = null
 
 func _get_action_glyph(
 	_device: int,  # Active device ID
-	device_type: DeviceType,  # Active or overridden device type
+	device_type: StdInputDevice.DeviceType,  # Active or overridden device type
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,
@@ -78,7 +78,7 @@ func _get_action_glyph(
 
 func _get_action_origin_label(
 	_device: int,  # Active device ID
-	device_type: DeviceType,  # Active or overridden device type
+	device_type: StdInputDevice.DeviceType,  # Active or overridden device type
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,

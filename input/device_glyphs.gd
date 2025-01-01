@@ -8,10 +8,6 @@
 class_name StdInputDeviceGlyphs
 extends Node
 
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
-const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -19,7 +15,7 @@ const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
 ## action and "binding index" (e.g. primary or secondary).
 func get_action_glyph(
 	device: int,
-	device_type: DeviceType,
+	device_type: StdInputDevice.DeviceType,
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int = 0,
@@ -44,7 +40,7 @@ func get_action_glyph(
 ## to the specified action.
 func get_action_origin_label(
 	device: int,
-	device_type: DeviceType,
+	device_type: StdInputDevice.DeviceType,
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int = 0,
@@ -62,7 +58,7 @@ func get_action_origin_label(
 
 func _get_action_glyph(
 	_device: int,
-	_device_type: DeviceType,
+	_device_type: StdInputDevice.DeviceType,
 	_action_set: StdInputActionSet,
 	_action: StringName,
 	_index: int,
@@ -74,7 +70,7 @@ func _get_action_glyph(
 
 func _get_action_origin_label(
 	_device: int,
-	_device_type: DeviceType,
+	_device_type: StdInputDevice.DeviceType,
 	_action_set: StdInputActionSet,
 	_action: StringName,
 	_index: int,
