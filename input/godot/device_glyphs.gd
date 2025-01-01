@@ -44,11 +44,7 @@ func _get_action_glyph(
 				scope,
 				action_set,
 				action,
-				(
-					StdInputDevice.DEVICE_TYPE_KEYBOARD
-					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
-					else StdInputDevice.DEVICE_TYPE_GENERIC
-				),
+				StdInputDevice.get_device_category(device_type),
 				index,
 			)
 		)
@@ -65,7 +61,7 @@ func _get_action_glyph(
 
 func _get_action_origin_label(
 	_device: int,
-	device_type: DeviceType,
+	device_type: StdInputDevice.DeviceType,
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,
