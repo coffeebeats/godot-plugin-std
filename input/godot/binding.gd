@@ -3,8 +3,11 @@
 ##
 ## A shared library for reading and writing input bindings to a `StdSettingsScope`.
 ##
-## NOTE: This 'Object' should *not* be instanced and/or added to the 'SceneTree'. It is a
-## "static" library that can be imported at compile-time using 'preload'.
+## NOTE: This implementation requires that all bindings apply to all players. Changing
+## bindings for one player thus changes them for all players.
+##
+## NOTE: This 'Object' should *not* be instanced and/or added to the 'SceneTree'. It is
+## a "static" library that can be imported at compile-time using 'preload'.
 ##
 
 extends Object
@@ -14,18 +17,6 @@ extends Object
 const Origin := preload("../origin.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
-
-## BindingIndex is an enumeration of "ranks"/"indices" in which a binding can occupy.
-enum BindingIndex {  # gdlint:ignore=class-definitions-order
-	PRIMARY = 0,
-	SECONDARY = 1,
-}
-
-## BINDING_INDEX_PRIMARY is the primary device type-specific binding for an action.
-const BINDING_INDEX_PRIMARY := BindingIndex.PRIMARY
-
-## BINDING_INDEX_SECONDARY is the secondary device type-specific binding for an action.
-const BINDING_INDEX_SECONDARY := BindingIndex.SECONDARY
 
 ## EMPTY is a sentinel value denoting an unbound input device origin. This is used to
 ## "overwrite" a default value bound in project settings.
@@ -48,7 +39,9 @@ static func bind_action(
 	action: StringName,
 	event: InputEvent,
 	device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN,
-	index: BindingIndex = BINDING_INDEX_PRIMARY,
+	index: StdInputDeviceActions.BindingIndex = (
+		StdInputDeviceActions.BINDING_INDEX_PRIMARY
+	),
 ) -> bool:
 	assert(scope is StdSettingsScope, "missing input: scope")
 	assert(action_set is StdInputActionSet, "missing input: action set")
@@ -73,22 +66,30 @@ static func bind_action(
 	var changed := false
 
 	for a in action_set.list_action_names():
-		for i in BindingIndex.values():
-			var category := _get_action_set_category(action_set, device_type)
-			var key := _get_action_key(a, i)
+		for i in StdInputDeviceActions.BindingIndex.values():
+			var category := get_action_set_category(action_set, device_type)
+			var key := get_action_key(a, i)
 
 			if a == action and i == index:
-				if (
-					scope.config.get_int(category, key, UNSET) == UNSET
-					and (
-						value_encoded
-						== _get_origin_from_project_settings(
-							a,
-							device_type,
-							i,
+				var origin_current := scope.config.get_int(category, key, UNSET)
+				var origin_default := _get_origin_from_project_settings(
+					a,
+					device_type,
+					i,
+				)
+
+				if value_encoded == origin_default:
+					if origin_current == UNSET:
+						continue
+
+					if scope.config.erase(category, key):
+						print(
+							"std/input/godot/binding.gd",
+							": reset action binding: %s/%s" % [action_set.name, action],
 						)
-					)
-				):
+
+					changed = true
+
 					continue
 
 				if scope.config.set_int(category, key, value_encoded):
@@ -153,7 +154,9 @@ static func get_action_binding(
 	action_set: StdInputActionSet,
 	action: StringName,
 	device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN,
-	index: BindingIndex = BINDING_INDEX_PRIMARY,
+	index: StdInputDeviceActions.BindingIndex = (
+		StdInputDeviceActions.BINDING_INDEX_PRIMARY
+	),
 ) -> InputEvent:
 	assert(scope is StdSettingsScope, "missing input: scope")
 	assert(action_set is StdInputActionSet, "missing input: action set")
@@ -165,8 +168,8 @@ static func get_action_binding(
 	)
 	assert(index >= 0, "invalid argument: unsupported index")
 
-	var category := _get_action_set_category(action_set, device_type)
-	var key := _get_action_key(action, index)
+	var category := get_action_set_category(action_set, device_type)
+	var key := get_action_key(action, index)
 
 	var value_encoded := scope.config.get_int(category, key, UNSET)
 	if value_encoded == EMPTY:
@@ -193,6 +196,71 @@ static func get_action_binding(
 	return event
 
 
+## get_action_set_category returns the category name for the specified action set and
+## input device type.
+static func get_action_set_category(
+	action_set: StdInputActionSet,
+	device_type: StdInputDevice.DeviceType,
+) -> StringName:
+	return "%s/%d" % [action_set.name, device_type]
+
+
+## get_action_key returns the key name within a category for the specified action name
+## and binding index.
+static func get_action_key(
+	action: StringName, index: StdInputDeviceActions.BindingIndex
+) -> StringName:
+	return "%s/%d" % [action, index]
+
+
+## action_has_user_override returns whether there is a custom input binding (i.e. user-
+## set value) for the specified action, device type, and binding index. This effectively
+## returns whether the bindings match the default values.
+static func action_has_user_override(
+	scope: StdSettingsScope,
+	action_set: StdInputActionSet,
+	action: StringName,
+	device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN,
+	index: StdInputDeviceActions.BindingIndex = (
+		StdInputDeviceActions.BINDING_INDEX_PRIMARY
+	),
+) -> bool:
+	assert(scope is StdSettingsScope, "missing input: scope")
+	assert(action_set is StdInputActionSet, "missing input: action set")
+	assert(action, "missing input: action name")
+	assert(action in action_set.list_action_names(), "invalid input: unknown action")
+	assert(
+		device_type > StdInputDevice.DEVICE_TYPE_UNKNOWN,
+		"invalid argument: device type",
+	)
+	assert(index >= 0, "invalid argument: unsupported index")
+
+	var category := get_action_set_category(action_set, device_type)
+	var key := get_action_key(action, index)
+
+	return scope.config.get_int(category, key, UNSET) != UNSET
+
+
+## category_has_user_override returns whether there is any custom input binding (i.e.
+## user-set value) for the specified action set and device type. This effectively
+## returns whether all bindings in the action set, regardless of binding index, match
+## their default values.
+static func category_has_user_override(
+	scope: StdSettingsScope,
+	action_set: StdInputActionSet,
+	device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN,
+) -> bool:
+	assert(scope is StdSettingsScope, "missing input: scope")
+	assert(action_set is StdInputActionSet, "missing input: action set")
+	assert(
+		device_type > StdInputDevice.DEVICE_TYPE_UNKNOWN,
+		"invalid argument: device type",
+	)
+
+	var category := get_action_set_category(action_set, device_type)
+	return scope.config.has_category(category)
+
+
 ## reset_action clears the stored input event for the provided action and device type at
 ## the specified binding index/rank. This returns the action binding to its default
 ## state.
@@ -206,7 +274,9 @@ static func reset_action(
 	action_set: StdInputActionSet,
 	action: StringName,
 	device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN,
-	index: BindingIndex = BINDING_INDEX_PRIMARY,
+	index: StdInputDeviceActions.BindingIndex = (
+		StdInputDeviceActions.BINDING_INDEX_PRIMARY
+	),
 ) -> bool:
 	assert(scope is StdSettingsScope, "missing input: scope")
 	assert(action_set is StdInputActionSet, "missing input: action set")
@@ -224,8 +294,8 @@ static func reset_action(
 		index,
 	)
 	if event == null:
-		var category := _get_action_set_category(action_set, device_type)
-		var key := _get_action_key(action, index)
+		var category := get_action_set_category(action_set, device_type)
+		var key := get_action_key(action, index)
 
 		var changed := scope.config.erase(category, key)
 		if changed:
@@ -261,7 +331,7 @@ static func reset_all_actions(
 		"invalid argument: device type",
 	)
 
-	var category := _get_action_set_category(action_set, device_type)
+	var category := get_action_set_category(action_set, device_type)
 
 	var changed := scope.config.clear(category)
 	if changed:
@@ -306,24 +376,10 @@ static func _compare_and_swap(
 	return changed
 
 
-static func _get_action_set_category(
-	action_set: StdInputActionSet,
-	device_type: StdInputDevice.DeviceType,
-) -> StringName:
-	return "%s/%d" % [action_set.name, device_type]
-
-
-static func _get_action_key(
-	action: StringName,
-	index: BindingIndex,
-) -> StringName:
-	return "%s/%d" % [action, index]
-
-
 static func _get_event_from_project_settings(
 	action: StringName,
 	device_type: StdInputDevice.DeviceType,
-	index: BindingIndex,
+	index: StdInputDeviceActions.BindingIndex,
 ) -> InputEvent:
 	var origin := _get_origin_from_project_settings(action, device_type, index)
 	if origin == UNSET:
@@ -335,7 +391,7 @@ static func _get_event_from_project_settings(
 static func _get_origin_from_project_settings(
 	action: StringName,
 	device_type: StdInputDevice.DeviceType,
-	index: BindingIndex,
+	index: StdInputDeviceActions.BindingIndex,
 ) -> int:
 	var info = ProjectSettings.get_setting_with_override(&"input/" + action)
 	if not info is Dictionary:
