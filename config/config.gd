@@ -108,6 +108,18 @@ func has_bool(category: StringName, key: StringName) -> bool:
 	return value is bool
 
 
+## has_category returns whether there is any value associated with any key within the
+## specified category.
+func has_category(category: StringName) -> bool:
+	if category not in _data:
+		return false
+
+	if not _data[category]:
+		return false
+
+	return true
+
+
 ## has_float returns whether there is a `float`-typed value associated with `key` in
 ## `category`.
 func has_float(category: StringName, key: StringName) -> bool:
