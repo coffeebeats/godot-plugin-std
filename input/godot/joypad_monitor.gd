@@ -31,7 +31,7 @@ static var _regex_switch_joy_con_single := RegEx.create_from_string(
 	"(Joy-Con \\([LR]\\)|Left Joy-Con|Right Joy-Con)"
 )
 static var _regex_switch_pro := RegEx.create_from_string(
-	"(Switch (Controller|Pro)|Horipad Switch)"
+	"((Switch (Controller|Pro)|Horipad Switch)|Pro Controller)"
 )
 static var _regex_xbox_360 := RegEx.create_from_string("Xbox 360")
 static var _regex_xbox_one := RegEx.create_from_string("Xbox(?!( 360))")
