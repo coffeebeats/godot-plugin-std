@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.10 (2025-01-01)
+
+## What's Changed
+* fix(input): add a `has_category` method to `Config` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/166
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.9...v1.9.10
+
 ## 1.9.9 (2025-01-01)
 
 ## What's Changed
