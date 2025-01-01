@@ -7,9 +7,14 @@ extends GutTest
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Origin := preload("../origin.gd")
-const Binding := preload("binding.gd")
+const Bindings := preload("binding.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
+
+const BindingIndex := StdInputDeviceActions.BindingIndex
+const BINDING_INDEX_PRIMARY := StdInputDeviceActions.BINDING_INDEX_PRIMARY
+const BINDING_INDEX_SECONDARY := StdInputDeviceActions.BINDING_INDEX_SECONDARY
+const BINDING_INDEX_TERTIARY := StdInputDeviceActions.BINDING_INDEX_TERTIARY
 
 
 class TestBindingBase:
@@ -20,10 +25,10 @@ class TestBindingBase:
 
 	var _default_actions := PackedStringArray()
 	var _parameters := [
-		[StdInputDevice.DEVICE_TYPE_GENERIC, Binding.BINDING_INDEX_PRIMARY],
-		[StdInputDevice.DEVICE_TYPE_GENERIC, Binding.BINDING_INDEX_SECONDARY],
-		[StdInputDevice.DEVICE_TYPE_KEYBOARD, Binding.BINDING_INDEX_PRIMARY],
-		[StdInputDevice.DEVICE_TYPE_KEYBOARD, Binding.BINDING_INDEX_SECONDARY],
+		[StdInputDevice.DEVICE_TYPE_GENERIC, BINDING_INDEX_PRIMARY],
+		[StdInputDevice.DEVICE_TYPE_GENERIC, BINDING_INDEX_SECONDARY],
+		[StdInputDevice.DEVICE_TYPE_KEYBOARD, BINDING_INDEX_PRIMARY],
+		[StdInputDevice.DEVICE_TYPE_KEYBOARD, BINDING_INDEX_SECONDARY],
 	]
 
 	# -- TEST HOOKS ------------------------------------------------------------------ #
@@ -98,7 +103,7 @@ class TestBindAction:
 		var device_type: StdInputDevice.DeviceType = params[0]
 
 		# Given: A binding index.
-		var index: Binding.BindingIndex = params[1]
+		var index: BindingIndex = params[1]
 
 		# Given: A digital action name.
 		var action := &"test-action"
@@ -107,7 +112,7 @@ class TestBindAction:
 		action_set.actions_digital.append(action)
 
 		# Given: Default events for each binding index.
-		var events_default := Binding.BindingIndex.values().map(
+		var events_default := BindingIndex.values().map(
 			func(i):
 				return (
 					_create_kbm_event(KEY_A + i)
@@ -119,13 +124,13 @@ class TestBindAction:
 		# Given: The test action is bound to an origin.
 		_set_events_as_default(action, events_default)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
 			events_default[index],
 		)
 
 		# When: The action is bound to the default event.
 		var changed := (
-			Binding
+			Bindings
 			. bind_action(
 				scope,
 				action_set,
@@ -139,7 +144,7 @@ class TestBindAction:
 		# Then: There is no change.
 		assert_false(changed)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
 			events_default[index],
 		)
 
@@ -150,7 +155,7 @@ class TestBindAction:
 		var device_type: StdInputDevice.DeviceType = params[0]
 
 		# Given: A binding index.
-		var index: Binding.BindingIndex = params[1]
+		var index: BindingIndex = params[1]
 
 		# Given: A digital action name.
 		var action := &"test-action"
@@ -159,7 +164,7 @@ class TestBindAction:
 		action_set.actions_digital.append(action)
 
 		# Given: Default events for each binding index.
-		var events_default := Binding.BindingIndex.values().map(
+		var events_default := BindingIndex.values().map(
 			func(i):
 				return (
 					_create_kbm_event(KEY_A + i)
@@ -171,7 +176,7 @@ class TestBindAction:
 		# Given: The test action is bound to an origin.
 		_set_events_as_default(action, events_default)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
 			events_default[index],
 		)
 
@@ -182,7 +187,7 @@ class TestBindAction:
 			else _create_joypad_event(JOY_BUTTON_Y)
 		)
 		var changed := (
-			Binding
+			Bindings
 			. bind_action(
 				scope,
 				action_set,
@@ -196,7 +201,7 @@ class TestBindAction:
 		# Then: The binding is successfully changed.
 		assert_true(changed)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
 			event_new,
 		)
 
@@ -227,28 +232,28 @@ class TestBindAction:
 			else _create_joypad_event(JOY_BUTTON_A)
 		)
 		var changed := (
-			Binding
+			Bindings
 			. bind_action(
 				scope,
 				action_set,
 				action,
 				event,
 				device_type,
-				Binding.BINDING_INDEX_PRIMARY,
+				BINDING_INDEX_PRIMARY,
 			)
 		)
 		assert_true(changed)
 
 		# When: The secondary index is bound to the same origin.
 		changed = (
-			Binding
+			Bindings
 			. bind_action(
 				scope,
 				action_set,
 				action,
 				event,
 				device_type,
-				Binding.BINDING_INDEX_SECONDARY,
+				BINDING_INDEX_SECONDARY,
 			)
 		)
 		assert_true(changed)
@@ -256,13 +261,13 @@ class TestBindAction:
 		# Then: The primary index is unbound.
 		assert_null(
 			(
-				Binding
+				Bindings
 				. get_action_binding(
 					scope,
 					action_set,
 					action,
 					device_type,
-					Binding.BINDING_INDEX_PRIMARY,
+					BINDING_INDEX_PRIMARY,
 				)
 			),
 		)
@@ -271,13 +276,13 @@ class TestBindAction:
 		_assert_events_eq(
 			event,
 			(
-				Binding
+				Bindings
 				. get_action_binding(
 					scope,
 					action_set,
 					action,
 					device_type,
-					Binding.BINDING_INDEX_SECONDARY,
+					BINDING_INDEX_SECONDARY,
 				)
 			),
 		)
@@ -289,7 +294,7 @@ class TestBindAction:
 		var device_type: StdInputDevice.DeviceType = params[0]
 
 		# Given: A binding index.
-		var index: Binding.BindingIndex = params[1]
+		var index: BindingIndex = params[1]
 
 		# Given: Two digital action names.
 		var action1 := &"test-action1"
@@ -310,7 +315,7 @@ class TestBindAction:
 			else _create_joypad_event(JOY_BUTTON_A)
 		)
 		var changed := (
-			Binding
+			Bindings
 			. bind_action(
 				scope,
 				action_set,
@@ -324,7 +329,7 @@ class TestBindAction:
 
 		# When: The second action is bound to that same origin.
 		changed = (
-			Binding
+			Bindings
 			. bind_action(
 				scope,
 				action_set,
@@ -339,7 +344,7 @@ class TestBindAction:
 		# Then: The first action is unbound.
 		assert_null(
 			(
-				Binding
+				Bindings
 				. get_action_binding(
 					scope,
 					action_set,
@@ -354,7 +359,7 @@ class TestBindAction:
 		_assert_events_eq(
 			event,
 			(
-				Binding
+				Bindings
 				. get_action_binding(
 					scope,
 					action_set,
@@ -376,7 +381,7 @@ class TestResetAction:
 		var device_type: StdInputDevice.DeviceType = params[0]
 
 		# Given: A binding index.
-		var index: Binding.BindingIndex = params[1]
+		var index: BindingIndex = params[1]
 
 		# Given: A digital action name.
 		var action := &"test-action"
@@ -385,7 +390,7 @@ class TestResetAction:
 		action_set.actions_digital.append(action)
 
 		# Given: Default events for each binding index.
-		var events_default := Binding.BindingIndex.values().map(
+		var events_default := BindingIndex.values().map(
 			func(i):
 				return (
 					_create_kbm_event(KEY_A + i)
@@ -397,13 +402,13 @@ class TestResetAction:
 		# Given: The test action is bound to the default origin.
 		_set_events_as_default(action, events_default)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
 			events_default[index],
 		)
 
 		# When: The action's binding is reset.
 		var changed := (
-			Binding
+			Bindings
 			. reset_action(
 				scope,
 				action_set,
@@ -416,7 +421,7 @@ class TestResetAction:
 		# Then: There is no change.
 		assert_false(changed)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
 			events_default[index],
 		)
 
@@ -427,7 +432,7 @@ class TestResetAction:
 		var device_type: StdInputDevice.DeviceType = params[0]
 
 		# Given: A binding index.
-		var index: Binding.BindingIndex = params[1]
+		var index: BindingIndex = params[1]
 
 		# Given: A digital action name.
 		var action := &"test-action"
@@ -436,7 +441,7 @@ class TestResetAction:
 		action_set.actions_digital.append(action)
 
 		# Given: Default events for each binding index.
-		var events_default := Binding.BindingIndex.values().map(
+		var events_default := BindingIndex.values().map(
 			func(i):
 				return (
 					_create_kbm_event(KEY_A + i)
@@ -448,7 +453,7 @@ class TestResetAction:
 		# Given: The test action is bound to the default origin.
 		_set_events_as_default(action, events_default)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
 			events_default[index],
 		)
 
@@ -459,7 +464,7 @@ class TestResetAction:
 			else _create_joypad_event(JOY_BUTTON_Y)
 		)
 		var changed := (
-			Binding
+			Bindings
 			. bind_action(
 				scope,
 				action_set,
@@ -473,7 +478,7 @@ class TestResetAction:
 
 		# When: The action's binding is reset.
 		changed = (
-			Binding
+			Bindings
 			. reset_action(
 				scope,
 				action_set,
@@ -486,7 +491,7 @@ class TestResetAction:
 		# Then: There is a change back to the default origin.
 		assert_true(changed)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
 			events_default[index],
 		)
 
@@ -510,7 +515,7 @@ class TestResetAllActions:
 		var device_type: StdInputDevice.DeviceType = params[0]
 
 		# Given: A binding index.
-		var index: Binding.BindingIndex = params[1]
+		var index: BindingIndex = params[1]
 
 		# Given: Two digital action names.
 		var action1 := &"test-action1"
@@ -521,7 +526,7 @@ class TestResetAllActions:
 		action_set.actions_digital.append(action2)
 
 		# Given: Default events for each action.
-		var events_default1 := Binding.BindingIndex.values().map(
+		var events_default1 := BindingIndex.values().map(
 			func(i):
 				return (
 					_create_kbm_event(KEY_A + i)
@@ -529,14 +534,12 @@ class TestResetAllActions:
 					else _create_joypad_event(JOY_BUTTON_A + i)
 				)
 		)
-		var events_default2 := Binding.BindingIndex.values().map(
+		var events_default2 := BindingIndex.values().map(
 			func(i):
 				return (
-					_create_kbm_event(KEY_A + Binding.BindingIndex.size() + i)
+					_create_kbm_event(KEY_A + BindingIndex.size() + i)
 					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
-					else _create_joypad_event(
-						JOY_BUTTON_A + Binding.BindingIndex.size() + i
-					)
+					else _create_joypad_event(JOY_BUTTON_A + BindingIndex.size() + i)
 				)
 		)
 
@@ -545,14 +548,14 @@ class TestResetAllActions:
 		_set_events_as_default(action2, events_default2)
 
 		# When: All actions in the action set are reset.
-		var changed := Binding.reset_all_actions(scope, action_set, device_type)
+		var changed := Bindings.reset_all_actions(scope, action_set, device_type)
 		assert_false(changed)
 
 		# Then: The action's are still bound to their defaults.
 		_assert_events_eq(
 			events_default1[index],
 			(
-				Binding
+				Bindings
 				. get_action_binding(
 					scope,
 					action_set,
@@ -565,7 +568,7 @@ class TestResetAllActions:
 		_assert_events_eq(
 			events_default2[index],
 			(
-				Binding
+				Bindings
 				. get_action_binding(
 					scope,
 					action_set,
@@ -583,7 +586,7 @@ class TestResetAllActions:
 		var device_type: StdInputDevice.DeviceType = params[0]
 
 		# Given: A binding index.
-		var index: Binding.BindingIndex = params[1]
+		var index: BindingIndex = params[1]
 
 		# Given: Two digital action names.
 		var action1 := &"test-action1"
@@ -594,7 +597,7 @@ class TestResetAllActions:
 		action_set.actions_digital.append(action2)
 
 		# Given: Default events for each action.
-		var events_default1 := Binding.BindingIndex.values().map(
+		var events_default1 := BindingIndex.values().map(
 			func(i):
 				return (
 					_create_kbm_event(KEY_A + i)
@@ -602,14 +605,12 @@ class TestResetAllActions:
 					else _create_joypad_event(JOY_BUTTON_A + i)
 				)
 		)
-		var events_default2 := Binding.BindingIndex.values().map(
+		var events_default2 := BindingIndex.values().map(
 			func(i):
 				return (
-					_create_kbm_event(KEY_A + Binding.BindingIndex.size() + i)
+					_create_kbm_event(KEY_A + BindingIndex.size() + i)
 					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
-					else _create_joypad_event(
-						JOY_BUTTON_A + Binding.BindingIndex.size() + i
-					)
+					else _create_joypad_event(JOY_BUTTON_A + BindingIndex.size() + i)
 				)
 		)
 
@@ -632,7 +633,7 @@ class TestResetAllActions:
 		# Given: Both actions are bound to non-default events.
 		assert_true(
 			(
-				Binding
+				Bindings
 				. bind_action(
 					scope,
 					action_set,
@@ -644,12 +645,12 @@ class TestResetAllActions:
 			)
 		)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action1, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action1, device_type, index),
 			event1,
 		)
 		assert_true(
 			(
-				Binding
+				Bindings
 				. bind_action(
 					scope,
 					action_set,
@@ -661,18 +662,18 @@ class TestResetAllActions:
 			)
 		)
 		_assert_events_eq(
-			Binding.get_action_binding(scope, action_set, action2, device_type, index),
+			Bindings.get_action_binding(scope, action_set, action2, device_type, index),
 			event2,
 		)
 
 		# When: All actions in the action set are reset.
-		var changed := Binding.reset_all_actions(scope, action_set, device_type)
+		var changed := Bindings.reset_all_actions(scope, action_set, device_type)
 		assert_true(changed)
 
 		# Then: The actions are bound to their defaults.
 		_assert_events_eq(
 			(
-				Binding
+				Bindings
 				. get_action_binding(
 					scope,
 					action_set,
@@ -685,7 +686,7 @@ class TestResetAllActions:
 		)
 		_assert_events_eq(
 			(
-				Binding
+				Bindings
 				. get_action_binding(
 					scope,
 					action_set,
