@@ -11,7 +11,7 @@ const Bindings := preload("binding.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-const BindingIndex := StdInputDeviceActions.BindingIndex
+const BindingIndex := StdInputDeviceActions.BindingIndex  # gdlint:ignore=constant-name
 const BINDING_INDEX_PRIMARY := StdInputDeviceActions.BINDING_INDEX_PRIMARY
 const BINDING_INDEX_SECONDARY := StdInputDeviceActions.BINDING_INDEX_SECONDARY
 const BINDING_INDEX_TERTIARY := StdInputDeviceActions.BINDING_INDEX_TERTIARY
