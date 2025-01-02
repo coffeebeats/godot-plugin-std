@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.12 (2025-01-02)
+
+## What's Changed
+* fix(condition): avoid connecting multiple times to the property signal in `StdConditionExpressionSettingsProperty` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/171
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.11...v1.9.12
+
 ## 1.9.11 (2025-01-02)
 
 ## What's Changed
