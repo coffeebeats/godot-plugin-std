@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.11 (2025-01-02)
+
+## What's Changed
+* chore(input): move `Origin` into the `godot`-specific directory by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/168
+* fix(input): update a settings property when Steam Input is enabled/disabled by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/170
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.10...v1.9.11
+
 ## 1.9.10 (2025-01-01)
 
 ## What's Changed
