@@ -13,6 +13,16 @@ extends StdInputSlot.JoypadMonitor
 
 const Signals := preload("../../event/signal.gd")
 
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+## steam_input_enabled_property is a settings property that the joypad monitor will
+## toggle based on connected controller activity.
+##
+## NOTE: It unfortunately seems that the only way to check for whether Steam Input is in
+## use is by the presence of a connected joypad. As such, this property will be enabled
+## when devices are connected and disabled otherwise.
+@export var steam_input_enabled_property: StdSettingsPropertyBool = null
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _connected := PackedInt64Array()
@@ -138,13 +148,16 @@ func _connect_device(device: int) -> void:
 		"]: joypad connected: %d (type=%d)" % [device, device_type],
 	)
 
-	_connected.append(device)
-
 	var slot: int = get_slot_for_device_id(device)
 	if slot == -1:
 		assert(false, "invalid argument; failed to find slot for device")
 		return
 
+	# Update this property first so that subsequent notifications are handled by Steam-
+	# backed components.
+	steam_input_enabled_property.set_value(true)
+
+	_connected.append(device)
 	joy_connected.emit(slot, device_type)
 
 
@@ -170,6 +183,9 @@ func _disconnect_device(device: int) -> void:
 
 	_connected.remove_at(index)
 	joy_disconnected.emit(slot)
+
+	if not _connected:
+		steam_input_enabled_property.set_value(false)
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
