@@ -70,7 +70,7 @@ func _is_allowed() -> bool:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_settings_property_value_changed(_value) -> void:
+func _on_settings_property_value_changed(_value: Variant) -> void:
 	var is_enabled := _is_allowed()
 
 	if is_enabled == _is_enabled:
