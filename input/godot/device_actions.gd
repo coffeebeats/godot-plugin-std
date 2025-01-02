@@ -13,8 +13,8 @@ extends StdInputDeviceActions
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Signals := preload("../../event/signal.gd")
-const Origin := preload("../origin.gd")
 const Bindings := preload("binding.gd")
+const Origin := preload("origin.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 

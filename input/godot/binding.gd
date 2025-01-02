@@ -14,7 +14,7 @@ extends Object
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Origin := preload("../origin.gd")
+const Origin := preload("origin.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
