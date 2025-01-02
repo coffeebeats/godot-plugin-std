@@ -6,8 +6,8 @@ extends GutTest
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Origin := preload("../origin.gd")
 const Bindings := preload("binding.gd")
+const Origin := preload("origin.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
