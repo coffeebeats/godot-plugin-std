@@ -36,6 +36,10 @@ const Config := preload("../config/config.gd")
 ## scope is the settings scope to which this property will read and writes its value.
 @export var scope: StdSettingsScope = null
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+static var _logger := StdLogger.create("std/settings/property")
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -58,10 +62,25 @@ func set_value(value: Variant) -> bool:
 	assert(scope is StdSettingsScope, "invalid config; missing 'scope'")
 
 	if not can_modify():
-		push_warning("tried to write a read-only property: %s::%s" % [category, name])
+		(
+			_logger
+			. warn(
+				"Attempted to write to a read-only property.",
+				{&"category": category, &"name": name},
+			)
+		)
+
 		return false
 
 	if _set_value_on_config(scope.config, value):
+		(
+			_logger
+			. debug(
+				"Updated property value.",
+				{&"category": category, &"name": name, &"value": value},
+			)
+		)
+
 		value_changed.emit(value)
 		return true
 
@@ -75,6 +94,18 @@ func follow(other: StdSettingsProperty) -> bool:
 	assert(other is StdSettingsProperty, "missing argument: other")
 
 	if not other.value_changed.is_connected(value_changed.emit):
+		(
+			_logger
+			. debug(
+				"Started following other settings property.",
+				{
+					&"category": category,
+					&"name": name,
+					&"other": "%s/%s" % [other.category, other.name],
+				},
+			)
+		)
+
 		other.value_changed.connect(value_changed.emit)
 		return true
 
@@ -87,6 +118,18 @@ func unfollow(other: StdSettingsProperty) -> bool:
 	assert(other is StdSettingsProperty, "missing argument: other")
 
 	if other.value_changed.is_connected(value_changed.emit):
+		(
+			_logger
+			. debug(
+				"Stopped following other settings property.",
+				{
+					&"category": category,
+					&"name": name,
+					&"other": "%s/%s" % [other.category, other.name],
+				},
+			)
+		)
+
 		other.value_changed.disconnect(value_changed.emit)
 		return true
 
