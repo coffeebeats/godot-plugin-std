@@ -69,6 +69,8 @@ var process_callback := StateMachineProcessCallback.STATE_MACHINE_PROCESS_PHYSIC
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+static var _logger := StdLogger.create("std/fsm/state-machine")  # gdlint:ignore=class-definitions-order,max-line-length
+
 ## A pointer to the currently active 'State'.
 var state: State = null
 
@@ -150,11 +152,7 @@ func _enter_tree() -> void:
 		_leaves[s.get_instance_id()] = s
 		_states[get_path_to(n)] = s
 
-		print(
-			"std/fsm/state_machine.gd[",
-			get_instance_id(),
-			"]: registered state: " + str(s._path)
-		)
+		_logger.info("Registered state.", {&"path": str(s._path)})
 
 	# Delete 'Node' instances to prevent their addition to the scene.
 	if compact:
@@ -240,11 +238,7 @@ func _transition_to(path: NodePath) -> void:
 	assert(path in _states, "Invalid argument; 'path' not found in 'StateMachine'!")
 	assert(not _is_in_transition, "Invalid config; nested transitions prohibited!")
 
-	print(
-		"std/fsm/state_machine.gd[",
-		get_instance_id(),
-		"]: transition to state: " + str(path)
-	)
+	_logger.info("Transitioning to state.", {&"path": str(path)})
 
 	var next: State = _states[path]
 	assert(next.get_instance_id() in _leaves, "Argument 'next' was not a leaf 'State'!")

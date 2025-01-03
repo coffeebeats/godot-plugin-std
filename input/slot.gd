@@ -484,6 +484,8 @@ func _ready() -> void:
 	# be created by the super's implementation.
 	super._ready()
 
+	_logger = _logger.named(&"std/input/slot")
+
 	assert(
 		joypad_monitor is JoypadMonitor,
 		"invalid config; missing joypad connection monitor"
@@ -528,13 +530,9 @@ func _activate_device(device: StdInputDevice) -> bool:
 		_active = _kbm_device
 		device_activated.emit(_kbm_device)
 
-		print(
-			"std/input/slot.gd[",
-			get_instance_id(),
-			(
-				"]: activated keyboard device: %d (type=%d)"
-				% [_active.device_id, _active.device_type]
-			),
+		_logger.info(
+			"Activated keyboard device.",
+			{&"device": _active.device_id, &"type": _active.device_type}
 		)
 
 		return true
@@ -551,13 +549,9 @@ func _activate_device(device: StdInputDevice) -> bool:
 		_active = joypad
 		device_activated.emit(joypad)
 
-		print(
-			"std/input/slot.gd[",
-			get_instance_id(),
-			(
-				"]: activated joypad device: %d (type=%d)"
-				% [_active.device_id, _active.device_type]
-			),
+		_logger.info(
+			"Activated joypad device.",
+			{&"device": _active.device_id, &"type": _active.device_type}
 		)
 
 		return true
@@ -675,12 +669,6 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 
 
 func _on_cursor_visibility_changed(visible: bool) -> void:
-	print(
-		"std/input/slot.gd[",
-		get_instance_id(),
-		"]: cursor visibility changed: %s" % visible,
-	)
-
 	if not visible:
 		return
 

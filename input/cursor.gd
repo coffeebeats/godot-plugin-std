@@ -26,6 +26,8 @@ const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+static var _logger := StdLogger.create("std/input/cursor")
+
 var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = false
@@ -107,11 +109,7 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 	if not action_sets:
 		return
 
-	print(
-		"std/input/cursor.gd[",
-		get_instance_id(),
-		"]: updating cursor configuration",
-	)
+	_logger.info("Updating cursor configuration.")
 
 	# First, determine cursor show/hide properties.
 
@@ -307,4 +305,5 @@ func _on_properties_changed(should_emit: bool = true) -> void:
 	_update_focus()
 
 	if should_emit:
+		_logger.info("Cursor visibility changed.", {&"visible": _cursor_visible})
 		cursor_visibility_changed.emit(_cursor_visible)

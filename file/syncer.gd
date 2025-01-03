@@ -60,6 +60,8 @@ const FilePath := preload("path.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var _logger := StdLogger.create(&"std/file/syncer")
+
 var _bytes: PackedByteArray = PackedByteArray()
 var _debounce: Debounce = null
 var _file: FileAccess = null
@@ -78,12 +80,8 @@ func open(path: String) -> Error:
 
 	var path_absolute := FilePath.make_project_path_absolute(path)
 
-	print(
-		"std/file/syncer.gd[",
-		get_instance_id(),
-		"]: opening file: ",
-		path_absolute,
-	)
+	_logger = _logger.with({&"path": path_absolute})
+	_logger.info("Opening file.")
 
 	var path_base_dir := path_absolute.get_base_dir()
 	if not DirAccess.dir_exists_absolute(path_base_dir):
@@ -128,12 +126,7 @@ func close(flush: bool = true) -> void:
 
 	var path_absolute := _file.get_path_absolute()
 
-	print(
-		"std/file/syncer.gd[",
-		get_instance_id(),
-		"]: closing file: ",
-		path_absolute,
-	)
+	_logger.info("Closing file.")
 
 	if _debounce != null:
 		_debounce.reset()
@@ -163,11 +156,7 @@ func read_bytes() -> PackedByteArray:
 	assert(_file is FileAccess, "invalid state: file not open")
 	assert(_debounce is Debounce, "invalid state: missing Debounce timer")
 
-	print(
-		"std/file/syncer.gd[",
-		get_instance_id(),
-		"]: reading file contents",
-	)
+	_logger.debug("Reading file contents.")
 
 	_file.seek(0)
 	return _file.get_buffer(_file.get_length())
@@ -196,11 +185,7 @@ func store_bytes(bytes: PackedByteArray) -> void:
 	_bytes = bytes
 	_variant = null
 
-	print(
-		"std/file/syncer.gd[",
-		get_instance_id(),
-		"]: write requested",
-	)
+	_logger.debug("Write requested.")
 
 	_debounce.start()
 
@@ -220,11 +205,7 @@ func store_var(variant: Variant) -> void:
 	assert(_file is FileAccess, "invalid state: file not open")
 	assert(_debounce is Debounce, "invalid state: missing Debounce timer")
 
-	print(
-		"std/file/syncer.gd[",
-		get_instance_id(),
-		"]: write requested",
-	)
+	_logger.debug("Write requested.")
 
 	_bytes = PackedByteArray()
 	_variant = variant
@@ -311,12 +292,7 @@ func _flush() -> void:
 	if not _file:
 		return
 
-	print(
-		"std/file/syncer.gd[",
-		get_instance_id(),
-		"]: flushing data to disk: ",
-		_file.get_path_absolute()
-	)
+	_logger.debug("Flushing data to disk.")
 
 	var err := _file.resize(0)
 	assert(err == OK, "failed to truncate file before write")
