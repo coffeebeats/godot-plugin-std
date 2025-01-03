@@ -36,6 +36,8 @@ static var _regex_switch_pro := RegEx.create_from_string(
 static var _regex_xbox_360 := RegEx.create_from_string("Xbox 360")
 static var _regex_xbox_one := RegEx.create_from_string("Xbox(?!( 360))")
 
+var _logger := StdLogger.create("std/input/godot/joypad-monitor").with_process_frame()
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -108,13 +110,12 @@ func _broadcast_connected_joypad(device: int) -> void:
 	var joypad_name := Input.get_joy_name(device)
 	var device_type := get_device_type(joypad_name)
 
-	print(
-		"std/input/godot/joypad_monitor.gd[",
-		get_instance_id(),
-		(
-			"]: joypad connected: %d (name=%s,type=%d)"
-			% [device, joypad_name, device_type]
-		),
+	(
+		_logger
+		. info(
+			"Joypad connected.",
+			{&"device": device, &"name": joypad_name, &"type": device_type},
+		)
 	)
 
 	joy_connected.emit(device, device_type)
@@ -125,11 +126,7 @@ func _broadcast_connected_joypad(device: int) -> void:
 
 func _on_Input_joy_connection_changed(device: int, connected: bool) -> void:
 	if not connected:
-		print(
-			"std/input/godot/joypad_monitor.gd[",
-			get_instance_id(),
-			"]: joypad disconnected: %d" % device,
-		)
+		_logger.info("Joypad disconnected.", {&"device": device})
 
 		joy_disconnected.emit(device)
 		return

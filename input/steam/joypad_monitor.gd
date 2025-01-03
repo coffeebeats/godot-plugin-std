@@ -27,6 +27,8 @@ const Signals := preload("../../event/signal.gd")
 
 var _connected := PackedInt64Array()
 
+var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_frame()
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -59,11 +61,7 @@ func _enter_tree() -> void:
 	Steam.enableActionEventCallbacks()
 	Steam.enableDeviceCallbacks()
 
-	print(
-		"std/input/steam/joypad_monitor.gd[",
-		get_instance_id(),
-		"]: initialized Steam Input API",
-	)
+	_logger.info("Initialized Steam Input API.")
 
 
 func _exit_tree() -> void:
@@ -74,11 +72,7 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(Steam.input_device_disconnected, _on_device_disconnected)
 	Signals.disconnect_safe(Steam.input_gamepad_slot_change, _on_gamepad_slot_change)
 
-	print(
-		"std/input/steam/joypad_monitor.gd[",
-		get_instance_id(),
-		"]: shut down Steam Input API",
-	)
+	_logger.info("Shut down Steam Input API.")
 
 
 func _input(event: InputEvent) -> void:
@@ -142,11 +136,7 @@ func _connect_device(device: int) -> void:
 		Steam.INPUT_TYPE_XBOXONE_CONTROLLER:
 			device_type = StdInputDevice.DEVICE_TYPE_XBOX_ONE
 
-	print(
-		"std/input/steam/joypad_monitor.gd[",
-		get_instance_id(),
-		"]: joypad connected: %d (type=%d)" % [device, device_type],
-	)
+	_logger.info("Joypad connected.", {&"device": device, &"type": device_type})
 
 	var slot: int = get_slot_for_device_id(device)
 	if slot == -1:
@@ -167,11 +157,7 @@ func _disconnect_device(device: int) -> void:
 		assert(false, "invalid argument: missing device")
 		return
 
-	print(
-		"std/input/steam/joypad_monitor.gd[",
-		get_instance_id(),
-		"]: joypad disconnected: %d" % device,
-	)
+	_logger.info("Joypad disconnected.", {&"device": device})
 
 	var index := _connected.find(device)
 	assert(index >= 0, "invalid state; missing device")
@@ -213,13 +199,12 @@ func _on_action_event(
 
 
 func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
-	print(
-		"std/input/steam/joypad_monitor.gd[",
-		get_instance_id(),
-		(
-			"]: Steam Input configuration loaded: app %d: device %d: %s"
-			% [app, device, cfg]
-		),
+	(
+		_logger
+		. info(
+			"Steam Input configuration loaded.",
+			{&"app": app, &"device": device, &"cfg": str(cfg)},
+		)
 	)
 
 	var uses_steam_input_api: bool = cfg.get("uses_steam_input_api", true)

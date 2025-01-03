@@ -121,6 +121,10 @@ const DEVICE_ID_ALL := -1
 ## vibrations).
 @export var haptics: StdInputDeviceHaptics = null
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _logger := StdLogger.create("std/input/device")
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 @warning_ignore("SHADOWED_VARIABLE")
@@ -200,13 +204,9 @@ func load_action_set(action_set: StdInputActionSet) -> bool:
 	action_set_loaded.emit(action_set)
 	action_configuration_changed.emit()
 
-	print(
-		"std/input/device.gd[",
-		get_instance_id(),
-		(
-			"]: device %d (type=%d): loaded action set: %s"
-			% [device_id, device_type, action_set.name]
-		),
+	_logger.info(
+		"Loaded action set.",
+		{&"device": device_id, &"type": device_type, &"set": action_set.name}
 	)
 
 	return true
@@ -235,13 +235,9 @@ func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	action_set_layer_enabled.emit(layer)
 	action_configuration_changed.emit()
 
-	print(
-		"std/input/device.gd[",
-		get_instance_id(),
-		(
-			"]: device %d (type=%d): enabled action set layer: %s"
-			% [device_id, device_type, layer.name]
-		),
+	_logger.info(
+		"Enabled action set layer.",
+		{&"device": device_id, &"type": device_type, &"layer": layer.name}
 	)
 
 	return true
@@ -265,13 +261,9 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	action_set_layer_disabled.emit(layer)
 	action_configuration_changed.emit()
 
-	print(
-		"std/input/device.gd[",
-		get_instance_id(),
-		(
-			"]: device %d (type=%d): disabled action set layer: %s"
-			% [device_id, device_type, layer.name]
-		),
+	_logger.info(
+		"Disabled action set layer.",
+		{&"device": device_id, &"type": device_type, &"layer": layer.name}
 	)
 
 	return true

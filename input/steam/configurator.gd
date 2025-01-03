@@ -24,6 +24,10 @@ const Signals := preload("../../event/signal.gd")
 ## node, which must be present in the scene tree.
 @export var player_id: int = 1
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _logger := StdLogger.create("std/input/steam/configurator")
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
@@ -65,8 +69,10 @@ func _on_button_pressed() -> void:
 		return
 
 	if Steam.showBindingPanel(joypad.device_id):
-		print(
-			"std/input/steam/configurator.gd[",
-			get_instance_id(),
-			"]: opened bindings panel for joypad: %d" % joypad.device_id,
+		(
+			_logger
+			. info(
+				"Opened bindings panel for joypad.",
+				{&"device": joypad.device_id},
+			)
 		)

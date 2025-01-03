@@ -65,6 +65,8 @@ const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+static var _logger := StdLogger.create(&"std/scene/loader")
+
 var _loading: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -84,12 +86,7 @@ func load(path: String) -> Result:
 		return _loading[path]
 
 	if ResourceLoader.has_cached(path):
-		print(
-			"std/scene/loader.gd[",
-			get_instance_id(),
-			"]: returning cached scene file: ",
-			path
-		)
+		_logger.info("Returning cached scene file.", {&"path": path})
 
 		var result := Result.new_with_path(path)
 		result.path = path
@@ -98,7 +95,7 @@ func load(path: String) -> Result:
 
 		return result
 
-	print("std/scene/loader.gd[", get_instance_id(), "]: loading scene file: ", path)
+	_logger.info("Loading scene file.", {&"path": path})
 
 	var err := ResourceLoader.load_threaded_request(path, _TYPE_HINT_PACKED_SCENE, true)
 	assert(err == OK, "failed to load scene")
@@ -163,12 +160,7 @@ func _update(_delta: float) -> void:
 
 			result.scene = scene
 
-		print(
-			"std/scene/loader.gd[",
-			get_instance_id(),
-			"]: finished loading scene: ",
-			result.path
-		)
+		_logger.info("Finished loading scene.", {&"path": result.path})
 
 		_loading.erase(result.path)
 
