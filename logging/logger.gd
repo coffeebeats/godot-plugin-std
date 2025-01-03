@@ -41,7 +41,7 @@ const _WARN_PREFIX := &"[color=yellow]WARN[/color]:"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _is_editor: bool = OS.has_feature("editor")
+static var _is_editor: bool = OS.has_feature("editor")  # gdlint:ignore=class-definitions-order
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

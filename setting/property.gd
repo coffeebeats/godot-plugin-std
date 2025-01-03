@@ -38,7 +38,7 @@ const Config := preload("../config/config.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create("std/settings/property")
+static var _logger := StdLogger.create("std/settings/property")  # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

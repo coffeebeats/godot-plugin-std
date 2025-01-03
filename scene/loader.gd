@@ -65,7 +65,7 @@ const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create(&"std/scene/loader")
+static var _logger := StdLogger.create(&"std/scene/loader")  # gdlint:ignore=class-definitions-order
 
 var _loading: Dictionary = {}
 

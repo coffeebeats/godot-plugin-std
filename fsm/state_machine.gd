@@ -69,7 +69,7 @@ var process_callback := StateMachineProcessCallback.STATE_MACHINE_PROCESS_PHYSIC
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create("std/fsm/state-machine")
+static var _logger := StdLogger.create("std/fsm/state-machine")  # gdlint:ignore=class-definitions-order,max-line-length
 
 ## A pointer to the currently active 'State'.
 var state: State = null
