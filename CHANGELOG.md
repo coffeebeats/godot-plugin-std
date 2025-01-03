@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.10.0 (2025-01-03)
+
+## What's Changed
+* feat(logging): create a `StdLogger` class for logging with levels and hierarchical context by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/173
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.9.12...v1.10.0
+
 ## 1.9.12 (2025-01-02)
 
 ## What's Changed

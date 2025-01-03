@@ -25,6 +25,10 @@ const EMPTY := (1 << 63) - 1
 ## UNSET is a sentinel value denoting a missing input device origin.
 const UNSET := -1
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+static var _logger := StdLogger.create("std/input/godot/binding")
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -83,9 +87,12 @@ static func bind_action(
 						continue
 
 					if scope.config.erase(category, key):
-						print(
-							"std/input/godot/binding.gd",
-							": reset action binding: %s/%s" % [action_set.name, action],
+						(
+							_logger
+							. info(
+								"Reset action binding.",
+								{&"set": action_set.name, &"action": action},
+							)
 						)
 
 					changed = true
@@ -93,16 +100,16 @@ static func bind_action(
 					continue
 
 				if scope.config.set_int(category, key, value_encoded):
-					print(
-						"std/input/godot/binding.gd",
-						(
-							": bound action to event: %s/%s: %s"
-							% [
-								action_set.name,
-								a,
-								event,
-							]
-						),
+					(
+						_logger
+						. info(
+							"Bound action to origin.",
+							{
+								&"set": action_set.name,
+								&"action": action,
+								&"origin": value_encoded,
+							},
+						)
 					)
 
 					changed = true
@@ -126,15 +133,12 @@ static func bind_action(
 				action_changed = scope.config.set_int(category, key, EMPTY)
 
 			if action_changed:
-				print(
-					"std/input/godot/binding.gd",
-					(
-						": unbound action: %s/%s"
-						% [
-							action_set.name,
-							a,
-						]
-					),
+				(
+					_logger
+					. debug(
+						"Unbound action.",
+						{&"set": action_set.name, &"action": action},
+					)
 				)
 
 			changed = action_changed or changed
@@ -299,9 +303,12 @@ static func reset_action(
 
 		var changed := scope.config.erase(category, key)
 		if changed:
-			print(
-				"std/input/godot/binding.gd",
-				": reset action binding: %s/%s" % [action_set.name, action],
+			(
+				_logger
+				. info(
+					"Reset action binding.",
+					{&"set": action_set.name, &"action": action},
+				)
 			)
 
 		return changed
@@ -335,10 +342,7 @@ static func reset_all_actions(
 
 	var changed := scope.config.clear(category)
 	if changed:
-		print(
-			"std/input/godot/binding.gd",
-			": reset all bindings in action set: %s" % [action_set.name],
-		)
+		_logger.info("Reset all action set bindings.", {&"set": action_set.name})
 
 	return changed
 

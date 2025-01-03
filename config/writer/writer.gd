@@ -23,12 +23,7 @@ var _connected: Config = null
 func load_config(config: Config) -> Error:
 	assert(config is Config, "invalid argument: expected a 'Config' instance")
 
-	print(
-		"std/config/writer/writer.gd[",
-		get_instance_id(),
-		"]: loading configuration from file: ",
-		_get_filepath()
-	)
+	_logger.info("Loading configuration from file.", {&"path": _get_filepath()})
 
 	var err := _open_file()
 	if err != OK:
@@ -46,12 +41,7 @@ func load_config(config: Config) -> Error:
 func store_config(config: Config) -> Error:
 	assert(config is Config, "invalid argument: expected a 'Config' instance")
 
-	print(
-		"std/config/writer/writer.gd[",
-		get_instance_id(),
-		"]: storing configuration in file: ",
-		_get_filepath()
-	)
+	_logger.info("Storing configuration in file.", {&"path": _get_filepath()})
 
 	var err := _open_file()
 	if err != OK:
@@ -78,12 +68,7 @@ func sync_config(config: Config) -> Error:
 	if _connected != null:
 		unsync_config(_connected)
 
-	print(
-		"std/config/writer/writer.gd[",
-		get_instance_id(),
-		"]: syncing configuration to file: ",
-		_get_filepath()
-	)
+	_logger.info("Syncing configuration to file.", {&"path": _get_filepath()})
 
 	var err := load_config(config)
 	if err != OK:
@@ -108,12 +93,7 @@ func unsync_config(config: Config) -> void:
 	if _connected == null or config != _connected:
 		return
 
-	print(
-		"std/config/writer/writer.gd[",
-		get_instance_id(),
-		"]: stopping configuration sync to file: ",
-		_get_filepath()
-	)
+	_logger.info("Stopping configuration sync to file.", {&"path": _get_filepath()})
 
 	assert(
 		_connected.changed.is_connected(_on_Config_changed),
@@ -127,6 +107,12 @@ func unsync_config(config: Config) -> void:
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _enter_tree() -> void:
+	super._enter_tree()
+
+	_logger = _logger.named(&"std/config/writer")
 
 
 func _exit_tree() -> void:
