@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.10.1 (2025-01-07)
+
+## What's Changed
+* fix(input): delay Steam Input activation until it's enabled by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/175
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.10.0...v1.10.1
+
 ## 1.10.0 (2025-01-03)
 
 ## What's Changed
