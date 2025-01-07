@@ -28,6 +28,14 @@ const DEVICE_ID_ALL := Steam.INPUT_HANDLE_ALL_CONTROLLERS
 ## translations.
 @export var joypad_monitor: StdInputSlot.JoypadMonitor = null
 
+## steam_input_enabled_property is a settings property that the joypad monitor will
+## toggle based on connected controller activity.
+##
+## NOTE: It unfortunately seems that the only way to check for whether Steam Input is in
+## use is by the presence of a connected joypad. As such, this property will be enabled
+## when devices are connected and disabled otherwise.
+@export var steam_input_enabled_property: StdSettingsPropertyBool = null
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set_handles is a reverse mapping from action set names to action set handles.
@@ -49,12 +57,18 @@ static var _action_handles: Dictionary = {}  # gdlint:ignore=class-definitions-o
 ## NOTE: Because the number of action sets should be small, an array is preferred.
 static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ignore=class-definitions-order,max-line-length
 
+## _is_initialized tracks whether this component has been initialized. This needs to
+## occur once *after the first joypad has been connected*.
+static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-order
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## get_action_set_handle returns the handle for the specified action set, fetching it
 ## from the Steam Input API if it hasn't yet been loaded.
 static func get_action_set_handle(id: StringName) -> int:
+	assert(_is_initialized, "invalid state; Steam Input not initialized")
+
 	var handle: int = _action_set_handles.get(id, 0)
 	if not handle:
 		handle = Steam.getActionSetHandle(id)
@@ -70,6 +84,8 @@ static func get_action_set_handle(id: StringName) -> int:
 ## get_analog_action_handle returns the handle for the specified analog action,
 ## fetching it from the Steam Input API if it hasn't yet been loaded.
 static func get_analog_action_handle(action: StringName) -> int:
+	assert(_is_initialized, "invalid state; Steam Input not initialized")
+
 	var handle: int = _action_handles.get(action, 0)
 	if not handle:
 		handle = Steam.getAnalogActionHandle(action)
@@ -86,6 +102,8 @@ static func get_analog_action_handle(action: StringName) -> int:
 ## get_digital_action_handle returns the handle for the specified digital action,
 ## fetching it from the Steam Input API if it hasn't yet been loaded.
 static func get_digital_action_handle(action: StringName) -> int:
+	assert(_is_initialized, "invalid state; Steam Input not initialized")
+
 	var handle: int = _action_handles.get(action, 0)
 	if not handle:
 		handle = Steam.getDigitalActionHandle(action)
@@ -102,6 +120,8 @@ static func get_digital_action_handle(action: StringName) -> int:
 ## is_action_set_enabled returns whether the provided name refers to an active action
 ## set or action set layer.
 func is_action_set_enabled(slot: int, action_set_name: String) -> bool:
+	assert(_is_initialized, "invalid state; Steam Input not initialized")
+
 	var action_set := _get_action_set(slot)
 	if not action_set:
 		return false
@@ -121,18 +141,26 @@ func is_action_set_enabled(slot: int, action_set_name: String) -> bool:
 
 func _exit_tree() -> void:
 	Signals.disconnect_safe(Steam.input_action_event, _on_input_action_event)
+	Signals.disconnect_safe(
+		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
+	)
 
 
 func _ready() -> void:
 	assert(in_game_actions, "invalid state; missing in game actions")
 	assert(joypad_monitor is SteamJoypadMonitor, "invalid state; missing node")
+	assert(
+		steam_input_enabled_property is StdSettingsPropertyBool,
+		"invalid state; missing property",
+	)
 
-	# Fetch all action and action set handles prior to connecting to event handler.
-	for action_set in in_game_actions.action_sets + in_game_actions.action_set_layers:
-		get_action_set_handle(action_set.name)
-		_store_action_handles(action_set)
+	if steam_input_enabled_property.get_value():
+		_on_steam_input_state_changed(true)
 
 	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
+	Signals.connect_safe(
+		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
+	)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -273,6 +301,13 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _initialize_action_handles() -> void:
+	# Fetch all action and action set handles prior to connecting to event handler.
+	for action_set in in_game_actions.action_sets + in_game_actions.action_set_layers:
+		get_action_set_handle(action_set.name)
+		_store_action_handles(action_set)
 
 
 func _publish_input_event(event: InputEvent) -> void:
@@ -417,3 +452,11 @@ func _on_input_action_event(
 			event.strength = 1.0 if event.pressed else 0.0
 
 			_publish_input_event(event)
+
+
+func _on_steam_input_state_changed(enabled: bool) -> void:
+	if not enabled or _is_initialized:
+		return
+
+	_initialize_action_handles()
+	_is_initialized = true

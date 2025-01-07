@@ -11,10 +11,14 @@ extends RefCounted
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const _DEBUG_PREFIX := &"[color=cyan]DEBUG[/color]:"
-const _ERROR_PREFIX := &"[color=red]ERROR[/color]:"
-const _INFO_PREFIX := &"[color=green]INFO[/color]:"
-const _WARN_PREFIX := &"[color=yellow]WARN[/color]:"
+const _DEBUG_PREFIX_EDITOR := &"[b][color=cyan]DEBUG[/color]:[/b]"
+const _DEBUG_PREFIX_RELEASE := &"DEBUG:"
+const _ERROR_PREFIX_EDITOR := &"[b][color=red]ERROR[/color]:[/b]"
+const _ERROR_PREFIX_RELEASE := &"ERROR:"
+const _INFO_PREFIX_EDITOR := &"[b][color=green]INFO[/color]:[/b]"
+const _INFO_PREFIX_RELEASE := &"INFO:"
+const _WARN_PREFIX_EDITOR := &"[b][color=yellow]WARN[/color]:[/b]"
+const _WARN_PREFIX_RELEASE := &"WARN:"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -109,13 +113,17 @@ func error(msg: String, ctx: Dictionary = {}) -> void:
 	if _is_editor:
 		message = "[color=white]%s[/color]" % msg
 
-	var prefix := _format_name() + " "
-	if _is_editor:
-		prefix += _ERROR_PREFIX + " "
+	var prefix := (
+		"%s %s "
+		% [
+			_format_name(),
+			_ERROR_PREFIX_EDITOR if _is_editor else _ERROR_PREFIX_RELEASE
+		]
+	)
 
 	var fields: String = ""
 	if ctx:
-		fields = " " + _format_context(ctx)
+		fields = _format_context(ctx)
 
 	print_rich(prefix, message, fields)
 	push_error(msg, fields)
@@ -130,13 +138,14 @@ func warn(msg: String, ctx: Dictionary = {}) -> void:
 	if _is_editor:
 		message = "[color=white]%s[/color]" % msg
 
-	var prefix := _format_name() + " "
-	if _is_editor:
-		prefix += _WARN_PREFIX + " "
+	var prefix := (
+		"%s %s "
+		% [_format_name(), _WARN_PREFIX_EDITOR if _is_editor else _WARN_PREFIX_RELEASE]
+	)
 
 	var fields: String = ""
 	if ctx:
-		fields = " " + _format_context(ctx)
+		fields = _format_context(ctx)
 
 	print_rich(prefix, message, fields)
 	push_warning(msg, fields)
@@ -151,13 +160,14 @@ func info(msg: String, ctx: Dictionary = {}) -> void:
 	if _is_editor:
 		message = "[color=white]%s[/color]" % msg
 
-	var prefix := _format_name() + " "
-	if _is_editor:
-		prefix += _INFO_PREFIX + " "
+	var prefix := (
+		"%s %s "
+		% [_format_name(), _INFO_PREFIX_EDITOR if _is_editor else _INFO_PREFIX_RELEASE]
+	)
 
 	var fields: String = ""
 	if ctx:
-		fields = " " + _format_context(ctx)
+		fields = _format_context(ctx)
 
 	print_rich(prefix, message, fields)
 
@@ -174,13 +184,17 @@ func debug(msg: String, ctx: Dictionary = {}) -> void:
 	if _is_editor:
 		message = "[color=white]%s[/color]" % msg
 
-	var prefix := _format_name() + " "
-	if _is_editor:
-		prefix += _DEBUG_PREFIX + " "
+	var prefix := (
+		"%s %s "
+		% [
+			_format_name(),
+			_DEBUG_PREFIX_EDITOR if _is_editor else _DEBUG_PREFIX_RELEASE
+		]
+	)
 
 	var fields: String = ""
 	if ctx:
-		fields = " " + _format_context(ctx)
+		fields = _format_context(ctx)
 
 	print_rich(prefix, message, fields)
 
@@ -201,11 +215,17 @@ func _format_context(ctx: Dictionary) -> String:
 	for key in ctx:
 		fields.append("%s=%s" % [key, str(ctx[key])])
 
-	return "(%s)" % ",".join(fields) if fields else ""
+	if not fields:
+		return ""
+
+	if _is_editor:
+		return "\n\t" + "\n\t".join(fields)
+
+	return " (%s)" % ",".join(fields)
 
 
 func _format_name() -> String:
 	if not name:
 		return ""
 
-	return "[%s]" % ("[color=white]%s[/color]" % name if _is_editor else String(name))
+	return "[%s]" % ("[color=gray]%s[/color]" % name if _is_editor else String(name))
