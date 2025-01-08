@@ -455,7 +455,6 @@ func _on_input_action_event(
 
 func _on_steam_input_state_changed(enabled: bool) -> void:
 	if not enabled or _is_initialized:
-		Signals.disconnect_safe(Steam.input_action_event, _on_input_action_event)
 		return
 
 	_is_initialized = true
