@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.10.2 (2025-01-08)
+
+## What's Changed
+* fix(condition): correctly manage signal connections on expressions/settings properties by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/177
+* fix(input): provide `swap_joypad_components` method to switch between Godot and Steam input by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/179
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.10.1...v1.10.2
+
 ## 1.10.1 (2025-01-07)
 
 ## What's Changed

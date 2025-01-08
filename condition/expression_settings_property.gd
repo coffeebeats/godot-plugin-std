@@ -22,10 +22,6 @@ const Signals := preload("../event/signal.gd")
 ## the condition fails.
 @export var block: StdSettingsPropertyBool = null
 
-# -- INITIALIZATION ------------------------------------------------------------------ #
-
-var _is_enabled: bool = false
-
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
@@ -71,11 +67,4 @@ func _is_allowed() -> bool:
 
 
 func _on_settings_property_value_changed(_value: Variant) -> void:
-	var is_enabled := _is_allowed()
-
-	if is_enabled == _is_enabled:
-		return
-
-	_is_enabled = is_enabled
-
-	value_changed.emit(is_enabled)
+	value_changed.emit(_is_allowed())

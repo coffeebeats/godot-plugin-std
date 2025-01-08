@@ -45,7 +45,7 @@ func _enter_tree() -> void:
 		expression.setup()
 
 	for expression in expressions_block:
-		Signals.disconnect_safe(expression.value_changed, _on_expression_value_changed)
+		Signals.connect_safe(expression.value_changed, _on_expression_value_changed)
 		expression.setup()
 
 	_evaluate()
@@ -53,9 +53,11 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	for expression in expressions_allow:
+		Signals.disconnect_safe(expression.value_changed, _on_expression_value_changed)
 		expression.teardown()
 
 	for expression in expressions_block:
+		Signals.disconnect_safe(expression.value_changed, _on_expression_value_changed)
 		expression.teardown()
 
 
@@ -90,7 +92,7 @@ func _is_allowed() -> bool:
 		for expression in expressions_block:
 			var allowed := expression.is_allowed()
 
-			if allowed and not expressions_block_require_all:
+			if not allowed and not expressions_block_require_all:
 				return false
 
 			if not allowed and expressions_block_require_all:
