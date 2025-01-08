@@ -145,7 +145,15 @@ func test_input_slot_swap_reconnects_joypads() -> void:
 
 	# When: The joypad monitor is swapped.
 	var joypad_monitor_prev := slot.joypad_monitor
-	slot.joypad_monitor = joypad_monitor
+	(
+		slot
+		. swap_joypad_components(
+			joypad_monitor,
+			slot.actions_joy,
+			slot.glyphs_joy,
+			slot.haptics_joy,
+		)
+	)
 	joypad_monitor_prev.free()
 
 	# Then: The same joypad is active (the `InputDevice` may be different though).
