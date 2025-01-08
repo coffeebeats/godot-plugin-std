@@ -39,7 +39,7 @@ func get_device_id_for_slot(slot: int) -> int:
 
 ## get_slot_for_device_id returns the "slot" index of the specified input device handle.
 func get_slot_for_device_id(device: int) -> int:
-	return _connected.find(device)
+	return Steam.getConnectedControllers().find(device)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -162,7 +162,7 @@ func _disconnect_device(device: int) -> void:
 	var index := _connected.find(device)
 	assert(index >= 0, "invalid state; missing device")
 
-	var slot: int = get_slot_for_device_id(device)
+	var slot: int = _connected.find(device)
 	if slot == -1:
 		assert(false, "invalid argument; failed to find slot for device")
 		return
