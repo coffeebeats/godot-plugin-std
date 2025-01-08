@@ -157,7 +157,6 @@ func _ready() -> void:
 	if steam_input_enabled_property.get_value():
 		_on_steam_input_state_changed(true)
 
-	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
 	Signals.connect_safe(
 		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
 	)
@@ -311,8 +310,6 @@ func _initialize_action_handles() -> void:
 
 
 func _publish_input_event(event: InputEvent) -> void:
-	Input.parse_input_event(event)
-
 	if not event is InputEventAction:
 		return
 
@@ -320,6 +317,8 @@ func _publish_input_event(event: InputEvent) -> void:
 		Input.action_press(event.action)
 	else:
 		Input.action_release(event.action)
+
+	Input.parse_input_event(event)
 
 
 func _store_action_handles(action_set: StdInputActionSet) -> void:
@@ -456,7 +455,10 @@ func _on_input_action_event(
 
 func _on_steam_input_state_changed(enabled: bool) -> void:
 	if not enabled or _is_initialized:
+		Signals.disconnect_safe(Steam.input_action_event, _on_input_action_event)
 		return
 
-	_initialize_action_handles()
 	_is_initialized = true
+
+	_initialize_action_handles()
+	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
