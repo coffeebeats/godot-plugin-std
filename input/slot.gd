@@ -110,60 +110,29 @@ class JoypadMonitor:
 
 ## joypad_monitor is a node which monitors joypad activity. This `StdInputSlot` node
 ## will manage active input devices based on the monitor's signals.
-@export var joypad_monitor: JoypadMonitor = null:
-	set = set_joypad_monitor
+@export var joypad_monitor: JoypadMonitor = null
 
 @export_subgroup("Keyboard and mouse")
 
 ## actions_kbm is the actions component for keyboard and mouse.
-@export var actions_kbm: StdInputDeviceActions = null:
-	set(value):
-		actions_kbm = value
-
-		if _kbm_device:
-			_kbm_device.actions = value
+@export var actions_kbm: StdInputDeviceActions = null
 
 ## glyphs_kbm is the glyphs component for keyboard and mouse.
-@export var glyphs_kbm: StdInputDeviceGlyphs = null:
-	set(value):
-		glyphs_kbm = value
-
-		if _kbm_device:
-			_kbm_device.glyphs = value
+@export var glyphs_kbm: StdInputDeviceGlyphs = null
 
 ## haptics_kbm is the haptics component for keyboard and mouse.
-@export var haptics_kbm: StdInputDeviceHaptics = null:
-	set(value):
-		haptics_kbm = value
-
-		if _kbm_device:
-			_kbm_device.haptics = value
+@export var haptics_kbm: StdInputDeviceHaptics = null
 
 @export_subgroup("Joypad")
 
 ## actions_joy is the actions component for joypads.
-@export var actions_joy: StdInputDeviceActions = null:
-	set(value):
-		actions_joy = value
-
-		for joypad in _joypad_devices:
-			joypad.actions_joy = value
+@export var actions_joy: StdInputDeviceActions = null
 
 ## glyphs_joy is the glyphs component for joypads.
-@export var glyphs_joy: StdInputDeviceGlyphs = null:
-	set(value):
-		glyphs_joy = value
-
-		for joypad in _joypad_devices:
-			joypad.glyphs_joy = value
+@export var glyphs_joy: StdInputDeviceGlyphs = null
 
 ## haptics_joy is the haptics component for joypads.
-@export var haptics_joy: StdInputDeviceHaptics = null:
-	set(value):
-		haptics_joy = value
-
-		for joypad in _joypad_devices:
-			joypad.haptics_joy = value
+@export var haptics_joy: StdInputDeviceHaptics = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -235,6 +204,56 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[StdInputDevic
 		devices.push_front(_kbm_device)
 
 	return devices
+
+
+## swap_joypad_components swaps the joypad monitor and device component implementations
+## to the ones provided. This will cause all connected joypads to disconnect, at which
+## point they should be once the new joypad monitor is ready.
+##
+## NOTE: This method will *not* remove the prior `JoypadMonitor` from the scene nor add
+## the new one to the scene.
+func swap_joypad_components(
+	next_joypad_monitor: JoypadMonitor,
+	next_device_actions: StdInputDeviceActions,
+	next_device_glyphs: StdInputDeviceGlyphs,
+	next_device_haptics: StdInputDeviceHaptics,
+) -> void:
+	assert(next_joypad_monitor, "missing argument")
+	assert(next_device_actions, "missing argument")
+	assert(next_device_glyphs, "missing argument")
+	assert(next_device_haptics, "missing argument")
+
+	_logger.debug("Swapping device components for input slot.", {&"player": player_id})
+
+	var action_sets := _list_action_sets()
+
+	if joypad_monitor:
+		for joypad in _joypad_devices:
+			if joypad == _active:
+				_active = null
+
+			_disconnect_joy_device(joypad.device_id)
+
+		Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
+		Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+
+	actions_joy = next_device_actions
+	glyphs_joy = next_device_glyphs
+	haptics_joy = next_device_haptics
+	joypad_monitor = next_joypad_monitor
+
+	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
+	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+
+	joypad_monitor.broadcast_connected_joypads()
+
+	for joypad in _joypad_devices:
+		for action_set in action_sets:
+			if action_set is StdInputActionSetLayer:
+				joypad.enable_action_set_layer(action_set)
+				continue
+
+			joypad.load_action_set(action_set)
 
 
 # -- PUBLIC METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -745,37 +764,3 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
 	pass  # No need to disable action sets/layers here - the device may reconnect.
-
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
-
-
-## set_joypad_monitor swaps the joypad monitor implementation to the one provided. This
-## will cause all connected joypads to disconnect, at which point they should be
-## reconnected once the new joypad monitor is ready.
-##
-## NOTE: This method will *not* remove the prior `JoypadMonitor` from the scene nor add
-## the new one to the scene.
-func set_joypad_monitor(node: JoypadMonitor) -> void:
-	assert(node is JoypadMonitor, "invalid argument; wrong type")
-
-	if node == joypad_monitor:
-		return
-
-	if joypad_monitor:
-		for joypad in _joypad_devices:
-			if joypad == _active:
-				_active = null
-
-			_disconnect_joy_device(joypad.device_id)
-
-		Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
-		Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
-
-	joypad_monitor = node
-
-	if is_inside_tree():
-		Signals.connect_safe(node.joy_connected, _connect_joy_device)
-		Signals.connect_safe(node.joy_disconnected, _disconnect_joy_device)
-
-		node.broadcast_connected_joypads()
