@@ -5,7 +5,7 @@
 ##
 
 class_name StdSaveFile
-extends Resource
+extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
@@ -67,7 +67,7 @@ func open(directory: String) -> Error:
 	if err != OK:
 		(
 			_logger
-			. error(
+			.error(
 				"Failed to open save file.",
 				{&"directory": directory, &"error": err, &"path": path},
 			)
