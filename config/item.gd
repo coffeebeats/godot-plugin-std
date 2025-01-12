@@ -14,23 +14,23 @@ const Config := preload("config.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const PROPERTY_KEY_CATEGORY := &"category"
 const PROPERTY_KEY_NAME := &"name"
 const PROPERTY_KEY_TYPE := &"type"
 const PROPERTY_KEY_USAGE := &"usage"
 
-# -- CONFIGURATION ------------------------------------------------------------------- #
-
-## category is the name of the `Config` category which contains the definition for this
-## item.
-@export var category: StringName = &""
-
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## get_category returns the name of the `Config` category which contains the definition
+## for this item.
+func get_category() -> StringName:
+	return _get_category()
 
 
 ## marshal populates the provided `Config` instance with this config item's properties.
 ## Only exported script variables will be stored.
 func marshal(config: Config) -> void:
+	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")
 		return
@@ -40,9 +40,6 @@ func marshal(config: Config) -> void:
 			continue
 
 		var name: StringName = property[PROPERTY_KEY_NAME]
-		if name == PROPERTY_KEY_CATEGORY:
-			continue
-
 		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
 		var value: Variant = get(name)
 
@@ -88,6 +85,7 @@ func marshal(config: Config) -> void:
 ## unmarshal reads configuration data from the provided `Config` instance and updates
 ## this config item's properties. Only exported script variables will be set.
 func unmarshal(config: Config) -> void:
+	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")
 		return
@@ -97,9 +95,6 @@ func unmarshal(config: Config) -> void:
 			continue
 
 		var name: StringName = property[PROPERTY_KEY_NAME]
-		if name == PROPERTY_KEY_CATEGORY:
-			continue
-
 		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
 		var value: Variant = config.get_variant(category, name, null)
 
@@ -108,3 +103,11 @@ func unmarshal(config: Config) -> void:
 			continue
 
 		set(name, value)
+
+
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+
+func _get_category() -> StringName:
+	assert(false, "unimplemented")
+	return &""
