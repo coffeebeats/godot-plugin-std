@@ -46,7 +46,15 @@ func marshal(config: Config) -> void:
 		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
 		var value: Variant = get(name)
 
-		if value == property_get_revert(name) or typeof(value) != type:
+		if (
+			typeof(value) != type
+			or (
+				value == property_get_revert(name)
+				or (value == type_convert(null, type))
+				# Cannot convert `null` to `String` type, so explicitly handle below.
+				or (value is String and value == "")
+			)
+		):
 			config.erase(category, name)
 			continue
 
@@ -92,8 +100,11 @@ func unmarshal(config: Config) -> void:
 		if name == PROPERTY_KEY_CATEGORY:
 			continue
 
+		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
 		var value: Variant = config.get_variant(category, name, null)
-		if value == null or typeof(value) != property[PROPERTY_KEY_TYPE]:
+
+		if value == null or typeof(value) != type:
+			self.set(name, type_convert(null, type) if type != TYPE_STRING else "")
 			continue
 
 		set(name, value)
