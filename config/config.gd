@@ -86,9 +86,7 @@ func get_string_list(
 
 ## get_variant retrieves the value associated with `key` in `category` if one is set. If
 ## no value is associated then `default` is returned.
-func get_variant(
-	category: StringName, key: StringName, default: Variant
-) -> Variant:
+func get_variant(category: StringName, key: StringName, default: Variant) -> Variant:
 	var value: Variant = _get_variant(category, key)
 	return value if value != null else default
 
