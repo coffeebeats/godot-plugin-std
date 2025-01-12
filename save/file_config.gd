@@ -95,7 +95,7 @@ func _close() -> void:
 	if not _writer:
 		assert(false, "invalid state; found dangling writer")
 		return
-	
+
 	remove_child(_writer)
 
 	_writer.close()
@@ -129,7 +129,7 @@ func _compute_checksum() -> String:
 	if not FileAccess.file_exists(_writer.path):
 		(
 			logger
-			.error(
+			. error(
 				"Failed to open save file for reading.",
 				{&"error": ERR_FILE_NOT_FOUND},
 			)

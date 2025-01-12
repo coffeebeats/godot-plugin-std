@@ -20,5 +20,6 @@ extends StdConfigItem
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
+
 func _get_category() -> StringName:
 	return "slot-%d" % index
