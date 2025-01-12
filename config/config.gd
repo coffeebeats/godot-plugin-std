@@ -84,6 +84,13 @@ func get_string_list(
 	return value if value is PackedStringArray else default
 
 
+## get_variant retrieves the value associated with `key` in `category` if one is set. If
+## no value is associated then `default` is returned.
+func get_variant(category: StringName, key: StringName, default: Variant) -> Variant:
+	var value: Variant = _get_variant(category, key)
+	return value if value != null else default
+
+
 ## get_vector2 retrieves the value associated with `key` in `category` if one is set and
 ## it's type is a `Vector2`. If no value is associated then `default` is returned.
 func get_vector2(category: StringName, key: StringName, default: Vector2) -> Vector2:
