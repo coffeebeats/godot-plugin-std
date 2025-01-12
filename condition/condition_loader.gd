@@ -15,10 +15,12 @@ extends StdCondition
 ## scene tree (below this node) if the condition evaluates to `true`.
 @export_file("*.tscn") var scene: String
 
+## force_readable_name controls whether the instantiated scene uses a readable name.
+@export var force_readable_name: bool = false
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _node: Node = null
-var _packed_scene: PackedScene = null
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -30,29 +32,26 @@ func _exit_tree() -> void:
 		_node.free()
 		_node = null
 
-	_packed_scene = null
 
-
-func _enter_tree() -> void:
+func _ready() -> void:
 	assert(scene, "invalid config; missing scene")
-	_packed_scene = load(scene)
-
-	super._enter_tree()
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
 func _on_allow() -> void:
-	assert(_packed_scene is PackedScene, "invalid state; missing packed scene")
+	var packed_scene := load(scene)
+	assert(packed_scene is PackedScene, "invalid state; missing packed scene")
+
 	assert(
 		not _node or not _node.is_inside_tree(), "invalid state; found dangling node"
 	)
 
 	if not _node:
-		_node = _packed_scene.instantiate()
+		_node = packed_scene.instantiate()
 
-	add_child(_node, false)
+	add_child(_node, force_readable_name)
 
 
 func _on_block() -> void:
@@ -66,4 +65,8 @@ func _on_block() -> void:
 
 
 func _should_trigger_allow_action_on_enter() -> bool:
+	return true
+
+
+func _should_trigger_block_action_on_enter() -> bool:
 	return true
