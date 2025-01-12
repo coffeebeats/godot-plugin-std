@@ -26,6 +26,14 @@ func _enter_tree() -> void:
 	super._enter_tree()
 
 
+func _exit_tree() -> void:
+	for child in _children:
+		if child and not child.is_queued_for_deletion():
+			child.free()
+
+	_children.clear()
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
@@ -45,3 +53,7 @@ func _on_block() -> void:
 
 func _should_trigger_allow_action_on_enter() -> bool:
 	return false  # No need to add nodes which will already enter the scene.
+
+
+func _should_trigger_block_action_on_enter() -> bool:
+	return true

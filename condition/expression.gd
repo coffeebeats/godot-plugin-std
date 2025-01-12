@@ -23,8 +23,6 @@ signal value_changed(is_allowed: bool)
 func setup() -> void:
 	_setup()
 
-	value_changed.emit(is_allowed())
-
 
 ## teardown cleans up the resource, allowing things like signals to be disconnected.
 ## This must be called by the node hosting the expression.

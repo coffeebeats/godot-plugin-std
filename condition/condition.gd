@@ -36,6 +36,10 @@ const Signals := preload("../event/signal.gd")
 ## require that all "block" expressions must be enabled for the block action to occur.
 @export var expressions_block_require_all: bool = false
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _is_currently_allowed: bool = false
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
@@ -77,14 +81,36 @@ func _should_trigger_allow_action_on_enter() -> bool:
 	return false
 
 
+func _should_trigger_block_action_on_enter() -> bool:
+	assert(false, "unimplemented")
+	return false
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
 func _evaluate(is_entering: bool = true) -> void:
-	if not _is_allowed():
-		_on_block()
-	elif not is_entering or _should_trigger_allow_action_on_enter():
+	var is_allowed := _is_allowed()
+
+	if (
+		is_allowed
+		and (
+			(not is_entering or _should_trigger_allow_action_on_enter())
+			or not _is_currently_allowed
+		)
+	):
+		_is_currently_allowed = true
 		_on_allow()
+
+	if (
+		not is_allowed
+		and (
+			(not is_entering or _should_trigger_block_action_on_enter())
+			or _is_currently_allowed
+		)
+	):
+		_is_currently_allowed = false
+		_on_block()
 
 
 func _is_allowed() -> bool:
