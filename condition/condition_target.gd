@@ -30,3 +30,7 @@ func _on_block() -> void:
 
 func _should_trigger_allow_action_on_enter() -> bool:
 	return true
+
+
+func _should_trigger_block_action_on_enter() -> bool:
+	return true
