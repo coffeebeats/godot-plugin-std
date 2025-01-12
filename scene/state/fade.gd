@@ -28,7 +28,7 @@ const Playable := preload("playable.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _color_rect: ColorRect = ColorRect.new()
+var _color_rect: ColorRect = null
 var _tween_in: Tween = null
 var _tween_out: Tween = null
 
@@ -40,6 +40,9 @@ var _is_node_added_to_scene: bool = false
 ## A virtual method called when this state is entered (after exiting previous state).
 func _on_enter(previous: State) -> void:
 	super(previous)
+
+	assert(not _color_rect, "invalid state; found dangling ColorRect")
+	_color_rect = ColorRect.new()
 
 	assert(not _tween_in and not _tween_out, "found leftover tween")
 	assert(not _color_rect.is_inside_tree(), "node should not be in tree")
@@ -86,6 +89,10 @@ func _on_exit(next: State) -> void:
 
 	_tween_in = null
 	_tween_out = null
+
+	if _color_rect and not _color_rect.is_queued_for_deletion():
+		_color_rect.free()
+		_color_rect = null
 
 
 ## A virtual method called to process a frame/tick, given the frame time 'delta'.

@@ -21,16 +21,10 @@
 @icon("../editor/icons/state.svg")
 extends Object
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const StateMachine := preload("state_machine.gd")
 const State := preload("state.gd")
-
-# -- CONFIGURATION ------------------------------------------------------------------- #
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -62,8 +56,6 @@ func is_substate_of(other: State) -> bool:
 
 	return false
 
-
-# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
@@ -126,8 +118,6 @@ func _on_update(_delta: float) -> State:
 	return _parent
 
 
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
@@ -143,5 +133,3 @@ func _on_update(_delta: float) -> State:
 func _transition_to(next: NodePath):
 	_root._transition_to(next)  # gdlint:ignore=private-method-call
 	return null
-
-# -- SETTERS/GETTERS ----------------------------------------------------------------- #
