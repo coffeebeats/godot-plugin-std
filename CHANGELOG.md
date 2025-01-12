@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.10.3 (2025-01-12)
+
+## What's Changed
+* fix(condition): prevent duplicate allow/block handler calls by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/180
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.10.2...v1.10.3
+
 ## 1.10.2 (2025-01-08)
 
 ## What's Changed
