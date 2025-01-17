@@ -1,7 +1,7 @@
 ##
 ## std/config/writer/project_settings.gd
 ##
-## `StdProjectSettingsConfigWriter` synchronizes the provided `Config` instance with the
+## StdProjectSettingsConfigWriter synchronizes the provided `Config` instance with the
 ## project settings override file. File contents will be written as UTF8-encoded text.
 ##
 ## WARNING: Parsing `ConfigFile` objects from files is insecure [1]. If possible, avoid
@@ -21,25 +21,9 @@ var _config_file: ConfigFile = null
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _init() -> void:
-	super._init()
-
-	assert(_get_filepath() != "", "missing project settings override path")
-
-
 func _enter_tree() -> void:
-	super._enter_tree()
-
+	assert(_get_filepath() != "", "missing project settings override path")
 	_config_file = ConfigFile.new()
-
-
-func _exit_tree() -> void:
-	super._exit_tree()
-
-	_config_file = null
-
-	if _connected != null:
-		unsync_config(_connected)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -49,7 +33,9 @@ func _deserialize_var(bytes: PackedByteArray) -> Variant:
 	var out: Dictionary = {}
 
 	var cfg := ConfigFile.new()
-	cfg.parse(bytes.get_string_from_utf8())
+	var err := cfg.parse(bytes.get_string_from_utf8())
+	if err != OK:
+		return out
 
 	for section in cfg.get_sections():
 		var category := {}
