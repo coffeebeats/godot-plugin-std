@@ -30,6 +30,11 @@ var _pending_config: Config = null
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## get_filepath returns the target file path at which the configuration data is stored.
+func get_filepath() -> String:
+	return _get_filepath()
+
+
 ## load_config hydrates the provided 'Config' instance with the contents of the file.
 func load_config(config: Config) -> StdThreadWorkerResult:
 	assert(config is Config, "invalid argument: expected a 'Config' instance")
