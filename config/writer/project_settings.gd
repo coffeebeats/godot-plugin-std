@@ -24,6 +24,7 @@ var _config_file: ConfigFile = null
 func _enter_tree() -> void:
 	assert(_get_filepath() != "", "missing project settings override path")
 	_config_file = ConfigFile.new()
+	_logger = _logger.named(&"std/config/writer/project-settings")
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #

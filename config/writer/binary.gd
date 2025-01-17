@@ -18,6 +18,13 @@ const CHECKSUM_BYTE_LENGTH := 16
 ## path is the filepath at which the 'Config' file contents will be synced to.
 @export var path: String = ""
 
+# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _enter_tree() -> void:
+	_logger = _logger.named(&"std/config/writer/binary")
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
