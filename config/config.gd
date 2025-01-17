@@ -183,6 +183,7 @@ func has_vector2_list(category: StringName, key: StringName) -> bool:
 	return value is PackedVector2Array
 
 
+## lock blocks the current thread until it acquires the lock for this `Config` object.
 func lock() -> void:
 	_mutex.lock()
 
@@ -241,6 +242,7 @@ func set_vector2_list(
 	return _set_variant(category, key, value)
 
 
+## unlock releases the currently held lock for the `Config` object.
 func unlock() -> void:
 	_mutex.unlock()
 
