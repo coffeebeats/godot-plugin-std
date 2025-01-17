@@ -31,7 +31,7 @@ func test_worker_completes_successfully():
 	add_child(worker)
 
 	# When: The worker is executed.
-	var result := worker._worker_run()
+	var result := worker.run()
 	assert_not_null(result)
 
 	# Then: The result is in progress.
@@ -54,7 +54,7 @@ func test_worker_fails_successfully():
 	add_child(worker)
 
 	# When: The worker is executed.
-	var result := worker._worker_run()
+	var result := worker.run()
 	assert_not_null(result)
 
 	# Then: The result is in progress.
