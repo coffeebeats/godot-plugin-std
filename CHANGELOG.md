@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.11.1 (2025-01-18)
+
+## What's Changed
+* fix(setting): correctly bind callback in `StdSettingRepository` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/189
+* chore(file): remove `StdFileSyncer`, which was replaced with `StdFileWriter` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/191
+* fix(setting): add debounce to `StdSettingRepository` config writes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/192
+* fix(config): update `StdConfigWriterBinary` class name in tests by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/193
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.11.0...v1.11.1
+
 ## 1.11.0 (2025-01-18)
 
 ## What's Changed
