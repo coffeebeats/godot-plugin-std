@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.11.0 (2025-01-18)
+
+## What's Changed
+* feat(config): create a `StdConfigItem` for representing an entire category of properties via a resource by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/182
+* feat(save): create a `Config`-backed save file implementation by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/184
+* feat(thread): create a `StdThreadWorker` node for running jobs in a separate thread by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/185
+* fix(config): make `Config` thread-safe by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/186
+* feat(file): create a `StdFileWriter` node for OS operations in background threads by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/187
+* fix(config): update `StdConfigWriter` implementations to use a `StdWorkerThread` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/188
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.10.3...v1.11.0
+
 ## 1.10.3 (2025-01-12)
 
 ## What's Changed
