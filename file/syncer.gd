@@ -27,8 +27,6 @@ signal write_flushed
 const Debounce := preload("../timer/debounce.gd")
 const FilePath := preload("path.gd")
 
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## close_on_tree_exited controls whether the file should be closed when this node is

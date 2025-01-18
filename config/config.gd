@@ -22,6 +22,7 @@ signal changed(category: StringName, key: StringName)
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _data: Dictionary = {}
+var _mutex: Mutex = Mutex.new()
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -84,6 +85,13 @@ func get_string_list(
 	return value if value is PackedStringArray else default
 
 
+## get_variant retrieves the value associated with `key` in `category` if one is set. If
+## no value is associated then `default` is returned.
+func get_variant(category: StringName, key: StringName, default: Variant) -> Variant:
+	var value: Variant = _get_variant(category, key)
+	return value if value != null else default
+
+
 ## get_vector2 retrieves the value associated with `key` in `category` if one is set and
 ## it's type is a `Vector2`. If no value is associated then `default` is returned.
 func get_vector2(category: StringName, key: StringName, default: Vector2) -> Vector2:
@@ -111,13 +119,19 @@ func has_bool(category: StringName, key: StringName) -> bool:
 ## has_category returns whether there is any value associated with any key within the
 ## specified category.
 func has_category(category: StringName) -> bool:
+	_mutex.lock()
+
+	var result := true
+
 	if category not in _data:
-		return false
+		result = false
 
-	if not _data[category]:
-		return false
+	elif not _data[category]:
+		result = false
 
-	return true
+	_mutex.unlock()
+
+	return result
 
 
 ## has_float returns whether there is a `float`-typed value associated with `key` in
@@ -167,6 +181,11 @@ func has_vector2(category: StringName, key: StringName) -> bool:
 func has_vector2_list(category: StringName, key: StringName) -> bool:
 	var value: Variant = _get_variant(category, key)
 	return value is PackedVector2Array
+
+
+## lock blocks the current thread until it acquires the lock for this `Config` object.
+func lock() -> void:
+	_mutex.lock()
 
 
 ## set_bool updates the value associated with `key` in `category` and returns whether
@@ -223,6 +242,11 @@ func set_vector2_list(
 	return _set_variant(category, key, value)
 
 
+## unlock releases the currently held lock for the `Config` object.
+func unlock() -> void:
+	_mutex.unlock()
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
@@ -232,7 +256,10 @@ func _delete_category(
 ) -> bool:
 	assert(category != "", "invalid argument: missing category")
 
+	_mutex.lock()
+
 	if category not in _data:
+		_mutex.unlock()
 		return false
 
 	var was_updated: bool = false
@@ -241,6 +268,8 @@ func _delete_category(
 
 	# NOTE: Ignore this result because changed status is determined by keys deleted.
 	_data.erase(category)
+
+	_mutex.unlock()
 
 	return was_updated
 
@@ -253,10 +282,15 @@ func _delete_key(
 	assert(category != "", "invalid argument: missing category")
 	assert(key != "", "invalid argument: missing key")
 
+	_mutex.lock()
+
 	if category not in _data:
+		_mutex.unlock()
 		return false
 
 	var was_updated: bool = _data[category].erase(key)
+
+	_mutex.unlock()
 
 	if emit and was_updated:
 		changed.emit(category, key)
@@ -268,10 +302,17 @@ func _get_variant(category: StringName, key: StringName) -> Variant:
 	assert(category != "", "invalid argument: missing category")
 	assert(key != "", "invalid argument: missing key")
 
+	_mutex.lock()
+
 	if category not in _data:
+		_mutex.unlock()
 		return null
 
-	return _data[category].get(key)
+	var value: Variant = _data[category].get(key)
+
+	_mutex.unlock()
+
+	return value
 
 
 func _set_variant(
@@ -283,12 +324,16 @@ func _set_variant(
 	assert(category != "", "invalid argument: missing category")
 	assert(key != "", "invalid argument: missing key")
 
+	_mutex.lock()
+
 	if category not in _data:
 		_data[category] = {}
 
 	var previous: Variant = _data[category].get(key)
 
 	_data[category][key] = value
+
+	_mutex.unlock()
 
 	var was_updated: bool = value != previous
 	if emit and was_updated:
