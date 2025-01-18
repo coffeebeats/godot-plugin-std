@@ -132,17 +132,6 @@ func _ready() -> void:
 
 	add_child(writer, false, INTERNAL_MODE_FRONT)
 
-	var err := _sync_config(writer, scope.config)
-	if err != OK:
-		assert(false, "failed to sync config with writer")
-		(
-			_logger
-			. error(
-				"Failed to sync config to file.",
-				{&"error": err, &"path": writer.get_filepath()},
-			)
-		)
-
 	# Configure the 'Debounce' timer used to rate-limit file system writes.
 	_debounce = _create_debounce_timer()
 	add_child(_debounce, false, INTERNAL_MODE_FRONT)
@@ -153,6 +142,18 @@ func _ready() -> void:
 			_on_Debounce_timeout.bind(writer, scope.config),
 		)
 	)
+
+	# Sync configuration changes to the configured target.
+	var err := _sync_config(writer, scope.config)
+	if err != OK:
+		assert(false, "failed to sync config with writer")
+		(
+			_logger
+			. error(
+				"Failed to sync config to file.",
+				{&"error": err, &"path": writer.get_filepath()},
+			)
+		)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
