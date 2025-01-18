@@ -6,7 +6,7 @@
 ##
 
 class_name StdSaveFile
-extends StdBinaryConfigWriter
+extends StdConfigWriterBinary
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 

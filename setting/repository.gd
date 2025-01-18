@@ -31,7 +31,7 @@ const Config := preload("../config/config.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create(&"std/setting/repository")
+static var _logger := StdLogger.create(&"std/setting/repository")  # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 

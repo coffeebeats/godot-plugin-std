@@ -1,12 +1,12 @@
 ##
 ## std/config/writer/binary.gd
 ##
-## StdBinaryConfigWriter synchronizes the provided `Config` instance with the specified
+## StdConfigWriterBinary synchronizes the provided `Config` instance with the specified
 ## file. File contents will be written using binary serialization and include a 16-byte
 ## MD5 checksum as a prefix.
 ##
 
-class_name StdBinaryConfigWriter
+class_name StdConfigWriterBinary
 extends StdConfigWriter
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
