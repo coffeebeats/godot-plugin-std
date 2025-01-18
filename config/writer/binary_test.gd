@@ -102,7 +102,7 @@ func test_config_writer_load_config_skips_invalid_tmp_file_data():
 	# Given: Invalid data is stored at the temporary file path.
 	var file := FileAccess.open(path + ".tmp", FileAccess.WRITE)
 	assert_not_null(file)
-	file.store_buffer(var_to_bytes({&"category": {&"key": 1}})) # Missing checksum.
+	file.store_buffer(var_to_bytes({&"category": {&"key": 1}}))  # Missing checksum.
 	file.close()
 
 	# Given: The config instance is reset.
