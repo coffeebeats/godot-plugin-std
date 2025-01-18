@@ -29,7 +29,7 @@ func _enter_tree() -> void:
 
 
 func _config_read_bytes(config_path: String) -> ReadResult:
-	var tmp_config_path := _get_tmp_filepath()
+	var tmp_config_path := FilePath.make_project_path_absolute(_get_tmp_filepath())
 	if not FileAccess.file_exists(tmp_config_path):
 		return super._config_read_bytes(config_path)
 
@@ -64,7 +64,7 @@ func _config_read_bytes(config_path: String) -> ReadResult:
 
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
-	if bytes.is_empty():
+	if bytes.size() < 4:  # Minimum size for encoding a variant.
 		return {}
 
 	var checksum := bytes.slice(0, CHECKSUM_BYTE_LENGTH)

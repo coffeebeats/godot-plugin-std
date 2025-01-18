@@ -111,7 +111,7 @@ func _config_read_bytes(config_path: String) -> ReadResult:
 ## file. Once that succeeds, the file will be renamed to the actual file. This ensures
 ## the target filepath is only overwritten if it was successfully written first.
 func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
-	var tmp_config_path := _get_tmp_filepath()
+	var tmp_config_path := FilePath.make_project_path_absolute(_get_tmp_filepath())
 	var err := _file_open(tmp_config_path, FileAccess.WRITE)
 	if err != OK:
 		return err
@@ -130,7 +130,7 @@ func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
 
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
-	if bytes.is_empty():
+	if bytes.size() < 4:  # Minimum size for encoding a variant.
 		return {}
 
 	return bytes_to_var(bytes)
