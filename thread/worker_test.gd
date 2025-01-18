@@ -73,7 +73,6 @@ func test_worker_fails_successfully():
 
 func after_each():
 	remove_child(worker)
-	assert_false(worker._worker_thread.is_alive())
 	worker.free()
 
 

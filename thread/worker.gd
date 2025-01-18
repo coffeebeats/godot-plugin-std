@@ -104,4 +104,10 @@ func _worker_thread_impl() -> void:
 			continue
 
 		var err := _worker_impl()
+
+		_worker_mutex.lock()
+
+		_worker_result = null
 		result.finish(err)
+
+		_worker_mutex.unlock()
