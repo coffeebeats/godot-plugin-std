@@ -130,6 +130,9 @@ func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
 
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
+	if bytes.is_empty():
+		return {}
+
 	return bytes_to_var(bytes)
 
 

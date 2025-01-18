@@ -64,9 +64,6 @@ func _config_read_bytes(config_path: String) -> ReadResult:
 
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
-	# NOTE: serialization is done using 'var_to_bytes', so the opposite function should
-	# be used. However, 'ConfigWriter' expects a non-nil 'Dictionary', so this check is
-	# required to avoid exceptions.
 	if bytes.is_empty():
 		return {}
 
