@@ -119,7 +119,10 @@ func _sync_config(writer: StdConfigWriter, config: Config) -> Error:
 
 	_logger.info("Syncing configuration to file.", {&"path": writer.get_filepath()})
 
-	var err := config.changed.connect(_on_Config_changed.bind(writer, config)) as Error
+	# TODO(https://github.com/godotengine/godot-proposals/issues/4920): Replace this
+	# with a "left" `bind` call.
+	var callback := func(c, k): _on_Config_changed(writer, config, c, k)
+	var err := config.changed.connect(callback) as Error
 	if err != OK:
 		return err
 
