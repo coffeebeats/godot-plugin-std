@@ -1,9 +1,9 @@
 ##
 ## std/setting/repository.gd
 ##
-## `StdSettingsRepository` hosts the specified `StdSettingsScope`, ensuring it stays
+## StdSettingsRepository hosts the specified `StdSettingsScope`, ensuring it stays
 ## referenced for the lifespan of this node. Additionally, manages syncing the
-## configuration to the specified sync target and handling settings observers.
+## configuration to the specified sync target.
 ##
 
 @tool
@@ -28,6 +28,10 @@ const Config := preload("../config/config.gd")
 	set(value):
 		sync_target = value
 		update_configuration_warnings()
+
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+static var _logger := StdLogger.create(&"std/setting/repository")  # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -76,13 +80,67 @@ func _ready() -> void:
 
 	assert(scope is StdSettingsScope, "invalid state: missing scope")
 
-	if sync_target is StdSettingsSyncTarget and not Engine.is_editor_hint():
-		var node := sync_target.create_sync_target_node()
-		assert(node is StdConfigWriter, "invalid state: expected a config writer")
+	if not sync_target is StdSettingsSyncTarget:
+		return
 
-		if node is StdConfigWriter:
-			add_child(node, false, INTERNAL_MODE_FRONT)
+	var node := sync_target.create_sync_target_node()
+	if not node is StdConfigWriter:
+		assert(false, "invalid state: expected a config writer")
+		return
 
-			@warning_ignore("confusable_local_declaration")
-			var err := node.sync_config(scope.config)
-			assert(err == OK, "failed to sync config with writer")
+	add_child(node, false, INTERNAL_MODE_FRONT)
+
+	var err := _sync_config(node, scope.config)
+	if err != OK:
+		assert(false, "failed to sync config with writer")
+		(
+			_logger
+			. error(
+				"Failed to sync config to file.",
+				{&"error": err, &"path": node.get_filepath()},
+			)
+		)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _sync_config is a convenience method which first hydrates the provided 'Config'
+## instance with the file's contents and then saves the config to disk each time a
+## change is detected.
+##
+## NOTE: If the provided 'Config' is already being synced then nothing occurs. If a
+## different 'Config' instance is being synced, that one will be unsynced first.
+## Finally, synchronization will automatically be cleaned up on tree exit.
+func _sync_config(writer: StdConfigWriter, config: Config) -> Error:
+	assert(writer is StdConfigWriter, "invalid argument; missing config writer")
+	assert(writer.is_inside_tree(), "invalid state; config writer not in scene tree")
+	assert(config is Config, "invalid argument: expected a 'Config' instance")
+
+	_logger.info("Syncing configuration to file.", {&"path": writer.get_filepath()})
+
+	var err := config.changed.connect(_on_Config_changed.bind(writer, config)) as Error
+	if err != OK:
+		return err
+
+	err = writer.load_config(config).wait()
+	if err != OK:
+		return err
+
+	return OK
+
+
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_Config_changed(
+	writer: StdConfigWriter,
+	config: Config,
+	_category: StringName,
+	_key: StringName,
+) -> void:
+	var err := writer.store_config(config).wait()
+	if err != OK:
+		_logger.error(
+			"Failed to write config to file.", {&"path": writer.get_filepath()}
+		)

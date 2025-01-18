@@ -25,11 +25,15 @@ var _logger := StdLogger.create(&"std/file/writer")
 
 func _file_close() -> Error:
 	if not _file is FileAccess:
-		assert(false, "invalid state; cannot open file while another is open")
+		assert(false, "invalid state; no file is open")
 		return ERR_DOES_NOT_EXIST
+
+	var path := _file.get_path()
 
 	_file.close()
 	_file = null
+
+	_logger.debug("Closed file.", {&"path": path})
 
 	return OK
 
@@ -50,6 +54,8 @@ func _file_delete(path: String) -> Error:
 	if err != OK:
 		_logger.error("Failed to delete file.", {&"path": path})
 
+	_logger.debug("Deleted file.", {&"path": path})
+
 	return err
 
 
@@ -67,6 +73,8 @@ func _file_move(from: String, to: String) -> Error:
 				{&"path_from": from, &"path_to": to},
 			)
 		)
+
+	_logger.debug("Moved file.", {&"path_from": from, &"path_to": to})
 
 	return err
 
@@ -99,14 +107,19 @@ func _file_open(path: String, mode: FileAccess.ModeFlags) -> Error:
 	logger = logger.with({&"mode": mode})
 
 	if not FileAccess.file_exists(path):
-		if FileAccess.open(path, FileAccess.WRITE) == null:
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		if file == null:
 			var err := FileAccess.get_open_error()
 			if err != OK:
 				logger.error("Failed to create file.")
 				return err
 
-	var file := FileAccess.open(path, mode)
-	if file == null:
+		logger.debug("Created file.")
+
+		file.close()
+
+	_file = FileAccess.open(path, mode)
+	if _file == null:
 		var err := FileAccess.get_open_error()
 		if err != OK:
 			logger.error("Failed to open file.")
@@ -119,7 +132,7 @@ func _file_open(path: String, mode: FileAccess.ModeFlags) -> Error:
 
 func _file_read(position: int = 0, count: int = -1) -> PackedByteArray:
 	if not _file is FileAccess:
-		assert(false, "invalid state; no file is open")
+		assert(false, "invalid state; no file found")
 		return PackedByteArray()
 
 	_file.seek(position)
