@@ -10,7 +10,7 @@ extends Resource
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Config := preload("config.gd")
+const Config := preload("../config.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
