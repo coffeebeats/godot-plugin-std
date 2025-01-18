@@ -1,5 +1,5 @@
 ##
-## Tests pertaining to the `StdBinaryConfigWriter` class.
+## Tests pertaining to the `StdConfigWriterBinary` class.
 ##
 
 extends GutTest
@@ -14,7 +14,7 @@ const Config := preload("../config.gd")
 ## removed at the end of each test.
 var path_test_dir: String
 
-var writer: StdBinaryConfigWriter = null
+var writer: StdConfigWriterBinary = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -24,7 +24,7 @@ func test_config_writer_load_config_reads_existing_file_data():
 	var path := path_test_dir.path_join("test.dat")
 
 	# Given: A config writer writing to a file.
-	writer = StdBinaryConfigWriter.new()
+	writer = StdConfigWriterBinary.new()
 	writer.path = path
 	add_child(writer)
 
@@ -58,7 +58,7 @@ func test_config_writer_load_config_reads_valid_tmp_file_data():
 	config.set_string(&"category", &"key", "value")
 
 	# Given: A config writer writing to a tmp file.
-	writer = StdBinaryConfigWriter.new()
+	writer = StdConfigWriterBinary.new()
 	writer.path = path + ".tmp"
 	add_child(writer)
 
@@ -91,7 +91,7 @@ func test_config_writer_load_config_skips_invalid_tmp_file_data():
 	config.set_string(&"category", &"key", "value")
 
 	# Given: A config writer writing to a file.
-	writer = StdBinaryConfigWriter.new()
+	writer = StdConfigWriterBinary.new()
 	writer.path = path
 	add_child(writer)
 
