@@ -17,7 +17,7 @@ extends StdSettingsSyncTarget
 
 
 func _create_sync_target_node() -> StdConfigWriter:
-	var writer := StdBinaryConfigWriter.new()
+	var writer := StdConfigWriterBinary.new()
 	writer.path = path
 
 	return writer
