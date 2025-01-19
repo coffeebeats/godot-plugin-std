@@ -1,8 +1,8 @@
 ##
 ## std/config/item.gd
 ##
-## StdConfigItem is a collection of key/value pairs that can be marshaled to or
-## unmarshaled from a `Config` object.
+## StdConfigItem is a collection of key/value pairs that can be serialized to or
+## deserialized from a `Config` object.
 ##
 
 class_name StdConfigSchema
@@ -21,10 +21,10 @@ const PROPERTY_KEY_USAGE := &"usage"
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## marshal populates the provided `Config` instance with this schema's items.
+## serialize_to populates the provided `Config` instance with this schema's items.
 ##
 ## NOTE: Only exported, non-null `StdConfigItem` properties will be set on the `Config`.
-func marshal(config: Config) -> void:
+func serialize_to(config: Config) -> void:
 	var categories := PackedStringArray()
 
 	for property in get_property_list():
@@ -41,13 +41,13 @@ func marshal(config: Config) -> void:
 		assert(category not in categories, "invalid config; duplicate category")
 		categories.append(category)
 
-		value.marshal(config)
+		value.serialize_to(config)
 
 
-## unmarshal populates this schema object from the provided `Config` instance.
+## deserialize_from populates this schema object from the provided `Config` instance.
 ##
 ## NOTE: Only exported, non-null `StdConfigItem` properties will be updated.
-func unmarshal(config: Config) -> void:
+func deserialize_from(config: Config) -> void:
 	var categories := PackedStringArray()
 
 	for property in get_property_list():
@@ -64,4 +64,4 @@ func unmarshal(config: Config) -> void:
 		assert(category not in categories, "invalid config; duplicate category")
 		categories.append(category)
 
-		value.unmarshal(config)
+		value.deserialize_from(config)

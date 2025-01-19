@@ -27,9 +27,9 @@ func get_category() -> StringName:
 	return _get_category()
 
 
-## marshal populates the provided `Config` instance with this config item's properties.
-## Only exported script variables will be stored.
-func marshal(config: Config) -> void:
+## serialize_to populates the provided `Config` instance with this config item's
+## properties. Only exported script variables will be stored.
+func serialize_to(config: Config) -> void:
 	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")
@@ -82,9 +82,9 @@ func marshal(config: Config) -> void:
 				config.set_vector2(category, name, value)
 
 
-## unmarshal reads configuration data from the provided `Config` instance and updates
-## this config item's properties. Only exported script variables will be set.
-func unmarshal(config: Config) -> void:
+## deserialize_from reads configuration data from the provided `Config` instance and
+## updates this config item's properties. Only exported script variables will be set.
+func deserialize_from(config: Config) -> void:
 	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")

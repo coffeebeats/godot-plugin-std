@@ -30,7 +30,7 @@ class ExampleConfigItem:
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
-func test_config_item_marshal_serializes_properties_to_config_correctly():
+func test_config_item_serialize_to_serializes_properties_to_config_correctly():
 	# Given: A new, empty 'Config' instance.
 	var config := Config.new()
 
@@ -45,8 +45,8 @@ func test_config_item_marshal_serializes_properties_to_config_correctly():
 	item.test_vector2 = Vector2(1.0, 1.0)
 	item.test_vector2_list = PackedVector2Array([Vector2.ZERO])
 
-	# When: The item is marshaled into the config object.
-	item.marshal(config)
+	# When: The item is serialized into the config object.
+	item.serialize_to(config)
 
 	# Then: The config contains the expected values.
 	assert_eq(config.get_bool(item.get_category(), &"test_bool", false), true)
@@ -75,7 +75,7 @@ func test_config_item_marshal_serializes_properties_to_config_correctly():
 	)
 
 
-func test_config_item_marshal_overwrites_existing_values():
+func test_config_item_serialize_to_overwrites_existing_values():
 	# Given: A config item populated with non-default values.
 	var item := ExampleConfigItem.new()
 	item.test_bool = true
@@ -102,8 +102,8 @@ func test_config_item_marshal_overwrites_existing_values():
 		item.get_category(), &"test_vector2_list", PackedVector2Array()
 	)
 
-	# When: The item is marshaled into the config object.
-	item.marshal(config)
+	# When: The item is serialized into the config object.
+	item.serialize_to(config)
 
 	# Then: The config contains the expected values.
 	assert_eq(config.get_bool(item.get_category(), &"test_bool", false), true)
@@ -132,7 +132,7 @@ func test_config_item_marshal_overwrites_existing_values():
 	)
 
 
-func test_config_item_marshal_erases_when_serializing_default_value():
+func test_config_item_serialize_to_erases_when_serializing_default_value():
 	# Given: A config item populated with default values.
 	var item := ExampleConfigItem.new()
 	item.test_bool = false
@@ -161,8 +161,8 @@ func test_config_item_marshal_erases_when_serializing_default_value():
 		item.get_category(), &"test_vector2_list", PackedVector2Array([Vector2.ZERO])
 	)
 
-	# When: The item is marshaled into the config object.
-	item.marshal(config)
+	# When: The item is serialized into the config object.
+	item.serialize_to(config)
 
 	# Then: The default values were erased from the config object.
 	assert_false(config.has_bool(item.get_category(), &"test_bool"))
@@ -196,8 +196,8 @@ func test_config_item_deserializes_properties_from_config_correctly():
 		item.get_category(), &"test_vector2_list", PackedVector2Array([Vector2.ZERO])
 	)
 
-	# When: The config is unmarshaled into the config item.
-	item.unmarshal(config)
+	# When: The config is deserialized from the config item.
+	item.deserialize_from(config)
 
 	# Then: The config contains the expected values.
 	assert_eq(item.test_bool, true)
@@ -210,7 +210,7 @@ func test_config_item_deserializes_properties_from_config_correctly():
 	assert_eq(item.test_vector2_list, PackedVector2Array([Vector2.ZERO]))
 
 
-func test_config_item_unmarshal_ignores_other_categories():
+func test_config_item_deserialize_from_ignores_other_categories():
 	# Given: A new, empty config item.
 	var item := ExampleConfigItem.new()
 
@@ -235,8 +235,8 @@ func test_config_item_unmarshal_ignores_other_categories():
 			category, &"test_vector2_list", PackedVector2Array([Vector2.ZERO])
 		)
 
-	# When: The config is unmarshaled into the config item.
-	item.unmarshal(config)
+	# When: The config is deserialized from the config item.
+	item.deserialize_from(config)
 
 	# Then: The config contains the expected values.
 	assert_eq(item.test_bool, false)
@@ -249,7 +249,7 @@ func test_config_item_unmarshal_ignores_other_categories():
 	assert_eq(item.test_vector2_list, PackedVector2Array())
 
 
-func test_config_item_unmarshal_erases_values_when_missing_from_config():
+func test_config_item_deserialize_from_erases_values_when_missing_from_config():
 	# Given: A new, empty config item.
 	var item := ExampleConfigItem.new()
 	item.test_bool = true
@@ -264,8 +264,8 @@ func test_config_item_unmarshal_erases_values_when_missing_from_config():
 	# Given: A 'Config' instance with other categories populated.
 	var config := Config.new()
 
-	# When: The config is unmarshaled into the config item.
-	item.unmarshal(config)
+	# When: The config is deserialized from the config item.
+	item.deserialize_from(config)
 
 	# Then: The config contains the expected values.
 	assert_eq(item.test_bool, false)
