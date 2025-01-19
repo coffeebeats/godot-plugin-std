@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.1 (2025-01-19)
+
+## What's Changed
+* fix(setting): update reference to `StdConfigWriterBinary` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/196
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.12.0...v1.12.1
+
 ## 1.12.0 (2025-01-19)
 
 ## What's Changed
