@@ -31,7 +31,7 @@ class ConfigSchemaTest:
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
-func test_config_schema_serialize_to_serializes_items_to_config_correctly():
+func test_config_schema_store_serializes_items_to_config_correctly():
 	# Given: A new, empty 'Config' instance.
 	var config := Config.new()
 
@@ -45,13 +45,13 @@ func test_config_schema_serialize_to_serializes_items_to_config_correctly():
 	schema.item = item
 
 	# When: The item is serialized into the config object.
-	schema.serialize_to(config)
+	schema.store(config)
 
 	# Then: The config contains the expected values.
 	assert_eq(config.get_int(&"category", &"key", 0), 1)
 
 
-func test_config_schema_deserialize_from_deserializes_items_to_config_correctly():
+func test_config_schema_load_deserializes_items_to_config_correctly():
 	# Given: A populated 'Config' instance.
 	var config := Config.new()
 	config.set_int(&"category", &"key", 1)
@@ -65,7 +65,7 @@ func test_config_schema_deserialize_from_deserializes_items_to_config_correctly(
 	schema.item = item
 
 	# When: The item is deserialized from the config object.
-	schema.deserialize_from(config)
+	schema.load(config)
 
 	# Then: The config item contains the expected values.
 	assert_eq(item.key, 1)

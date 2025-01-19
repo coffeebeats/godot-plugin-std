@@ -1,8 +1,8 @@
 ##
 ## std/config/item.gd
 ##
-## StdConfigItem is a collection of key/value pairs that can be marshaled to or
-## unmarshaled from a `Config` object.
+## StdConfigItem is a collection of key/value pairs that can be serialized to or
+## deserialized from a `Config` object.
 ##
 
 class_name StdConfigItem
@@ -27,9 +27,9 @@ func get_category() -> StringName:
 	return _get_category()
 
 
-## serialize_to populates the provided `Config` instance with this config item's
-## properties. Only exported script variables will be stored.
-func serialize_to(config: Config) -> void:
+## store populates the provided `Config` instance with this config item's properties.
+## Only exported script variables will be stored.
+func store(config: Config) -> void:
 	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")
@@ -82,9 +82,9 @@ func serialize_to(config: Config) -> void:
 				config.set_vector2(category, name, value)
 
 
-## deserialize_from reads configuration data from the provided `Config` instance and
-## updates this config item's properties. Only exported script variables will be set.
-func deserialize_from(config: Config) -> void:
+## load reads configuration data from the provided `Config` instance and updates this
+## config item's properties. Only exported script variables will be set.
+func load(config: Config) -> void:
 	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")

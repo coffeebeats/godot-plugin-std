@@ -21,10 +21,10 @@ const PROPERTY_KEY_USAGE := &"usage"
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## serialize_to populates the provided `Config` instance with this schema's items.
+## store populates the provided `Config` instance with this schema's items.
 ##
 ## NOTE: Only exported, non-null `StdConfigItem` properties will be set on the `Config`.
-func serialize_to(config: Config) -> void:
+func store(config: Config) -> void:
 	var categories := PackedStringArray()
 
 	for property in get_property_list():
@@ -41,13 +41,13 @@ func serialize_to(config: Config) -> void:
 		assert(category not in categories, "invalid config; duplicate category")
 		categories.append(category)
 
-		value.serialize_to(config)
+		value.store(config)
 
 
-## deserialize_from populates this schema object from the provided `Config` instance.
+## load populates this schema object from the provided `Config` instance.
 ##
 ## NOTE: Only exported, non-null `StdConfigItem` properties will be updated.
-func deserialize_from(config: Config) -> void:
+func load(config: Config) -> void:
 	var categories := PackedStringArray()
 
 	for property in get_property_list():
@@ -64,4 +64,4 @@ func deserialize_from(config: Config) -> void:
 		assert(category not in categories, "invalid config; duplicate category")
 		categories.append(category)
 
-		value.deserialize_from(config)
+		value.load(config)
