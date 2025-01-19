@@ -1,8 +1,8 @@
 ##
 ## std/config/item.gd
 ##
-## StdConfigItem is a collection of key/value pairs that can be marshaled to or
-## unmarshaled from a `Config` object.
+## StdConfigItem is a collection of key/value pairs that can be serialized to or
+## deserialized from a `Config` object.
 ##
 
 class_name StdConfigItem
@@ -10,7 +10,7 @@ extends Resource
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Config := preload("config.gd")
+const Config := preload("../config.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -27,9 +27,9 @@ func get_category() -> StringName:
 	return _get_category()
 
 
-## marshal populates the provided `Config` instance with this config item's properties.
+## store populates the provided `Config` instance with this config item's properties.
 ## Only exported script variables will be stored.
-func marshal(config: Config) -> void:
+func store(config: Config) -> void:
 	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")
@@ -82,9 +82,9 @@ func marshal(config: Config) -> void:
 				config.set_vector2(category, name, value)
 
 
-## unmarshal reads configuration data from the provided `Config` instance and updates
-## this config item's properties. Only exported script variables will be set.
-func unmarshal(config: Config) -> void:
+## load reads configuration data from the provided `Config` instance and updates this
+## config item's properties. Only exported script variables will be set.
+func load(config: Config) -> void:
 	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")
