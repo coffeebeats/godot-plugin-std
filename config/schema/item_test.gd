@@ -6,7 +6,7 @@ extends GutTest
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Config := preload("config.gd")
+const Config := preload("../config.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
