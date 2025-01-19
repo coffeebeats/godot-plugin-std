@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.0 (2025-01-19)
+
+## What's Changed
+* feat(config): create a `StdConfigSchema` which is a base class for defining an entire `Config` object schema by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/194
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.11.1...v1.12.0
+
 ## 1.11.1 (2025-01-18)
 
 ## What's Changed
