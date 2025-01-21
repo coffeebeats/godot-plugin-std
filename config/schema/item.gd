@@ -29,6 +29,19 @@ func get_category() -> StringName:
 	return _get_category()
 
 
+## reset sets all serialization-enabled properties back to their default values.
+func reset() -> void:
+	var defaults := new()
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+
+		self.set(name, defaults.get(name))
+
+
 ## store populates the provided `Config` instance with this config item's properties.
 ## Only exported script variables will be stored.
 func store(config: Config) -> void:
