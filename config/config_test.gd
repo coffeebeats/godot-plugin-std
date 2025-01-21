@@ -134,6 +134,54 @@ func test_config_erase_string_removes_value():
 	assert_signal_emitted_with_parameters(config, "changed", ["category", "key"])
 
 
+func test_config_reset_clears_values():
+	# Given: A 'Config' instance populated with multiple categories and keys.
+	var config := Config.new()
+	config.set_float("category1", "key1", 1.0)
+	config.set_float("category1", "key2", 1.0)
+	config.set_float("category2", "key1", 1.0)
+	config.set_float("category2", "key2", 1.0)
+
+	# Given: Signal emissions are monitored.
+	watch_signals(config)
+
+	# When: The `Config` object is reset.
+	var got := config.reset()
+
+	# Then: The `Config` object changed.
+	assert_true(got)
+
+	# Then: The populated values were removed.
+	assert_false(config.has_float("category1", "key1"))
+	assert_false(config.has_float("category1", "key2"))
+	assert_false(config.has_float("category2", "key1"))
+	assert_false(config.has_float("category2", "key2"))
+
+	# Then: The 'changed' signal was emitted.
+	assert_signal_emit_count(config, "changed", 4)
+	assert_signal_emitted_with_parameters(config, "changed", ["category1", "key1"], 0)
+	assert_signal_emitted_with_parameters(config, "changed", ["category1", "key2"], 1)
+	assert_signal_emitted_with_parameters(config, "changed", ["category2", "key1"], 2)
+	assert_signal_emitted_with_parameters(config, "changed", ["category2", "key2"], 3)
+
+
+func test_config_reset_on_empty_object_does_nothing():
+	# Given: A new, empty 'Config' instances.
+	var config := Config.new()
+
+	# Given: Signal emissions are monitored.
+	watch_signals(config)
+
+	# When: The `Config` object is reset.
+	var got := config.reset()
+
+	# Then: The `Config` object did not change.
+	assert_false(got)
+
+	# Then: The 'changed' signal was emitted.
+	assert_signal_not_emitted(config, "changed")
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
