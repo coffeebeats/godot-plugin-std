@@ -26,6 +26,24 @@ var _worker_thread: Thread = null
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## is_thread_running returns whether this worker's thread is currently alive.
+func is_thread_running() -> bool:
+	_worker_mutex.lock()
+	var value := _is_running
+	_worker_mutex.unlock()
+
+	return value
+
+
+## is_worker_in_progress returns whether this worker is currently executing its task.
+func is_worker_in_progress() -> bool:
+	_worker_mutex.lock()
+	var value := _worker_result != null
+	_worker_mutex.unlock()
+
+	return value
+
+
 ## run executes the worker, immediately returning a result which can be used to track
 ## the progress of the current invocation.
 ##
@@ -45,6 +63,17 @@ func run() -> StdThreadWorkerResult:
 	_worker_mutex.unlock()
 
 	return result
+
+
+## wait causes the calling thread to wait until any in-progress task is completed. This
+## is safe to call even if the worker is not currently in progress.
+func wait() -> void:
+	_worker_mutex.lock()
+	var result := _worker_result
+	_worker_mutex.unlock()
+
+	if result:
+		result.wait()
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
