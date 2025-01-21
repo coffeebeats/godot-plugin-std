@@ -134,7 +134,7 @@ func _file_open(
 
 	logger.debug("Opened file.")
 
-	return OK
+	return OK  # gdlint:ignore=max-returns
 
 
 func _file_read(position: int = 0, count: int = -1) -> PackedByteArray:
