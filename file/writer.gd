@@ -79,7 +79,11 @@ func _file_move(from: String, to: String) -> Error:
 	return err
 
 
-func _file_open(path: String, mode: FileAccess.ModeFlags) -> Error:
+func _file_open(
+	path: String,
+	mode: FileAccess.ModeFlags,
+	create_if_missing: bool = true,
+) -> Error:
 	if not path.is_absolute_path():
 		assert(false, "invalid argument; expected absolute path")
 		return ERR_INVALID_PARAMETER
@@ -89,6 +93,9 @@ func _file_open(path: String, mode: FileAccess.ModeFlags) -> Error:
 		return ERR_ALREADY_IN_USE
 
 	var logger := _logger.with({&"path": path})
+
+	if not create_if_missing and not FileAccess.file_exists(path):
+		return ERR_FILE_NOT_FOUND
 
 	var path_base_dir := path.get_base_dir()
 	if not DirAccess.dir_exists_absolute(path_base_dir):
@@ -127,7 +134,7 @@ func _file_open(path: String, mode: FileAccess.ModeFlags) -> Error:
 
 	logger.debug("Opened file.")
 
-	return OK
+	return OK  # gdlint:ignore=max-returns
 
 
 func _file_read(position: int = 0, count: int = -1) -> PackedByteArray:
