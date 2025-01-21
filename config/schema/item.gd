@@ -29,6 +29,29 @@ func get_category() -> StringName:
 	return _get_category()
 
 
+## load reads configuration data from the provided `Config` instance and updates this
+## config item's properties. Only exported script variables will be set.
+func load(config: Config) -> void:
+	var category := _get_category()
+	if not category:
+		assert(false, "invalid config; missing category")
+		return
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
+		var value: Variant = config.get_variant(category, name, null)
+
+		if value == null or typeof(value) != type:
+			self.set(name, type_convert(null, type) if type != TYPE_STRING else "")
+			continue
+
+		set(name, value)
+
+
 ## reset sets all serialization-enabled properties back to their default values.
 func reset() -> void:
 	var defaults := new()
@@ -95,29 +118,6 @@ func store(config: Config) -> void:
 			TYPE_VECTOR2:
 				assert(value is Vector2, "invalid state; wrong type")
 				config.set_vector2(category, name, value)
-
-
-## load reads configuration data from the provided `Config` instance and updates this
-## config item's properties. Only exported script variables will be set.
-func load(config: Config) -> void:
-	var category := _get_category()
-	if not category:
-		assert(false, "invalid config; missing category")
-		return
-
-	for property in get_property_list():
-		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
-			continue
-
-		var name: StringName = property[PROPERTY_KEY_NAME]
-		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
-		var value: Variant = config.get_variant(category, name, null)
-
-		if value == null or typeof(value) != type:
-			self.set(name, type_convert(null, type) if type != TYPE_STRING else "")
-			continue
-
-		set(name, value)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
