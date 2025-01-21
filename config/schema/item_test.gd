@@ -23,6 +23,8 @@ class ExampleConfigItem:
 	@export var test_vector2: Vector2
 	@export var test_vector2_list: PackedVector2Array
 
+	var ignored_field: bool  # Should not be serialized/deserialized.
+
 	func _get_category() -> StringName:
 		return &"test-category"
 
@@ -36,6 +38,7 @@ func test_config_item_store_serializes_properties_to_config_correctly():
 
 	# Given: A populated config item.
 	var item := ExampleConfigItem.new()
+	item.ignored_field = true  # Shouldn't be serialized!
 	item.test_bool = true
 	item.test_float = 1.0
 	item.test_int = 1
@@ -49,6 +52,7 @@ func test_config_item_store_serializes_properties_to_config_correctly():
 	item.store(config)
 
 	# Then: The config contains the expected values.
+	assert_eq(config.get_bool(item.get_category(), &"ignored_field", false), false)
 	assert_eq(config.get_bool(item.get_category(), &"test_bool", false), true)
 	assert_eq(config.get_float(item.get_category(), &"test_float", 0.0), 1.0)
 	assert_eq(config.get_int(item.get_category(), &"test_int", 0), 1)
@@ -78,6 +82,7 @@ func test_config_item_store_serializes_properties_to_config_correctly():
 func test_config_item_store_overwrites_existing_values():
 	# Given: A config item populated with non-default values.
 	var item := ExampleConfigItem.new()
+	item.ignored_field = true  # Shouldn't be serialized!
 	item.test_bool = true
 	item.test_float = 1.0
 	item.test_int = 1
@@ -89,6 +94,7 @@ func test_config_item_store_overwrites_existing_values():
 
 	# Given: A 'Config' instance with different values.
 	var config := Config.new()
+	config.set_bool(item.get_category(), &"ignored_field", false)
 	config.set_bool(item.get_category(), &"test_bool", false)
 	config.set_float(item.get_category(), &"test_float", 0.0)
 	config.set_int(item.get_category(), &"test_int", 0)
@@ -106,6 +112,7 @@ func test_config_item_store_overwrites_existing_values():
 	item.store(config)
 
 	# Then: The config contains the expected values.
+	assert_eq(config.get_bool(item.get_category(), &"ignored_field", true), false)
 	assert_eq(config.get_bool(item.get_category(), &"test_bool", false), true)
 	assert_eq(config.get_float(item.get_category(), &"test_float", 0.0), 1.0)
 	assert_eq(config.get_int(item.get_category(), &"test_int", 0), 1)
@@ -135,6 +142,7 @@ func test_config_item_store_overwrites_existing_values():
 func test_config_item_store_erases_when_serializing_default_value():
 	# Given: A config item populated with default values.
 	var item := ExampleConfigItem.new()
+	item.ignored_field = true
 	item.test_bool = false
 	item.test_float = 0.0
 	item.test_int = 0
@@ -146,6 +154,7 @@ func test_config_item_store_erases_when_serializing_default_value():
 
 	# Given: A 'Config' instance with starting values.
 	var config := Config.new()
+	config.set_bool(item.get_category(), &"ignored_field", false)
 	config.set_bool(item.get_category(), &"test_bool", true)
 	config.set_float(item.get_category(), &"test_float", 1.0)
 	config.set_int(item.get_category(), &"test_int", 1)
@@ -165,6 +174,7 @@ func test_config_item_store_erases_when_serializing_default_value():
 	item.store(config)
 
 	# Then: The default values were erased from the config object.
+	assert_true(config.has_bool(item.get_category(), &"ignored_field"))  # Ignored!
 	assert_false(config.has_bool(item.get_category(), &"test_bool"))
 	assert_false(config.has_float(item.get_category(), &"test_float"))
 	assert_false(config.has_int(item.get_category(), &"test_int"))
@@ -181,6 +191,7 @@ func test_config_item_deserializes_properties_from_config_correctly():
 
 	# Given: A populated 'Config' instance.
 	var config := Config.new()
+	config.set_bool(item.get_category(), &"ignored_field", true)  # Should ignore!
 	config.set_bool(item.get_category(), &"test_bool", true)
 	config.set_float(item.get_category(), &"test_float", 1.0)
 	config.set_int(item.get_category(), &"test_int", 1)
@@ -200,6 +211,7 @@ func test_config_item_deserializes_properties_from_config_correctly():
 	item.load(config)
 
 	# Then: The config contains the expected values.
+	assert_eq(item.ignored_field, false)
 	assert_eq(item.test_bool, true)
 	assert_eq(item.test_float, 1.0)
 	assert_eq(item.test_int, 1)
@@ -252,6 +264,7 @@ func test_config_item_load_ignores_other_categories():
 func test_config_item_load_erases_values_when_missing_from_config():
 	# Given: A new, empty config item.
 	var item := ExampleConfigItem.new()
+	item.ignored_field = true
 	item.test_bool = true
 	item.test_float = 1.0
 	item.test_int = 1
@@ -268,6 +281,7 @@ func test_config_item_load_erases_values_when_missing_from_config():
 	item.load(config)
 
 	# Then: The config contains the expected values.
+	assert_eq(item.ignored_field, true)
 	assert_eq(item.test_bool, false)
 	assert_eq(item.test_float, 0.0)
 	assert_eq(item.test_int, 0)
