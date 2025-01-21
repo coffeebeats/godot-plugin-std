@@ -36,7 +36,7 @@ func _config_read_bytes(config_path: String) -> ReadResult:
 	# '.tmp' file exists; check whether it was completely written.
 
 	var result := ReadResult.new()
-	var err := _file_open(tmp_config_path, FileAccess.READ)
+	var err := _file_open(tmp_config_path, FileAccess.READ, false)
 	if err != OK:
 		result.error = err
 		return result
@@ -65,6 +65,7 @@ func _config_read_bytes(config_path: String) -> ReadResult:
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
 	if bytes.size() < 4:  # Minimum size for encoding a variant.
+		assert(false, "invalid argument; missing data")
 		return {}
 
 	var checksum := bytes.slice(0, CHECKSUM_BYTE_LENGTH)
@@ -106,6 +107,9 @@ func _compute_checksum(bytes: PackedByteArray) -> PackedByteArray:
 	ctx.update(bytes)
 
 	var checksum := ctx.finish()
-	assert(checksum.size() == 16, "invalid output; unexpected checksum length")
+	assert(
+		checksum.size() == CHECKSUM_BYTE_LENGTH,
+		"invalid output; unexpected checksum length",
+	)
 
 	return checksum

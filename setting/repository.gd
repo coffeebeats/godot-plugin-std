@@ -201,7 +201,7 @@ func _sync_config(writer: StdConfigWriter, config: Config) -> Error:
 		return err
 
 	err = writer.load_config(config).wait()
-	if err != OK:
+	if err != OK and err != ERR_FILE_NOT_FOUND:  # A missing file here is okay.
 		return err
 
 	return OK

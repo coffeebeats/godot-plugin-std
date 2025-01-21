@@ -84,7 +84,7 @@ func store_config(config: Config) -> StdThreadWorkerResult:
 func _config_read_bytes(config_path: String) -> ReadResult:
 	var result := ReadResult.new()
 
-	var err := _file_open(config_path, FileAccess.READ)
+	var err := _file_open(config_path, FileAccess.READ, false)
 	if err != OK:
 		result.error = err
 		return result
@@ -131,6 +131,7 @@ func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
 	if bytes.size() < 4:  # Minimum size for encoding a variant.
+		assert(false, "invalid argument; missing data")
 		return {}
 
 	return bytes_to_var(bytes)
@@ -169,6 +170,9 @@ func _worker_impl() -> Error:
 			var read_result := _config_read_bytes(path)
 			if read_result.error != OK:
 				return read_result.error
+
+			if read_result.bytes.size() < 4:
+				return ERR_INVALID_DATA
 
 			var data: Variant = _deserialize_var(read_result.bytes)
 			if not data is Dictionary:
