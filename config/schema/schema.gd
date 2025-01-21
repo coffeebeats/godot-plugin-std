@@ -18,6 +18,8 @@ const PROPERTY_KEY_NAME := &"name"
 const PROPERTY_KEY_TYPE := &"type"
 const PROPERTY_KEY_USAGE := &"usage"
 
+const PROPERTY_USAGE_SERDE := PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -28,7 +30,7 @@ func store(config: Config) -> void:
 	var categories := PackedStringArray()
 
 	for property in get_property_list():
-		if not (property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SCRIPT_VARIABLE):
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
 			continue
 
 		var name: StringName = property[PROPERTY_KEY_NAME]
@@ -51,7 +53,7 @@ func load(config: Config) -> void:
 	var categories := PackedStringArray()
 
 	for property in get_property_list():
-		if not (property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SCRIPT_VARIABLE):
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
 			continue
 
 		var name: StringName = property[PROPERTY_KEY_NAME]
