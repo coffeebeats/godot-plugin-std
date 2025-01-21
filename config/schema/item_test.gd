@@ -292,6 +292,34 @@ func test_config_item_load_erases_values_when_missing_from_config():
 	assert_eq(item.test_vector2_list, PackedVector2Array())
 
 
+func test_config_item_reset_restores_properties():
+	# Given: A populated config item.
+	var item := ExampleConfigItem.new()
+	item.ignored_field = true  # Shouldn't be serialized!
+	item.test_bool = true
+	item.test_float = 1.0
+	item.test_int = 1
+	item.test_int_list = PackedInt64Array([1, 2, 3])
+	item.test_string = "string"
+	item.test_string_list = PackedStringArray(["a", "b", "c"])
+	item.test_vector2 = Vector2(1.0, 1.0)
+	item.test_vector2_list = PackedVector2Array([Vector2.ZERO])
+
+	# When: The item is reset.
+	item.reset()
+
+	# Then: All relevant properties are restored to their defaults.
+	assert_eq(item.ignored_field, true)  # Ignored!
+	assert_eq(item.test_bool, false)
+	assert_eq(item.test_float, 0.0)
+	assert_eq(item.test_int, 0)
+	assert_eq(item.test_int_list, PackedInt64Array())
+	assert_eq(item.test_string, "")
+	assert_eq(item.test_string_list, PackedStringArray())
+	assert_eq(item.test_vector2, Vector2.ZERO)
+	assert_eq(item.test_vector2_list, PackedVector2Array())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

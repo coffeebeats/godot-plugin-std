@@ -27,6 +27,8 @@ class ConfigSchemaTest:
 
 	@export var item: ConfigItemTest = null
 
+	var ignored_field: bool
+
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -44,7 +46,7 @@ func test_config_schema_store_serializes_items_to_config_correctly():
 	var schema := ConfigSchemaTest.new()
 	schema.item = item
 
-	# When: The item is serialized into the config object.
+	# When: The schema is serialized into the config object.
 	schema.store(config)
 
 	# Then: The config contains the expected values.
@@ -64,11 +66,31 @@ func test_config_schema_load_deserializes_items_to_config_correctly():
 	var schema := ConfigSchemaTest.new()
 	schema.item = item
 
-	# When: The item is deserialized from the config object.
+	# When: The schema is deserialized from the config object.
 	schema.load(config)
 
 	# Then: The config item contains the expected values.
 	assert_eq(item.key, 1)
+
+
+func test_config_schema_reset_restores_items_to_defaults():
+	# Given: A populated config item.
+	var item := ConfigItemTest.new()
+	item.key = 1
+	item.category = &"category"
+
+	# Given: A new config schema with one item set.
+	var schema := ConfigSchemaTest.new()
+	schema.item = item
+	schema.ignored_field = true
+
+	# When: The schema is reset.
+	schema.reset()
+
+	# Then: The schema values match expectations.
+	assert_eq(item.key, 0)
+	assert_eq(item.category, &"category")  # Ignored!
+	assert_eq(schema.ignored_field, true)  # Ignored!
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
