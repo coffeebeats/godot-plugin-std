@@ -31,32 +31,7 @@ var writer: StdConfigWriterTest = null
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
-func test_config_writer_load_config_succeeds_when_file_does_not_exist():
-	# Given: A test file path.
-	var path := path_test_dir.path_join("test.dat")
-
-	# Given: An empty `Config` instance.
-	var config := Config.new()
-
-	# Given: A config writer writing to a file that doesn't exist.
-	writer = StdConfigWriterTest.new()
-	writer.path = path
-	add_child(writer)
-
-	# When: The config is loaded from disk.
-	var err := writer.load_config(config).wait()
-
-	# Then: There's no error.
-	assert_eq(err, OK)
-
-	# Then: The config instance is empty.
-	assert_true(not config._data)  # No need to lock config here.
-
-	# Then: The writer created the file.
-	assert_true(FileAccess.file_exists(path))
-
-
-func test_config_writer_load_config_succeeds_when_path_is_nested():
+func test_config_writer_load_config_fails_if_directory_is_missing():
 	# Given: A test file path.
 	var path := path_test_dir.path_join("directory/does/not/exist/test.dat")
 
@@ -71,14 +46,27 @@ func test_config_writer_load_config_succeeds_when_path_is_nested():
 	# When: The config is loaded from disk.
 	var err := writer.load_config(config).wait()
 
-	# Then: There's no error.
-	assert_eq(err, OK)
+	# Then: The error matches expectations.
+	assert_eq(err, ERR_FILE_NOT_FOUND)
 
-	# Then: The config instance is empty.
-	assert_true(not config._data)  # No need to lock config here.
 
-	# Then: The writer created the file.
-	assert_true(FileAccess.file_exists(path))
+func test_config_writer_load_config_fails_if_file_is_missing():
+	# Given: A test file path.
+	var path := path_test_dir.path_join("test.dat")
+
+	# Given: An empty `Config` instance.
+	var config := Config.new()
+
+	# Given: A config writer writing to a file that doesn't exist.
+	writer = StdConfigWriterTest.new()
+	writer.path = path
+	add_child(writer)
+
+	# When: The config is loaded from disk.
+	var err := writer.load_config(config).wait()
+
+	# Then: The error matches expectations.
+	assert_eq(err, ERR_FILE_NOT_FOUND)
 
 
 func test_config_writer_load_config_reads_existing_file_data():
@@ -117,6 +105,32 @@ func test_config_writer_load_config_reads_existing_file_data():
 func test_config_writer_store_config_succeeds_when_file_does_not_exist():
 	# Given: A test file path.
 	var path := path_test_dir.path_join("test.dat")
+
+	# Given: A non-empty `Config` instance.
+	var config := Config.new()
+	config.set_string(&"category", &"key", "value")
+
+	# Given: A config writer writing to a file that doesn't exist.
+	writer = StdConfigWriterTest.new()
+	writer.path = path
+	add_child(writer)
+
+	# When: The config is written to disk.
+	var err := writer.store_config(config).wait()
+
+	# Then: There's no error.
+	assert_eq(err, OK)
+
+	# Then: The on-disk contents match expectations.
+	var got := Config.new()
+	err = writer.load_config(got).wait()
+	assert_eq(err, OK)
+	assert_eq_deep(got._data, config._data)
+
+
+func test_config_writer_store_config_succeeds_when_nested_file_does_not_exist():
+	# Given: A test file path.
+	var path := path_test_dir.path_join("nested/test.dat")
 
 	# Given: A non-empty `Config` instance.
 	var config := Config.new()
