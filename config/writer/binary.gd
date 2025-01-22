@@ -37,6 +37,42 @@ class StdConfigWriterBinaryResult:
 ## path is the filepath at which the 'Config' file contents will be synced to.
 @export var path: String = ""
 
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## get_checksum synchronously reads the checksum of the persisted file into the provided
+## packed byte array. Note that this executes in the current thread.
+func get_checksum(bytes: PackedByteArray) -> Error:
+	var path_absolute := FilePath.make_project_path_absolute(get_filepath())
+
+	_worker_mutex.lock()
+
+	if _worker_result != null:
+		_worker_mutex.unlock()
+		return ERR_BUSY
+
+	var file := FileAccess.open(path_absolute, FileAccess.READ)
+	if not file:
+		_worker_mutex.unlock()
+		return FileAccess.get_open_error()
+
+	var checksum := file.get_buffer(CHECKSUM_BYTE_LENGTH)
+
+	file.close()
+	_worker_mutex.unlock()
+
+	if checksum.size() != CHECKSUM_BYTE_LENGTH:
+		return ERR_INVALID_DATA
+
+	bytes.clear()
+	bytes.append_array(checksum)
+
+	if bytes.size() != CHECKSUM_BYTE_LENGTH:
+		return ERR_INVALID_DATA
+
+	return OK
+
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
