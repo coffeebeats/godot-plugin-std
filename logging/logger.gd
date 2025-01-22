@@ -213,7 +213,7 @@ func _format_context(ctx: Dictionary) -> String:
 		fields.append("prf=%d" % Engine.get_process_frames())
 
 	for key in ctx:
-		fields.append("%s=%s" % [key, str(ctx[key])])
+		fields.append("[color=gray]%s=%s[/color]" % [key, str(ctx[key])])
 
 	if not fields:
 		return ""

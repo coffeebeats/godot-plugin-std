@@ -23,6 +23,30 @@ const PROPERTY_USAGE_SERDE := PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_ST
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## copy hydrates this config item with the data from the provided instance. All values
+## will be overwritten with those sourced from the `other` object. Values not present in
+## the `other` object are set to their empty values.
+func copy(other: StdConfigItem) -> void:
+	if not other is StdConfigItem:
+		assert(false, "invalid argument; missing other item object")
+		return
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
+
+		var value: Variant = other.get(name)
+
+		if value == null or typeof(value) != type:
+			self.set(name, type_convert(null, type) if type != TYPE_STRING else "")
+			continue
+
+		self.set(name, value)
+
+
 ## get_category returns the name of the `Config` category which contains the definition
 ## for this item.
 func get_category() -> StringName:
@@ -49,7 +73,17 @@ func load(config: Config) -> void:
 			self.set(name, type_convert(null, type) if type != TYPE_STRING else "")
 			continue
 
-		set(name, value)
+		(
+			self
+			. set(
+				name,
+				(
+					value.duplicate()
+					if value is Object and value.has_method(&"duplicate")
+					else value
+				),
+			)
+		)
 
 
 ## reset sets all serialization-enabled properties back to their default values.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.14.0 (2025-01-22)
+
+## What's Changed
+* feat(config): add `copy()` methods to `StdConfigItem` and `StdConfigSchema` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/207
+* fix(config,file): standardize "busy" errors to `ERR_BUSY` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/209
+* fix(save): support `save://` protocol in filepath; fix timestamp unit by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/210
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.13.0...v1.14.0
+
 ## 1.13.0 (2025-01-22)
 
 ## What's Changed
