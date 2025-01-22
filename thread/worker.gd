@@ -53,7 +53,7 @@ func run() -> StdThreadWorkerResult:
 
 	if _worker_result is StdThreadWorkerResult:
 		_worker_mutex.unlock()
-		return StdThreadWorkerResult.failed(ERR_ALREADY_IN_USE)
+		return StdThreadWorkerResult.failed(ERR_BUSY)
 
 	var result := _create_worker_result()
 	assert(result is StdThreadWorkerResult, "invalid return value; missing result")
