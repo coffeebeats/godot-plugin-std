@@ -32,6 +32,37 @@ class ExampleConfigItem:
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
+func test_config_item_copy_sets_properties_correctly():
+	# Given: An empty destination item.
+	var dst := ExampleConfigItem.new()
+
+	# Given: A populated source item.
+	var item := ExampleConfigItem.new()
+	item.ignored_field = true  # Shouldn't be serialized!
+	item.test_bool = true
+	item.test_float = 1.0
+	item.test_int = 1
+	item.test_int_list = PackedInt64Array([1, 2, 3])
+	item.test_string = "string"
+	item.test_string_list = PackedStringArray(["a", "b", "c"])
+	item.test_vector2 = Vector2(1.0, 1.0)
+	item.test_vector2_list = PackedVector2Array([Vector2.ZERO])
+
+	# When: The source config item is copied to the destination item.
+	dst.copy(item)
+
+	# Then: The items contain the expected values.
+	assert_eq(dst.ignored_field, false)
+	assert_eq(dst.test_bool, item.test_bool)
+	assert_eq(dst.test_float, item.test_float)
+	assert_eq(dst.test_int, item.test_int)
+	assert_eq(dst.test_int_list, item.test_int_list)
+	assert_eq(dst.test_string, item.test_string)
+	assert_eq(dst.test_string_list, item.test_string_list)
+	assert_eq(dst.test_vector2, item.test_vector2)
+	assert_eq(dst.test_vector2_list, item.test_vector2_list)
+
+
 func test_config_item_store_serializes_properties_to_config_correctly():
 	# Given: A new, empty 'Config' instance.
 	var config := Config.new()
