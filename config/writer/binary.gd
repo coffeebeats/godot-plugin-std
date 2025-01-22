@@ -13,6 +13,25 @@ extends StdConfigWriter
 
 const CHECKSUM_BYTE_LENGTH := 16
 
+
+class StdConfigWriterBinaryResult:
+	extends StdThreadWorkerResult
+
+	var _checksum: String = ""
+
+	func get_checksum() -> String:
+		_mutex.lock()
+		var checksum := _checksum
+		_mutex.unlock()
+
+		return checksum
+
+	func set_checksum(value: String) -> void:
+		_mutex.lock()
+		_checksum = value
+		_mutex.unlock()
+
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## path is the filepath at which the 'Config' file contents will be synced to.
@@ -26,6 +45,12 @@ func _enter_tree() -> void:
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+
+## _create_worker_result can be overridden to custom the type of result object used by
+## the worker.
+func _create_worker_result() -> StdThreadWorkerResult:
+	return StdConfigWriterBinaryResult.new()
 
 
 func _config_read_bytes(config_path: String) -> ReadResult:
@@ -64,19 +89,29 @@ func _config_read_bytes(config_path: String) -> ReadResult:
 
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
-	if bytes.size() < 4:  # Minimum size for encoding a variant.
+	if bytes.size() < (CHECKSUM_BYTE_LENGTH + VARIANT_ENCODING_LENGTH_MIN):
 		assert(false, "invalid argument; missing data")
-		return {}
+		return null
 
 	var checksum := bytes.slice(0, CHECKSUM_BYTE_LENGTH)
 	var data := bytes.slice(CHECKSUM_BYTE_LENGTH)
 
 	if checksum.hex_encode() != _compute_checksum(data).hex_encode():
-		return {}
+		return null
 
 	var value: Variant = bytes_to_var(data)
 	if not value is Dictionary:
-		return {}
+		return null
+
+	_worker_mutex.lock()
+	var result: StdConfigWriterBinaryResult = _worker_result
+	_worker_mutex.unlock()
+
+	if not result:
+		assert(false, "invalid state; missing result")
+		return null
+
+	result.set_checksum(checksum.hex_encode())
 
 	return value
 
@@ -94,6 +129,14 @@ func _serialize_var(variant: Variant) -> PackedByteArray:
 
 	out.append_array(checksum)
 	out.append_array(bytes)
+
+	_worker_mutex.lock()
+	var result: StdConfigWriterBinaryResult = _worker_result
+	_worker_mutex.unlock()
+
+	assert(result, "invalid state; missing result")
+	if result:
+		result.set_checksum(checksum.hex_encode())
 
 	return out
 
