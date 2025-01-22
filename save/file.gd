@@ -35,6 +35,7 @@ const STATUS_UNKNOWN := Status.UNKNOWN
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 ## load_save_data asynchronously hydrates the provided save data resource with the save
 ## data persisted at this writer's configured filepath. The return value denotes the
 ## current state of the save slot (i.e. whether it's empty, usable, or corrupt).
@@ -43,7 +44,7 @@ const STATUS_UNKNOWN := Status.UNKNOWN
 func load_save_data(data: StdSaveData) -> Status:
 	assert(data is StdSaveData, "invalid argument; missing data")
 
-	var config := Config.new() # Will temporarily hold save data.
+	var config := Config.new()  # Will temporarily hold save data.
 
 	var result: Result = load_config(config)
 	assert(result is Result, "invalid state; missing result")
@@ -53,11 +54,11 @@ func load_save_data(data: StdSaveData) -> Status:
 		data.reset()
 		data.load(config)
 
-	
 	var status := _handle_result(err)
 	save_loaded.emit(data, status)
-	
+
 	return status
+
 
 ## load_save_data_sync synchronously hydrates the provided save data resource with the
 ## save data persisted at this writer's configured filepath. The return value denotes
@@ -65,7 +66,7 @@ func load_save_data(data: StdSaveData) -> Status:
 func load_save_data_sync(data: StdSaveData) -> Status:
 	assert(data is StdSaveData, "invalid argument; missing data")
 
-	var config := Config.new() # Will temporarily hold save data.
+	var config := Config.new()  # Will temporarily hold save data.
 
 	var result: Result = load_config(config)
 	assert(result is Result, "invalid state; missing result")
@@ -75,10 +76,9 @@ func load_save_data_sync(data: StdSaveData) -> Status:
 		data.reset()
 		data.load(config)
 
-	
 	var status := _handle_result(err)
 	save_loaded.emit(data, status)
-	
+
 	return status
 
 
@@ -90,7 +90,7 @@ func load_save_data_sync(data: StdSaveData) -> Status:
 func store_save_data(data: StdSaveData) -> Status:
 	assert(data is StdSaveData, "invalid argument; missing data")
 
-	var config := Config.new() # Will temporarily hold save data.
+	var config := Config.new()  # Will temporarily hold save data.
 	data.store(config)
 
 	var result: Result = store_config(config)
@@ -110,17 +110,17 @@ func store_save_data(data: StdSaveData) -> Status:
 func store_save_data_sync(data: StdSaveData) -> Status:
 	assert(data is StdSaveData, "invalid argument; missing data")
 
-	var config := Config.new() # Will temporarily hold save data.
+	var config := Config.new()  # Will temporarily hold save data.
 	data.store(config)
 
 	var result: Result = store_config(config)
 	assert(result is Result, "invalid state; missing result")
 
 	var err: Error = await result.done
-	
+
 	var status := _handle_result(err)
 	save_stored.emit(data, status)
-	
+
 	return status
 
 
@@ -148,6 +148,7 @@ func _get_save_directory() -> String:
 	assert(false, "unimplemented")
 	return ""
 
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
@@ -165,7 +166,7 @@ func _is_save_directory_empty() -> bool:
 		or DirAccess.get_files_at(path_directory).is_empty()
 	):
 		return true
-	
+
 	return false
 
 
@@ -181,9 +182,12 @@ func _handle_result(err: Error) -> Status:
 			return STATUS_BROKEN
 
 		_:
-			_logger.warn(
-				"Encountered unknown error when reading save file.",
-				{&"error": err},
+			(
+				_logger
+				. warn(
+					"Encountered unknown error when reading save file.",
+					{&"error": err},
+				)
 			)
 
 			return STATUS_UNKNOWN
