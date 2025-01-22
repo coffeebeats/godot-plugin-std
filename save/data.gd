@@ -8,7 +8,7 @@
 class_name StdSaveData
 extends StdConfigSchema
 
-# -- PUBLIC METHODS ------------------------------------------------------------------ #
+# -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## summary is a save summary resource which defines the metadata about this save.
 @export var summary: StdSaveSummary = null

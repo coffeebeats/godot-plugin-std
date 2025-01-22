@@ -11,7 +11,7 @@ extends StdConfigItem
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## time_last_saved is the last time (unix epoch timestamp) this save slot was saved.
-@export var time_last_saved: int = 0
+@export var time_last_saved: float = 0.0
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

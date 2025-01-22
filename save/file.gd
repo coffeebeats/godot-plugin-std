@@ -135,13 +135,14 @@ func _on_enter() -> void:
 
 
 func _get_filepath() -> String:
-	assert(not path.is_absolute_path(), "invalid argument; expected relative path")
+	var path_rel := path.trim_prefix("save://")
+	assert(not path_rel.is_absolute_path(), "invalid argument; expected relative path")
 
 	var directory := _get_save_directory()
 	if not directory:
 		return ""
 
-	return directory.path_join(path)
+	return directory.path_join(path_rel)
 
 
 func _get_save_directory() -> String:
@@ -182,6 +183,7 @@ func _handle_result(err: Error) -> Status:
 			return STATUS_BROKEN
 
 		_:
+			assert(false, "encountered unknown error")
 			(
 				_logger
 				. warn(
