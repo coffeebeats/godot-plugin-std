@@ -14,6 +14,8 @@ const Config := preload("../config.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+const VARIANT_ENCODING_LENGTH_MIN := 4
+
 enum Command { UNSPECIFIED, LOAD, STORE }  # gdlint:ignore=class-definitions-order
 
 
@@ -130,9 +132,9 @@ func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
 
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
-	if bytes.size() < 4:  # Minimum size for encoding a variant.
+	if bytes.size() < VARIANT_ENCODING_LENGTH_MIN:
 		assert(false, "invalid argument; missing data")
-		return {}
+		return null
 
 	return bytes_to_var(bytes)
 
