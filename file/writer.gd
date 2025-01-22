@@ -39,13 +39,13 @@ func _file_close() -> Error:
 
 
 func _file_delete(path: String) -> Error:
-	if _file is FileAccess:
-		assert(false, "invalid state; cannot delete file while another is open")
-		return ERR_ALREADY_IN_USE
-
 	if not path.is_absolute_path():
 		assert(false, "invalid argument; expected absolute path")
 		return ERR_INVALID_PARAMETER
+
+	if _file is FileAccess:
+		assert(false, "invalid state; cannot delete file while another is open")
+		return ERR_BUSY
 
 	if not FileAccess.file_exists(path):
 		return OK
@@ -62,7 +62,7 @@ func _file_delete(path: String) -> Error:
 func _file_move(from: String, to: String) -> Error:
 	if _file is FileAccess:
 		assert(false, "invalid state; cannot move file while another is open")
-		return ERR_ALREADY_IN_USE
+		return ERR_BUSY
 
 	var err := DirAccess.rename_absolute(from, to)
 	if err != OK:
@@ -90,7 +90,7 @@ func _file_open(
 
 	if _file is FileAccess:
 		assert(false, "invalid state; cannot open file while another is open")
-		return ERR_ALREADY_IN_USE
+		return ERR_BUSY
 
 	var logger := _logger.with({&"path": path})
 

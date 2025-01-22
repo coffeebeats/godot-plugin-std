@@ -47,8 +47,7 @@ func load_config(config: Config) -> StdThreadWorkerResult:
 
 	if _pending != Command.UNSPECIFIED:
 		_worker_mutex.unlock()
-		assert(false, "invalid state; worker busy")
-		return StdThreadWorkerResult.failed(ERR_ALREADY_IN_USE)
+		return StdThreadWorkerResult.failed(ERR_BUSY)
 
 	_pending = Command.LOAD
 	_pending_config = config
@@ -65,8 +64,7 @@ func store_config(config: Config) -> StdThreadWorkerResult:
 
 	if _pending != Command.UNSPECIFIED:
 		_worker_mutex.unlock()
-		assert(false, "invalid state; worker busy")
-		return StdThreadWorkerResult.failed(ERR_ALREADY_IN_USE)
+		return StdThreadWorkerResult.failed(ERR_BUSY)
 
 	_pending = Command.STORE
 	_pending_config = config
