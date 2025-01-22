@@ -36,6 +36,10 @@ func load(config: Config) -> void:
 		var name: StringName = property[PROPERTY_KEY_NAME]
 		var value: Variant = get(name)
 
+		# TODO: This may be relaxed in the future, but for now it seems that all config
+		# items should be populated.
+		assert(value != null, "invalid config; exported schema item cannot be null")
+
 		if not value is StdConfigItem:
 			continue
 
@@ -73,6 +77,10 @@ func store(config: Config) -> void:
 
 		var name: StringName = property[PROPERTY_KEY_NAME]
 		var value: Variant = get(name)
+
+		# TODO: This may be relaxed in the future, but for now it seems that all config
+		# items should be populated.
+		assert(value != null, "invalid config; exported schema item cannot be null")
 
 		if not value is StdConfigItem:
 			continue
