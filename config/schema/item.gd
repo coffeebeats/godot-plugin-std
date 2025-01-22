@@ -18,6 +18,8 @@ const PROPERTY_KEY_NAME := &"name"
 const PROPERTY_KEY_TYPE := &"type"
 const PROPERTY_KEY_USAGE := &"usage"
 
+const PROPERTY_USAGE_SERDE := PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -25,6 +27,42 @@ const PROPERTY_KEY_USAGE := &"usage"
 ## for this item.
 func get_category() -> StringName:
 	return _get_category()
+
+
+## load reads configuration data from the provided `Config` instance and updates this
+## config item's properties. Only exported script variables will be set.
+func load(config: Config) -> void:
+	var category := _get_category()
+	if not category:
+		assert(false, "invalid config; missing category")
+		return
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
+		var value: Variant = config.get_variant(category, name, null)
+
+		if value == null or typeof(value) != type:
+			self.set(name, type_convert(null, type) if type != TYPE_STRING else "")
+			continue
+
+		set(name, value)
+
+
+## reset sets all serialization-enabled properties back to their default values.
+func reset() -> void:
+	var defaults := new()
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+
+		self.set(name, defaults.get(name))
 
 
 ## store populates the provided `Config` instance with this config item's properties.
@@ -36,7 +74,7 @@ func store(config: Config) -> void:
 		return
 
 	for property in get_property_list():
-		if not (property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SCRIPT_VARIABLE):
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
 			continue
 
 		var name: StringName = property[PROPERTY_KEY_NAME]
@@ -80,29 +118,6 @@ func store(config: Config) -> void:
 			TYPE_VECTOR2:
 				assert(value is Vector2, "invalid state; wrong type")
 				config.set_vector2(category, name, value)
-
-
-## load reads configuration data from the provided `Config` instance and updates this
-## config item's properties. Only exported script variables will be set.
-func load(config: Config) -> void:
-	var category := _get_category()
-	if not category:
-		assert(false, "invalid config; missing category")
-		return
-
-	for property in get_property_list():
-		if not (property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SCRIPT_VARIABLE):
-			continue
-
-		var name: StringName = property[PROPERTY_KEY_NAME]
-		var type: Variant.Type = property[PROPERTY_KEY_TYPE]
-		var value: Variant = config.get_variant(category, name, null)
-
-		if value == null or typeof(value) != type:
-			self.set(name, type_convert(null, type) if type != TYPE_STRING else "")
-			continue
-
-		set(name, value)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #

@@ -188,6 +188,22 @@ func lock() -> void:
 	_mutex.lock()
 
 
+## reset clears all data from the `Config` object, restoring it to an empty state.
+func reset() -> bool:
+	_mutex.lock()
+
+	var was_updated: bool = false
+
+	for category in _data.keys():
+		was_updated = clear(category) or was_updated
+
+	assert(not _data, "invalid state; found dangling categories")
+
+	_mutex.unlock()
+
+	return was_updated
+
+
 ## set_bool updates the value associated with `key` in `category` and returns whether
 ## the value was changed.
 func set_bool(category: StringName, key: StringName, value: bool) -> bool:

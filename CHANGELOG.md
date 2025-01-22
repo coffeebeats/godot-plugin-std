@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.13.0 (2025-01-22)
+
+## What's Changed
+* feat(config): implement a `reset()` method on `Config` objects by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/198
+* fix(config): ensure non-exported variables aren't serialized/deserialized by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/200
+* feat(config): implement `reset()` methods on schema classes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/201
+* fix(file,config,setting): propagate and handle `ERR_FILE_NOT_FOUND` when syncing config files by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/202
+* feat(thread): add convenience methods for checking worker status by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/203
+* feat(config): attach checksum to result of binary config file operations by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/204
+* feat(save): implement a save file writer and refactor save data resources by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/205
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.12.1...v1.13.0
+
 ## 1.12.1 (2025-01-19)
 
 ## What's Changed
