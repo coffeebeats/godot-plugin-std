@@ -75,7 +75,7 @@ func load(config: Config) -> void:
 
 		(
 			self
-			.set(
+			. set(
 				name,
 				(
 					value.duplicate()
