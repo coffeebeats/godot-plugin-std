@@ -14,7 +14,7 @@ extends StdConfigWriter
 const CHECKSUM_BYTE_LENGTH := 16
 
 
-class StdConfigWriterBinaryResult:
+class Result:
 	extends StdThreadWorkerResult
 
 	var _checksum: String = ""
@@ -37,42 +37,6 @@ class StdConfigWriterBinaryResult:
 ## path is the filepath at which the 'Config' file contents will be synced to.
 @export var path: String = ""
 
-# -- PUBLIC METHODS ------------------------------------------------------------------ #
-
-
-## get_checksum synchronously reads the checksum of the persisted file into the provided
-## packed byte array. Note that this executes in the current thread.
-func get_checksum(bytes: PackedByteArray) -> Error:
-	var path_absolute := FilePath.make_project_path_absolute(get_filepath())
-
-	_worker_mutex.lock()
-
-	if _worker_result != null:
-		_worker_mutex.unlock()
-		return ERR_BUSY
-
-	var file := FileAccess.open(path_absolute, FileAccess.READ)
-	if not file:
-		_worker_mutex.unlock()
-		return FileAccess.get_open_error()
-
-	var checksum := file.get_buffer(CHECKSUM_BYTE_LENGTH)
-
-	file.close()
-	_worker_mutex.unlock()
-
-	if checksum.size() != CHECKSUM_BYTE_LENGTH:
-		return ERR_INVALID_DATA
-
-	bytes.clear()
-	bytes.append_array(checksum)
-
-	if bytes.size() != CHECKSUM_BYTE_LENGTH:
-		return ERR_INVALID_DATA
-
-	return OK
-
-
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
@@ -86,7 +50,7 @@ func _enter_tree() -> void:
 ## _create_worker_result can be overridden to custom the type of result object used by
 ## the worker.
 func _create_worker_result() -> StdThreadWorkerResult:
-	return StdConfigWriterBinaryResult.new()
+	return Result.new()
 
 
 func _config_read_bytes(config_path: String) -> ReadResult:
@@ -140,7 +104,7 @@ func _deserialize_var(bytes: PackedByteArray) -> Variant:
 		return null
 
 	_worker_mutex.lock()
-	var result: StdConfigWriterBinaryResult = _worker_result
+	var result: Result = _worker_result
 	_worker_mutex.unlock()
 
 	if not result:
@@ -167,7 +131,7 @@ func _serialize_var(variant: Variant) -> PackedByteArray:
 	out.append_array(bytes)
 
 	_worker_mutex.lock()
-	var result: StdConfigWriterBinaryResult = _worker_result
+	var result: Result = _worker_result
 	_worker_mutex.unlock()
 
 	assert(result, "invalid state; missing result")
