@@ -33,6 +33,27 @@ class ConfigSchemaTest:
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
+func test_config_schema_copy_sets_properties_correctly():
+	# Given: A populated config item.
+	var item := ConfigItemTest.new()
+	item.key = 1
+	item.category = &"category"
+
+	# Given: A destination schema instance with an empty item.
+	var dst := ConfigSchemaTest.new()
+	dst.item = ConfigItemTest.new()
+
+	# Given: A source schema instance with one item set.
+	var src := ConfigSchemaTest.new()
+	src.item = item
+
+	# When: The schema is copied from 'src' to 'dst'.
+	dst.copy(src)
+
+	# Then: All properties match expected values.
+	assert_eq(dst.item.key, src.item.key)
+
+
 func test_config_schema_store_serializes_items_to_config_correctly():
 	# Given: A new, empty 'Config' instance.
 	var config := Config.new()
