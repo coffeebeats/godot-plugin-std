@@ -45,11 +45,19 @@ var _is_currently_allowed: bool = false
 
 func _enter_tree() -> void:
 	for expression in expressions_allow:
-		Signals.connect_safe(expression.value_changed, _on_expression_value_changed)
+		Signals.connect_safe(
+			expression.value_changed,
+			_on_expression_value_changed,
+			CONNECT_REFERENCE_COUNTED
+		)
 		expression.setup()
 
 	for expression in expressions_block:
-		Signals.connect_safe(expression.value_changed, _on_expression_value_changed)
+		Signals.connect_safe(
+			expression.value_changed,
+			_on_expression_value_changed,
+			CONNECT_REFERENCE_COUNTED
+		)
 		expression.setup()
 
 	_evaluate()
