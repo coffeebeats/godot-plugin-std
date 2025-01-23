@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.1 (2025-01-23)
+
+## What's Changed
+* fix(condition): reference count connections to expressions by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/211
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.14.0...v1.14.1
+
 ## 1.14.0 (2025-01-22)
 
 ## What's Changed
