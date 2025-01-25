@@ -172,7 +172,7 @@ func tick(delta: float) -> void:
 
 	if (
 		_remaining_micros == 0
-		or (_elapsed_micros >= int(duration_max * MICROSECONDS_PER_SECOND))
+		or (float(_elapsed_micros) >= duration_max * MICROSECONDS_PER_SECOND)
 	):
 		_elapsed_micros = 0
 		_remaining_micros = 0
