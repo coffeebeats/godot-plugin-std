@@ -53,10 +53,16 @@ const MICROSECONDS_PER_SECOND := 1e6
 ## are repeated calls to 'start' continuing the debounce cluster, the effect will be
 ## reset after this duration.
 ##
-## NOTE: This value must be greater than the 'duration' value.
+## NOTE: This value must be greater than the 'duration' value. If the value is `0`, then
+## that will be treated as `INF`.
 @export var duration_max: float = INF:
 	set(value):
-		duration_max = value
+		# NOTE: Due to a Godot engine bug [1], this value will be overwritten to `0` by
+		# the inspector. Catch these cases and set to `INF`, despite `0` technically
+		# being a valid value (why use a debounce timer in that case, though).
+		#
+		# [1] https://github.com/godotengine/godot/issues/88006
+		duration_max = value if value > 0 else INF
 		if Engine.is_editor_hint():
 			update_configuration_warnings()
 
@@ -166,7 +172,7 @@ func tick(delta: float) -> void:
 
 	if (
 		_remaining_micros == 0
-		or (_elapsed_micros >= int(duration_max * MICROSECONDS_PER_SECOND))
+		or (float(_elapsed_micros) >= duration_max * MICROSECONDS_PER_SECOND)
 	):
 		_elapsed_micros = 0
 		_remaining_micros = 0

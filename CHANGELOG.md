@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.2 (2025-01-25)
+
+## What's Changed
+* fix(timer): address bugs in `Debounce`, ensuring timeouts work by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/213
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.14.1...v1.14.2
+
 ## 1.14.1 (2025-01-23)
 
 ## What's Changed
