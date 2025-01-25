@@ -28,7 +28,7 @@ signal timeout
 
 ## Defines when "execution" occurs for the debounce effect. For 'LEADING', "execution"
 ## is at the start of a cluster; 'TRAILING' "execution" is at the end of a cluster.
-enum ExecutionMode {LEADING, TRAILING}
+enum ExecutionMode { LEADING, TRAILING }
 
 const EXECUTION_MODE_LEADING := ExecutionMode.LEADING
 
