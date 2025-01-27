@@ -142,13 +142,13 @@ func get_in_game_actions_file_contents() -> String:
 			if not action_set:
 				continue
 
-			_write_locale_actions_in_action_set(action_set)
+			_write_locale_actions_in_action_set(action_set, locale_godot)
 
 		for action_set_layer in action_set_layers:
 			if not action_set_layer:
 				continue
 
-			_write_locale_actions_in_action_set(action_set_layer)
+			_write_locale_actions_in_action_set(action_set_layer, locale_godot)
 
 		_write_close_bracket()
 
@@ -159,6 +159,24 @@ func get_in_game_actions_file_contents() -> String:
 	assert(_indent == 0, "missing bracket!")
 
 	return _contents
+
+
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+
+func _get_action_set_display_name(
+	action_set_name: StringName,
+	_locale: StringName = &"",
+) -> String:
+	return action_set_name
+
+
+func _get_action_display_name(
+	_action_set_name: StringName,
+	action_name: StringName,
+	_locale: StringName = &"",
+) -> String:
+	return action_name
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -312,11 +330,16 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 				_write_close_bracket()
 
 
-func _write_locale_actions_in_action_set(action_set: StdInputActionSet) -> void:
+func _write_locale_actions_in_action_set(
+	action_set: StdInputActionSet,
+	locale: StringName,
+) -> void:
 	var prefix := "layer_" if action_set is StdInputActionSetLayer else "set_"
 	_write_string(prefix + action_set.name, true, false)
 	write_space()
-	_write_string(action_set.name, false)
+
+	var action_set_display_name := _get_action_set_display_name(action_set.name, locale)
+	_write_string(action_set_display_name, false)
 
 	for action in (
 		action_set.actions_analog_1d
@@ -330,4 +353,10 @@ func _write_locale_actions_in_action_set(action_set: StdInputActionSet) -> void:
 	):
 		_write_string("action_" + action, true, false)
 		write_space()
-		_write_string(action, false)
+
+		var action_display_name := _get_action_display_name(
+			action_set.name,
+			action,
+			locale,
+		)
+		_write_string(action_display_name, false)
