@@ -163,7 +163,7 @@ func get_in_game_actions_file_contents() -> String:
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
-	
+
 func _get_action_set_display_name(
 	action_set_name: StringName,
 	_locale: StringName = &"",
@@ -177,6 +177,7 @@ func _get_action_display_name(
 	_locale: StringName = &"",
 ) -> String:
 	return action_name
+
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
