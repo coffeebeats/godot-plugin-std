@@ -12,6 +12,13 @@ extends Resource
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## app_id is the ID of the Steam application. This is used to determine the manifest
+## file's name.
+@export var app_id: int = 480:
+	set(value):
+		app_id = value
+		_write_file()
+
 @export_group("Actions")
 
 ## action_sets is the complete set of available `StdInputActionSet`s within the game.
@@ -48,7 +55,7 @@ var _indent: int = 0
 
 ## get_filename returns the basename of the actions manifest file.
 func get_filename() -> String:
-	return "res://game_actions_%d.vdf" % Steam.getAppID()
+	return "res://game_actions_%d.vdf" % app_id
 
 
 ## get_in_game_actions_file_contents returns the contents of the Steam Input in-game
@@ -135,13 +142,13 @@ func get_in_game_actions_file_contents() -> String:
 			if not action_set:
 				continue
 
-			_write_locale_actions_in_action_set(action_set)
+			_write_locale_actions_in_action_set(action_set, locale_godot)
 
 		for action_set_layer in action_set_layers:
 			if not action_set_layer:
 				continue
 
-			_write_locale_actions_in_action_set(action_set_layer)
+			_write_locale_actions_in_action_set(action_set_layer, locale_godot)
 
 		_write_close_bracket()
 
@@ -153,6 +160,23 @@ func get_in_game_actions_file_contents() -> String:
 
 	return _contents
 
+
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+	
+func _get_action_set_display_name(
+	action_set_name: StringName,
+	_locale: StringName = &"",
+) -> String:
+	return action_set_name
+
+
+func _get_action_display_name(
+	_action_set_name: StringName,
+	action_name: StringName,
+	_locale: StringName = &"",
+) -> String:
+	return action_name
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
@@ -305,11 +329,16 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 				_write_close_bracket()
 
 
-func _write_locale_actions_in_action_set(action_set: StdInputActionSet) -> void:
+func _write_locale_actions_in_action_set(
+	action_set: StdInputActionSet,
+	locale: StringName,
+) -> void:
 	var prefix := "layer_" if action_set is StdInputActionSetLayer else "set_"
 	_write_string(prefix + action_set.name, true, false)
 	write_space()
-	_write_string(action_set.name, false)
+
+	var action_set_display_name := _get_action_set_display_name(action_set.name, locale)
+	_write_string(action_set_display_name, false)
 
 	for action in (
 		action_set.actions_analog_1d
@@ -323,4 +352,10 @@ func _write_locale_actions_in_action_set(action_set: StdInputActionSet) -> void:
 	):
 		_write_string("action_" + action, true, false)
 		write_space()
-		_write_string(action, false)
+
+		var action_display_name := _get_action_display_name(
+			action_set.name,
+			action,
+			locale,
+		)
+		_write_string(action_display_name, false)
