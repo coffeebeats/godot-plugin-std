@@ -12,13 +12,6 @@ extends Resource
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## app_id is the ID of the Steam application. This is used to determine the manifest
-## file's name.
-@export var app_id: int = 480:
-	set(value):
-		app_id = value
-		_write_file()
-
 @export_group("Actions")
 
 ## action_sets is the complete set of available `StdInputActionSet`s within the game.
@@ -55,7 +48,7 @@ var _indent: int = 0
 
 ## get_filename returns the basename of the actions manifest file.
 func get_filename() -> String:
-	return "res://game_actions_%d.vdf" % app_id
+	return "res://game_actions_%d.vdf" % Steam.getAppID()
 
 
 ## get_in_game_actions_file_contents returns the contents of the Steam Input in-game
