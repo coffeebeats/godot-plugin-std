@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.3 (2025-01-27)
+
+## What's Changed
+* fix(input): allow overriding how action display names are translated in the Steam Input manifest by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/215
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.14.2...v1.14.3
+
 ## 1.14.2 (2025-01-25)
 
 ## What's Changed
