@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.4 (2025-01-29)
+
+## What's Changed
+* fix(input): remove `@tool` script from `StdInputSteamConfigurator` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/217
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.14.3...v1.14.4
+
 ## 1.14.3 (2025-01-27)
 
 ## What's Changed
