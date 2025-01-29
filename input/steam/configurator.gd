@@ -54,7 +54,7 @@ func _on_button_pressed() -> void:
 	if Steam.showBindingPanel(joypad.device_id):
 		(
 			_logger
-			.info(
+			. info(
 				"Opened bindings panel for joypad.",
 				{&"device": joypad.device_id},
 			)
