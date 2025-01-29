@@ -25,6 +25,7 @@ const Signals := preload("../event/signal.gd")
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const DeviceType := StdInputDevice.DeviceType  # gdlint:ignore=constant-name
+const DEVICE_TYPE_GENERIC := StdInputDevice.DEVICE_TYPE_GENERIC
 const DEVICE_TYPE_KEYBOARD := StdInputDevice.DEVICE_TYPE_KEYBOARD
 const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 
@@ -87,7 +88,13 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
 
 	if device_type_override is StdSettingsPropertyInt:
-		Signals.disconnect_safe(device_type_override.value_changed, _handle_update)
+		(
+			Signals
+			. disconnect_safe(
+				device_type_override.value_changed,
+				_on_glyph_type_property_changed,
+			)
+		)
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -132,7 +139,13 @@ func _ready() -> void:
 	Signals.connect_safe(_slot.device_activated, _on_device_activated)
 
 	if device_type_override is StdSettingsPropertyInt:
-		Signals.connect_safe(device_type_override.value_changed, _handle_update)
+		(
+			Signals
+			. connect_safe(
+				device_type_override.value_changed,
+				_on_glyph_type_property_changed,
+			)
+		)
 
 	_handle_update()
 
@@ -210,4 +223,8 @@ func _on_actions_changed() -> void:
 func _on_device_activated(device: StdInputDevice) -> void:
 	set_process(device.device_type == DeviceType.KEYBOARD)
 	_device_activated(device)
+	_handle_update()
+
+
+func _on_glyph_type_property_changed(_device_type: Variant) -> void:
 	_handle_update()
