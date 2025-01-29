@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.5 (2025-01-29)
+
+## What's Changed
+* fix(input): add signal handler to `StdInputGlyph`, correcting argument error by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/219
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.14.4...v1.14.5
+
 ## 1.14.4 (2025-01-29)
 
 ## What's Changed
