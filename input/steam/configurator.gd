@@ -5,7 +5,6 @@
 ## panel) whenever the configure `Button` node is pressed.
 ##
 
-@tool
 class_name StdInputSteamConfigurator
 extends Node
 
@@ -32,27 +31,11 @@ var _logger := StdLogger.create("std/input/steam/configurator")
 
 
 func _exit_tree() -> void:
-	if Engine.is_editor_hint():
-		return
-
 	Signals.disconnect_safe(button.pressed, _on_button_pressed)
 
 
-func _get_configuration_warnings() -> PackedStringArray:
-	var warnings := PackedStringArray()
-
-	if not button is Button:
-		warnings.append("missing 'Button' node")
-
-	return warnings
-
-
 func _ready() -> void:
-	if Engine.is_editor_hint():
-		return
-
 	assert(button is Button, "invalid config; missing button node")
-
 	Signals.connect_safe(button.pressed, _on_button_pressed)
 
 
