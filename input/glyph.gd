@@ -85,6 +85,9 @@ func _exit_tree() -> void:
 		return
 
 	Signals.disconnect_safe(_slot.action_configuration_changed, _on_actions_changed)
+	Signals.disconnect_safe(
+		_slot.cursor_visibility_changed, _on_cursor_visibility_changed
+	)
 	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
 
 	if device_type_override is StdSettingsPropertyInt:
@@ -136,6 +139,7 @@ func _ready() -> void:
 	set_process(_slot.device_type == DeviceType.KEYBOARD)
 
 	Signals.connect_safe(_slot.action_configuration_changed, _on_actions_changed)
+	Signals.connect_safe(_slot.cursor_visibility_changed, _on_cursor_visibility_changed)
 	Signals.connect_safe(_slot.device_activated, _on_device_activated)
 
 	if device_type_override is StdSettingsPropertyInt:
@@ -171,6 +175,14 @@ func _handle_update() -> void:
 ##
 ## NOTE: This will be called *before* the glyph is updated.
 func _action_configuration_changed() -> void:
+	pass
+
+
+## _cursor_visibility_changed can be overridden by a subclass to react to changes to the
+## the specified player's cursor visibility.
+##
+## NOTE: This will be called *before* the glyph is updated.
+func _cursor_visibility_changed(_cursor_visible: bool) -> void:
 	pass
 
 
@@ -217,6 +229,11 @@ static func _get_keyboard_language() -> String:
 
 func _on_actions_changed() -> void:
 	_action_configuration_changed()
+	_handle_update()
+
+
+func _on_cursor_visibility_changed(cursor_visible: bool) -> void:
+	_cursor_visibility_changed(cursor_visible)
 	_handle_update()
 
 
