@@ -62,6 +62,14 @@ func hide_cursor() -> void:
 	_on_properties_changed()
 
 
+## report_focus_handler_visible is used to notify the `StdInputCursor` that a previously
+## hidden focus handler is now visible. This serves as a trigger to re-evaluate focus if
+## there isn't currently a focused node.
+func report_focus_handler_visible(_handler: StdInputCursorFocusHandler) -> void:
+	if not _cursor_visible:
+		_update_focus()
+
+
 ## set_hovered registers the provided `Control` node as the most recently hovered UI
 ## element. If the cursor is disabled, focus will transition directly to this node if
 ## eligible.

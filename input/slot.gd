@@ -20,6 +20,10 @@ extends StdInputDevice
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
+## cursor_visibility_changed is emitted when this slot's cursor visibility changes. This
+## is only used if a `cursor` property is set.
+signal cursor_visibility_changed(visible: bool)
+
 ## device_activated is emitted when a new `StdInputDevice` becomes active.
 signal device_activated(device: StdInputDevice)
 
@@ -358,11 +362,6 @@ func _enter_tree() -> void:
 	)
 	StdGroup.with_id(GROUP_INPUT_SLOT).add_member(self)
 
-	assert(cursor is StdInputCursor, "invalid config; missing component")
-	Signals.connect_safe(
-		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
-	)
-
 	assert(joypad_monitor is JoypadMonitor, "invalid config; missing component")
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
@@ -373,6 +372,12 @@ func _enter_tree() -> void:
 	Signals.connect_safe(device_activated, _on_Self_device_activated)
 	Signals.connect_safe(device_connected, _on_Self_device_connected)
 	Signals.connect_safe(device_disconnected, _on_Self_device_disconnected)
+
+	# NOTE: Connect after initializing devices to avoid inadvertent device activation.
+	assert(cursor is StdInputCursor, "invalid config; missing component")
+	Signals.connect_safe(
+		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
+	)
 
 
 func _exit_tree() -> void:
@@ -405,12 +410,6 @@ func _exit_tree() -> void:
 		_disconnect_joy_device(joypad.device_id)
 
 	_joypad_devices = []
-
-	# NOTE: Connect after initializing devices to avoid inadvertent device activation.
-	assert(cursor is StdInputCursor, "invalid config; missing component")
-	Signals.connect_safe(
-		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
-	)
 
 
 func _input(event: InputEvent) -> void:
@@ -688,14 +687,11 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 
 
 func _on_cursor_visibility_changed(visible: bool) -> void:
-	if not visible:
-		return
+	if visible and claim_kbm_input and _cursor_activates_kbm:
+		assert(_kbm_device, "invalid state; missing input device")
+		_activate_device(_kbm_device)
 
-	if not claim_kbm_input or not _cursor_activates_kbm or _active == _kbm_device:
-		return
-
-	assert(_kbm_device, "invalid state; missing input device")
-	_activate_device(_kbm_device)
+	cursor_visibility_changed.emit(visible)
 
 
 func _on_Self_action_configuration_changed() -> void:

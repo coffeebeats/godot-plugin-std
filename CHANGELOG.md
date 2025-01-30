@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.14.6 (2025-01-30)
+
+## What's Changed
+* fix(input): enable focus handlers to regain focus if no element is focused by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/221
+* fix(input): update glyphs when cursor visibility changes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/223
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.14.5...v1.14.6
+
 ## 1.14.5 (2025-01-29)
 
 ## What's Changed
