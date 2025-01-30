@@ -87,6 +87,13 @@ func _enter_tree() -> void:
 		_anchors.append(self)
 
 
+func _notification(what) -> void:
+	match what:
+		NOTIFICATION_VISIBILITY_CHANGED:
+			if visible and _cursor is StdInputCursor:
+				_cursor.report_focus_handler_visible(self)
+
+
 func _ready() -> void:
 	assert(_control is Control, "invalid state; missing Control node")
 
