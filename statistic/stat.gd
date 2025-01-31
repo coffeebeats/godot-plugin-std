@@ -1,10 +1,10 @@
 ##
-## std/statistic/value.gd
+## std/statistic/stat.gd
 ##
-## StdStatValue is a base class for a user statistic.
+## StdStat is a base class for a user statistic.
 ##
 
-class_name StdStatValue
+class_name StdStat
 extends Resource
 
 # -- SIGNALS ------------------------------------------------------------------------- #

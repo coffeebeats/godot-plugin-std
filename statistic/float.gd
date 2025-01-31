@@ -1,11 +1,11 @@
 ##
 ## std/statistic/float.gd
 ##
-## StdStatValueFloat is a float user statistic.
+## StdStatFloat is a float user statistic.
 ##
 
-class_name StdStatValueFloat
-extends StdStatValue
+class_name StdStatFloat
+extends StdStat
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

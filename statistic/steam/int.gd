@@ -1,11 +1,11 @@
 ##
 ## std/statistic/steam/int.gd
 ##
-## StdStatValueIntSteam is an `int` user statistic backed by Steam.
+## StdStatIntSteam is an `int` user statistic backed by Steam.
 ##
 
-class_name StdStatValueIntSteam
-extends StdStatValueInt
+class_name StdStatIntSteam
+extends StdStatInt
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

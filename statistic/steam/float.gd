@@ -1,11 +1,11 @@
 ##
 ## std/statistic/steam/float.gd
 ##
-## StdStatValueFloatSteam is a `float` user statistic backed by Steam.
+## StdStatFloatSteam is a `float` user statistic backed by Steam.
 ##
 
-class_name StdStatValueFloatSteam
-extends StdStatValueFloat
+class_name StdStatFloatSteam
+extends StdStatFloat
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 

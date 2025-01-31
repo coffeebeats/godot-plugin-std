@@ -1,11 +1,11 @@
 ##
 ## std/statistic/int.gd
 ##
-## StdStatValueInt is an integer user statistic.
+## StdStatInt is an integer user statistic.
 ##
 
-class_name StdStatValueInt
-extends StdStatValue
+class_name StdStatInt
+extends StdStat
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
