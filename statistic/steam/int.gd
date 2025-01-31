@@ -14,6 +14,5 @@ func _get_value() -> int:
 	return Steam.getStatInt(id)
 
 
-func _set_value(value: int) -> void:
-	if not Steam.setStatInt(id, value):
-		assert(false, "unexpected result; failed to update value")
+func _set_value(value: int) -> bool:
+	return Steam.setStatInt(id, value)

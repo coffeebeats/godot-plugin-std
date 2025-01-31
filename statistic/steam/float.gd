@@ -15,5 +15,4 @@ func _get_value() -> float:
 
 
 func _set_value(value: float) -> void:
-	if not Steam.setStatFloat(id, value):
-		assert(false, "unexpected result; failed to update value")
+	return Steam.setStatFloat(id, value)

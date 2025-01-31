@@ -15,5 +15,6 @@ func _get_value() -> int:
 	return 0
 
 
-func _set_value(_value: int) -> void:
+func _set_value(_value: int) -> bool:
 	assert(false, "unimplemented")
+	return false
