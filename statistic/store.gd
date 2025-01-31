@@ -59,7 +59,7 @@ func _ready() -> void:
 		if not achievement.is_unlocked():
 			(
 				Signals
-				.connect_safe(
+				. connect_safe(
 					achievement.unlocked,
 					_on_achievement_unlocked.bind(achievement),
 					CONNECT_ONE_SHOT,
