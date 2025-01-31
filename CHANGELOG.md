@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.1 (2025-01-31)
+
+## What's Changed
+* fix(statistic): load leaderboards upon stat store `ready` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/228
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.15.0...v1.15.1
+
 ## 1.15.0 (2025-01-31)
 
 ## What's Changed
