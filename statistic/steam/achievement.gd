@@ -11,7 +11,9 @@ extends StdAchievement
 
 
 func _is_unlocked() -> bool:
-	return Steam.getAchievement(id)
+	var data := Steam.getAchievement(id)
+	assert(data.get("ret", false), "failed to check achievement status")
+	return data.get("achieved", false)
 
 
 func _unlock() -> bool:

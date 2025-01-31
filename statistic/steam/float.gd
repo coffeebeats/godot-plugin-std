@@ -14,5 +14,5 @@ func _get_value() -> float:
 	return Steam.getStatFloat(id)
 
 
-func _set_value(value: float) -> void:
+func _set_value(value: float) -> bool:
 	return Steam.setStatFloat(id, value)
