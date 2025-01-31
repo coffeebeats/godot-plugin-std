@@ -30,15 +30,21 @@ func is_unlocked() -> bool:
 
 
 ## unlock "sets" the achievement, unlocking it for the user. Safe to call repeatedly.
-func unlock():
+func unlock() -> bool:
 	assert(id, "invalid state; missing id")
 
 	var was_unlocked := is_unlocked()
+	var result := _unlock()
 
-	_unlock()
+	# NOTE: It's unclear what the return value of `_unlock` should be. Set this
+	# assertion here to catch a mistaken assumption, which is that it returns whether it
+	# was newly unlocked.
+	assert(result != was_unlocked, "conflicting return value for achievement")
 
 	if not was_unlocked:
 		unlocked.emit()
+
+	return result
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -49,5 +55,6 @@ func _is_unlocked() -> bool:
 	return false
 
 
-func _unlock() -> void:
+func _unlock() -> bool:
 	assert(false, "unimplemented")
+	return false
