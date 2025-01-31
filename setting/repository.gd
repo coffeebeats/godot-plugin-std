@@ -8,13 +8,12 @@
 
 @tool
 class_name StdSettingsRepository
-extends Node
+extends Debouncer
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Config := preload("../config/config.gd")
-const Signals := preload("../event/signal.gd")
-const Debounce := preload("../timer/debounce.gd")
+const Debouncer := preload("../timer/debouncer.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -31,56 +30,35 @@ const Debounce := preload("../timer/debounce.gd")
 		sync_target = value
 		update_configuration_warnings()
 
-# NOTE: Insert a space to avoid overwriting global 'Timer' variable.
-@export_subgroup("Debounce ")
-
-## duration sets the minimum duration (in seconds) between writes to the file.
-@export var duration: float = 0.25:
-	set(value):
-		duration = value
-		if _debounce != null:
-			_debounce.duration = value
-			update_configuration_warnings()
-
-## duration_max sets the maximum delay (in seconds) before a pending write request is
-## written to the file.
-@export var duration_max: float = 0.75:
-	set(value):
-		duration_max = value
-		if _debounce != null:
-			_debounce.duration_max = value
-			update_configuration_warnings()
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 static var _logger := StdLogger.create(&"std/setting/repository")  # gdlint:ignore=class-definitions-order,max-line-length
-
-var _debounce: Debounce = null
+var _writer: StdConfigWriter = null
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
 func _enter_tree() -> void:
+	super._enter_tree()
+
 	if scope is StdSettingsScope:
 		var is_changed := StdGroup.with_id(scope.get_scope_id()).add_member(self)
 		assert(is_changed, "invalid state: duplicate repository registered")
 
-	Signals.connect_safe(child_exiting_tree, _on_Self_child_exiting_tree)
-
 
 func _exit_tree() -> void:
-	assert(_debounce == null, "invalid state: found dangling Debounce timer")
+	super._exit_tree()
+
+	_writer = null
 
 	if scope is StdSettingsScope:
 		var is_changed := StdGroup.with_id(scope.get_scope_id()).remove_member(self)
 		if not is_changed:
 			push_warning("invalid state: repository not registered")
 
-	Signals.disconnect_safe(child_exiting_tree, _on_Self_child_exiting_tree)
-
 
 func _get_configuration_warnings() -> PackedStringArray:
-	var warnings := PackedStringArray()
+	var warnings := super._get_configuration_warnings()
 
 	if not scope is StdSettingsScope:
 		(
@@ -101,25 +79,17 @@ func _get_configuration_warnings() -> PackedStringArray:
 	if scope is StdSettingsScope and scope.get_repository() != self:
 		warnings.append("invalid state: duplicate repository for scope")
 
-	if not _debounce:
-		return warnings
-
-	assert(_debounce is Debounce, "invalid type: expected Debounce timer")
-
-	if _debounce.duration != duration:
-		warnings.append("Invalid config; expected valid 'duration' value!")
-	if _debounce.duration_max != duration_max:
-		warnings.append("Invalid config; expected valid 'duration_max' value!")
-
 	return warnings
 
 
 func _ready() -> void:
+	super._ready()
+
 	if Engine.is_editor_hint():
 		return
 
 	assert(scope is StdSettingsScope, "invalid state: missing scope")
-	assert(_debounce == null, "invalid state: found dangling Debounce timer")
+	assert(_writer == null, "invalid state: found dangling writer")
 
 	if not sync_target is StdSettingsSyncTarget:
 		return
@@ -131,17 +101,7 @@ func _ready() -> void:
 		return
 
 	add_child(writer, false, INTERNAL_MODE_FRONT)
-
-	# Configure the 'Debounce' timer used to rate-limit file system writes.
-	_debounce = _create_debounce_timer()
-	add_child(_debounce, false, INTERNAL_MODE_FRONT)
-	(
-		Signals
-		. connect_safe(
-			_debounce.timeout,
-			_on_Debounce_timeout.bind(writer, scope.config),
-		)
-	)
+	_writer = writer
 
 	# Sync configuration changes to the configured target.
 	var err := _sync_config(writer, scope.config)
@@ -157,29 +117,6 @@ func _ready() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-## Creates a 'Debounce' timer node configured for file system writes.
-func _create_debounce_timer() -> Debounce:
-	var out := Debounce.new()
-
-	out.duration_max = duration_max
-	assert(
-		out.duration_max == duration_max,
-		"Invalid config; expected '%f' to be '%f'!" % [out.duration_max, duration_max]
-	)
-
-	out.duration = duration
-	assert(
-		out.duration == duration,
-		"Invalid config; expected '%f' to be '%f'!" % [out.duration, duration]
-	)
-
-	out.execution_mode = Debounce.EXECUTION_MODE_TRAILING
-	out.process_callback = Timer.TIMER_PROCESS_IDLE
-	out.timeout_on_tree_exit = true
-
-	return out
 
 
 ## _sync_config is a convenience method which first hydrates the provided 'Config'
@@ -207,25 +144,16 @@ func _sync_config(writer: StdConfigWriter, config: Config) -> Error:
 	return OK
 
 
+func _timeout() -> void:
+	var err := _writer.store_config(scope.config).wait()
+	if err != OK:
+		_logger.error(
+			"Failed to write config to file.", {&"path": _writer.get_filepath()}
+		)
+
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_Config_changed(_category: StringName, _key: StringName) -> void:
-	_debounce.start()
-
-
-func _on_Debounce_timeout(writer: StdConfigWriter, config: Config) -> void:
-	var err := writer.store_config(config).wait()
-	if err != OK:
-		_logger.error(
-			"Failed to write config to file.", {&"path": writer.get_filepath()}
-		)
-
-
-func _on_Self_child_exiting_tree(node: Node) -> void:
-	if node != _debounce:
-		return
-
-	# The debounce timer just flushed pending contents to disk, so the reference can be
-	# safely cleaned up.
-	_debounce = null
+	_start()

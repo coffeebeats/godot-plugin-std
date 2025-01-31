@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.15.0 (2025-01-31)
+
+## What's Changed
+* feat(statistic): create a statistic interface and implement Steam variants by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/224
+* feat(statistic): create an achievement resource with a Steam implementation by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/226
+* feat(statistic): define a leaderboard resource and create a Steam implementation by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/227
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.14.6...v1.15.0
+
 ## 1.14.6 (2025-01-30)
 
 ## What's Changed
