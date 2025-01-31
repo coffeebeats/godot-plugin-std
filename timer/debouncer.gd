@@ -76,12 +76,16 @@ func _ready() -> void:
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
-
 func _timeout() -> void:
 	pass
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _cancel() -> void:
+	assert(_debounce is Debounce, "invalid state; missing debounce timer")
+	_debounce.reset()
 
 
 ## Creates a 'Debounce' timer node configured for file system writes.
