@@ -1,11 +1,11 @@
 ##
 ## std/statistic/steam/float.gd
 ##
-## StdStatValueFloatSteam is a `float` user statistic backed by Steam.
+## StdStatFloatSteam is a `float` user statistic backed by Steam.
 ##
 
-class_name StdStatValueFloatSteam
-extends StdStatValueFloat
+class_name StdStatFloatSteam
+extends StdStatFloat
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
@@ -15,5 +15,4 @@ func _get_value() -> float:
 
 
 func _set_value(value: float) -> void:
-	if not Steam.setStatFloat(id, value):
-		assert(false, "unexpected result; failed to update value")
+	return Steam.setStatFloat(id, value)

@@ -1,11 +1,11 @@
 ##
 ## std/statistic/float.gd
 ##
-## StdStatValueFloat is a float user statistic.
+## StdStatFloat is a float user statistic.
 ##
 
-class_name StdStatValueFloat
-extends StdStatValue
+class_name StdStatFloat
+extends StdStat
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
@@ -15,5 +15,6 @@ func _get_value() -> float:
 	return 0.0
 
 
-func _set_value(_value: float) -> void:
+func _set_value(_value: float) -> bool:
 	assert(false, "unimplemented")
+	return false

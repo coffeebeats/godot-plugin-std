@@ -1,10 +1,10 @@
 ##
-## std/statistic/value.gd
+## std/statistic/stat.gd
 ##
-## StdStatValue is a base class for a user statistic.
+## StdStat is a base class for a user statistic.
 ##
 
-class_name StdStatValue
+class_name StdStat
 extends Resource
 
 # -- SIGNALS ------------------------------------------------------------------------- #
@@ -27,11 +27,23 @@ func get_value():
 
 
 ## set_value updates the current value of the statistic.
-func set_value(value):
+func set_value(value) -> bool:
 	assert(id, "invalid state; missing id")
-	if value != _get_value():
-		_set_value(value)
+
+	var previous: Variant = _get_value()
+	var result: bool = _set_value(value)
+
+	var has_changed: bool = previous != value
+
+	# NOTE: It's unclear what the return value of `_set_value` should be. Set this
+	# assertion here to catch a mistaken assumption, which is that it returns whether it
+	# was updated.
+	assert(result == has_changed, "conflicting return value for statistic")
+
+	if has_changed:
 		value_changed.emit(value)
+
+	return result
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -41,5 +53,6 @@ func _get_value():
 	assert(false, "unimplemented")
 
 
-func _set_value(_value) -> void:
+func _set_value(_value) -> bool:
 	assert(false, "unimplemented")
+	return false
