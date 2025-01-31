@@ -14,16 +14,15 @@ const Debounce := preload("debounce.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## duration sets the minimum duration (in seconds) between stat store requests.
-@export var duration: float = 5.0:
+## duration sets the minimum duration (in seconds) between operations.
+@export var duration: float = 1.0:
 	set(value):
 		duration = value
 		if _debounce != null:
 			_debounce.duration = value
 			update_configuration_warnings()
 
-## duration_max sets the maximum delay (in seconds) before a pending stat store request
-## is sent to the statistics API.
+## duration_max sets the maximum delay (in seconds) before a pending operation is run.
 @export var duration_max: float = 10.0:
 	set(value):
 		duration_max = value
