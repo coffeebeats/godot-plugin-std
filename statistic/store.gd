@@ -23,6 +23,10 @@ const Debouncer := preload("../timer/debouncer.gd")
 ## unlocking, the statistics data will be stored (debounced via the properties below).
 @export var achievements: Array[StdAchievement] = []
 
+## leaderboards is the set of leaderboards defined for the game. Definitions for these
+## will be fetched upon this store entering the scene.
+@export var leaderboards: Array[StdLeaderboard] = []
+
 ## statistics is the set of user statistics defined for the game.
 @export var statistics: Array[StdStat] = []
 
@@ -55,12 +59,15 @@ func _ready() -> void:
 		if not achievement.is_unlocked():
 			(
 				Signals
-				. connect_safe(
+				.connect_safe(
 					achievement.unlocked,
 					_on_achievement_unlocked.bind(achievement),
 					CONNECT_ONE_SHOT,
 				)
 			)
+
+	for leaderboard in leaderboards:
+		leaderboard.load_definition()
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
