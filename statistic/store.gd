@@ -69,8 +69,8 @@ func _load_stats() -> void:
 	pass
 
 
-func _store_stats() -> void:
-	pass
+func _store_stats() -> bool:
+	return false
 
 
 func _timeout() -> void:
