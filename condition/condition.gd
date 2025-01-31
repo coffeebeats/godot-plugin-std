@@ -18,6 +18,11 @@ const Signals := preload("../event/signal.gd")
 
 @export_subgroup("Allow ")
 
+## force_allow is a convenience setting which forces this conditional node to be
+## allowed, regardless of how the associated expressions evaluate. This property can be
+## overruled by `force_block`.
+@export var force_allow: bool = false
+
 ## expressions_allow is a list of expressions which, if *any* are true, allow the
 ## configured nodes to enter the scene.
 @export var expressions_allow: Array[StdConditionExpression] = []
@@ -27,6 +32,11 @@ const Signals := preload("../event/signal.gd")
 @export var expressions_allow_require_all: bool = false
 
 @export_subgroup("Block ")
+
+## force_block is a convenience setting which forces this conditional node to be
+## blocked, regardless of how the associated expressions evaluate. This takes priority
+## over `force_allow`.
+@export var force_block: bool = false
 
 ## expressions_block is a list of expressions which, if *any* are true, block the
 ## configured nodes to enter the scene.
@@ -98,7 +108,7 @@ func _should_trigger_block_action_on_enter() -> bool:
 
 
 func _evaluate(is_entering: bool = true) -> void:
-	var is_allowed := _is_allowed()
+	var is_allowed := false if force_block else (true if force_allow else _is_allowed())
 
 	if (
 		is_allowed
