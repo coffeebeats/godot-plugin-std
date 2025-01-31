@@ -8,7 +8,6 @@
 class_name StdStatStoreSteam
 extends StdStatStore
 
-
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
