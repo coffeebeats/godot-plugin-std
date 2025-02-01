@@ -9,9 +9,8 @@
 ## the `_load_stats`/`_store_stats` methods to define how to persist statistics values.
 ##
 
-@tool
 class_name StdStatisticStore
-extends StdDebouncer
+extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
@@ -38,6 +37,11 @@ signal leaderboard_scores_downloaded(
 	entries: Array[StdLeaderboard.Entry],
 )
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Signals := preload("../event/signal.gd")
+const Debounce := preload("../timer/debounce.gd")
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## achievements is the set of user achievements defined for the game. Upon one of these
@@ -51,11 +55,20 @@ signal leaderboard_scores_downloaded(
 ## statistics is the set of user statistics defined for the game.
 @export var statistics: Array[StdStat] = []
 
+@export_subgroup("Debounce")
+
+## debounce_duration is the minimum duration (in seconds) between calls to store stats.
+@export var debounce_duration: float = 5.0
+
+## debounce_duration_max sets the maximum duration (in seconds) a call can be delayed.
+@export var debounce_duration_max: float = 30.0
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 # gdlint:ignore=class-definitions-order
 static var _logger := StdLogger.create(&"std/statistic/store")
 
+var _debounce: Debounce = null
 var _leaderboards: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -64,12 +77,15 @@ var _leaderboards: Dictionary = {}
 ## store_stats persists any pending statistic updates. If `force` is passed, this will
 ## bypass the debounce timer and directly update stats.
 func store_stats(force: bool = false) -> void:
+	assert(is_inside_tree(), "invalid state; must be inside scene tree")
+	assert(_debounce is Debounce, "invalid state; missing debounce timer")
+
 	if force:
+		_debounce.reset()
 		_store_stats()
-		_cancel()
 		return
 
-	_start()
+	_debounce.start()
 
 
 # Achievements
@@ -93,6 +109,7 @@ func unlock_achievement(id: StringName) -> bool:
 
 	if not was_unlocked:
 		achievement_unlocked.emit(id)
+		store_stats()
 
 	return result
 
@@ -296,11 +313,27 @@ func set_stat_value_int(id: StringName, value: int) -> bool:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _ready() -> void:
-	super._ready()
+func _exit_tree() -> void:
+	_debounce = null
 
-	if Engine.is_editor_hint():
-		return
+
+func _ready() -> void:
+	assert(_debounce == null, "invalid state: found dangling Debounce timer")
+
+	# Configure the 'Debounce' timer used to rate-limit calls to store stats. Use a
+	# "leading" execution mode so first call is immediate (allows achievements to be
+	# displayed as soon as they unlock).
+	_debounce = (
+		Debounce
+		. create(
+			debounce_duration,
+			debounce_duration_max,
+			true,
+			Debounce.EXECUTION_MODE_LEADING,
+		)
+	)
+	add_child(_debounce, false, INTERNAL_MODE_BACK)
+	Signals.connect_safe(_debounce.timeout, _on_debounce_timeout)
 
 	_load_stats()
 
@@ -388,10 +421,6 @@ func _store_stats() -> bool:
 	return false
 
 
-func _timeout() -> void:
-	store_stats()
-
-
 func _unlock_achievement(_id: StringName) -> bool:
 	assert(false, "unimplemented")
 	return false
@@ -467,3 +496,7 @@ func _notify_uploaded_leaderboard_score(
 
 func _on_achievement_unlocked(_achievement: StdAchievement) -> void:
 	store_stats(true)
+
+
+func _on_debounce_timeout() -> void:
+	store_stats()
