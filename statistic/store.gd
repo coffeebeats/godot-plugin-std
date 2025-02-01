@@ -279,12 +279,15 @@ func get_stat_value_float(id: StringName) -> float:
 	return _get_stat_value_float(id)
 
 
-## set_stat_value updates the current value of the statistic.
-func set_stat_value(id: StringName, value: Variant) -> bool:
+## set_stat_value_float updates the current value of the `float` statistic.
+func set_stat_value_float(id: StringName, value: float) -> bool:
 	assert(id, "invalid argument; missing id")
-	assert(value is int or value is float, "invalid argument; wrong type")
+	return _set_stat_value_float(id, value)
 
-	return _set_stat_value(id, value)
+## set_stat_value_int updates the current value of the `int` statistic.
+func set_stat_value_int(id: StringName, value: int) -> bool:
+	assert(id, "invalid argument; missing id")
+	return _set_stat_value_int(id, value)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -364,7 +367,11 @@ func _load_stats() -> void:
 	pass
 
 
-func _set_stat_value(_id: StringName, _value: Variant) -> bool:
+func _set_stat_value_float(_id: StringName, _value: float) -> bool:
+	assert(false, "unimplemented")
+	return false
+
+func _set_stat_value_int(_id: StringName, _value: int) -> bool:
 	assert(false, "unimplemented")
 	return false
 
@@ -409,7 +416,7 @@ func _notify_downloaded_leaderboard_scores(
 	leaderboard_scores_downloaded.emit(id, entries)
 
 
-func _notify_load_definition(
+func _notify_leaderboard_loaded(
 	id: StringName,
 	handle: Variant = null,
 ) -> void:
@@ -427,7 +434,7 @@ func _notify_load_definition(
 	_leaderboards[id] = handle
 
 
-func _notify_upload_score(
+func _notify_uploaded_leaderboard_score(
 	id: StringName,
 	success: bool,
 	updated: bool,
