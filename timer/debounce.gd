@@ -24,11 +24,15 @@ extends Node
 ## Emitted when "execution" is ready, following a call to 'start'.
 signal timeout
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Debounce := preload("debounce.gd")
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## Defines when "execution" occurs for the debounce effect. For 'LEADING', "execution"
 ## is at the start of a cluster; 'TRAILING' "execution" is at the end of a cluster.
-enum ExecutionMode { LEADING, TRAILING }
+enum ExecutionMode { LEADING, TRAILING }  # gdlint:ignore=class-definitions-order
 
 const EXECUTION_MODE_LEADING := ExecutionMode.LEADING
 
@@ -109,6 +113,37 @@ var _remaining_micros: int = 0
 var _elapsed_micros: int = 0
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+@warning_ignore("SHADOWED_VARIABLE")
+
+
+## Creates a 'Debounce' timer node configured for file system writes.
+static func create(
+	duration: float,
+	duration_max: float,
+	timeout_on_tree_exit: bool = false,
+	execution_mode: ExecutionMode = Debounce.EXECUTION_MODE_TRAILING,
+	process_callback: Timer.TimerProcessCallback = Timer.TIMER_PROCESS_IDLE,
+) -> Debounce:
+	var out: Debounce = Debounce.new()
+
+	out.duration_max = duration_max
+	assert(
+		out.duration_max == duration_max,
+		"Invalid config; expected '%f' to be '%f'!" % [out.duration_max, duration_max]
+	)
+
+	out.duration = duration
+	assert(
+		out.duration == duration,
+		"Invalid config; expected '%f' to be '%f'!" % [out.duration, duration]
+	)
+
+	out.execution_mode = execution_mode
+	out.process_callback = process_callback
+	out.timeout_on_tree_exit = timeout_on_tree_exit
+
+	return out
 
 
 ## Returns whether the "debounce" effect is active; when 'false', there have been no

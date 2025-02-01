@@ -28,6 +28,8 @@ var _worker_thread: Thread = null
 
 ## is_thread_running returns whether this worker's thread is currently alive.
 func is_thread_running() -> bool:
+	assert(is_inside_tree(), "invalid state; must be in scene tree")
+
 	_worker_mutex.lock()
 	var value := _is_running
 	_worker_mutex.unlock()
@@ -37,6 +39,8 @@ func is_thread_running() -> bool:
 
 ## is_worker_in_progress returns whether this worker is currently executing its task.
 func is_worker_in_progress() -> bool:
+	assert(is_inside_tree(), "invalid state; must be in scene tree")
+
 	_worker_mutex.lock()
 	var value := _worker_result != null
 	_worker_mutex.unlock()
@@ -49,6 +53,8 @@ func is_worker_in_progress() -> bool:
 ##
 ## NOTE: Only one invocation may occur at a time.
 func run() -> StdThreadWorkerResult:
+	assert(is_inside_tree(), "invalid state; must be in scene tree")
+
 	_worker_mutex.lock()
 
 	if _worker_result is StdThreadWorkerResult:
@@ -68,6 +74,8 @@ func run() -> StdThreadWorkerResult:
 ## wait causes the calling thread to wait until any in-progress task is completed. This
 ## is safe to call even if the worker is not currently in progress.
 func wait() -> void:
+	assert(is_inside_tree(), "invalid state; must be in scene tree")
+
 	_worker_mutex.lock()
 	var result := _worker_result
 	_worker_mutex.unlock()
@@ -80,6 +88,8 @@ func wait() -> void:
 
 
 func _exit_tree():
+	wait()  # Don't exit until work completes.
+
 	_worker_mutex.lock()
 	_is_running = false
 

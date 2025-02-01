@@ -101,10 +101,7 @@ func wait() -> Error:
 
 	_semaphore_waiting_count += 1
 
-	var semaphore := _semaphore
-
 	_mutex.unlock()
-
-	semaphore.wait()
+	_semaphore.wait()
 
 	return get_error()
