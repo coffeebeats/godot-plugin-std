@@ -108,8 +108,8 @@ func unlock_achievement(id: StringName) -> bool:
 	var result := _unlock_achievement(id)
 
 	if not was_unlocked:
-		achievement_unlocked.emit(id)
 		store_stats()
+		achievement_unlocked.emit(id)
 
 	return result
 
@@ -148,7 +148,7 @@ func download_leaderboard_scores(id: StringName, start: int, end: int) -> void:
 
 	(
 		_logger
-		. info(
+		.info(
 			"Downloading leaderboard scores in range.",
 			{&"name": id, &"start": start, &"end": end},
 		)
@@ -177,7 +177,7 @@ func download_leaderboard_scores_around_user(
 
 	(
 		_logger
-		. info(
+		.info(
 			"Downloading leaderboard scores around local user.",
 			{&"name": id, &"before": before, &"after": after},
 		)
@@ -198,7 +198,7 @@ func download_leaderboard_scores_for_friends(id: StringName) -> void:
 
 	(
 		_logger
-		. info(
+		.info(
 			"Downloading leaderboard scores for friends.",
 			{&"name": id},
 		)
@@ -226,7 +226,7 @@ func download_leaderboard_scores_for_users(
 
 	(
 		_logger
-		. info(
+		.info(
 			"Downloading leaderboard scores for users.",
 			{&"name": id, &"users": users},
 		)
@@ -269,7 +269,7 @@ func upload_leaderboard_score(
 
 	(
 		_logger
-		. info(
+		.info(
 			"Uploading leaderboard score.",
 			{
 				&"name": id,
@@ -325,7 +325,7 @@ func _ready() -> void:
 	# displayed as soon as they unlock).
 	_debounce = (
 		Debounce
-		. create(
+		.create(
 			debounce_duration,
 			debounce_duration_max,
 			true,
@@ -444,7 +444,7 @@ func _notify_downloaded_leaderboard_scores(
 ) -> void:
 	(
 		_logger
-		. info(
+		.info(
 			"Successfully downloaded leaderboard scores.",
 			{&"name": id, &"count": entries.size()},
 		)
@@ -461,7 +461,7 @@ func _notify_leaderboard_loaded(
 
 	(
 		_logger
-		. info(
+		.info(
 			"Successfully loaded leaderboard definition.",
 			{&"name": id, &"handle": handle},
 		)
@@ -480,7 +480,7 @@ func _notify_uploaded_leaderboard_score(
 	if success:
 		(
 			_logger
-			. info(
+			.info(
 				"Successfully uploaded leaderboard score.",
 				{&"name": id, &"updated": updated, &"score": score},
 			)
@@ -492,11 +492,6 @@ func _notify_uploaded_leaderboard_score(
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
-
-
-func _on_achievement_unlocked(_achievement: StdAchievement) -> void:
-	store_stats(true)
-
 
 func _on_debounce_timeout() -> void:
 	store_stats()
