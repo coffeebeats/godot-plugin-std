@@ -1,20 +1,25 @@
 ##
 ## std/statistic/int.gd
 ##
-## StdStatInt is an integer user statistic.
+## StdStat is a class defining a custom user `int` statistic.
+##
+## NOTE: This resource should be added to a `StdStatisticStore` node so that its
+## implementation can automatically be loaded.
 ##
 
 class_name StdStatInt
 extends StdStat
 
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+# -- PUBLIC METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _get_value() -> int:
-	assert(false, "unimplemented")
-	return 0
+## get_value reads the current value of the `int` statistic.
+func get_value() -> int:
+	assert(_store is StdStatisticStore, "invalid state; missing store")
+	return _store.get_stat_value_int(id)
 
 
-func _set_value(_value: int) -> bool:
-	assert(false, "unimplemented")
-	return false
+## set_value updates the current value of the `int` statistic.
+func set_value(value: int) -> bool:
+	assert(_store is StdStatisticStore, "invalid state; missing store")
+	return _store.set_stat_value(id, value)
