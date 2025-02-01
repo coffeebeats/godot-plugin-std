@@ -1,10 +1,11 @@
 ##
 ## std/timer/debouncer.gd
 ##
-## Debouncer is a base class for nodes which want to debounce an operation.
+## StdDebouncer is a base class for nodes which want to debounce an operation.
 ##
 
 @tool
+class_name StdDebouncer
 extends Node
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
