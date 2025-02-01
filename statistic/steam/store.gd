@@ -57,7 +57,7 @@ func _download_leaderboard_scores_around_user(
 	)
 
 
-func _download_leaderboard_scores_for_friends(_id: StringName) -> void:
+func _download_leaderboard_scores_for_friends(id: StringName) -> void:
 	var handle: Variant = _leaderboards.get(id)
 	assert(handle is int, "invalid state; missing leaderboard handle")
 
@@ -77,8 +77,8 @@ func _download_leaderboard_scores_for_friends(_id: StringName) -> void:
 
 
 func _download_leaderboard_scores_for_users(
-	_id: StringName,
-	_users: PackedInt64Array,
+	id: StringName,
+	users: PackedInt64Array,
 ) -> void:
 	var handle: Variant = _leaderboards.get(id)
 	assert(handle is int, "invalid state; missing leaderboard handle")
@@ -141,7 +141,7 @@ func _timeout() -> void:
 	store_stats()
 
 
-func _unlock_achievement(_id: StringName) -> bool:
+func _unlock_achievement(id: StringName) -> bool:
 	return Steam.setAchievement(id)
 
 
