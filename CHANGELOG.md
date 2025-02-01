@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.3 (2025-02-01)
+
+## What's Changed
+* fix: remove error-prone `Debouncer`, simplify `StdSettingsRepository` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/232
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.15.2...v1.15.3
+
 ## 1.15.2 (2025-02-01)
 
 ## What's Changed
