@@ -8,53 +8,40 @@
 ##
 
 class_name StdAchievement
-extends Resource
+extends StdStatistic
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## unlocked is emitted when this achievement is first unlocked.
-signal unlocked
+signal unlocked()
 
-# -- CONFIGURATION ------------------------------------------------------------------- #
+# -- DEPENDENCIES -------------------------------------------------------------------- #
 
-## id is the "API name", or unique identifier, for this achievement.
-@export var id: StringName = &""
+const Signals := preload("../event/signal.gd")
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## is_unlocked returns whether the achievement is currently unlocked by the user.
+## is_unlocked returns whether the achievement has already been unlocked by the user.
 func is_unlocked() -> bool:
-	assert(id, "invalid state; missing id")
-	return _is_unlocked()
+	assert(_store is StdStatisticStore, "invalid state; missing store")
+	return _store.is_achievement_unlocked(id)
 
 
 ## unlock "sets" the achievement, unlocking it for the user. Safe to call repeatedly.
 func unlock() -> bool:
-	assert(id, "invalid state; missing id")
+	assert(_store is StdStatisticStore, "invalid state; missing store")
+	Signals.ensure_connected(_store.achievement_unlocked, _on_achievement_unlocked)
 
-	var was_unlocked := is_unlocked()
-	var result := _unlock()
+	return _store.unlock_achievement(id)
 
-	# NOTE: It's unclear what the return value of `_unlock` should be. Set this
-	# assertion here to catch a mistaken assumption, which is that it returns whether it
-	# was newly unlocked.
-	assert(result != was_unlocked, "conflicting return value for achievement")
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
-	if not was_unlocked:
-		unlocked.emit()
+func _on_achievement_unlocked(achievement: StringName) -> void:
+	if achievement != id:
+		return
 
-	return result
+	unlocked.emit()
 
-
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
-
-
-func _is_unlocked() -> bool:
-	assert(false, "unimplemented")
-	return false
-
-
-func _unlock() -> bool:
-	assert(false, "unimplemented")
-	return false
+	# NOTE: This signal is no longer needed - the achievement won't be unlocked twice.
+	Signals.disconnect_safe(_store.achievement_unlocked, _on_achievement_unlocked)
