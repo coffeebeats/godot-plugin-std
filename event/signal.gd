@@ -12,6 +12,18 @@ extends Object
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## ensure_connected connects the callback to the provided receiver if it's not already.
+static func ensure_connected(
+	receiver: Signal,
+	callback: Callable,
+	flags: int = 0,
+) -> Error:
+	if not receiver.is_connected(callback):
+		return connect_safe(receiver, callback, flags)
+
+	return OK
+
+
 ## connect_safe safely connects the callback to the provided receiver.
 static func connect_safe(receiver: Signal, callback: Callable, flags: int = 0) -> Error:
 	var err := receiver.connect(callback, flags) as Error

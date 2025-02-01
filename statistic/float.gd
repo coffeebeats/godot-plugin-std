@@ -1,20 +1,25 @@
 ##
 ## std/statistic/float.gd
 ##
-## StdStatFloat is a float user statistic.
+## StdStat is a class defining a custom user `float` statistic.
+##
+## NOTE: This resource should be added to a `StdStatisticStore` node so that its
+## implementation can automatically be loaded.
 ##
 
 class_name StdStatFloat
 extends StdStat
 
-# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+# -- PUBLIC METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _get_value() -> float:
-	assert(false, "unimplemented")
-	return 0.0
+## get_value reads the current value of the `float` statistic.
+func get_value() -> float:
+	assert(_store is StdStatisticStore, "invalid state; missing store")
+	return _store.get_stat_value_float(id)
 
 
-func _set_value(_value: float) -> bool:
-	assert(false, "unimplemented")
-	return false
+## set_value updates the current value of the `float` statistic.
+func set_value(value: float) -> bool:
+	assert(_store is StdStatisticStore, "invalid state; missing store")
+	return _store.set_stat_value(id, value)
