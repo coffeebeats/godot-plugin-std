@@ -34,7 +34,9 @@ class Entry:
 	var rank: int = 0
 	var score: int = 0
 
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
 
 ## download_scores fetches a range of global leaderboard entries.
 ##
@@ -42,7 +44,9 @@ class Entry:
 ## will be emitted. There is currently no way to relay an error to the caller.
 func download_scores(start: int, end: int) -> void:
 	assert(_store is StdStatisticStore, "invalid state; missing store")
-	Signals.ensure_connected(_store.leaderboard_scores_downloaded, _on_downloaded_scores)
+	Signals.ensure_connected(
+		_store.leaderboard_scores_downloaded, _on_downloaded_scores
+	)
 
 	_store.download_leaderboard_scores(id, start, end)
 
@@ -54,9 +58,12 @@ func download_scores(start: int, end: int) -> void:
 ## will be emitted. There is currently no way to relay an error to the caller.
 func download_scores_around_user(before: int, after: int) -> void:
 	assert(_store is StdStatisticStore, "invalid state; missing store")
-	Signals.ensure_connected(
-		_store.leaderboard_scores_downloaded,
-		_on_downloaded_scores,
+	(
+		Signals
+		. ensure_connected(
+			_store.leaderboard_scores_downloaded,
+			_on_downloaded_scores,
+		)
 	)
 
 	_store.download_leaderboard_scores_around_user(id, before, after)
@@ -69,7 +76,9 @@ func download_scores_around_user(before: int, after: int) -> void:
 ## will be emitted. There is currently no way to relay an error to the caller.
 func download_scores_for_friends() -> void:
 	assert(_store is StdStatisticStore, "invalid state; missing store")
-	Signals.ensure_connected(_store.leaderboard_scores_downloaded, _on_downloaded_scores)
+	Signals.ensure_connected(
+		_store.leaderboard_scores_downloaded, _on_downloaded_scores
+	)
 
 	_store.download_leaderboard_scores_for_friends(id)
 
@@ -81,7 +90,9 @@ func download_scores_for_friends() -> void:
 ## will be emitted. There is currently no way to relay an error to the caller.
 func download_scores_for_users(users: PackedInt64Array) -> void:
 	assert(_store is StdStatisticStore, "invalid state; missing store")
-	Signals.ensure_connected(_store.leaderboard_scores_downloaded, _on_downloaded_scores)
+	Signals.ensure_connected(
+		_store.leaderboard_scores_downloaded, _on_downloaded_scores
+	)
 
 	_store.download_leaderboard_scores_for_users(id, users)
 
@@ -101,6 +112,7 @@ func upload_score(score: int, details: Variant = null, keep_best: bool = true) -
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
 
 func _on_downloaded_scores(leaderboard: StringName, entries: Array[Entry] = []) -> void:
 	if leaderboard != id:

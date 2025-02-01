@@ -60,6 +60,7 @@ var _leaderboards: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 ## store_stats persists any pending statistic updates. If `force` is passed, this will
 ## bypass the debounce timer and directly update stats.
 func store_stats(force: bool = false) -> void:
@@ -72,6 +73,7 @@ func store_stats(force: bool = false) -> void:
 
 
 # Achievements
+
 
 ## is_achievement_unlocked returns whether the specified achievement has been unlocked
 ## by the local user.
@@ -129,7 +131,7 @@ func download_leaderboard_scores(id: StringName, start: int, end: int) -> void:
 
 	(
 		_logger
-		.info(
+		. info(
 			"Downloading leaderboard scores in range.",
 			{&"name": id, &"start": start, &"end": end},
 		)
@@ -145,8 +147,8 @@ func download_leaderboard_scores(id: StringName, start: int, end: int) -> void:
 ## will be emitted. There is currently no way to relay an error to the caller.
 func download_leaderboard_scores_around_user(
 	id: StringName,
-	 before: int,
-	  after: int,
+	before: int,
+	after: int,
 ) -> void:
 	if not _leaderboards.get(id):
 		assert(false, "invalid state; missing leaderboard handle")
@@ -158,7 +160,7 @@ func download_leaderboard_scores_around_user(
 
 	(
 		_logger
-		.info(
+		. info(
 			"Downloading leaderboard scores around local user.",
 			{&"name": id, &"before": before, &"after": after},
 		)
@@ -179,7 +181,7 @@ func download_leaderboard_scores_for_friends(id: StringName) -> void:
 
 	(
 		_logger
-		.info(
+		. info(
 			"Downloading leaderboard scores for friends.",
 			{&"name": id},
 		)
@@ -207,7 +209,7 @@ func download_leaderboard_scores_for_users(
 
 	(
 		_logger
-		.info(
+		. info(
 			"Downloading leaderboard scores for users.",
 			{&"name": id, &"users": users},
 		)
@@ -250,7 +252,7 @@ func upload_leaderboard_score(
 
 	(
 		_logger
-		.info(
+		. info(
 			"Uploading leaderboard score.",
 			{
 				&"name": id,
@@ -284,6 +286,7 @@ func set_stat_value_float(id: StringName, value: float) -> bool:
 	assert(id, "invalid argument; missing id")
 	return _set_stat_value_float(id, value)
 
+
 ## set_stat_value_int updates the current value of the `int` statistic.
 func set_stat_value_int(id: StringName, value: int) -> bool:
 	assert(id, "invalid argument; missing id")
@@ -300,7 +303,7 @@ func _ready() -> void:
 		return
 
 	_load_stats()
-	
+
 	for leaderboard in leaderboards:
 		leaderboard.set_store(self)
 		load_leaderboard(leaderboard.id)
@@ -311,7 +314,9 @@ func _ready() -> void:
 	for stat in statistics:
 		stat.set_store(self)
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
 
 func _download_leaderboard_scores(_id: StringName, _begin: int, _end: int) -> void:
 	assert(false, "unimplemented")
@@ -360,8 +365,10 @@ func _is_achievement_unlocked(_id: StringName) -> bool:
 	assert(false, "unimplemented")
 	return false
 
+
 func _load_leaderboard(_id: StringName) -> void:
 	assert(false, "unimplemented")
+
 
 func _load_stats() -> void:
 	pass
@@ -370,6 +377,7 @@ func _load_stats() -> void:
 func _set_stat_value_float(_id: StringName, _value: float) -> bool:
 	assert(false, "unimplemented")
 	return false
+
 
 func _set_stat_value_int(_id: StringName, _value: int) -> bool:
 	assert(false, "unimplemented")
@@ -407,7 +415,7 @@ func _notify_downloaded_leaderboard_scores(
 ) -> void:
 	(
 		_logger
-		.info(
+		. info(
 			"Successfully downloaded leaderboard scores.",
 			{&"name": id, &"count": entries.size()},
 		)
@@ -424,7 +432,7 @@ func _notify_leaderboard_loaded(
 
 	(
 		_logger
-		.info(
+		. info(
 			"Successfully loaded leaderboard definition.",
 			{&"name": id, &"handle": handle},
 		)
@@ -443,7 +451,7 @@ func _notify_uploaded_leaderboard_score(
 	if success:
 		(
 			_logger
-			.info(
+			. info(
 				"Successfully uploaded leaderboard score.",
 				{&"name": id, &"updated": updated, &"score": score},
 			)

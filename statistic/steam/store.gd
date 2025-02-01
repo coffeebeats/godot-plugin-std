@@ -25,7 +25,7 @@ func _download_leaderboard_scores(id: StringName, begin: int, end: int) -> void:
 
 	(
 		Steam
-		.downloadLeaderboardEntries(
+		. downloadLeaderboardEntries(
 			begin,
 			end,
 			Steam.LEADERBOARD_DATA_REQUEST_GLOBAL,
@@ -48,7 +48,7 @@ func _download_leaderboard_scores_around_user(
 
 	(
 		Steam
-		.downloadLeaderboardEntries(
+		. downloadLeaderboardEntries(
 			before,
 			after,
 			Steam.LEADERBOARD_DATA_REQUEST_GLOBAL_AROUND_USER,
@@ -67,7 +67,7 @@ func _download_leaderboard_scores_for_friends(_id: StringName) -> void:
 
 	(
 		Steam
-		.downloadLeaderboardEntries(
+		. downloadLeaderboardEntries(
 			0,
 			0,
 			Steam.LEADERBOARD_DATA_REQUEST_FRIENDS,
@@ -113,6 +113,7 @@ func _is_achievement_unlocked(id: StringName) -> bool:
 	assert(data.get("ret", false), "failed to check achievement status")
 	return data.get("achieved", false)
 
+
 func _load_leaderboard(id: StringName) -> void:
 	var handle: Variant = _leaderboards.get(id)
 	assert(handle is int, "invalid state; missing leaderboard handle")
@@ -122,6 +123,7 @@ func _load_leaderboard(id: StringName) -> void:
 	Signals.ensure_connected(Steam.leaderboard_find_result, _on_leaderboard_found)
 
 	Steam.findLeaderboard(id)
+
 
 func _set_stat_value_float(id: StringName, value: float) -> bool:
 	return Steam.setStatFloat(id, value)

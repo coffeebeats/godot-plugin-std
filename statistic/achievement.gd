@@ -13,7 +13,7 @@ extends StdStatistic
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## unlocked is emitted when this achievement is first unlocked.
-signal unlocked()
+signal unlocked
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -35,7 +35,9 @@ func unlock() -> bool:
 
 	return _store.unlock_achievement(id)
 
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
 
 func _on_achievement_unlocked(achievement: StringName) -> void:
 	if achievement != id:
