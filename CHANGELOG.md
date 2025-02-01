@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.2 (2025-02-01)
+
+## What's Changed
+* refactor(statistic): simplify API by moving storefront-specific logic into `StdStatisticStore` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/230
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.15.1...v1.15.2
+
 ## 1.15.1 (2025-01-31)
 
 ## What's Changed
