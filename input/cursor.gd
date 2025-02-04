@@ -31,6 +31,7 @@ static var _logger := StdLogger.create("std/input/cursor")
 var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = false
+var _focus_root: Control = null
 var _hide_actions := PackedStringArray()
 var _hide_actions_if_hovered := PackedStringArray()
 var _hide_delay: float = 0.0
@@ -67,6 +68,22 @@ func hide_cursor() -> void:
 ## there isn't currently a focused node.
 func report_focus_handler_visible(_handler: StdInputCursorFocusHandler) -> void:
 	if not _cursor_visible:
+		_update_focus()
+
+
+## set_focus_root restricts UI focus to be under the scene subtree rooted at `root`. If
+## set, current and future focus handlers will be ignored if they aren't descendants of
+## `root`. Call this with `null` to unset the focus root.
+func set_focus_root(root: Control = null) -> void:
+	assert(
+		root == null or root.is_visible_in_tree(),
+		"invalid argument; root node isn't visible",
+	)
+
+	var changed := _focus_root != root
+	_focus_root = root
+
+	if changed and not _cursor_visible:
 		_update_focus()
 
 
@@ -272,7 +289,7 @@ func _update_focus() -> void:
 		_hovered.grab_focus()
 		unset_hovered(_hovered)
 	else:
-		var focus_target := StdInputCursorFocusHandler.get_focus_target()
+		var focus_target := StdInputCursorFocusHandler.get_focus_target(_focus_root)
 		if focus_target:
 			# NOTE: Use a deferred call here so that the current input event gets
 			# swallowed. That ensures the anchor is focused and not a potential

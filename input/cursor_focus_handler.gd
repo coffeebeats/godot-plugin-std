@@ -40,7 +40,10 @@ var _cursor: StdInputCursor = null
 ## get_focus_target returns the last registered focus anchor that's visible in the scene
 ## tree. Note that this does _not_ account for hovered nodes - only those selected to be
 ## "anchors" in the scene.
-static func get_focus_target() -> Control:
+##
+## The `anchor` parameter is an optional node which, when specified, restricts the
+## selected focus target to be a descendent of that node.
+static func get_focus_target(ancestor: Control = null) -> Control:
 	if not _anchors:
 		return null
 
@@ -57,7 +60,10 @@ static func get_focus_target() -> Control:
 			continue
 
 		var target := anchor._control
-		if target.is_visible_in_tree():
+		if (
+			target.is_visible_in_tree()
+			and (not ancestor or ancestor.is_ancestor_of(target))
+		):
 			return target
 
 		i -= 1
