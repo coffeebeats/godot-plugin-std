@@ -279,7 +279,8 @@ func _update_focus() -> void:
 		get_viewport().gui_release_focus()
 		return
 
-	if get_viewport().gui_get_focus_owner():
+	var current_focus := get_viewport().gui_get_focus_owner()
+	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
 		return
 
 	if _hovered:
