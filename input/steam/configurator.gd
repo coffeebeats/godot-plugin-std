@@ -30,10 +30,6 @@ var _logger := StdLogger.create("std/input/steam/configurator")
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	Signals.disconnect_safe(button.pressed, _on_button_pressed)
-
-
 func _ready() -> void:
 	assert(button is Button, "invalid config; missing button node")
 	Signals.connect_safe(button.pressed, _on_button_pressed)
