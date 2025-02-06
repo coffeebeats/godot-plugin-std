@@ -139,13 +139,6 @@ func is_action_set_enabled(slot: int, action_set_name: String) -> bool:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	Signals.disconnect_safe(Steam.input_action_event, _on_input_action_event)
-	Signals.disconnect_safe(
-		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
-	)
-
-
 func _ready() -> void:
 	assert(in_game_actions, "invalid state; missing in game actions")
 	assert(joypad_monitor is SteamJoypadMonitor, "invalid state; missing node")

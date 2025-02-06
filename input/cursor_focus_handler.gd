@@ -40,7 +40,10 @@ var _cursor: StdInputCursor = null
 ## get_focus_target returns the last registered focus anchor that's visible in the scene
 ## tree. Note that this does _not_ account for hovered nodes - only those selected to be
 ## "anchors" in the scene.
-static func get_focus_target() -> Control:
+##
+## The `anchor` parameter is an optional node which, when specified, restricts the
+## selected focus target to be a descendent of that node.
+static func get_focus_target(ancestor: Control = null) -> Control:
 	if not _anchors:
 		return null
 
@@ -57,7 +60,10 @@ static func get_focus_target() -> Control:
 			continue
 
 		var target := anchor._control
-		if target.is_visible_in_tree():
+		if (
+			target.is_visible_in_tree()
+			and (not ancestor or ancestor.is_ancestor_of(target))
+		):
 			return target
 
 		i -= 1
@@ -70,16 +76,6 @@ static func get_focus_target() -> Control:
 
 func _exit_tree() -> void:
 	_anchors.erase(self)
-
-	Signals.disconnect_safe(_control.mouse_entered, _on_Control_mouse_entered)
-	Signals.disconnect_safe(_control.mouse_exited, _on_Control_mouse_exited)
-	(
-		Signals
-		. disconnect_safe(
-			_cursor.cursor_visibility_changed,
-			_on_cursor_visibility_changed,
-		)
-	)
 
 
 func _enter_tree() -> void:
@@ -100,8 +96,8 @@ func _ready() -> void:
 	_control_focus_mode = _control.focus_mode
 	_control_mouse_filter = _control.mouse_filter
 
-	Signals.connect_safe(_control.mouse_entered, _on_Control_mouse_entered)
-	Signals.connect_safe(_control.mouse_exited, _on_Control_mouse_exited)
+	Signals.connect_safe(_control.mouse_entered, _on_control_mouse_entered)
+	Signals.connect_safe(_control.mouse_exited, _on_control_mouse_exited)
 
 	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
 	assert(_cursor is StdInputCursor, "invalid state; missing input cursor")
@@ -121,12 +117,12 @@ func _ready() -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_Control_mouse_entered() -> void:
+func _on_control_mouse_entered() -> void:
 	if _control_focus_mode != FOCUS_NONE:
 		_cursor.set_hovered(_control)
 
 
-func _on_Control_mouse_exited() -> void:
+func _on_control_mouse_exited() -> void:
 	if _control_focus_mode != FOCUS_NONE:
 		_cursor.unset_hovered(_control)
 

@@ -80,26 +80,6 @@ func _enter_tree() -> void:
 	assert(_slot is StdInputSlot, "invalid state; missing player slot")
 
 
-func _exit_tree() -> void:
-	if Engine.is_editor_hint():
-		return
-
-	Signals.disconnect_safe(_slot.action_configuration_changed, _on_actions_changed)
-	Signals.disconnect_safe(
-		_slot.cursor_visibility_changed, _on_cursor_visibility_changed
-	)
-	Signals.disconnect_safe(_slot.device_activated, _on_device_activated)
-
-	if device_type_override is StdSettingsPropertyInt:
-		(
-			Signals
-			. disconnect_safe(
-				device_type_override.value_changed,
-				_on_glyph_type_property_changed,
-			)
-		)
-
-
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 

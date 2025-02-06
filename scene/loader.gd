@@ -69,6 +69,10 @@ static var _logger := StdLogger.create(&"std/scene/loader")  # gdlint:ignore=cla
 
 var _loading: Dictionary = {}
 
+## Don't use sub-threads when running in the editor. This prevents noisy errors due to
+## auto-load references. See https://github.com/godotengine/godot/issues/98865.
+static var _use_sub_threads: bool = not OS.has_feature("editor")  # gdlint:ignore=class-definitions-order,max-line-length
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -97,7 +101,9 @@ func load(path: String) -> Result:
 
 	_logger.info("Loading scene file.", {&"path": path})
 
-	var err := ResourceLoader.load_threaded_request(path, _TYPE_HINT_PACKED_SCENE, true)
+	var err := ResourceLoader.load_threaded_request(
+		path, _TYPE_HINT_PACKED_SCENE, _use_sub_threads
+	)
 	assert(err == OK, "failed to load scene")
 
 	var status := ResourceLoader.load_threaded_get_status(path)

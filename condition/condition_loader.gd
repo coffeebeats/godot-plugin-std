@@ -41,15 +41,23 @@ func _ready() -> void:
 
 
 func _on_allow() -> void:
-	var packed_scene := load(scene)
-	assert(packed_scene is PackedScene, "invalid state; missing packed scene")
-
 	assert(
 		not _node or not _node.is_inside_tree(), "invalid state; found dangling node"
 	)
 
 	if not _node:
+		var packed_scene := load(scene)
+		assert(packed_scene is PackedScene, "invalid state; missing packed scene")
+
 		_node = packed_scene.instantiate()
+
+	(
+		_logger
+		. debug(
+			"Adding node to scene.",
+			{&"parent": get_parent().get_path(), &"scene": scene},
+		)
+	)
 
 	add_child(_node, force_readable_name)
 
@@ -60,6 +68,14 @@ func _on_block() -> void:
 
 	assert(_node.is_inside_tree(), "invalid state; node not in scene")
 	assert(is_ancestor_of(_node), "invalid state; node not a descendent")
+
+	(
+		_logger
+		. debug(
+			"Removing node from scene.",
+			{&"parent": get_parent().get_path(), &"scene": scene},
+		)
+	)
 
 	remove_child(_node)
 

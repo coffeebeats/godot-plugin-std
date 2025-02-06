@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.15.4 (2025-02-06)
+
+## What's Changed
+* fix(input): allow restricting focus to a UI subtree by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/234
+* fix(input): ensure that the currently focused target is a descendant of the focus root by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/236
+* fix(condition): only load nodes in `StdConditionLoader` if needed by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/237
+* fix(scene): hide harmless error when in editor by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/238
+* fix(setting): don't disconnect signals on tree exit by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/239
+* fix(input): remove unnecessary signal disconnections on scene tree exit by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/240
+* fix(input): handle invalid focus roots and missing focus handlers in `StdInputCursor` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/241
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.15.3...v1.15.4
+
 ## 1.15.3 (2025-02-01)
 
 ## What's Changed

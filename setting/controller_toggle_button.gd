@@ -21,11 +21,6 @@ extends StdSettingsController
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	if _target.toggled.is_connected(_on_BaseButton_toggled):
-		_target.toggled.disconnect(_on_BaseButton_toggled)
-
-
 func _ready() -> void:
 	# NOTE: Call first to set initial value prior to signal connection, avoiding an
 	# extra set operation from the controller.
