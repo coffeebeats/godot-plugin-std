@@ -20,11 +20,27 @@ extends StdCondition
 
 func _on_allow() -> void:
 	for target in targets:
+		(
+			_logger
+			. debug(
+				"Making node visible.",
+				{&"parent": get_parent().get_path(), &"target": target},
+			)
+		)
+
 		target.visible = true
 
 
 func _on_block() -> void:
 	for target in targets:
+		(
+			_logger
+			. debug(
+				"Hiding node.",
+				{&"parent": get_parent().get_path(), &"target": target},
+			)
+		)
+
 		target.visible = false
 
 

@@ -40,6 +40,14 @@ func _exit_tree() -> void:
 func _on_allow() -> void:
 	for child in _children:
 		if not is_ancestor_of(child):
+			(
+				_logger
+				. debug(
+					"Adding child to scene.",
+					{&"parent": get_parent().get_path(), &"node": child.name},
+				)
+			)
+
 			add_child(child, false)
 
 
@@ -48,6 +56,14 @@ func _on_block() -> void:
 		assert(child in _children, "invalid state; found unknown child node")
 
 		if is_ancestor_of(child):
+			(
+				_logger
+				. debug(
+					"Removing child from scene.",
+					{&"parent": get_parent().get_path(), &"node": child.name},
+				)
+			)
+
 			remove_child(child)
 
 
