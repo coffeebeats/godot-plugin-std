@@ -20,11 +20,6 @@ extends StdSettingsController
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	if _target.value_changed.is_connected(_on_Range_value_changed):
-		_target.value_changed.disconnect(_on_Range_value_changed)
-
-
 func _ready() -> void:
 	# NOTE: Call first to set initial value prior to signal connection, avoiding an
 	# extra set operation from the controller.

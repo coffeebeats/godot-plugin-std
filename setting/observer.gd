@@ -42,17 +42,6 @@ func _ready() -> void:
 		for p in properties:
 			_handle_value_change(p, p.get_value())
 
-
-func _exit_tree() -> void:
-	for p in _connected:
-		var fn: Callable = _connected[p]
-
-		if p.value_changed.is_connected(fn):
-			p.value_changed.disconnect(fn)
-
-	_connected.clear()
-
-
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
