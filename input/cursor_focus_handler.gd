@@ -77,16 +77,6 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 func _exit_tree() -> void:
 	_anchors.erase(self)
 
-	Signals.disconnect_safe(_control.mouse_entered, _on_Control_mouse_entered)
-	Signals.disconnect_safe(_control.mouse_exited, _on_Control_mouse_exited)
-	(
-		Signals
-		. disconnect_safe(
-			_cursor.cursor_visibility_changed,
-			_on_cursor_visibility_changed,
-		)
-	)
-
 
 func _enter_tree() -> void:
 	if use_as_anchor and not self in _anchors:
@@ -106,8 +96,8 @@ func _ready() -> void:
 	_control_focus_mode = _control.focus_mode
 	_control_mouse_filter = _control.mouse_filter
 
-	Signals.connect_safe(_control.mouse_entered, _on_Control_mouse_entered)
-	Signals.connect_safe(_control.mouse_exited, _on_Control_mouse_exited)
+	Signals.connect_safe(_control.mouse_entered, _on_control_mouse_entered)
+	Signals.connect_safe(_control.mouse_exited, _on_control_mouse_exited)
 
 	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
 	assert(_cursor is StdInputCursor, "invalid state; missing input cursor")
@@ -127,12 +117,12 @@ func _ready() -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_Control_mouse_entered() -> void:
+func _on_control_mouse_entered() -> void:
 	if _control_focus_mode != FOCUS_NONE:
 		_cursor.set_hovered(_control)
 
 
-func _on_Control_mouse_exited() -> void:
+func _on_control_mouse_exited() -> void:
 	if _control_focus_mode != FOCUS_NONE:
 		_cursor.unset_hovered(_control)
 

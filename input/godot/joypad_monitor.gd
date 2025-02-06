@@ -7,6 +7,10 @@
 
 extends StdInputSlot.JoypadMonitor
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Signals := preload("../../event/signal.gd")
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 # NOTE: Match the supported device types to regular expression patterns using Godot's
@@ -85,14 +89,8 @@ func get_device_type(joypad_name: String) -> StdInputDevice.DeviceType:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	if Input.joy_connection_changed.is_connected(_on_Input_joy_connection_changed):
-		Input.joy_connection_changed.disconnect(_on_Input_joy_connection_changed)
-
-
 func _ready() -> void:
-	var err := Input.joy_connection_changed.connect(_on_Input_joy_connection_changed)
-	assert(err == OK, "failed to connect to signal")
+	Signals.connect_safe(Input.joy_connection_changed, _on_Input_joy_connection_changed)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #

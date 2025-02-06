@@ -86,10 +86,6 @@ func reload(device: int = DEVICE_ID_ALL) -> void:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	Signals.disconnect_safe(scope.config.changed, _on_config_changed)
-
-
 func _ready() -> void:
 	assert(scope is StdSettingsScope, "invalid config; missing bindings scope")
 
