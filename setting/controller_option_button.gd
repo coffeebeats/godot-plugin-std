@@ -28,11 +28,6 @@ func _enter_tree() -> void:
 		return
 
 
-func _exit_tree() -> void:
-	if _target.item_selected.is_connected(_on_OptionButton_item_selected):
-		_target.item_selected.disconnect(_on_OptionButton_item_selected)
-
-
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := super._get_configuration_warnings()
 
