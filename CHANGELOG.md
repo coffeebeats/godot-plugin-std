@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.6 (2025-02-06)
+
+## What's Changed
+* fix(input): add a `focus_root_changed` signal to `StdInputCursor` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/244
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.15.5...v1.15.6
+
 ## 1.15.5 (2025-02-06)
 
 ## What's Changed
