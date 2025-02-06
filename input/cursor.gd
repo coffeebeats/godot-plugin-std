@@ -16,6 +16,13 @@ extends Node
 ## changes.
 signal cursor_visibility_changed(visible: bool)
 
+## focus_root_changed is emitted when the focus root changes. Note that `root` may be
+## `null` if the root focus was cleared.
+##
+## NOTE: This will be called *before* `StdInputCursor` recomputes the target focus node,
+## allowing observers to select a specific focus target instead.
+signal focus_root_changed(root: Control)
+
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Signals := preload("../event/signal.gd")
@@ -90,6 +97,9 @@ func set_focus_root(root: Control = null) -> void:
 
 	var changed := _focus_root != root
 	_focus_root = root
+
+	if changed:
+		focus_root_changed.emit(root)
 
 	if changed and not _cursor_visible:
 		_update_focus()
