@@ -49,6 +49,12 @@ const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## use_sub_threads controls whether sub threads are used during background loading.
+##
+## NOTE: Disabling this may reduce noisy errors when loaded scripts contain references
+## to autoloaded scenes (see https://github.com/godotengine/godot/issues/98865).
+@export var use_sub_threads: bool = true
+
 ## process_callback determines whether 'update' is called during the physics or idle
 ## process callback function (if the process mode allows for it).
 @export var process_callback := SceneProcessCallback.SCENE_PROCESS_PHYSICS:
@@ -68,10 +74,6 @@ const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 static var _logger := StdLogger.create(&"std/scene/loader")  # gdlint:ignore=class-definitions-order
 
 var _loading: Dictionary = {}
-
-## Don't use sub-threads when running in the editor. This prevents noisy errors due to
-## auto-load references. See https://github.com/godotengine/godot/issues/98865.
-static var _use_sub_threads: bool = not OS.has_feature("editor")  # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -102,7 +104,7 @@ func load(path: String) -> Result:
 	_logger.info("Loading scene file.", {&"path": path})
 
 	var err := ResourceLoader.load_threaded_request(
-		path, _TYPE_HINT_PACKED_SCENE, _use_sub_threads
+		path, _TYPE_HINT_PACKED_SCENE, use_sub_threads
 	)
 	assert(err == OK, "failed to load scene")
 
@@ -166,7 +168,13 @@ func _update(_delta: float) -> void:
 
 			result.scene = scene
 
-		_logger.info("Finished loading scene.", {&"path": result.path})
+		(
+			_logger
+			. info(
+				"Finished loading scene.",
+				{&"path": result.path, &"status": result.status},
+			)
+		)
 
 		_loading.erase(result.path)
 
