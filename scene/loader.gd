@@ -65,13 +65,13 @@ const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create(&"std/scene/loader") # gdlint:ignore=class-definitions-order
+static var _logger := StdLogger.create(&"std/scene/loader")  # gdlint:ignore=class-definitions-order
 
 var _loading: Dictionary = {}
 
 ## Don't use sub-threads when running in the editor. This prevents noisy errors due to
 ## auto-load references. See https://github.com/godotengine/godot/issues/98865.
-static var _use_sub_threads: bool = not OS.has_feature("editor") # gdlint:ignore=class-definitions-order,max-line-length
+static var _use_sub_threads: bool = not OS.has_feature("editor")  # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
