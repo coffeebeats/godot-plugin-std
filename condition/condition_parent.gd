@@ -29,7 +29,7 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	for child in _children:
 		if child and not child.is_queued_for_deletion():
-			child.free()
+			child.queue_free()
 
 	_children.clear()
 

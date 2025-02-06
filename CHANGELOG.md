@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.5 (2025-02-06)
+
+## What's Changed
+* fix(condition): use `queue_free` to prevent errors when changing scenes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/242
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.15.4...v1.15.5
+
 ## 1.15.4 (2025-02-06)
 
 ## What's Changed

@@ -29,7 +29,7 @@ func _exit_tree() -> void:
 	super._exit_tree()
 
 	if _node:
-		_node.free()
+		_node.queue_free()
 		_node = null
 
 
