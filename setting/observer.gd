@@ -42,6 +42,7 @@ func _ready() -> void:
 		for p in properties:
 			_handle_value_change(p, p.get_value())
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
