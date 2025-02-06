@@ -80,6 +80,14 @@ func set_focus_root(root: Control = null) -> void:
 		"invalid argument; root node isn't visible",
 	)
 
+	(
+		_logger
+		. debug(
+			"Updating focus root.",
+			{&"root": root.get_path() if root else ^"/root"},
+		)
+	)
+
 	var changed := _focus_root != root
 	_focus_root = root
 
@@ -188,7 +196,6 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_INPUT_CURSOR).remove_member(self)
-	Signals.disconnect_safe(get_viewport().gui_focus_changed, _on_gui_focus_changed)
 
 
 func _input(event: InputEvent) -> void:
@@ -279,6 +286,11 @@ func _update_focus() -> void:
 		get_viewport().gui_release_focus()
 		return
 
+	# When switching scenes, nodes will be rebuilt. Ensure the cached focus root is
+	# still valid before trying to use it.
+	if _focus_root and not is_instance_valid(_focus_root):
+		set_focus_root(null)
+
 	var current_focus := get_viewport().gui_get_focus_owner()
 	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
 		return
@@ -296,6 +308,8 @@ func _update_focus() -> void:
 			# swallowed. That ensures the anchor is focused and not a potential
 			# neighbor (depending on what input triggered the change).
 			focus_target.call_deferred(&"grab_focus")
+		elif current_focus:
+			current_focus.release_focus()
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
