@@ -18,6 +18,9 @@ signal cursor_visibility_changed(visible: bool)
 
 ## focus_root_changed is emitted when the focus root changes. Note that `root` may be
 ## `null` if the root focus was cleared.
+##
+## NOTE: This will be called *before* `StdInputCursor` recomputes the target focus node,
+## allowing observers to select a specific focus target instead.
 signal focus_root_changed(root: Control)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
