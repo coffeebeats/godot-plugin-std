@@ -138,9 +138,6 @@ func _select_value(value) -> void:
 
 
 func _on_OptionButton_item_selected(index: int) -> void:
-	if not is_inside_tree():
-		return
-
 	assert(
 		_options is Array and not _options.is_empty(),
 		"invalid state; missing options",
