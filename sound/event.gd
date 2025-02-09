@@ -38,8 +38,8 @@ extends Resource
 
 ## instantiate creates a new instance of this sound event description. The caller must
 ## call its `start` method to begin playback.
-func instantiate(player: Node) -> StdSoundEventInstance:
-	var instance := StdSoundEventInstance.new()
+func instantiate(player: Node) -> StdSoundInstance:
+	var instance := StdSoundInstance.new()
 
 	assert(player is Node, "invalid argument; missing player")
 	instance.player = player
