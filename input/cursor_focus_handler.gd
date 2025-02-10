@@ -127,7 +127,7 @@ func _ready() -> void:
 
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			_cursor.cursor_visibility_changed,
 			_on_cursor_visibility_changed,
 		)
