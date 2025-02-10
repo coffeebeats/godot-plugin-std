@@ -43,6 +43,7 @@ var player: Node = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+# gdlint:ignore=class-definitions-order
 static var _logger := StdLogger.create(&"std/sound/instance")
 
 var _is_done: bool = false
