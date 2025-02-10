@@ -58,7 +58,7 @@ func instantiate(player: Node) -> StdSoundInstance:
 	instance.group = group
 
 	if group:
-		group.reserve(instance)
+		group.add(instance)
 
 	for param in _get_params():
 		assert(param is StdSoundParam, "invalid config; wrong type")
