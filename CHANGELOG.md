@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.0 (2025-02-10)
+
+## What's Changed
+* feat(sound): create a simple event-based audio playback system by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/246
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.15.6...v1.16.0
+
 ## 1.15.6 (2025-02-06)
 
 ## What's Changed
