@@ -7,6 +7,11 @@
 class_name StdAudioBus
 extends Resource
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+@warning_ignore("UNUSED_PRIVATE_CLASS_VARIABLE")
+static var _logger := StdLogger.create(&"std/sound/bus")
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
