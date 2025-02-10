@@ -1,5 +1,5 @@
 ##
-## std/sound/pool_1d.gd
+## std/sound/pool_2d.gd
 ##
 ## StdAudioStreamPlayerPool2D is an object pool of `AudioStreamPlayer2D` nodes.
 ##

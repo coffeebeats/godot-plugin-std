@@ -127,7 +127,7 @@ func _ready() -> void:
 
 	(
 		Signals
-		. connect_safe(
+		.connect_safe(
 			_cursor.cursor_visibility_changed,
 			_on_cursor_visibility_changed,
 		)
@@ -143,7 +143,7 @@ func _ready() -> void:
 func _on_control_focus_entered() -> void:
 	_focused = true
 
-	if sound_effect_focus and (not _hovered):
+	if sound_effect_focus and not _hovered:
 		assert(_player is StdSoundEventPlayer, "invalid state; missing event player")
 		_player.play(sound_effect_focus)
 

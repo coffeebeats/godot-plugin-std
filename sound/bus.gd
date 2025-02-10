@@ -35,7 +35,3 @@ func _get_bus_name() -> StringName:
 
 func _setup() -> void:
 	pass
-
-
-func _teardown() -> void:
-	pass
