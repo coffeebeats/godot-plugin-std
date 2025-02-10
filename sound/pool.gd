@@ -86,6 +86,7 @@ func _ready() -> void:
 
 	assert(_pool.size() == size, "invalid state; pool incorrectly configured")
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 

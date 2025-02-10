@@ -4,7 +4,6 @@
 ## StdAudioStreamPlayerPool1D is an object pool of `AudioStreamPlayer` nodes.
 ##
 
-
 class_name StdAudioStreamPlayerPool1D
 extends "pool.gd"
 

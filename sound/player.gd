@@ -30,6 +30,7 @@ const GROUP_SOUND_PLAYER := &"std/sound:player"
 @warning_ignore("INT_AS_ENUM_WITHOUT_CAST")
 @warning_ignore("INT_AS_ENUM_WITHOUT_MATCH")
 
+
 ## play instantiates and plays the provided sound event. The sound can be faded in using
 ## the provided fade parameters.
 func play(
@@ -65,6 +66,7 @@ func play(
 	instance.start(fade_in, fade_transition, fade_ease)
 
 	return instance
+
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 

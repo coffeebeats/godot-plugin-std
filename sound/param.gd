@@ -14,8 +14,10 @@ extends Resource
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
+
 func apply_to_event_instance(instance: StdSoundInstance) -> void:
 	_apply_to_event_instance(instance)
+
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
