@@ -22,7 +22,7 @@ signal done
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## MUTE_VOLUME_DB describes the relative loudness value that will be used to mute audio.
-const MUTE_VOLUME_DB := -120.0
+const MUTE_VOLUME_DB := 120.0
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
