@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.2 (2025-02-12)
+
+## What's Changed
+* fix(sound): correct sign on `MUTE_VOLUME_DB` so mute works as expected by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/250
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.1...v1.16.2
+
 ## 1.16.1 (2025-02-10)
 
 ## What's Changed
