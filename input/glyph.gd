@@ -131,7 +131,9 @@ func _ready() -> void:
 			)
 		)
 
-	_handle_update()
+	# NOTE: Defer this call so notes higher up in the scene tree can set relevant
+	# properties in their `_ready` callbacks.
+	_handle_update.call_deferred()
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
