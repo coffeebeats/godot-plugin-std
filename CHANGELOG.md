@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.3 (2025-02-13)
+
+## What's Changed
+* fix(input): defer initial `StdInputGlyph` update to allow time for parent nodes to set properties by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/252
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.2...v1.16.3
+
 ## 1.16.2 (2025-02-12)
 
 ## What's Changed
