@@ -12,6 +12,11 @@ extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
+## about_to_grab_focus is emitted whenever the specified node is about to grab focus.
+## The `trigger` parameter is the input action name that caused the focus change, if one
+## exists (i.e. it's only populated if an input action triggered the focus change).
+signal about_to_grab_focus(node: Control, trigger: StringName)
+
 ## cursor_visibility_changed is emitted when the visibility of the application's cursor
 ## changes.
 signal cursor_visibility_changed(visible: bool)
@@ -246,7 +251,7 @@ func _input(event: InputEvent) -> void:
 			if action not in _pressed:
 				_pressed.append(action)
 				_cursor_visible = false
-				_on_properties_changed()
+				_on_properties_changed(action)
 				break
 
 	for action in _hide_actions:
@@ -257,7 +262,7 @@ func _input(event: InputEvent) -> void:
 		if action not in _pressed:
 			_pressed.append(action)
 			_cursor_visible = false
-			_on_properties_changed()
+			_on_properties_changed(action)
 			break
 
 
@@ -291,7 +296,7 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _update_focus() -> void:
+func _update_focus(trigger: StringName = &"") -> void:
 	if _cursor_visible:
 		get_viewport().gui_release_focus()
 		return
@@ -306,6 +311,8 @@ func _update_focus() -> void:
 		return
 
 	if _hovered:
+		about_to_grab_focus.emit(_hovered, trigger)
+
 		# NOTE: Don't use a deferred call so that the current input event applies
 		# as if the previously-hovered node was already focused.
 		_hovered.focus_mode = Control.FOCUS_ALL
@@ -314,6 +321,8 @@ func _update_focus() -> void:
 	else:
 		var focus_target := StdInputCursorFocusHandler.get_focus_target(_focus_root)
 		if focus_target:
+			about_to_grab_focus.emit.call_deferred(focus_target, trigger)
+
 			# NOTE: Use a deferred call here so that the current input event gets
 			# swallowed. That ensures the anchor is focused and not a potential
 			# neighbor (depending on what input triggered the change).
@@ -326,12 +335,17 @@ func _update_focus() -> void:
 
 
 func _on_gui_focus_changed(control: Control) -> void:
+	_logger.debug("GUI focus changed.", {&"path": control.get_path()})
+
 	control.focus_exited.connect(
 		func(): call_deferred(&"_update_focus"), CONNECT_ONE_SHOT
 	)
 
 
-func _on_properties_changed(should_emit: bool = true) -> void:
+func _on_properties_changed(
+	trigger: StringName = &"",
+	should_emit: bool = true,
+) -> void:
 	if _cursor_captured:
 		_cursor_visible = false
 
@@ -352,8 +366,15 @@ func _on_properties_changed(should_emit: bool = true) -> void:
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
-	_update_focus()
+	_update_focus(trigger)
 
 	if should_emit:
-		_logger.info("Cursor visibility changed.", {&"visible": _cursor_visible})
+		(
+			_logger
+			. info(
+				"Cursor visibility changed.",
+				{&"trigger": trigger, &"visible": _cursor_visible},
+			)
+		)
+
 		cursor_visibility_changed.emit(_cursor_visible)

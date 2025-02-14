@@ -24,7 +24,15 @@ signal removed(instance: StdSoundInstance)
 ## space within the group opens up.
 @export var max_audible: int = -1
 
+## resume_playing_on_unmute controls whether sounds that were muted via this group's
+## `mute` method resume audible playback when `unmute` is called. This is helpful for
+## circumstances where the mute functions more as a "prevent new sounds" behavior.
+@export var resume_playing_on_unmute: bool = true
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
+
+# gdlint:ignore=class-definitions-order
+static var _logger := StdLogger.create(&"std/sound/group")
 
 var _mute: int = 0
 var _playing: Array[StdSoundInstance] = []
@@ -72,6 +80,8 @@ func mute() -> void:
 	var was_muted: bool = _mute > 0
 	_mute += 1
 
+	_logger.debug("Muting sound group.", {&"count": _mute})
+
 	if was_muted:
 		return
 
@@ -88,7 +98,12 @@ func unmute() -> void:
 	var was_muted: bool = _mute > 0
 	_mute = max(_mute - 1, 0)
 
+	_logger.debug("Unmuting sound group.", {&"count": _mute})
+
 	if not was_muted or _mute > 0:
+		return
+
+	if not resume_playing_on_unmute:
 		return
 
 	for instance in _playing:
