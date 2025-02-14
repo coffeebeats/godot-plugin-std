@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.4 (2025-02-14)
+
+## What's Changed
+* fix(input,sound): add `about_to_grab_focus` signal as a pre-focus hook; allow sound groups to keep sounds muted after unmute by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/254
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.3...v1.16.4
+
 ## 1.16.3 (2025-02-13)
 
 ## What's Changed
