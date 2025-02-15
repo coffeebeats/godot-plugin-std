@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.16.7 (2025-02-15)
+
+## What's Changed
+* fix(ci): allow pushing a branch update manually by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/260
+* fix(ci): don't skip `release-branch` job even if dependency is skipped by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/262
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.6...v1.16.7
+
 ## 1.16.6 (2025-02-15)
 
 ## What's Changed
