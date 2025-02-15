@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.5 (2025-02-15)
+
+## What's Changed
+* refactor(ci): use `godot-infra` shared action for packaging/publishing addon contents by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/256
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.4...v1.16.5
+
 ## 1.16.4 (2025-02-14)
 
 ## What's Changed
