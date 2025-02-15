@@ -61,7 +61,7 @@ jobs:
         with:
           gdenv-pin-path: .godot-version
 
-      - uses: coffeebeats/godot-infra/package-addon@main
+      - uses: coffeebeats/godot-infra/package-addon@v1
         with:
           subfolder: std
           target-branch: "godot-v${{ steps.version.outputs.major-minor }}"
