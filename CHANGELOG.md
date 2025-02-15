@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.16.8 (2025-02-15)
+
+## What's Changed
+* chore(ci): temporarily pin to `godot-infra/package-addon@main` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/263
+* chore(ci): revert back to `v1` of `godot-infra` action by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/265
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.7...v1.16.8
+
 ## 1.16.7 (2025-02-15)
 
 ## What's Changed
