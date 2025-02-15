@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.9 (2025-02-15)
+
+## What's Changed
+* chore(addons): update `GodotSteam` and `Gut` to latest by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/266
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.8...v1.16.9
+
 ## 1.16.8 (2025-02-15)
 
 ## What's Changed
