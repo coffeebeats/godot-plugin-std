@@ -60,3 +60,5 @@ jobs:
           subfolder: std
           target-branch: "godot-v${{ steps.version.outputs.major-minor }}"
           godot-editor-version: "v${{ steps.version.outputs.semantic }}"
+          file-excludes: |
+            **/*_test.gd
