@@ -215,6 +215,32 @@ func load_action_set(action_set: StdInputActionSet) -> bool:
 # Action set layers
 
 
+## disable_action_set_layer unbinds all of the actions defined within the layer. Does
+## nothing if not activated.
+##
+## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
+## taken.
+func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
+	assert(layer is StdInputActionSetLayer, "invalid argument: layer")
+	assert(actions is StdInputDeviceActions, "invalid state; missing component")
+
+	if not actions.disable_action_set_layer(device_id, layer):
+		return false
+
+	# NOTE: Some implementations (e.g. Steam) may not have their state updated until
+	# player input is received, so do not assert the layer is removed.
+
+	action_set_layer_disabled.emit(layer)
+	action_configuration_changed.emit()
+
+	_logger.info(
+		"Disabled action set layer.",
+		{&"device": device_id, &"type": device_type, &"layer": layer.name}
+	)
+
+	return true
+
+
 ## enable_action_set_layer binds all of the actions defined within the layer. All
 ## *conflicting* origins from either the base action set or prior layers will be
 ## overridden (unbound from prior actions and bound to the action in this layer). Does
@@ -243,30 +269,10 @@ func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	return true
 
 
-## disable_action_set_layer unbinds all of the actions defined within the layer. Does
-## nothing if not activated.
-##
-## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
-## taken.
-func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
-	assert(layer is StdInputActionSetLayer, "invalid argument: layer")
+## list_action_set_layers returns a list of enabled action set layers for the device.
+func list_action_set_layers() -> Array[StdInputActionSetLayer]:
 	assert(actions is StdInputDeviceActions, "invalid state; missing component")
-
-	if not actions.disable_action_set_layer(device_id, layer):
-		return false
-
-	# NOTE: Some implementations (e.g. Steam) may not have their state updated until
-	# player input is received, so do not assert the layer is removed.
-
-	action_set_layer_disabled.emit(layer)
-	action_configuration_changed.emit()
-
-	_logger.info(
-		"Disabled action set layer.",
-		{&"device": device_id, &"type": device_type, &"layer": layer.name}
-	)
-
-	return true
+	return actions.list_action_set_layers(device_id)
 
 
 # Glyphs

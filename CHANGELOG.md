@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.16.10 (2025-02-18)
+
+## What's Changed
+* chore(fsm): disable noisy logging by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/268
+* fix(input): improve flexibility and reliability of `StdInputActionSetLoader` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/270
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.9...v1.16.10
+
 ## 1.16.9 (2025-02-15)
 
 ## What's Changed
