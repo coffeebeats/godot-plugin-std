@@ -152,8 +152,6 @@ func _enter_tree() -> void:
 		_leaves[s.get_instance_id()] = s
 		_states[get_path_to(n)] = s
 
-		_logger.debug("Registered state.", {&"path": str(s._path)})
-
 	# Delete 'Node' instances to prevent their addition to the scene.
 	if compact:
 		var index := 0
