@@ -25,6 +25,11 @@ var _node: Node = null
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _enter_tree() -> void:
+	_logger = _logger.named(&"std/condition/target")
+	super._enter_tree()
+
+
 func _exit_tree() -> void:
 	super._exit_tree()
 

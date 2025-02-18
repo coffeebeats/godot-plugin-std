@@ -15,6 +15,14 @@ extends StdCondition
 ## apply to.
 @export var targets: Array[CanvasItem] = []
 
+# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _enter_tree() -> void:
+	_logger = _logger.named(&"std/condition/target")
+	super._enter_tree()
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 

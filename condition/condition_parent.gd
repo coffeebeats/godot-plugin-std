@@ -22,6 +22,8 @@ var _children: Array[Node] = []
 
 
 func _enter_tree() -> void:
+	_logger = _logger.named(&"std/condition/target")
+
 	_children = get_children()
 	super._enter_tree()
 
