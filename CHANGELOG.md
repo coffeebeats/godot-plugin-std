@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.16.11 (2025-02-21)
+
+## What's Changed
+* fix(sound): add ability to clear an audio stream player pool by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/271
+* fix(sound): ensure `StdSoundInstance`s get cleaned up by ensuring `done` is emitted by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/273
+* fix(scene): disable `use_sub_threads` to prevent crashing by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/274
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.10...v1.16.11
+
 ## 1.16.10 (2025-02-18)
 
 ## What's Changed
