@@ -39,7 +39,7 @@ func clear() -> void:
 	_logger.info("Destroying object pool.")
 
 	for object in _pool:
-		_on_reclaim(object) # NOTE: Reclaim here to reduce risk of use-after-free error.
+		_on_reclaim(object)  # NOTE: Reclaim here to reduce risk of use-after-free error.
 		_destroy_object(object)
 
 		if is_instance_valid(object):
