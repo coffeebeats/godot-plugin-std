@@ -130,6 +130,9 @@ func stop(
 		_tween.kill()
 		_tween = null
 
+	if player.playing and fade_out <= 0.0:
+		player.stop()
+
 	if not player.playing:
 		done.emit()
 		return
