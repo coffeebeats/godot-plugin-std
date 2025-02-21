@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.12 (2025-02-21)
+
+## What's Changed
+* fix(sound): ensure `StdSoundEventPlayer` cleans up its audio stream player pools by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/275
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.11...v1.16.12
+
 ## 1.16.11 (2025-02-21)
 
 ## What's Changed
