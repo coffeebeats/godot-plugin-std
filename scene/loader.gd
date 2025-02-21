@@ -53,7 +53,10 @@ const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 ##
 ## NOTE: Disabling this may reduce noisy errors when loaded scripts contain references
 ## to autoloaded scenes (see https://github.com/godotengine/godot/issues/98865).
-@export var use_sub_threads: bool = true
+##
+## FIXME(https://github.com/godotengine/godot/issues/84012): Re-enable 'use_sub_threads'
+## once crashing is resolved.
+@export var use_sub_threads: bool = false
 
 ## process_callback determines whether 'update' is called during the physics or idle
 ## process callback function (if the process mode allows for it).
@@ -102,6 +105,10 @@ func load(path: String) -> Result:
 		return result
 
 	_logger.info("Loading scene file.", {&"path": path})
+
+	# FIXME(https://github.com/godotengine/godot/issues/84012): Re-enable
+	# 'use_sub_threads' once crashing is resolved.
+	assert(not use_sub_threads, "invalid config; not supported")
 
 	var err := ResourceLoader.load_threaded_request(
 		path, _TYPE_HINT_PACKED_SCENE, use_sub_threads
