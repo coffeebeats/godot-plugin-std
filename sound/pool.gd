@@ -31,6 +31,23 @@ var _pool: Array[Variant] = []
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## clear immediately frees all of the objects within the pool, rendering it empty.
+##
+## NOTE: Be sure that no pooled objects are in use when invoking `clear`, as a crash may
+## occur when using a freed object.
+func clear() -> void:
+	_logger.info("Destroying object pool.")
+
+	for object in _pool:
+		_on_reclaim(object)  # NOTE: Reclaim here to reduce risk of use-after-free error.
+		_destroy_object(object)
+
+		if is_instance_valid(object):
+			object.free()
+
+	_pool.clear()
+
+
 ## claim borrows an object from the pool. If no object is available, `null` is returned.
 func claim() -> Variant:
 	var object: Variant = _pool.pop_back()
@@ -92,6 +109,10 @@ func _ready() -> void:
 
 func _create_object() -> Variant:
 	return null
+
+
+func _destroy_object(_object: Variant) -> void:
+	pass
 
 
 func _on_claim(_object: Variant) -> void:
