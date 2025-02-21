@@ -74,7 +74,7 @@ const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create(&"std/scene/loader") # gdlint:ignore=class-definitions-order
+static var _logger := StdLogger.create(&"std/scene/loader")  # gdlint:ignore=class-definitions-order
 
 var _loading: Dictionary = {}
 
@@ -110,7 +110,9 @@ func load(path: String) -> Result:
 	# 'use_sub_threads' once crashing is resolved.
 	assert(not use_sub_threads, "invalid config; not supported")
 
-	var err := ResourceLoader.load_threaded_request(path, _TYPE_HINT_PACKED_SCENE, use_sub_threads)
+	var err := ResourceLoader.load_threaded_request(
+		path, _TYPE_HINT_PACKED_SCENE, use_sub_threads
+	)
 	assert(err == OK, "failed to load scene")
 
 	var status := ResourceLoader.load_threaded_get_status(path)
@@ -175,7 +177,7 @@ func _update(_delta: float) -> void:
 
 		(
 			_logger
-			.info(
+			. info(
 				"Finished loading scene.",
 				{&"path": result.path, &"status": result.status},
 			)
