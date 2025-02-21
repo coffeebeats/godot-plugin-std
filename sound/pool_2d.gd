@@ -20,12 +20,13 @@ func _create_object() -> Variant:
 func _destroy_object(object: Variant) -> void:
 	var player: AudioStreamPlayer2D = object
 	assert(player is AudioStreamPlayer2D, " invalid argument; wrong type")
-	assert(player in get_children(), "invalid input; not a child node")
 
 	if player.playing:
 		player.stop()
 
-	remove_child(player)
+	if player in get_children():
+		remove_child(player)
+
 	player.free()
 
 
