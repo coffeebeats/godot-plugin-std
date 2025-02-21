@@ -78,3 +78,8 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_SOUND_PLAYER).remove_member(self)
+
+	if pool_1d is StdAudioStreamPlayerPool1D:
+		pool_1d.clear()
+	if pool_2d is StdAudioStreamPlayerPool2D:
+		pool_2d.clear()
