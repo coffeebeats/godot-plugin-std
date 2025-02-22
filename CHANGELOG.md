@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.13 (2025-02-22)
+
+## What's Changed
+* fix(input): only call `DisplayServer` method on supported platforms by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/277
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.12...v1.16.13
+
 ## 1.16.12 (2025-02-21)
 
 ## What's Changed
