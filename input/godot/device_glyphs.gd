@@ -40,7 +40,7 @@ func _get_action_glyph(
 
 		var event := (
 			Bindings
-			.get_action_binding(
+			. get_action_binding(
 				scope,
 				action_set,
 				action,
@@ -78,7 +78,7 @@ func _get_action_origin_label(
 
 	var event := (
 		Bindings
-		.get_action_binding(
+		. get_action_binding(
 			scope,
 			action_set,
 			action,

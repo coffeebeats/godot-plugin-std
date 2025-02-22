@@ -45,7 +45,7 @@ const _WARN_PREFIX_RELEASE := &"WARN:"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _is_editor: bool = OS.has_feature("editor") # gdlint:ignore=class-definitions-order
+static var _is_editor: bool = OS.has_feature("editor")  # gdlint:ignore=class-definitions-order
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
