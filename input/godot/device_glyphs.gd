@@ -40,7 +40,7 @@ func _get_action_glyph(
 
 		var event := (
 			Bindings
-			. get_action_binding(
+			.get_action_binding(
 				scope,
 				action_set,
 				action,
@@ -78,7 +78,7 @@ func _get_action_origin_label(
 
 	var event := (
 		Bindings
-		. get_action_binding(
+		.get_action_binding(
 			scope,
 			action_set,
 			action,
@@ -95,7 +95,15 @@ func _get_action_origin_label(
 		assert(false, "invalid input; missing keycodes")
 		physical_keycode = event.keycode
 
-	var keycode := DisplayServer.keyboard_get_label_from_physical(physical_keycode)
+	var keycode := (
+		DisplayServer.keyboard_get_label_from_physical(physical_keycode)
+		if (
+			OS.has_feature(&"windows")
+			or OS.has_feature(&"macos")
+			or OS.has_feature(&"linuxbsd")
+		)
+		else physical_keycode
+	)
 
 	if not OS.is_keycode_unicode(keycode):
 		return OS.get_keycode_string(keycode)
