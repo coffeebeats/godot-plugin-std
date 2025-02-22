@@ -174,7 +174,7 @@ func info(msg: String, ctx: Dictionary = {}) -> void:
 
 ## debug logs a debug-level message with the provided context `ctx`.
 func debug(msg: String, ctx: Dictionary = {}) -> void:
-	if not _is_editor:
+	if not OS.has_feature(&"debug"):
 		return
 
 	ctx = ctx.duplicate()
