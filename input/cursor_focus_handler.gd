@@ -136,6 +136,12 @@ func _ready() -> void:
 	# Ensure the initial mouse filter state is set.
 	_on_cursor_visibility_changed(_cursor.get_is_visible())
 
+	# Broadcast that a new anchor handler has entered the scene. This ensures that when
+	# a new scene is loaded the UI can seamlessly select a new focus target.
+	if use_as_anchor and visible:
+		# NOTE: Defer this call in case the rest of the scene hasn't finished loading.
+		_cursor.report_focus_handler_visible.call_deferred(self)
+
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
