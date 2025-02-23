@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.14 (2025-02-23)
+
+## What's Changed
+* fix(input): report focus handler visible upon ready by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/279
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.13...v1.16.14
+
 ## 1.16.13 (2025-02-22)
 
 ## What's Changed
