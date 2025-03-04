@@ -1,10 +1,10 @@
 [gd_scene load_steps=6 format=3 uid="uid://bno7ek647xnaf"]
 
-[ext_resource type="Script" path="res://scene/scene.gd" id="1_58vt3"]
-[ext_resource type="Script" path="res://scene/example/main.gd" id="1_y7srq"]
-[ext_resource type="Script" path="res://scene/state/track.gd" id="2_xj43q"]
-[ext_resource type="Script" path="res://scene/state/playable.gd" id="3_d0na2"]
-[ext_resource type="Script" path="res://scene/state/fade.gd" id="4_x50d8"]
+[ext_resource type="Script" uid="uid://br56la7gn3kka" path="res://scene/scene.gd" id="1_58vt3"]
+[ext_resource type="Script" uid="uid://dorm1l0t132ig" path="res://scene/example/main.gd" id="1_y7srq"]
+[ext_resource type="Script" uid="uid://b24dlcs8yhqps" path="res://scene/state/track.gd" id="2_xj43q"]
+[ext_resource type="Script" uid="uid://cnjio0uj37od0" path="res://scene/state/playable.gd" id="3_d0na2"]
+[ext_resource type="Script" uid="uid://dwudf8vu6vh5x" path="res://scene/state/fade.gd" id="4_x50d8"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_y7srq")
