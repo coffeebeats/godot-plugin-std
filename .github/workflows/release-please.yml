@@ -56,12 +56,12 @@ jobs:
         with:
           submodules: true
 
-      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v1
+      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v2
         id: version
         with:
           gdenv-pin-path: .godot-version
 
-      - uses: coffeebeats/godot-infra/package-addon@v1
+      - uses: coffeebeats/godot-infra/package-addon@v2
         with:
           subfolder: std
           target-branch: "godot-v${{ steps.version.outputs.major-minor }}"
