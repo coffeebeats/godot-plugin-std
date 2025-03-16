@@ -25,8 +25,8 @@ jobs:
     timeout-minutes: 5
 
     outputs:
-      has_change: "${{ steps.check-non-source.outputs.any_modified == 'true' || steps.check-source.outputs.any_modified == 'true' }}"
-      has_source_change: "${{ steps.check-source.outputs.any_modified == 'true' }}"
+      has_change: "${{ steps.check-non-source.outputs.changed == 'true' || steps.check-source.outputs.changed == 'true' }}"
+      has_source_change: "${{ steps.check-source.outputs.changed == 'true' }}"
 
     steps:
       - uses: actions/checkout@v4
@@ -35,15 +35,15 @@ jobs:
 
       - name: Check for any non-source code changes
         id: check-non-source
-        uses: tj-actions/changed-files@v45
+        uses: coffeebeats/godot-infra/changed-files@v2
         with:
-          files_ignore: "**/*.gd"
+          exclude: "**/*.gd"
 
       - name: Check for any source code changes
         id: check-source
-        uses: tj-actions/changed-files@v45
+        uses: coffeebeats/godot-infra/changed-files@v2
         with:
-          files: "**/*.gd"
+          include: "**/*.gd"
 
   format-and-lint:
     needs: ["changes"]
