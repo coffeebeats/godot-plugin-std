@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://c0kd16i7v6rkm"]
 
-[ext_resource type="Script" path="res://scene/example/screen.gd" id="1_0xa13"]
-[ext_resource type="Script" path="res://scene/handle.gd" id="2_87pjw"]
+[ext_resource type="Script" uid="uid://bys1qhpwlwc1i" path="res://scene/example/screen.gd" id="1_0xa13"]
+[ext_resource type="Script" uid="uid://p0v745ukqbbi" path="res://scene/handle.gd" id="2_87pjw"]
 
 [node name="Screen" type="ColorRect"]
 anchors_preset = 15
