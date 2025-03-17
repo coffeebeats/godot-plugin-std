@@ -29,19 +29,19 @@ jobs:
       has_source_change: "${{ steps.check-source.outputs.any_modified == 'true' }}"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
 
       - name: Check for any non-source code changes
         id: check-non-source
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@2f7c5bfce28377bc069a65ba478de0a74aa0ca32
         with:
           files_ignore: "**/*.gd"
 
       - name: Check for any source code changes
         id: check-source
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@2f7c5bfce28377bc069a65ba478de0a74aa0ca32
         with:
           files: "**/*.gd"
 
@@ -55,7 +55,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           # Checkout the "head_ref" (i.e. PR branch HEAD) in case a commit is
           # later needed. See https://github.com/stefanzweifel/git-auto-commit-action
@@ -73,7 +73,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: true
 
