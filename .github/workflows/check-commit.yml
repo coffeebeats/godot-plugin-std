@@ -25,25 +25,25 @@ jobs:
     timeout-minutes: 5
 
     outputs:
-      has_change: "${{ steps.check-non-source.outputs.changed == 'true' || steps.check-source.outputs.changed == 'true' }}"
-      has_source_change: "${{ steps.check-source.outputs.changed == 'true' }}"
+      has_change: "${{ steps.check-non-source.outputs.any_modified == 'true' || steps.check-source.outputs.any_modified == 'true' }}"
+      has_source_change: "${{ steps.check-source.outputs.any_modified == 'true' }}"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
 
       - name: Check for any non-source code changes
         id: check-non-source
-        uses: coffeebeats/godot-infra/changed-files@v2
+        uses: tj-actions/changed-files@2f7c5bfce28377bc069a65ba478de0a74aa0ca32
         with:
-          exclude: "**/*.gd"
+          files_ignore: "**/*.gd"
 
       - name: Check for any source code changes
         id: check-source
-        uses: coffeebeats/godot-infra/changed-files@v2
+        uses: tj-actions/changed-files@2f7c5bfce28377bc069a65ba478de0a74aa0ca32
         with:
-          include: "**/*.gd"
+          files: "**/*.gd"
 
   format-and-lint:
     needs: ["changes"]
@@ -55,7 +55,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           # Checkout the "head_ref" (i.e. PR branch HEAD) in case a commit is
           # later needed. See https://github.com/stefanzweifel/git-auto-commit-action
@@ -63,7 +63,7 @@ jobs:
           ref: ${{ github.head_ref }}
           token: ${{ env.ACTIONS_BOT_TOKEN }}
 
-      - uses: "coffeebeats/godot-infra/check-godot-project@v2"
+      - uses: coffeebeats/godot-infra/check-godot-project@v2
 
   test:
     needs: ["changes"]
@@ -73,16 +73,16 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: true
 
-      - uses: "coffeebeats/godot-infra/.github/actions/parse-godot-version@v2"
+      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v2
         id: version
         with:
           gdenv-pin-path: .godot-version
 
-      - uses: "coffeebeats/godot-infra/.github/actions/setup-godot@v2"
+      - uses: coffeebeats/godot-infra/.github/actions/setup-godot@v2
         with:
           version: ${{ steps.version.outputs.semantic }}
 

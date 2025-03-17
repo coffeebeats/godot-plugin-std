@@ -21,9 +21,9 @@ jobs:
       release-tag: ${{ steps.release.outputs.tag_name }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445
         id: release
         with:
           config-file: .release-please/config.json
@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: true
 

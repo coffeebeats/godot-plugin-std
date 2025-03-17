@@ -11,4 +11,4 @@ updates:
     reviewers:
       - coffeebeats
     schedule:
-      interval: "weekly"
+      interval: "monthly"
