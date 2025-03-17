@@ -1,9 +1,0 @@
-[submodule "addons/gut"]
-path = addons/gut
-url = git@github.com:coffeebeats/gut.git
-branch = godot-v4.4
-
-[submodule "addons/godotsteam"]
-path = addons/godotsteam
-url = git@github.com:coffeebeats/GodotSteam.git
-branch = godot-v4.4
