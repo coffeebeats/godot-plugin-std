@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0 (2025-03-17)
+
+## What's Changed
+* chore!: update to Godot `v4.4` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/281
+* fix(ci): pin all external GitHub action versions to a specific commit by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/284
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v1.16.14...v2.0.0
+
 ## 1.16.14 (2025-02-23)
 
 ## What's Changed
