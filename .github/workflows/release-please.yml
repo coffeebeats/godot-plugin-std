@@ -6,10 +6,6 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   release-please:
     if: github.event_name != 'workflow_dispatch'
@@ -32,6 +28,9 @@ jobs:
           # NOTE: To handle releases on specific branches (e.g. a '1.X' release branch),
           # simply change the "branches" filter in the workflow's on-"push" trigger.
           target-branch: ${{ github.ref_name }}
+
+          # NOTE: This PAT requires 'contents:write' and 'pull-requests:write' permissions.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
       - name: Log release-please action output
         shell: bash
