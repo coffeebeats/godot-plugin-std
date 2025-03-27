@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write # Used by 'coffeebeats/godot-infra/package-addon@v2'
+
 jobs:
   release-please:
     if: github.event_name != 'workflow_dispatch'
