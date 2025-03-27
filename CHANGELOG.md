@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.2 (2025-03-27)
+
+## What's Changed
+* chore(ci): don't automerge Dependabot PRs by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/287
+* chore: update to Godot `v4.4.1-stable` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/289
+* chore(addons): update `GodotSteam` to latest by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/290
+* fix(ci): use a PAT for the `release-please` workflow by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/291
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v2.0.1...v2.0.2
+
 ## 2.0.1 (2025-03-17)
 
 ## What's Changed
