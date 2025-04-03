@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.3 (2025-04-03)
+
+## What's Changed
+* chore(deps): bump tj-actions/changed-files from 46.0.1 to 46.0.3 by @dependabot in https://github.com/coffeebeats/godot-plugin-std/pull/292
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v2.0.2...v2.0.3
+
 ## 2.0.2 (2025-03-27)
 
 ## What's Changed
