@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write # Used by 'coffeebeats/godot-infra/package-addon@v2'
+  issues: write
 
 jobs:
   release-please:
