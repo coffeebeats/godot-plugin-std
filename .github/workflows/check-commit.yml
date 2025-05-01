@@ -1,4 +1,4 @@
-name: "📋 Check: Godot project"
+name: "🔎 Check: Godot project"
 
 on:
   pull_request:
@@ -37,12 +37,14 @@ jobs:
         id: check-non-source
         uses: tj-actions/changed-files@823fcebdb31bb35fdf2229d9f769b400309430d0
         with:
+          exclude_submodules: true
           files_ignore: "**/*.gd"
 
       - name: Check for any source code changes
         id: check-source
         uses: tj-actions/changed-files@823fcebdb31bb35fdf2229d9f769b400309430d0
         with:
+          exclude_submodules: true
           files: "**/*.gd"
 
   format-and-lint:
@@ -111,16 +113,8 @@ jobs:
     timeout-minutes: 1
 
     steps:
-      - name: Verify 'format-and-lint' status
+      - name: Verify status of dependencies
         if: |
           always() &&
-          needs.format-and-lint.result == 'failure' ||
-          needs.format-and-lint.result == 'cancelled'
-        run: exit 1
-
-      - name: Verify 'test' status
-        if: |
-          always() &&
-          needs.test.result == 'failure' ||
-          needs.test.result == 'cancelled'
+          (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
         run: exit 1
