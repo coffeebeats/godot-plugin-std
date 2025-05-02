@@ -7,5 +7,15 @@
 # MacOS-specific ignores
 .DS_Store
 
+# Godot source/editor files
+godot/
+Godot.app
+godot.app
+Godot.exe
+godot.exe
+
 # Testing-related ignores
 # ...
+
+# IDE-related files
+.vscode/*
