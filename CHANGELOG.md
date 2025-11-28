@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.0.0 (2025-11-28)
+
+## What's Changed
+* chore(deps): bump tj-actions/changed-files from 46.0.1 to 46.0.3 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/292
+* refactor(ci): simplify `branch_protection` check; skip submodules when checking for changes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/295
+* chore(deps): bump tj-actions/changed-files from 46.0.3 to 46.0.5 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/294
+* fix(ci): add missing `issues:write` permission to `release-please` workflow by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/296
+* chore: ignore `godot/` directory and editor binaries by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/297
+* chore(deps): bump actions/checkout from 4.2.2 to 5.0.0 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/298
+* chore(deps): bump googleapis/release-please-action from 4.2.0 to 4.3.0 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/299
+* chore(deps): bump tj-actions/changed-files from 46.0.5 to 47.0.0 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/300
+* chore(deps): bump googleapis/release-please-action from 4.3.0 to 4.4.0 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/301
+* chore!: update to Godot `v4.5` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/302
+* chore(docs): update versions in `README.md` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/303
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v2.0.2...v3.0.0
+
 ## 2.0.2 (2025-03-27)
 
 ## What's Changed
