@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.2 (2025-12-21)
+
+## What's Changed
+* chore: update imports and `GodotSteam` initialization settings by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/309
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v3.0.1...v3.0.2
+
 ## 3.0.1 (2025-12-21)
 
 ## What's Changed
