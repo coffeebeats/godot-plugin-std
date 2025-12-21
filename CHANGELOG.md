@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.0.1 (2025-12-21)
+
+## What's Changed
+* chore(addons): update `Gut` to latest by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/305
+* chore(deps): bump actions/checkout from 5.0.0 to 6.0.0 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/304
+* chore(input): migrate to new linter name by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/307
+* chore(docs): remove outdated binary path for formatting/linting tools by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/308
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v3.0.0...v3.0.1
+
 ## 3.0.0 (2025-11-28)
 
 ## What's Changed
