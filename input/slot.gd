@@ -583,7 +583,7 @@ func _connect_joy_device(
 	assert(device >= 0, "invalid argument; device must be >= 0")
 
 	# NOTE: Shadowing here prevents using wrong type.
-	@warning_ignore("SHADOWED_VARIABLE")
+	@warning_ignore("SHADOWED_VARIABLE_BASE_CLASS")
 	var device_type := joy_device_type
 
 	if device_type == DEVICE_TYPE_KEYBOARD:
@@ -651,7 +651,7 @@ func _list_action_sets(
 
 func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
 	# NOTE: Shadowing here prevents using wrong type.
-	@warning_ignore("SHADOWED_VARIABLE")
+	@warning_ignore("SHADOWED_VARIABLE_BASE_CLASS")
 	var device_type := joy_device_type
 
 	var joy := StdInputDevice.new()
@@ -704,7 +704,6 @@ func _on_Self_action_configuration_changed() -> void:
 	# override properties set in earlier action sets.
 	for action_set in action_sets:
 		# Update cursor properties.
-
 		_cursor_activates_kbm = (
 			false
 			if action_set.cursor_activates_kbm == PROPERTY_STATUS_OFF
