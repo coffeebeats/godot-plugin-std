@@ -10,7 +10,8 @@ To use this plugin, add this repository as a submodule of a Godot project (typic
 
 #### Branch name / Release tag: Godot version
 
-- `main` / `v3`: `v4.5`
+- `main` / `v4`: `v4.6`
+- `v3`: `v4.5`
 - `v2`: `v4.4`
 - `v1`: `v4.3`
 - `v0`: `v4.2`
@@ -74,7 +75,6 @@ When submitting code for review, ensure the following requirements are met:
 
     ```sh
     godot \
-        --quit \
         --headless \
         -s addons/gut/gut_cmdln.gd \
         -gdir="res://" \

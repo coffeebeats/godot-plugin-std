@@ -65,7 +65,7 @@ jobs:
           ref: ${{ github.head_ref }}
           token: ${{ env.ACTIONS_BOT_TOKEN }}
 
-      - uses: coffeebeats/godot-infra/check-godot-project@v3
+      - uses: coffeebeats/godot-infra/check-godot-project@v4
 
   test:
     needs: ["changes"]
@@ -79,12 +79,12 @@ jobs:
         with:
           submodules: true
 
-      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v3
+      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v4
         id: version
         with:
           gdenv-pin-path: .godot-version
 
-      - uses: coffeebeats/godot-infra/.github/actions/setup-godot@v3
+      - uses: coffeebeats/godot-infra/.github/actions/setup-godot@v4
         with:
           version: ${{ steps.version.outputs.semantic }}
 

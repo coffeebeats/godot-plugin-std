@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # Used by 'coffeebeats/godot-infra/package-addon@v3'
+  contents: write # Used by 'coffeebeats/godot-infra/package-addon@v4'
   issues: write
 
 jobs:
@@ -59,12 +59,12 @@ jobs:
         with:
           submodules: true
 
-      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v3
+      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v4
         id: version
         with:
           gdenv-pin-path: .godot-version
 
-      - uses: coffeebeats/godot-infra/package-addon@v3
+      - uses: coffeebeats/godot-infra/package-addon@v4
         with:
           subfolder: std
           target-branch: "godot-v${{ steps.version.outputs.major-minor }}"
