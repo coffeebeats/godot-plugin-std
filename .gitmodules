@@ -1,3 +1,8 @@
+[submodule "addons/gdUnit4"]
+path = addons/gdUnit4
+url = git@github.com:coffeebeats/gdUnit4.git
+branch = godot-v4.6
+
 [submodule "addons/gut"]
 path = addons/gut
 url = git@github.com:coffeebeats/gut.git
