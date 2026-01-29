@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.0.1 (2026-01-29)
+
+## What's Changed
+* fix(docs): Update README for branch naming convention by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/317
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.0.0...v4.0.1
+
 ## 4.0.0 (2026-01-29)
 
 ## What's Changed
