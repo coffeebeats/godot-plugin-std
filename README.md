@@ -74,7 +74,6 @@ When submitting code for review, ensure the following requirements are met:
 
     ```sh
     godot \
-        --quit \
         --headless \
         -s addons/gut/gut_cmdln.gd \
         -gdir="res://" \
