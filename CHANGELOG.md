@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.0.0 (2026-01-29)
+
+## What's Changed
+* chore(addons): add `gdUnit4` as a dependency by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/313
+* chore(deps): bump actions/checkout from 6.0.0 to 6.0.1 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/312
+* chore(deps): bump tj-actions/changed-files from 47.0.0 to 47.0.1 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/311
+* chore(addons): Revert "add `gdUnit4` as a dependency (#313)" by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/315
+* chore!: update for Godot `v4.6` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/316
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v3.0.2...v4.0.0
+
 ## 3.0.2 (2025-12-21)
 
 ## What's Changed
