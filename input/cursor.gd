@@ -319,7 +319,10 @@ func _update_focus(trigger: StringName = &"") -> void:
 		_hovered.grab_focus()
 		unset_hovered(_hovered)
 	else:
-		var focus_target := StdInputCursorFocusHandler.get_focus_target(_focus_root)
+		var focus_target: Control = null
+		if _focus_root and not _focus_root.is_queued_for_deletion():
+			focus_target = StdInputCursorFocusHandler.get_focus_target(_focus_root)
+
 		if focus_target:
 			about_to_grab_focus.emit.call_deferred(focus_target, trigger)
 
