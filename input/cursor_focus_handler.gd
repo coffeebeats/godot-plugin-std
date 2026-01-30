@@ -132,6 +132,13 @@ func _ready() -> void:
 			_on_cursor_visibility_changed,
 		)
 	)
+	(
+		Signals
+		. connect_safe(
+			_cursor.focus_root_changed,
+			_on_focus_root_changed,
+		)
+	)
 
 	# Ensure the initial mouse filter state is set.
 	_on_cursor_visibility_changed(_cursor.get_is_visible())
@@ -187,3 +194,15 @@ func _on_cursor_visibility_changed(is_cursor_visible: bool) -> void:
 	else:
 		_control.mouse_filter = _control_mouse_filter
 		_control.focus_mode = FOCUS_NONE
+
+
+func _on_focus_root_changed(root: Control) -> void:
+	# If there's a focus root and this control isn't under it, disable focus and mouse
+	# interaction to prevent elements outside the root (e.g., behind a modal) from
+	# receiving focus or hover.
+	if root and not root.is_ancestor_of(_control):
+		_control.mouse_filter = MOUSE_FILTER_IGNORE
+		_control.focus_mode = FOCUS_NONE
+		return
+
+	_on_cursor_visibility_changed(_cursor.get_is_visible())
