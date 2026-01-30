@@ -275,8 +275,12 @@ func test_is_encoded_value_type_returns_false_for_negative_values() -> void:
 	var value_encoded: int = -1
 
 	# When: The value is checked against known indices.
-	var is_kbm := Origin.is_encoded_value_type(value_encoded, Origin.bitmask_indices_kbm)
-	var is_joy := Origin.is_encoded_value_type(value_encoded, Origin.bitmask_indices_joy)
+	var is_kbm := Origin.is_encoded_value_type(
+		value_encoded, Origin.bitmask_indices_kbm
+	)
+	var is_joy := Origin.is_encoded_value_type(
+		value_encoded, Origin.bitmask_indices_joy
+	)
 
 	# Then: Both checks return false.
 	assert_false(is_kbm)

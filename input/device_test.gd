@@ -18,9 +18,18 @@ func test_get_device_category_returns_correct_category(
 			[StdInputDevice.DEVICE_TYPE_XBOX_360, StdInputDevice.DEVICE_TYPE_GENERIC],
 			[StdInputDevice.DEVICE_TYPE_XBOX_ONE, StdInputDevice.DEVICE_TYPE_GENERIC],
 			[StdInputDevice.DEVICE_TYPE_SWITCH_PRO, StdInputDevice.DEVICE_TYPE_GENERIC],
-			[StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR, StdInputDevice.DEVICE_TYPE_GENERIC],
-			[StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE, StdInputDevice.DEVICE_TYPE_GENERIC],
-			[StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER, StdInputDevice.DEVICE_TYPE_GENERIC],
+			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR,
+				StdInputDevice.DEVICE_TYPE_GENERIC
+			],
+			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE,
+				StdInputDevice.DEVICE_TYPE_GENERIC
+			],
+			[
+				StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER,
+				StdInputDevice.DEVICE_TYPE_GENERIC
+			],
 			[StdInputDevice.DEVICE_TYPE_STEAM_DECK, StdInputDevice.DEVICE_TYPE_GENERIC],
 			[StdInputDevice.DEVICE_TYPE_TOUCH, StdInputDevice.DEVICE_TYPE_GENERIC],
 		]
