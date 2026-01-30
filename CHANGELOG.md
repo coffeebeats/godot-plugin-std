@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.0.2 (2026-01-30)
+
+## What's Changed
+* fix(input): handle non-null, queued-for-deletion focus root by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/320
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.0.1...v4.0.2
+
 ## 4.0.1 (2026-01-29)
 
 ## What's Changed
