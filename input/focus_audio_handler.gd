@@ -39,7 +39,9 @@ var _player: StdSoundEventPlayer = null
 
 func _ready() -> void:
 	_handler = get_node_or_null(focus_handler)
-	assert(_handler is StdInputCursorFocusHandler, "invalid state; missing focus handler")
+	assert(
+		_handler is StdInputCursorFocusHandler, "invalid state; missing focus handler"
+	)
 
 	if not StdGroup.is_empty(StdSoundEventPlayer.GROUP_SOUND_PLAYER):
 		_player = StdGroup.get_sole_member(StdSoundEventPlayer.GROUP_SOUND_PLAYER)

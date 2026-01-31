@@ -37,7 +37,6 @@ const Signals := preload("../event/signal.gd")
 ## effect, the target node will be focus when the cursor is hidden.
 @export var use_as_anchor: bool = false
 
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 # gdlint:ignore=class-definitions-order
