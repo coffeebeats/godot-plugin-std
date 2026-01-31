@@ -11,9 +11,17 @@ extends Control
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-## focused is emitted when this focus handler's target `Control` node is the currently
-## focused UI element.
+## focused is emitted when the target `Control` node gains focus.
 signal focused
+
+## unfocused is emitted when the target `Control` node loses focus.
+signal unfocused
+
+## hovered is emitted when the mouse cursor enters the target `Control` node.
+signal hovered
+
+## unhovered is emitted when the mouse cursor exits the target `Control` node.
+signal unhovered
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -29,15 +37,6 @@ const Signals := preload("../event/signal.gd")
 ## effect, the target node will be focus when the cursor is hidden.
 @export var use_as_anchor: bool = false
 
-@export_subgroup("Feedback")
-
-## sound_effect_focus is a sound event to play when the target `Control` node is
-## first focused. This will not play if the node was already hovered.
-@export var sound_effect_focus: StdSoundEvent = null
-
-## sound_effect_hover is a sound event to play when the target `Control` node is
-## first hovered. This will not play if the node was already focused.
-@export var sound_effect_hover: StdSoundEvent = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -49,11 +48,20 @@ var _control_mouse_filter: MouseFilter = MOUSE_FILTER_IGNORE
 var _cursor: StdInputCursor = null
 var _focused: bool = false
 var _hovered: bool = false
-var _player: StdSoundEventPlayer = null
 
 @onready var _control: Control = get_node(control)
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## is_focused returns whether the target `Control` node currently has focus.
+func is_focused() -> bool:
+	return _focused
+
+
+## is_hovered returns whether the target `Control` node is currently hovered.
+func is_hovered() -> bool:
+	return _hovered
 
 
 ## get_focus_target returns the last registered focus anchor that's visible in the scene
@@ -123,8 +131,6 @@ func _ready() -> void:
 	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
 	assert(_cursor is StdInputCursor, "invalid state; missing input cursor")
 
-	_player = StdGroup.get_sole_member(StdSoundEventPlayer.GROUP_SOUND_PLAYER)
-
 	(
 		Signals
 		. connect_safe(
@@ -155,16 +161,12 @@ func _ready() -> void:
 
 func _on_control_focus_entered() -> void:
 	_focused = true
-
-	if sound_effect_focus and not _hovered:
-		assert(_player is StdSoundEventPlayer, "invalid state; missing event player")
-		_player.play(sound_effect_focus)
-
 	focused.emit()
 
 
 func _on_control_focus_exited() -> void:
 	_focused = false
+	unfocused.emit()
 
 
 func _on_control_mouse_entered() -> void:
@@ -172,10 +174,7 @@ func _on_control_mouse_entered() -> void:
 		_cursor.set_hovered(_control)
 
 	_hovered = true
-
-	if sound_effect_hover and not _focused:
-		assert(_player is StdSoundEventPlayer, "invalid state; missing event player")
-		_player.play(sound_effect_hover)
+	hovered.emit()
 
 
 func _on_control_mouse_exited() -> void:
@@ -183,6 +182,7 @@ func _on_control_mouse_exited() -> void:
 		_cursor.unset_hovered(_control)
 
 	_hovered = false
+	unhovered.emit()
 
 
 func _on_cursor_visibility_changed(is_cursor_visible: bool) -> void:
