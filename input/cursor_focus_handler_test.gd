@@ -7,7 +7,6 @@ extends GutTest
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var cursor: StdInputCursor = null
-var player: StdSoundEventPlayer = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -245,6 +244,156 @@ func test_focus_root_change_keeps_controls_inside_root_enabled() -> void:
 	assert_eq(button_inside.mouse_filter, Control.MOUSE_FILTER_STOP)
 
 
+func test_focused_signal_emitted_on_focus() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	button.add_child(handler)
+
+	# Given: The focused signal is being watched.
+	watch_signals(handler)
+
+	# When: The button gains focus.
+	button.focus_entered.emit()
+
+	# Then: The focused signal is emitted.
+	assert_signal_emitted(handler, "focused")
+
+
+func test_unfocused_signal_emitted_on_blur() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	button.add_child(handler)
+
+	# Given: The unfocused signal is being watched.
+	watch_signals(handler)
+
+	# When: The button loses focus.
+	button.focus_exited.emit()
+
+	# Then: The unfocused signal is emitted.
+	assert_signal_emitted(handler, "unfocused")
+
+
+func test_hovered_signal_emitted_on_mouse_enter() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	button.add_child(handler)
+
+	# Given: The hovered signal is being watched.
+	watch_signals(handler)
+
+	# When: The mouse enters the button.
+	button.mouse_entered.emit()
+
+	# Then: The hovered signal is emitted.
+	assert_signal_emitted(handler, "hovered")
+
+
+func test_unhovered_signal_emitted_on_mouse_exit() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	button.add_child(handler)
+
+	# Given: The unhovered signal is being watched.
+	watch_signals(handler)
+
+	# When: The mouse exits the button.
+	button.mouse_exited.emit()
+
+	# Then: The unhovered signal is emitted.
+	assert_signal_emitted(handler, "unhovered")
+
+
+func test_is_focused_returns_correct_state() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	button.add_child(handler)
+
+	# Then: Initially not focused.
+	assert_false(handler.is_focused())
+
+	# When: The button gains focus.
+	button.focus_entered.emit()
+
+	# Then: is_focused returns true.
+	assert_true(handler.is_focused())
+
+	# When: The button loses focus.
+	button.focus_exited.emit()
+
+	# Then: is_focused returns false.
+	assert_false(handler.is_focused())
+
+
+func test_is_hovered_returns_correct_state() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	button.add_child(handler)
+
+	# Then: Initially not hovered.
+	assert_false(handler.is_hovered())
+
+	# When: The mouse enters the button.
+	button.mouse_entered.emit()
+
+	# Then: is_hovered returns true.
+	assert_true(handler.is_hovered())
+
+	# When: The mouse exits the button.
+	button.mouse_exited.emit()
+
+	# Then: is_hovered returns false.
+	assert_false(handler.is_hovered())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -256,16 +405,10 @@ func before_all() -> void:
 func before_each() -> void:
 	# Clear global state before each test.
 	StdGroup.with_id(StdInputCursor.GROUP_INPUT_CURSOR).clear_members()
-	StdGroup.with_id(StdSoundEventPlayer.GROUP_SOUND_PLAYER).clear_members()
 	StdInputCursorFocusHandler._anchors.clear()
 
 	cursor = autofree(StdInputCursor.new())
 
-	# NOTE: StdInputCursorFocusHandler requires a sound player in the scene.
-	player = StdSoundEventPlayer.new()
-	add_child_autofree(player)
-
 
 func after_each() -> void:
 	cursor = null
-	player = null
