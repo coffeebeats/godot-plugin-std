@@ -2,7 +2,7 @@
 ## std/input/cursor_focus_handler.gd
 ##
 ## StdInputCursorFocusHandler is a class which helps manage UI focus for a configured
-## `Control` node. It will work with a `StdInputCursor` singleton node to grab or 
+## `Control` node. It will work with a `StdInputCursor` singleton node to grab or
 ## release focus depending on whether the UI navigation mode is cursor or focus-based.
 ##
 
@@ -116,19 +116,19 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 
 
 func _exit_tree() -> void:
-	_anchors.erase(self )
+	_anchors.erase(self)
 
 
 func _enter_tree() -> void:
 	if use_as_anchor and not self in _anchors:
-		_anchors.append(self )
+		_anchors.append(self)
 
 
 func _notification(what) -> void:
 	match what:
 		NOTIFICATION_VISIBILITY_CHANGED:
 			if visible and _cursor is StdInputCursor:
-				_cursor.report_focus_handler_visible(self )
+				_cursor.report_focus_handler_visible(self)
 
 
 func _ready() -> void:
@@ -153,14 +153,14 @@ func _ready() -> void:
 
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			_cursor.cursor_visibility_changed,
 			_on_cursor_visibility_changed,
 		)
 	)
 	(
 		Signals
-		.connect_safe(
+		. connect_safe(
 			_cursor.focus_root_changed,
 			_on_focus_root_changed,
 		)
@@ -173,7 +173,7 @@ func _ready() -> void:
 	# a new scene is loaded the UI can seamlessly select a new focus target.
 	if use_as_anchor and visible:
 		# NOTE: Defer this call in case the rest of the scene hasn't finished loading.
-		_cursor.report_focus_handler_visible.call_deferred(self )
+		_cursor.report_focus_handler_visible.call_deferred(self)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
