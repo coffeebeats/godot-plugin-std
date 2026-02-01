@@ -142,7 +142,7 @@ func test_cursor_visibility_change_toggles_focus_mode() -> void:
 	handler.control = NodePath("..")
 	button.add_child(handler)
 
-	# Then: Initially (cursor visible), focus_mode is NONE and mouse_filter preserved.
+	# Given: Cursor visibility is handled correctly.
 	assert_eq(button.focus_mode, Control.FOCUS_NONE)
 	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_STOP)
 
@@ -392,6 +392,77 @@ func test_is_hovered_returns_correct_state() -> void:
 
 	# Then: is_hovered returns false.
 	assert_false(handler.is_hovered())
+
+
+func test_disabled_button_input_state(
+	params = use_parameters(
+		(
+			ParameterFactory
+			. named_parameters(
+				["block", "expected_mouse_filter"],
+				[
+					[true, Control.MOUSE_FILTER_IGNORE],
+					[false, Control.MOUSE_FILTER_STOP],
+				]
+			)
+		)
+	)
+) -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A disabled button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.disabled = true
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	handler.block_focus_and_hover_on_disable = params.block
+	button.add_child(handler)
+
+	# Then: The button's input state reflects the blocking configuration.
+	assert_eq(button.focus_mode, Control.FOCUS_NONE)
+	assert_eq(button.mouse_filter, params.expected_mouse_filter)
+
+
+func test_get_focus_target_with_disabled_anchor(
+	params = use_parameters(
+		(
+			ParameterFactory
+			. named_parameters(
+				["block", "expect_target"],
+				[
+					[true, false],
+					[false, true],
+				]
+			)
+		)
+	)
+) -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A disabled button with a focus handler as anchor.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.disabled = true
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	handler.use_as_anchor = true
+	handler.block_focus_and_hover_on_disable = params.block
+	button.add_child(handler)
+
+	# Then: The focus target reflects the blocking configuration.
+	var got := StdInputCursorFocusHandler.get_focus_target()
+	if params.expect_target:
+		assert_eq(got, button)
+	else:
+		assert_null(got)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #

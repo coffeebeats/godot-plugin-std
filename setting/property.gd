@@ -30,8 +30,7 @@ const Config := preload("../config/config.gd")
 ## can be used by virtual properties to ensure changes aren't saved.
 @export var readonly: bool = false
 
-# NOTE: Add a space character to disambiguate with property of same name.
-@export_category("Scope ")
+@export_category("Scope")
 
 ## scope is the settings scope to which this property will read and writes its value.
 @export var scope: StdSettingsScope = null

@@ -36,8 +36,7 @@ const MICROSECONDS_PER_SECOND := 1e6
 		if Engine.is_editor_hint():
 			update_configuration_warnings()
 
-# NOTE: Insert a space to avoid overwriting global 'Timer' variable.
-@export_category("Timer ")
+@export_category("Timer")
 
 ## Determines whether the internal timer is advanced during physics or render frames.
 @export var process_callback: Timer.TimerProcessCallback = Timer.TIMER_PROCESS_IDLE:
