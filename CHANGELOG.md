@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.0.3 (2026-02-01)
+
+## What's Changed
+* fix(input): handle dropping focus if new root doesn't contain it by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/322
+* fix(input): add unit tests for most important features by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/324
+* fix(input): add missing UID files for tests by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/325
+* refactor(input): decouple audio playback from focus handler by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/326
+* fix(input): block focus handling for disabled buttons by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/327
+* chore(input): parameterize some test cases to make tests more concise by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/328
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.0.2...v4.0.3
+
 ## 4.0.2 (2026-01-30)
 
 ## What's Changed
