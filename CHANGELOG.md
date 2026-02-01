@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.0.5 (2026-02-01)
+
+## What's Changed
+* fix: upgrade project files by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/332
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.0.4...v4.0.5
+
 ## 4.0.4 (2026-02-01)
 
 ## What's Changed
