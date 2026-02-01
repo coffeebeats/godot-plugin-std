@@ -89,8 +89,7 @@ const MICROSECONDS_PER_SECOND := 1e6
 ## removed from the 'SceneTree'.
 @export var timeout_on_tree_exit := false
 
-# NOTE: Insert a space to avoid overwriting global 'Timer' variable.
-@export_category("Timer ")
+@export_category("Timer")
 
 ## Determines whether the internal timer is advanced during physics or render frames.
 @export var process_callback: Timer.TimerProcessCallback = Timer.TIMER_PROCESS_IDLE:

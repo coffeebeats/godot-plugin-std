@@ -2,8 +2,8 @@
 ## std/input/cursor_focus_handler.gd
 ##
 ## StdInputCursorFocusHandler is a class which helps manage UI focus for a configured
-## `Control` node. It will work with a `StdInputCursor` singleton node to grab or release
-## focus depending on whether the UI navigation mode is cursor or focus-based.
+## `Control` node. It will work with a `StdInputCursor` singleton node to grab or
+## release focus depending on whether the UI navigation mode is cursor or focus-based.
 ##
 
 class_name StdInputCursorFocusHandler
@@ -11,9 +11,17 @@ extends Control
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-## focused is emitted when this focus handler's target `Control` node is the currently
-## focused UI element.
+## focused is emitted when the target `Control` node gains focus.
 signal focused
+
+## unfocused is emitted when the target `Control` node loses focus.
+signal unfocused
+
+## hovered is emitted when the mouse cursor enters the target `Control` node.
+signal hovered
+
+## unhovered is emitted when the mouse cursor exits the target `Control` node.
+signal unhovered
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
@@ -29,31 +37,38 @@ const Signals := preload("../event/signal.gd")
 ## effect, the target node will be focus when the cursor is hidden.
 @export var use_as_anchor: bool = false
 
-@export_subgroup("Feedback")
+@export_category("Button")
 
-## sound_effect_focus is a sound event to play when the target `Control` node is
-## first focused. This will not play if the node was already hovered.
-@export var sound_effect_focus: StdSoundEvent = null
-
-## sound_effect_hover is a sound event to play when the target `Control` node is
-## first hovered. This will not play if the node was already focused.
-@export var sound_effect_hover: StdSoundEvent = null
+## block_focus_and_hover_on_disable configures this focus handler to prevent its target
+## `Control` node from receiving hover and focus effects if it's disabled.
+@export var block_focus_and_hover_on_disable: bool = true
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 # gdlint:ignore=class-definitions-order
 static var _anchors: Array[StdInputCursorFocusHandler] = []
 
+var _control_disabled: bool = false
 var _control_focus_mode: FocusMode = FOCUS_NONE
 var _control_mouse_filter: MouseFilter = MOUSE_FILTER_IGNORE
 var _cursor: StdInputCursor = null
 var _focused: bool = false
 var _hovered: bool = false
-var _player: StdSoundEventPlayer = null
+var _is_outside_focus_root: bool = false
 
 @onready var _control: Control = get_node(control)
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## is_focused returns whether the target `Control` node currently has focus.
+func is_focused() -> bool:
+	return _focused
+
+
+## is_hovered returns whether the target `Control` node is currently hovered.
+func is_hovered() -> bool:
+	return _hovered
 
 
 ## get_focus_target returns the last registered focus anchor that's visible in the scene
@@ -72,10 +87,17 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 
 		if not anchor is StdInputCursorFocusHandler:
 			assert(false, "invalid state; wrong node type")
+			i -= 1
 			continue
 
 		if not anchor._control is Control:
 			assert(false, "invalid state; invalid target node")
+			i -= 1
+			continue
+
+		# Skip disabled buttons if configured.
+		if anchor.block_focus_and_hover_on_disable and anchor._control_disabled:
+			i -= 1
 			continue
 
 		var target := anchor._control
@@ -120,10 +142,14 @@ func _ready() -> void:
 	Signals.connect_safe(_control.mouse_entered, _on_control_mouse_entered)
 	Signals.connect_safe(_control.mouse_exited, _on_control_mouse_exited)
 
+	# Monitor disabled state changes for BaseButtons via the draw signal; see
+	# https://github.com/godotengine/godot-proposals/issues/8889.
+	if _control is BaseButton:
+		_control_disabled = _control is BaseButton and _control.disabled
+		Signals.connect_safe(_control.draw, _on_control_draw)
+
 	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
 	assert(_cursor is StdInputCursor, "invalid state; missing input cursor")
-
-	_player = StdGroup.get_sole_member(StdSoundEventPlayer.GROUP_SOUND_PLAYER)
 
 	(
 		Signals
@@ -132,9 +158,16 @@ func _ready() -> void:
 			_on_cursor_visibility_changed,
 		)
 	)
+	(
+		Signals
+		. connect_safe(
+			_cursor.focus_root_changed,
+			_on_focus_root_changed,
+		)
+	)
 
-	# Ensure the initial mouse filter state is set.
-	_on_cursor_visibility_changed(_cursor.get_is_visible())
+	# Ensure the initial state is set.
+	_update_input_state(_cursor.get_is_visible())
 
 	# Broadcast that a new anchor handler has entered the scene. This ensures that when
 	# a new scene is loaded the UI can seamlessly select a new focus target.
@@ -143,21 +176,57 @@ func _ready() -> void:
 		_cursor.report_focus_handler_visible.call_deferred(self)
 
 
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _update_input_state(is_cursor_visible: bool) -> void:
+	# Disabled buttons should not receive any input if blocking is enabled.
+	if (
+		block_focus_and_hover_on_disable
+		and _control is BaseButton
+		and _control_disabled
+	):
+		_control.focus_mode = FOCUS_NONE
+		_control.mouse_filter = MOUSE_FILTER_IGNORE
+		return
+
+	# If there's a focus root and this control isn't under it, disable focus and mouse
+	# interaction to prevent elements outside the root (e.g., behind a modal) from
+	# receiving focus or hover.
+	if _is_outside_focus_root:
+		_control.focus_mode = FOCUS_NONE
+		_control.mouse_filter = MOUSE_FILTER_IGNORE
+		return
+
+	if not is_cursor_visible:
+		# NOTE: When cursor is hidden, disable mouse filter to prevent hovering; see
+		# https://github.com/godotengine/godot/issues/56783.
+		_control.focus_mode = _control_focus_mode
+		_control.mouse_filter = MOUSE_FILTER_IGNORE
+	else:
+		_control.focus_mode = FOCUS_NONE
+		_control.mouse_filter = _control_mouse_filter
+
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_control_draw() -> void:
+	var button: BaseButton = _control
+	assert(button, "invalid state; unexpected control target type.")
+
+	_control_disabled = button.disabled
+	_update_input_state(_cursor.get_is_visible())
 
 
 func _on_control_focus_entered() -> void:
 	_focused = true
-
-	if sound_effect_focus and not _hovered:
-		assert(_player is StdSoundEventPlayer, "invalid state; missing event player")
-		_player.play(sound_effect_focus)
-
 	focused.emit()
 
 
 func _on_control_focus_exited() -> void:
 	_focused = false
+	unfocused.emit()
 
 
 func _on_control_mouse_entered() -> void:
@@ -165,10 +234,7 @@ func _on_control_mouse_entered() -> void:
 		_cursor.set_hovered(_control)
 
 	_hovered = true
-
-	if sound_effect_hover and not _focused:
-		assert(_player is StdSoundEventPlayer, "invalid state; missing event player")
-		_player.play(sound_effect_hover)
+	hovered.emit()
 
 
 func _on_control_mouse_exited() -> void:
@@ -176,14 +242,13 @@ func _on_control_mouse_exited() -> void:
 		_cursor.unset_hovered(_control)
 
 	_hovered = false
+	unhovered.emit()
 
 
 func _on_cursor_visibility_changed(is_cursor_visible: bool) -> void:
-	# NOTE: In order to stop a hidden cursor from hovering a UI element, disable its
-	# mouse filter property; see https://github.com/godotengine/godot/issues/56783.
-	if not is_cursor_visible:
-		_control.mouse_filter = MOUSE_FILTER_IGNORE
-		_control.focus_mode = _control_focus_mode
-	else:
-		_control.mouse_filter = _control_mouse_filter
-		_control.focus_mode = FOCUS_NONE
+	_update_input_state(is_cursor_visible)
+
+
+func _on_focus_root_changed(root: Control) -> void:
+	_is_outside_focus_root = root != null and not root.is_ancestor_of(_control)
+	_update_input_state(_cursor.get_is_visible())

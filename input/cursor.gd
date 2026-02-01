@@ -310,7 +310,20 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
 		return
 
-	if _hovered:
+	# NOTE: If the focus root is null or being deleted, search for any anchor;
+	# otherwise, restrict the search to anchors under the focus root.
+	var root := (
+		_focus_root
+		if is_instance_valid(_focus_root) and not _focus_root.is_queued_for_deletion()
+		else null
+	)
+
+	# NOTE: Only use _hovered if it's under the focus root (or there's no focus root).
+	# This handles the case where a modal opens over a hovered element - the element
+	# remains hovered but shouldn't receive focus (this is a Godot bug).
+	var hovered_under_root := _hovered and (not root or root.is_ancestor_of(_hovered))
+
+	if hovered_under_root:
 		about_to_grab_focus.emit(_hovered, trigger)
 
 		# NOTE: Don't use a deferred call so that the current input event applies
@@ -319,16 +332,16 @@ func _update_focus(trigger: StringName = &"") -> void:
 		_hovered.grab_focus()
 		unset_hovered(_hovered)
 	else:
-		var focus_target: Control = null
-		if _focus_root and not _focus_root.is_queued_for_deletion():
-			focus_target = StdInputCursorFocusHandler.get_focus_target(_focus_root)
+		if _hovered:
+			unset_hovered(_hovered)
+
+		var focus_target := StdInputCursorFocusHandler.get_focus_target(root)
 
 		if focus_target:
 			about_to_grab_focus.emit.call_deferred(focus_target, trigger)
 
-			# NOTE: Use a deferred call here so that the current input event gets
-			# swallowed. That ensures the anchor is focused and not a potential
-			# neighbor (depending on what input triggered the change).
+			# NOTE: Use a deferred call here so that the cursor visibility signal
+			# is processed first, allowing focus handlers to restore focus_mode.
 			focus_target.call_deferred(&"grab_focus")
 		elif current_focus:
 			current_focus.release_focus()
