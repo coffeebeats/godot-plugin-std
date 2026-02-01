@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.0.4 (2026-02-01)
+
+## What's Changed
+* chore(deps): bump actions/checkout from 6.0.1 to 6.0.2 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/329
+* fix(ci): skip examples during addon packaging by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/331
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.0.3...v4.0.4
+
 ## 4.0.3 (2026-02-01)
 
 ## What's Changed
