@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://cgm848o6qsj8n"]
+[gd_scene format=3 uid="uid://cgm848o6qsj8n"]
 
-[ext_resource type="Script" uid="uid://bys1qhpwlwc1i" path="res://scene/example/screen.gd" id="1_vpn5y"]
-[ext_resource type="Script" uid="uid://p0v745ukqbbi" path="res://scene/handle.gd" id="2_7gnix"]
+[ext_resource type="Script" uid="uid://cmgkn5ipmxs8t" path="res://scene/example/screen.gd" id="1_vpn5y"]
+[ext_resource type="Script" uid="uid://c84mmkfcun3hb" path="res://scene/handle.gd" id="2_7gnix"]
 
-[node name="Screen" type="ColorRect"]
+[node name="Screen" type="ColorRect" unique_id=2100983862]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -13,5 +13,5 @@ color = Color(0, 0, 0, 1)
 script = ExtResource("1_vpn5y")
 target = NodePath("Boot/Transition2")
 
-[node name="SceneHandle" type="Node" parent="."]
+[node name="SceneHandle" type="Node" parent="." unique_id=379680071]
 script = ExtResource("2_7gnix")

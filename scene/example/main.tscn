@@ -1,53 +1,53 @@
-[gd_scene load_steps=6 format=3 uid="uid://bno7ek647xnaf"]
+[gd_scene format=3 uid="uid://bno7ek647xnaf"]
 
-[ext_resource type="Script" uid="uid://dd4f7sijknd33" path="res://scene/scene.gd" id="1_58vt3"]
-[ext_resource type="Script" uid="uid://dtaj22at0np2n" path="res://scene/example/main.gd" id="1_y7srq"]
-[ext_resource type="Script" uid="uid://c0fcm8wqlb5dl" path="res://scene/state/track.gd" id="2_xj43q"]
-[ext_resource type="Script" uid="uid://b0dsminnypnro" path="res://scene/state/playable.gd" id="3_d0na2"]
-[ext_resource type="Script" uid="uid://b1yo2hjwxd7m7" path="res://scene/state/fade.gd" id="4_x50d8"]
+[ext_resource type="Script" uid="uid://br56la7gn3kka" path="res://scene/scene.gd" id="1_58vt3"]
+[ext_resource type="Script" uid="uid://dorm1l0t132ig" path="res://scene/example/main.gd" id="1_y7srq"]
+[ext_resource type="Script" uid="uid://b24dlcs8yhqps" path="res://scene/state/track.gd" id="2_xj43q"]
+[ext_resource type="Script" uid="uid://cnjio0uj37od0" path="res://scene/state/playable.gd" id="3_d0na2"]
+[ext_resource type="Script" uid="uid://dwudf8vu6vh5x" path="res://scene/state/fade.gd" id="4_x50d8"]
 
-[node name="Main" type="Node"]
+[node name="Main" type="Node" unique_id=258320388]
 script = ExtResource("1_y7srq")
 
-[node name="Scene" type="Node" parent="."]
+[node name="Scene" type="Node" parent="." unique_id=1223615978]
 script = ExtResource("1_58vt3")
 game_root = NodePath("../Root")
 initial = NodePath("Boot/Scene1")
 compact = false
 process_callback = 1
 
-[node name="Boot" type="Node" parent="Scene"]
+[node name="Boot" type="Node" parent="Scene" unique_id=1165497527]
 script = ExtResource("2_xj43q")
 
-[node name="Scene1" type="Node" parent="Scene/Boot"]
+[node name="Scene1" type="Node" parent="Scene/Boot" unique_id=466169650]
 script = ExtResource("3_d0na2")
 scene = "res://scene/example/black.tscn"
 
-[node name="Transition2" type="Node" parent="Scene/Boot"]
+[node name="Transition2" type="Node" parent="Scene/Boot" unique_id=1024762504]
 script = ExtResource("4_x50d8")
 fade_in = false
 to = NodePath("../Scene2")
 
-[node name="Scene2" type="Node" parent="Scene/Boot"]
+[node name="Scene2" type="Node" parent="Scene/Boot" unique_id=1957520337]
 script = ExtResource("3_d0na2")
 scene = "res://scene/example/blue.tscn"
 
-[node name="Transition3" type="Node" parent="Scene/Boot"]
+[node name="Transition3" type="Node" parent="Scene/Boot" unique_id=1919695524]
 script = ExtResource("4_x50d8")
 to = NodePath("../Scene3")
 
-[node name="Scene3" type="Node" parent="Scene/Boot"]
+[node name="Scene3" type="Node" parent="Scene/Boot" unique_id=117369763]
 script = ExtResource("3_d0na2")
 scene = "res://scene/example/red.tscn"
 
-[node name="Transition4" type="Node" parent="Scene/Boot"]
+[node name="Transition4" type="Node" parent="Scene/Boot" unique_id=1758630393]
 script = ExtResource("4_x50d8")
 fade_out = false
 to = NodePath("../Scene1")
 
-[node name="Root" type="Node" parent="."]
+[node name="Root" type="Node" parent="." unique_id=1674874066]
 
-[node name="Label" type="Label" parent="."]
+[node name="Label" type="Label" parent="." unique_id=2118313502]
 z_index = 10
 anchors_preset = 15
 anchor_right = 1.0
