@@ -29,12 +29,15 @@ func test_list_action_names_returns_all_action_types() -> void:
 
 func test_list_action_names_handles_absolute_mouse(
 	params = use_parameters(
-		ParameterFactory.named_parameters(
-			["include_absolute_mouse", "expected"],
-			[
-				[false, PackedStringArray([&"jump"])],
-				[true, PackedStringArray([&"jump", &"mouse_aim"])],
-			]
+		(
+			ParameterFactory
+			. named_parameters(
+				["include_absolute_mouse", "expected"],
+				[
+					[false, PackedStringArray([&"jump"])],
+					[true, PackedStringArray([&"jump", &"mouse_aim"])],
+				]
+			)
 		)
 	)
 ) -> void:

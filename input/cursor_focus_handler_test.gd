@@ -246,14 +246,17 @@ func test_focus_root_change_keeps_controls_inside_root_enabled() -> void:
 
 func test_handler_emits_signal_on_control_event(
 	params = use_parameters(
-		ParameterFactory.named_parameters(
-			["trigger_signal", "expected_signal"],
-			[
-				["focus_entered", "focused"],
-				["focus_exited", "unfocused"],
-				["mouse_entered", "hovered"],
-				["mouse_exited", "unhovered"],
-			]
+		(
+			ParameterFactory
+			. named_parameters(
+				["trigger_signal", "expected_signal"],
+				[
+					["focus_entered", "focused"],
+					["focus_exited", "unfocused"],
+					["mouse_entered", "hovered"],
+					["mouse_exited", "unhovered"],
+				]
+			)
 		)
 	)
 ) -> void:
