@@ -27,28 +27,29 @@ func test_list_action_names_returns_all_action_types() -> void:
 	)
 
 
-func test_list_action_names_excludes_absolute_mouse_by_default() -> void:
+func test_list_action_names_handles_absolute_mouse(
+	params = use_parameters(
+		(
+			ParameterFactory
+			. named_parameters(
+				["include_absolute_mouse", "expected"],
+				[
+					[false, PackedStringArray([&"jump"])],
+					[true, PackedStringArray([&"jump", &"mouse_aim"])],
+				]
+			)
+		)
+	)
+) -> void:
 	# Given: An action set with an absolute mouse action.
 	action_set.actions_digital = [&"jump"]
 	action_set.action_absolute_mouse = &"mouse_aim"
 
-	# When: Action names are listed without including absolute mouse.
-	var got := action_set.list_action_names()
+	# When: Action names are listed with the specified flag.
+	var got := action_set.list_action_names(params.include_absolute_mouse)
 
-	# Then: The absolute mouse action is not included.
-	assert_eq(got, PackedStringArray([&"jump"]))
-
-
-func test_list_action_names_includes_absolute_mouse_when_requested() -> void:
-	# Given: An action set with an absolute mouse action.
-	action_set.actions_digital = [&"jump"]
-	action_set.action_absolute_mouse = &"mouse_aim"
-
-	# When: Action names are listed with absolute mouse included.
-	var got := action_set.list_action_names(true)
-
-	# Then: The absolute mouse action is included at the end.
-	assert_eq(got, PackedStringArray([&"jump", &"mouse_aim"]))
+	# Then: The expected actions are returned.
+	assert_eq(got, params.expected)
 
 
 func test_list_action_names_returns_empty_for_empty_action_set() -> void:

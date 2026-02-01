@@ -244,7 +244,22 @@ func test_focus_root_change_keeps_controls_inside_root_enabled() -> void:
 	assert_eq(button_inside.mouse_filter, Control.MOUSE_FILTER_STOP)
 
 
-func test_focused_signal_emitted_on_focus() -> void:
+func test_handler_emits_signal_on_control_event(
+	params = use_parameters(
+		(
+			ParameterFactory
+			. named_parameters(
+				["trigger_signal", "expected_signal"],
+				[
+					["focus_entered", "focused"],
+					["focus_exited", "unfocused"],
+					["mouse_entered", "hovered"],
+					["mouse_exited", "unhovered"],
+				]
+			)
+		)
+	)
+) -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
 
@@ -257,83 +272,14 @@ func test_focused_signal_emitted_on_focus() -> void:
 	handler.control = NodePath("..")
 	button.add_child(handler)
 
-	# Given: The focused signal is being watched.
+	# Given: The handler signals are being watched.
 	watch_signals(handler)
 
-	# When: The button gains focus.
-	button.focus_entered.emit()
+	# When: The control emits the trigger signal.
+	button.get(params.trigger_signal).emit()
 
-	# Then: The focused signal is emitted.
-	assert_signal_emitted(handler, "focused")
-
-
-func test_unfocused_signal_emitted_on_blur() -> void:
-	# Given: A cursor in the scene.
-	add_child_autofree(cursor)
-
-	# Given: A button with a focus handler.
-	var button := Button.new()
-	button.focus_mode = Control.FOCUS_ALL
-	add_child_autofree(button)
-
-	var handler := StdInputCursorFocusHandler.new()
-	handler.control = NodePath("..")
-	button.add_child(handler)
-
-	# Given: The unfocused signal is being watched.
-	watch_signals(handler)
-
-	# When: The button loses focus.
-	button.focus_exited.emit()
-
-	# Then: The unfocused signal is emitted.
-	assert_signal_emitted(handler, "unfocused")
-
-
-func test_hovered_signal_emitted_on_mouse_enter() -> void:
-	# Given: A cursor in the scene.
-	add_child_autofree(cursor)
-
-	# Given: A button with a focus handler.
-	var button := Button.new()
-	button.focus_mode = Control.FOCUS_ALL
-	add_child_autofree(button)
-
-	var handler := StdInputCursorFocusHandler.new()
-	handler.control = NodePath("..")
-	button.add_child(handler)
-
-	# Given: The hovered signal is being watched.
-	watch_signals(handler)
-
-	# When: The mouse enters the button.
-	button.mouse_entered.emit()
-
-	# Then: The hovered signal is emitted.
-	assert_signal_emitted(handler, "hovered")
-
-
-func test_unhovered_signal_emitted_on_mouse_exit() -> void:
-	# Given: A cursor in the scene.
-	add_child_autofree(cursor)
-
-	# Given: A button with a focus handler.
-	var button := Button.new()
-	button.focus_mode = Control.FOCUS_ALL
-	add_child_autofree(button)
-
-	var handler := StdInputCursorFocusHandler.new()
-	handler.control = NodePath("..")
-	button.add_child(handler)
-
-	# Given: The unhovered signal is being watched.
-	watch_signals(handler)
-
-	# When: The mouse exits the button.
-	button.mouse_exited.emit()
-
-	# Then: The unhovered signal is emitted.
-	assert_signal_emitted(handler, "unhovered")
+	# Then: The expected handler signal is emitted.
+	assert_signal_emitted(handler, params.expected_signal)
 
 
 func test_is_focused_returns_correct_state() -> void:

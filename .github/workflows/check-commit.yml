@@ -15,10 +15,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  # NOTE: Switch to repository secret to have new commit run workflows.
-  ACTIONS_BOT_TOKEN: ${{ github.token }}
-
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -63,7 +59,9 @@ jobs:
           # later needed. See https://github.com/stefanzweifel/git-auto-commit-action
           # for more details.
           ref: ${{ github.head_ref }}
-          token: ${{ env.ACTIONS_BOT_TOKEN }}
+
+          # NOTE: Use repository secret to have new commit run workflows.
+          token: ${{ secrets.GHA_TOKEN || github.token }}
 
       - uses: coffeebeats/godot-infra/check-godot-project@v4
 
