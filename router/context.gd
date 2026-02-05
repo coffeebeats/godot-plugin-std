@@ -36,6 +36,9 @@ const NAVIGATION_EVENT_REPLACE := NavigationEvent.NAVIGATION_EVENT_REPLACE
 ## The router instance handling this navigation.
 var router: StdRouter = null
 
+## result is the result of the last hook's evaluation.
+var result: StdRouteHook.Result = null
+
 @export_category("Navigation")
 
 ## event is the triggering event type for the route navigation.
