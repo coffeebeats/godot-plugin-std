@@ -29,12 +29,13 @@ extends StdRouteHook
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger: StdLogger = StdLogger.create(&"std/router/hook/logger")  # gdlint:ignore=class-definitions-order
+# gdlint:ignore=class-definitions-order
+static var _logger: StdLogger = StdLogger.create(&"std/router/hook/logger")
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _after_enter(context: StdRouteContext) -> void:
+func _after_enter(context: StdRouterContext) -> void:
 	if log_after_enter:
 		(
 			_logger
@@ -52,7 +53,7 @@ func _after_enter(context: StdRouteContext) -> void:
 	return Result.new()
 
 
-func _after_exit(context: StdRouteContext) -> void:
+func _after_exit(context: StdRouterContext) -> void:
 	if log_after_exit:
 		(
 			_logger
@@ -70,7 +71,7 @@ func _after_exit(context: StdRouteContext) -> void:
 	return Result.new()
 
 
-func _before_enter(context: StdRouteContext) -> Result:
+func _before_enter(context: StdRouterContext) -> Result:
 	if log_before_enter:
 		(
 			_logger
@@ -88,7 +89,7 @@ func _before_enter(context: StdRouteContext) -> Result:
 	return Result.new()
 
 
-func _before_exit(context: StdRouteContext) -> Result:
+func _before_exit(context: StdRouterContext) -> Result:
 	if log_before_exit:
 		(
 			_logger
@@ -109,17 +110,17 @@ func _before_exit(context: StdRouteContext) -> Result:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _get_navigation_event_name(event: StdRouteContext.NavigationEvent) -> String:
+func _get_navigation_event_name(event: StdRouterContext.NavigationEvent) -> String:
 	match event:
-		StdRouteContext.NAVIGATION_EVENT_INITIAL:
+		StdRouterContext.NAVIGATION_EVENT_INITIAL:
 			return "initial"
-		StdRouteContext.NAVIGATION_EVENT_POP:
+		StdRouterContext.NAVIGATION_EVENT_POP:
 			return "pop"
-		StdRouteContext.NAVIGATION_EVENT_PUSH:
+		StdRouterContext.NAVIGATION_EVENT_PUSH:
 			return "push"
-		StdRouteContext.NAVIGATION_EVENT_REDIRECT:
+		StdRouterContext.NAVIGATION_EVENT_REDIRECT:
 			return "redirect"
-		StdRouteContext.NAVIGATION_EVENT_REPLACE:
+		StdRouterContext.NAVIGATION_EVENT_REPLACE:
 			return "replace"
 		_:
 			return "unknown"

@@ -43,30 +43,30 @@ class Result:
 
 ## before_enter is called before entering a route. Return a `Result` to control the
 ## navigation behavior.
-func before_enter(context: StdRouteContext) -> Result:
-	assert(context.from_route, "invalid state; missing 'to' route.")
+func before_enter(context: StdRouterContext) -> Result:
+	# NOTE: 'from_route' may be null on initial navigation.
 	assert(context.to_route, "invalid state; missing 'to' route.")
 	return _before_enter(context)
 
 
 ## after_enter is called after successfully entering a route.
-func after_enter(context: StdRouteContext) -> void:
-	assert(context.from_route, "invalid state; missing 'to' route.")
+func after_enter(context: StdRouterContext) -> void:
+	# NOTE: from_route may be null on initial navigation.
 	assert(context.to_route, "invalid state; missing 'to' route.")
 	_after_enter(context)
 
 
 ## before_exit is called before exiting a route. Return a `Result` to control the
 ## navigation behavior.
-func before_exit(context: StdRouteContext) -> Result:
-	assert(context.from_route, "invalid state; missing 'to' route.")
+func before_exit(context: StdRouterContext) -> Result:
+	assert(context.from_route, "invalid state; missing 'from' route.")
 	assert(context.to_route, "invalid state; missing 'to' route.")
 	return _before_exit(context)
 
 
 ## after_exit is called after successfully exiting a route.
-func after_exit(context: StdRouteContext) -> void:
-	assert(context.from_route, "invalid state; missing 'to' route.")
+func after_exit(context: StdRouterContext) -> void:
+	assert(context.from_route, "invalid state; missing 'from' route.")
 	assert(context.to_route, "invalid state; missing 'to' route.")
 	_after_exit(context)
 
@@ -75,20 +75,20 @@ func after_exit(context: StdRouteContext) -> void:
 
 
 ## _before_enter is a virtual method called before entering a route.
-func _before_enter(_context: StdRouteContext) -> Result:
+func _before_enter(_context: StdRouterContext) -> Result:
 	return Result.new()
 
 
 ## _after_enter is a virtual method called after successfully entering a route.
-func _after_enter(_context: StdRouteContext) -> void:
+func _after_enter(_context: StdRouterContext) -> void:
 	pass
 
 
 ## _before_exit is a virtual method called before exiting a route.
-func _before_exit(_context: StdRouteContext) -> Result:
+func _before_exit(_context: StdRouterContext) -> Result:
 	return Result.new()
 
 
 ## _after_exit is a virtual method called after successfully exiting a route.
-func _after_exit(_context: StdRouteContext) -> void:
+func _after_exit(_context: StdRouterContext) -> void:
 	pass

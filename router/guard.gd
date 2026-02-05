@@ -12,7 +12,7 @@ extends Resource
 
 
 ## is_allowed returns whether the navigation event is allowed for the given context.
-func is_allowed(context: StdRouteContext) -> bool:
+func is_allowed(context: StdRouterContext) -> bool:
 	return _is_allowed(context)
 
 
@@ -22,6 +22,6 @@ func is_allowed(context: StdRouteContext) -> bool:
 ## A virtual method returning whether navigation is allowed to proceed.
 ##
 ## NOTE: This method must be overridden.
-func _is_allowed(_context: StdRouteContext) -> bool:
+func _is_allowed(_context: StdRouterContext) -> bool:
 	assert(false, "unimplemented; this method must be overridden.")
 	return true

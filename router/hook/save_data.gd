@@ -24,7 +24,7 @@ extends StdRouteHook
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _before_enter(ctx: StdRouteContext) -> Result:
+func _before_enter(ctx: StdRouterContext) -> Result:
 	var result := Result.new()
 
 	if not load_before_enter:
@@ -37,7 +37,7 @@ func _before_enter(ctx: StdRouteContext) -> Result:
 	return result
 
 
-func _before_exit(ctx: StdRouteContext) -> Result:
+func _before_exit(ctx: StdRouterContext) -> Result:
 	var result := Result.new()
 
 	if not save_before_exit:
@@ -53,7 +53,7 @@ func _before_exit(ctx: StdRouteContext) -> Result:
 ## _load_data is a virtual method responsible for loading save game data.
 ##
 ## NOTE: The user must override this method.
-func _load_data(_context: StdRouteContext) -> Error:
+func _load_data(_context: StdRouterContext) -> Error:
 	assert(false, "unimplemented; this method must be overridden.")
 	return OK
 
@@ -61,6 +61,6 @@ func _load_data(_context: StdRouteContext) -> Error:
 ## _save_data is a virtual method responsible for saving game data.
 ##
 ## NOTE: The user must override this method.
-func _save_data(_context: StdRouteContext) -> Error:
+func _save_data(_context: StdRouterContext) -> Error:
 	assert(false, "unimplemented; this method must be overridden.")
 	return OK

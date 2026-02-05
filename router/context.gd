@@ -1,13 +1,13 @@
 ##
 ## router/context.gd
 ##
-## StdRouteContext defines information about a navigation event; it's passed to route
+## StdRouterContext defines information about a navigation event; it's passed to route
 ## hooks and guards during a route transition (not to be confused with transition
 ## effects). Navigation information includes details about the source and destination
 ## routes, their parameters, and how the navigation was initiated.
 ##
 
-class_name StdRouteContext
+class_name StdRouterContext
 extends RefCounted
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
@@ -62,7 +62,7 @@ var to_route: StdRoute = null
 ## to_params are the target route's parameters merged into all of its ancestors'
 ## route parameters. Note that this includes *all* ancestors, not just up to the least-
 ## common ancestor with the current route.
-var to_params: StdRouteParams = null
+var to_params: Config = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -80,14 +80,14 @@ func merge_into_from_params(params: StdRouteParams) -> void:
 	params.store(from_params)
 
 
-## merge_into_to_params merges the provide route params into this context's `to_params`.
-## Any values already present will be overridden.
+## merge_into_to_params merges the provided route params into this context's
+## `to_params`. Any values already present will be overridden.
 func merge_into_to_params(params: StdRouteParams) -> void:
 	if params == null:
 		assert(false, "invalid argument; missing route params")
 		return
 
-	if from_params == null:
-		from_params = Config.new()
+	if to_params == null:
+		to_params = Config.new()
 
-	params.store(from_params)
+	params.store(to_params)
