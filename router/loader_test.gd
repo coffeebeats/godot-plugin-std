@@ -6,7 +6,7 @@ extends GutTest
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-const _TEST_SCENE_PATH := "res://router/testdata/test_scene.tscn"
+const _TEST_SCENE_PATH_1 := "res://router/testdata/test_scene_1.tscn"
 const _TEST_SCENE_PATH_2 := "res://router/testdata/test_scene_2.tscn"
 
 var loader: StdRouterLoader = null
@@ -110,7 +110,7 @@ func test_load_all_returns_empty_array_for_empty_dependencies():
 func test_load_all_returns_result_for_each_resource():
 	# Given: Dependencies with multiple resources.
 	var deps := StdRouteDependencies.new()
-	deps.resources = [_TEST_SCENE_PATH, _TEST_SCENE_PATH_2]
+	deps.resources = [_TEST_SCENE_PATH_1, _TEST_SCENE_PATH_2]
 
 	# When: load_all is called.
 	var results := loader.load_all(deps)
@@ -127,7 +127,7 @@ func test_load_all_returns_result_for_each_resource():
 	assert_false(results[1].is_done())
 
 	# Then: Each result corresponds to the correct path.
-	assert_eq(results[0].path, _TEST_SCENE_PATH)
+	assert_eq(results[0].path, _TEST_SCENE_PATH_1)
 	assert_eq(results[1].path, _TEST_SCENE_PATH_2)
 
 	# When: All loads complete.
@@ -168,7 +168,7 @@ func test_loader_process_callback_idle_enables_idle_process():
 
 func test_load_valid_scene_emits_done_signal():
 	# Given: The test scene is loaded in the background.
-	var result := loader.load(_TEST_SCENE_PATH)
+	var result := loader.load(_TEST_SCENE_PATH_1)
 
 	# Given: Signal emissions are monitored.
 	watch_signals(result)
@@ -182,7 +182,7 @@ func test_load_valid_scene_emits_done_signal():
 
 func test_load_valid_scene_sets_status_loaded():
 	# Given: The test scene is loaded in the background.
-	var result := loader.load(_TEST_SCENE_PATH)
+	var result := loader.load(_TEST_SCENE_PATH_1)
 
 	# When: The load completes.
 	await wait_for_signal(result.done, 1.0)
@@ -193,7 +193,7 @@ func test_load_valid_scene_sets_status_loaded():
 
 func test_load_valid_scene_returns_packed_scene():
 	# Given: The test scene is loaded in the background.
-	var result := loader.load(_TEST_SCENE_PATH)
+	var result := loader.load(_TEST_SCENE_PATH_1)
 
 	# When: The load completes.
 	await wait_for_signal(result.done, 1.0)
@@ -207,7 +207,7 @@ func test_load_valid_scene_returns_packed_scene():
 
 func test_load_valid_scene_returns_ok_error():
 	# Given: The test scene is loaded in the background.
-	var result := loader.load(_TEST_SCENE_PATH)
+	var result := loader.load(_TEST_SCENE_PATH_1)
 
 	# When: The load completes.
 	await wait_for_signal(result.done, 1.0)
@@ -218,8 +218,8 @@ func test_load_valid_scene_returns_ok_error():
 
 func test_load_duplicate_path_returns_same_result():
 	# When: The same path is loaded twice.
-	var result1 := loader.load(_TEST_SCENE_PATH)
-	var result2 := loader.load(_TEST_SCENE_PATH)
+	var result1 := loader.load(_TEST_SCENE_PATH_1)
+	var result2 := loader.load(_TEST_SCENE_PATH_1)
 
 	# Then: The same result instance is returned (deduplication).
 	assert_same(result1, result2)
@@ -233,7 +233,7 @@ func test_load_pending_request_enables_process_mode():
 	assert_eq(loader.process_mode, Node.PROCESS_MODE_DISABLED)
 
 	# When: A load is requested.
-	var result := loader.load(_TEST_SCENE_PATH)
+	var result := loader.load(_TEST_SCENE_PATH_1)
 
 	# Then: Process mode is enabled.
 	assert_eq(loader.process_mode, Node.PROCESS_MODE_ALWAYS)
@@ -244,7 +244,7 @@ func test_load_pending_request_enables_process_mode():
 
 func test_load_completed_request_disables_process_mode():
 	# Given: A pending load request.
-	var result := loader.load(_TEST_SCENE_PATH)
+	var result := loader.load(_TEST_SCENE_PATH_1)
 
 	# When: The load completes.
 	await wait_for_signal(result.done, 1.0)
@@ -255,12 +255,12 @@ func test_load_completed_request_disables_process_mode():
 
 func test_load_cached_resource_returns_done_result():
 	# Given: A resource that is already cached.
-	var first_result := loader.load(_TEST_SCENE_PATH)
+	var first_result := loader.load(_TEST_SCENE_PATH_1)
 	await wait_for_signal(first_result.done, 1.0)
-	assert_true(ResourceLoader.has_cached(_TEST_SCENE_PATH))
+	assert_true(ResourceLoader.has_cached(_TEST_SCENE_PATH_1))
 
 	# When: The same resource is loaded again.
-	var result := loader.load(_TEST_SCENE_PATH)
+	var result := loader.load(_TEST_SCENE_PATH_1)
 
 	# Given: Signal emissions are monitored.
 	watch_signals(result)
@@ -285,5 +285,5 @@ func before_each() -> void:
 
 func after_each() -> void:
 	# Clear the loaded resources from the cache.
-	Resource.new().take_over_path(_TEST_SCENE_PATH)
+	Resource.new().take_over_path(_TEST_SCENE_PATH_1)
 	Resource.new().take_over_path(_TEST_SCENE_PATH_2)
