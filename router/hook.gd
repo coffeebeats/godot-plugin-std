@@ -11,18 +11,22 @@ extends Resource
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## Action is an enumeration of actions that a hook can take during navigation.
-enum Action { # gdlint:ignore=class-definitions-order
-	ACTION_CONTINUE, ## Allow navigation to proceed normally.
-	ACTION_BLOCK, ## Prevent the navigation from occurring.
-	ACTION_REDIRECT, ## Redirect to a different route.
-}
-
 
 ## Result is the result of a hook execution, containing the action to take and optional
 ## redirect information.
 class Result:
 	extends RefCounted
+
+	## Action is an enumeration of actions that a hook can take during navigation.
+	enum Action {  # gdlint:ignore=class-definitions-order
+		ACTION_CONTINUE,  ## Allow navigation to proceed normally.
+		ACTION_BLOCK,  ## Prevent the navigation from occurring.
+		ACTION_REDIRECT,  ## Redirect to a different route.
+	}
+
+	const ACTION_CONTINUE := Action.ACTION_CONTINUE
+	const ACTION_BLOCK := Action.ACTION_BLOCK
+	const ACTION_REDIRECT := Action.ACTION_REDIRECT
 
 	## action is the action the router should take based on this hook's execution.
 	var action: Action = Action.ACTION_CONTINUE
@@ -59,7 +63,7 @@ func after_exit(context: StdRouteContext) -> void:
 	_after_exit(context)
 
 
-# -- PRIVATE METHODS (OVERRIDES) ------------------------------------------------- #
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
 ## _before_enter is a virtual method called before entering a route.
