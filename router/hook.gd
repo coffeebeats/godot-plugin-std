@@ -38,7 +38,7 @@ class Result:
 	var redirect_params: StdRouteParams = null
 
 
-# -- PUBLIC METHODS -------------------------------------------------------------- #
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## before_enter is called before entering a route. Return a `Result` to control the
