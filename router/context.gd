@@ -17,7 +17,7 @@ const Config := preload("../config/config.gd")
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## NavigationEvent enumerates the type of event that triggered navigation.
-enum NavigationEvent {
+enum NavigationEvent {  # gdlint:ignore=class-definitions-order
 	NAVIGATION_EVENT_INITIAL,  ## The initial route on router startup.
 	NAVIGATION_EVENT_POP,  ## Navigating back in the route stack.
 	NAVIGATION_EVENT_PUSH,  ## A new route was pushed onto the stack.

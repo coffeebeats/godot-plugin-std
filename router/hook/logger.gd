@@ -29,7 +29,7 @@ extends StdRouteHook
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger: StdLogger = StdLogger.create(&"std/router/hook/logger")
+static var _logger: StdLogger = StdLogger.create(&"std/router/hook/logger")  # gdlint:ignore=class-definitions-order
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
