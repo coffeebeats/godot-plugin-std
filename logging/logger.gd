@@ -11,6 +11,19 @@ extends RefCounted
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+## Level is an enumeration of log levels supported by this hook.
+enum Level {
+	LEVEL_DEBUG,
+	LEVEL_ERROR,
+	LEVEL_INFO,
+	LEVEL_WARN,
+}
+
+const LEVEL_DEBUG := Level.LEVEL_DEBUG
+const LEVEL_ERROR := Level.LEVEL_ERROR
+const LEVEL_INFO := Level.LEVEL_INFO
+const LEVEL_WARN := Level.LEVEL_WARN
+
 const _DEBUG_PREFIX_EDITOR := &"[b][color=cyan]DEBUG[/color]:[/b]"
 const _DEBUG_PREFIX_RELEASE := &"DEBUG:"
 const _ERROR_PREFIX_EDITOR := &"[b][color=red]ERROR[/color]:[/b]"
@@ -104,74 +117,6 @@ func with_timestamp(enabled: bool = true) -> StdLogger:
 # Log methods
 
 
-## error logs an error with the provided context `ctx`.
-func error(msg: String, ctx: Dictionary = {}) -> void:
-	ctx = ctx.duplicate()
-	ctx.merge(context, false)
-
-	var message := msg
-	if _is_editor:
-		message = "[color=white]%s[/color]" % msg
-
-	var prefix := (
-		"%s %s "
-		% [
-			_format_name(),
-			_ERROR_PREFIX_EDITOR if _is_editor else _ERROR_PREFIX_RELEASE
-		]
-	)
-
-	var fields: String = ""
-	if ctx:
-		fields = _format_context(ctx)
-
-	print_rich(prefix, message, fields)
-	push_error(msg, fields)
-
-
-## warn logs a warning with the provided context `ctx`.
-func warn(msg: String, ctx: Dictionary = {}) -> void:
-	ctx = ctx.duplicate()
-	ctx.merge(context, false)
-
-	var message := msg
-	if _is_editor:
-		message = "[color=white]%s[/color]" % msg
-
-	var prefix := (
-		"%s %s "
-		% [_format_name(), _WARN_PREFIX_EDITOR if _is_editor else _WARN_PREFIX_RELEASE]
-	)
-
-	var fields: String = ""
-	if ctx:
-		fields = _format_context(ctx)
-
-	print_rich(prefix, message, fields)
-	push_warning(msg, fields)
-
-
-## info logs an info-level message with the provided context `ctx`.
-func info(msg: String, ctx: Dictionary = {}) -> void:
-	ctx = ctx.duplicate()
-	ctx.merge(context, false)
-
-	var message := msg
-	if _is_editor:
-		message = "[color=white]%s[/color]" % msg
-
-	var prefix := (
-		"%s %s "
-		% [_format_name(), _INFO_PREFIX_EDITOR if _is_editor else _INFO_PREFIX_RELEASE]
-	)
-
-	var fields: String = ""
-	if ctx:
-		fields = _format_context(ctx)
-
-	print_rich(prefix, message, fields)
-
-
 ## debug logs a debug-level message with the provided context `ctx`.
 func debug(msg: String, ctx: Dictionary = {}) -> void:
 	if not OS.has_feature(&"debug"):
@@ -197,6 +142,87 @@ func debug(msg: String, ctx: Dictionary = {}) -> void:
 		fields = _format_context(ctx)
 
 	print_rich(prefix, message, fields)
+
+
+## error logs an error with the provided context `ctx`.
+func error(msg: String, ctx: Dictionary = {}) -> void:
+	ctx = ctx.duplicate()
+	ctx.merge(context, false)
+
+	var message := msg
+	if _is_editor:
+		message = "[color=white]%s[/color]" % msg
+
+	var prefix := (
+		"%s %s "
+		% [
+			_format_name(),
+			_ERROR_PREFIX_EDITOR if _is_editor else _ERROR_PREFIX_RELEASE
+		]
+	)
+
+	var fields: String = ""
+	if ctx:
+		fields = _format_context(ctx)
+
+	print_rich(prefix, message, fields)
+	push_error(msg, fields)
+
+
+## info logs an info-level message with the provided context `ctx`.
+func info(msg: String, ctx: Dictionary = {}) -> void:
+	ctx = ctx.duplicate()
+	ctx.merge(context, false)
+
+	var message := msg
+	if _is_editor:
+		message = "[color=white]%s[/color]" % msg
+
+	var prefix := (
+		"%s %s "
+		% [_format_name(), _INFO_PREFIX_EDITOR if _is_editor else _INFO_PREFIX_RELEASE]
+	)
+
+	var fields: String = ""
+	if ctx:
+		fields = _format_context(ctx)
+
+	print_rich(prefix, message, fields)
+
+
+## log logs the provided message and `ctx` at the specified level.
+func log(level: Level, msg: String, ctx: Dictionary = {}) -> void:
+	match level:
+		LEVEL_DEBUG:
+			debug(msg, ctx)
+		LEVEL_ERROR:
+			error(msg, ctx)
+		LEVEL_INFO:
+			info(msg, ctx)
+		LEVEL_WARN:
+			warn(msg, ctx)
+
+
+## warn logs a warning with the provided context `ctx`.
+func warn(msg: String, ctx: Dictionary = {}) -> void:
+	ctx = ctx.duplicate()
+	ctx.merge(context, false)
+
+	var message := msg
+	if _is_editor:
+		message = "[color=white]%s[/color]" % msg
+
+	var prefix := (
+		"%s %s "
+		% [_format_name(), _WARN_PREFIX_EDITOR if _is_editor else _WARN_PREFIX_RELEASE]
+	)
+
+	var fields: String = ""
+	if ctx:
+		fields = _format_context(ctx)
+
+	print_rich(prefix, message, fields)
+	push_warning(msg, fields)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
