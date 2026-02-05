@@ -130,10 +130,10 @@ func disable_action_set_layer() -> void:
 
 ## enable_action_set_layer enables the configured action set layer for the the player.
 func enable_action_set_layer() -> void:
-	assert(action_set_layer is StdInputActionSetLayer, "invalidstate; missinglayer")
+	assert(action_set_layer is StdInputActionSetLayer, "invalid state; missing layer")
 
 	var slot := StdInputSlot.for_player(player_id)
-	assert(slot is StdInputSlot, "invalidstate; missinginputslot")
+	assert(slot is StdInputSlot, "invalid state; missing input slot")
 
 	if _is_action_set_layer_enabled():
 		return
