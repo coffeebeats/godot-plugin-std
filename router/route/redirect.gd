@@ -1,5 +1,5 @@
 ##
-## router/redirect.gd
+## router/route/redirect.gd
 ##
 ## StdRouteRedirect is a route that immediately redirects to another route; redirects
 ## are evaluated after the target route's guards pass, allowing conditional redirects
