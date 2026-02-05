@@ -48,13 +48,16 @@ extends RefCounted
 # -- SETTERS/GETTERS ----------------------------------------------------------------- #
 ```
 
-Lines are limited to 88 characters (including comments).
+- The order of sections must match the above
+- Lines are limited to 88 characters (including comments and section headers)
+- Doc comments begin the with the name of the class, field, or function
 
 ### Naming
 
 - Class names: `Std` prefix for exported classes (e.g., `StdConfigSchema`)
 - Private members: underscore prefix (`_data`, `_mutex`)
 - StringNames: use `&` prefix for literals (`&"category"`, `&"key"`)
+- Prefer single word file names are variable names, where possible
 
 ### Comments
 
