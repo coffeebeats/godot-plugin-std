@@ -43,8 +43,8 @@ func _after_enter(context: StdRouteContext) -> void:
 				&"Successfully entered route.",
 				{
 					&"event": &"after_enter",
-					&"route": _get_route_path(context.to_route),
-					&"trigger": _get_trigger_name(context.trigger),
+					&"route": context.to_route.get_full_path(),
+					&"trigger": _get_navigation_event_name(context.event),
 				},
 			)
 		)
@@ -61,8 +61,8 @@ func _after_exit(context: StdRouteContext) -> void:
 				&"Successfully exited route.",
 				{
 					&"event": &"after_exit",
-					&"route": _get_route_path(context.to_route),
-					&"trigger": _get_trigger_name(context.trigger),
+					&"route": context.to_route.get_full_path(),
+					&"trigger": _get_navigation_event_name(context.event),
 				},
 			)
 		)
@@ -79,8 +79,8 @@ func _before_enter(context: StdRouteContext) -> Result:
 				&"Entering route.",
 				{
 					&"event": &"before_enter",
-					&"route": _get_route_path(context.to_route),
-					&"trigger": _get_trigger_name(context.trigger),
+					&"route": context.to_route.get_full_path(),
+					&"trigger": _get_navigation_event_name(context.event),
 				},
 			)
 		)
@@ -97,8 +97,8 @@ func _before_exit(context: StdRouteContext) -> Result:
 				&"About to exit route.",
 				{
 					&"event": &"before_exit",
-					&"route": _get_route_path(context.to_route),
-					&"trigger": _get_trigger_name(context.trigger),
+					&"route": context.to_route.get_full_path(),
+					&"trigger": _get_navigation_event_name(context.event),
 				},
 			)
 		)
@@ -109,27 +109,17 @@ func _before_exit(context: StdRouteContext) -> Result:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _get_route_path(route: Variant) -> String:
-	if route == null:
-		return "<none>"
-
-	if route.has_method(&"get_full_path"):
-		return route.get_full_path()
-
-	return "<unknown>"
-
-
-func _get_trigger_name(trigger: StdRouteContext.Trigger) -> String:
-	match trigger:
-		StdRouteContext.Trigger.PUSH:
-			return "push"
-		StdRouteContext.Trigger.REPLACE:
-			return "replace"
-		StdRouteContext.Trigger.POP:
-			return "pop"
-		StdRouteContext.Trigger.REDIRECT:
-			return "redirect"
-		StdRouteContext.Trigger.INITIAL:
+func _get_navigation_event_name(event: StdRouteContext.NavigationEvent) -> String:
+	match event:
+		StdRouteContext.NAVIGATION_EVENT_INITIAL:
 			return "initial"
+		StdRouteContext.NAVIGATION_EVENT_POP:
+			return "pop"
+		StdRouteContext.NAVIGATION_EVENT_PUSH:
+			return "push"
+		StdRouteContext.NAVIGATION_EVENT_REDIRECT:
+			return "redirect"
+		StdRouteContext.NAVIGATION_EVENT_REPLACE:
+			return "replace"
 		_:
 			return "unknown"
