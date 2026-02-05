@@ -44,22 +44,30 @@ class Result:
 ## before_enter is called before entering a route. Return a `Result` to control the
 ## navigation behavior.
 func before_enter(context: StdRouteContext) -> Result:
+	assert(context.from_route, "invalid state; missing 'to' route.")
+	assert(context.to_route, "invalid state; missing 'to' route.")
 	return _before_enter(context)
 
 
 ## after_enter is called after successfully entering a route.
 func after_enter(context: StdRouteContext) -> void:
+	assert(context.from_route, "invalid state; missing 'to' route.")
+	assert(context.to_route, "invalid state; missing 'to' route.")
 	_after_enter(context)
 
 
 ## before_exit is called before exiting a route. Return a `Result` to control the
 ## navigation behavior.
 func before_exit(context: StdRouteContext) -> Result:
+	assert(context.from_route, "invalid state; missing 'to' route.")
+	assert(context.to_route, "invalid state; missing 'to' route.")
 	return _before_exit(context)
 
 
 ## after_exit is called after successfully exiting a route.
 func after_exit(context: StdRouteContext) -> void:
+	assert(context.from_route, "invalid state; missing 'to' route.")
+	assert(context.to_route, "invalid state; missing 'to' route.")
 	_after_exit(context)
 
 
