@@ -9,6 +9,10 @@
 class_name StdRouterController
 extends Resource
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Signals := preload("../event/signal.gd")
+
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## completed is emitted when the route navigation sequence is complete.
@@ -16,6 +20,7 @@ signal completed
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var _cancelled: bool = false
 var _parent: Node
 var _scene_exit: Node
 var _scene_enter: Node
@@ -23,6 +28,26 @@ var _transition_exit: StdRouteTransition
 var _transition_enter: StdRouteTransition
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## cancel stops the controller without emitting completed; all in progress transitions
+## will be canceled.
+func cancel() -> void:
+	_cancelled = true
+
+	if _transition_exit:
+		Signals.disconnect_safe(
+			_transition_exit.completed, _on_exit_transition_completed
+		)
+	if _transition_enter:
+		Signals.disconnect_safe(
+			_transition_enter.completed, _on_enter_transition_completed
+		)
+
+	if _transition_exit:
+		_transition_exit.cancel()
+	if _transition_enter:
+		_transition_enter.cancel()
 
 
 ## start begins the route navigation sequence. Subclasses customize behavior by
@@ -78,6 +103,9 @@ func _on_enter_transition_completed() -> void:
 
 ## _done signals that the controller has finished. Subclasses MUST call this when done.
 func _done() -> void:
+	if _cancelled:
+		return
+
 	completed.emit()
 
 

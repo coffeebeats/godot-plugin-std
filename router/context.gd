@@ -36,7 +36,9 @@ const NAVIGATION_EVENT_REPLACE := NavigationEvent.NAVIGATION_EVENT_REPLACE
 ## The router instance handling this navigation.
 var router: StdRouter = null
 
-## result is the result of the last hook's evaluation.
+## result is the most recent hook evaluation result. Updated after each hook in the
+## chain, allowing subsequent hooks to inspect the previous hook's outcome (e.g. handle
+## a blocked rejection).
 var result: StdRouteHook.Result = null
 
 @export_category("Navigation")
@@ -45,6 +47,11 @@ var result: StdRouteHook.Result = null
 var event: NavigationEvent = NAVIGATION_EVENT_INITIAL
 
 @export_subgroup("From")
+
+## redirected_from is the context from the navigation attempt that triggered a redirect
+## to this one. Forms a linked list of contexts, giving hooks visibility into the full
+## redirect chain.
+var redirected_from: StdRouterContext = null
 
 ## The current route's definition.
 var from_route: StdRoute = null
