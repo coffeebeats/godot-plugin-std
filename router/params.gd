@@ -1,29 +1,29 @@
 ##
 ## router/params.gd
 ##
-## A base class for type-safe, serializable route parameters. Extends `StdConfigItem` to
-## inherit automatic serialization via property reflection. Typed params are typically
-## defined as inner classes on typed handles. For example:
+## StdRouteParams is a base class for type-safe, serializable route parameters. Extends
+## `StdConfigItem` to inherit automatic serialization via property reflection.
+## Parameters are defined as standalone classes and attached to routes via the `params`
+## export property.
+##
+## The route's params instance serves as a frozen schema: calling `clone()` produces a
+## mutable copy that can be populated and passed to navigation methods. For example:
 ##
 ## ```gd
-## class_name SettingsMenuHandle
-## extends StdRouteHandle
+## class_name SettingsMenuParams
+## extends StdRouteParams
 ##
-## class Params:
-##   extends StdRouteParams
-##
-## 	 var tab: int = 0
-## 	 var scroll_position: float = 0.0
-##
-## 	 func _init(p_tab: int = 0, p_scroll: float = 0.0) -> Params:
-## 		var p := Params.new()
-## 		p.tab = p_tab
-## 		p.scroll_position = p_scroll
-## 		return p
+## var tab: int = 0
+## var scroll_position: float = 0.0
 ## ```
 ##
-## Standalone `StdRouteParams` classes are also supported for shared parameter types
-## used by multiple routes.
+## Then attach an instance to a route's `params` export in the inspector. Navigate with:
+##
+## ```gd
+## var p := route.params.clone() as SettingsMenuParams
+## p.tab = 2
+## route.push(p)
+## ```
 ##
 
 class_name StdRouteParams
