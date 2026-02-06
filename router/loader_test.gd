@@ -1,3 +1,5 @@
+#gdlint:ignore=max-public-methods
+
 ##
 ## Tests for StdRouterLoader.
 ##

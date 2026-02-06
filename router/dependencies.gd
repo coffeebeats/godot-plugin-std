@@ -12,4 +12,4 @@ extends Resource
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## resources is an array of resource paths to preload when this route is entered.
-@export_file("*.tscn") var resources: Array[String] = []
+@export_file var resources: Array[String] = []

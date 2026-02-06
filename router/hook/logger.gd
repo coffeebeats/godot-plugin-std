@@ -50,8 +50,6 @@ func _after_enter(context: StdRouterContext) -> void:
 			)
 		)
 
-	return Result.new()
-
 
 func _after_exit(context: StdRouterContext) -> void:
 	if log_after_exit:
@@ -67,8 +65,6 @@ func _after_exit(context: StdRouterContext) -> void:
 				},
 			)
 		)
-
-	return Result.new()
 
 
 func _before_enter(context: StdRouterContext) -> Result:
