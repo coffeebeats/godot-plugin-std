@@ -20,13 +20,28 @@ const PROPERTY_KEY_USAGE := &"usage"
 
 const PROPERTY_USAGE_SERDE := PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _frozen: bool = false
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## clone returns a new copy of this item with all serializable properties duplicated.
+func clone(freeze: bool = false) -> StdConfigItem:
+	var out := duplicate()
+	out._frozen = freeze
+	return out
 
 
 ## copy hydrates this config item with the data from the provided instance. All values
 ## will be overwritten with those sourced from the `other` object. Values not present in
 ## the `other` object are set to their empty values.
 func copy(other: StdConfigItem) -> void:
+	if _frozen:
+		assert(false, "invalid state; item is frozen")
+		return
+
 	if not other is StdConfigItem:
 		assert(false, "invalid argument; missing other item object")
 		return
@@ -47,6 +62,14 @@ func copy(other: StdConfigItem) -> void:
 		self.set(name, value)
 
 
+## frozen returns a frozen (immutable) copy of this item. Frozen items prevent all write
+## operations using the `StdConfigItem` APIs (it's still possibly to modify the item).
+func frozen() -> StdConfigItem:
+	var out := duplicate()
+	out._frozen = true
+	return out
+
+
 ## get_category returns the name of the `Config` category which contains the definition
 ## for this item.
 func get_category() -> StringName:
@@ -56,6 +79,10 @@ func get_category() -> StringName:
 ## load reads configuration data from the provided `Config` instance and updates this
 ## config item's properties. Only exported script variables will be set.
 func load(config: Config) -> void:
+	if _frozen:
+		assert(false, "invalid state; item is frozen")
+		return
+
 	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")
@@ -88,6 +115,10 @@ func load(config: Config) -> void:
 
 ## reset sets all serialization-enabled properties back to their default values.
 func reset() -> void:
+	if _frozen:
+		assert(false, "invalid state; item is frozen")
+		return
+
 	var defaults := new()
 
 	for property in get_property_list():
@@ -102,6 +133,10 @@ func reset() -> void:
 ## store populates the provided `Config` instance with this config item's properties.
 ## Only exported script variables will be stored.
 func store(config: Config) -> void:
+	if _frozen:
+		assert(false, "invalid state; item is frozen")
+		return
+
 	var category := _get_category()
 	if not category:
 		assert(false, "invalid config; missing category")
