@@ -16,19 +16,39 @@ signal completed
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## execute runs the route transition effect on the given scene. The `is_entering`
+## start begins the route transition effect on the given scene. The `is_entering`
 ## parameter indicates whether the scene is entering (true) or exiting (false) view.
-func execute(scene: Node, is_entering: bool) -> void:
-	_execute(scene, is_entering)
-	completed.emit()
+func start(scene: Node, is_entering: bool) -> void:
+	_start(scene, is_entering)
+
+
+## cancel stops the transition without emitting completed. Used by the router to
+## interrupt in-flight transitions.
+func cancel() -> void:
+	_cancel()
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-## _execute is a virtual method that runs the route transition effect on the given
-## scene.
+## _start is a virtual method that begins the route transition effect on the given scene.
+## Subclasses MUST call _done() when the transition completes (immediately or deferred).
 ##
-## NOTE: This method should be overridden to customize behavior.
-func _execute(_scene: Node, _is_entering: bool) -> void:
-	assert(false, "unimplemented; this method should be overridden.")
+## NOTE: Override this method to implement custom transition behavior.
+func _start(_scene: Node, _is_entering: bool) -> void:
+	_done()
+
+
+## _cancel is a virtual method for stopping the transition effect.
+##
+## NOTE: Override this method to implement custom transition behavior.
+func _cancel() -> void:
+	pass
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _done signals that the transition has finished. Subclasses MUST call this when done.
+func _done() -> void:
+	completed.emit()
