@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.0.6 (2026-02-07)
+
+## What's Changed
+* chore(docs): define an `AGENTS.md` file for agentic coding style by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/334
+* fix(ci): ignore test UID files and all nested agent instruction files by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/336
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.0.5...v4.0.6
+
 ## 4.0.5 (2026-02-01)
 
 ## What's Changed
