@@ -3,8 +3,8 @@
 ##
 ## StdRoute is a base class for all route types in the routing system. Routes are nodes
 ## that define navigation targets and should be placed under a `StdRouter` node. Each
-## route has a 1:1 mapping with a `StdRouteHandle` resource, which is the sole mechanism
-## for navigating to that route.
+## route provides navigation methods (push, pop, replace) and an optional frozen params
+## schema for type-safe parameter passing.
 ##
 
 @tool
@@ -27,14 +27,18 @@ const DEPENDENCY_WAIT_MODE_REJECT := DependencyWaitMode.DEPENDENCY_WAIT_MODE_REJ
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## handle is a lightweight identity resource that uniquely identifies this route. If
+## omitted, one will be auto-created. A route and its handle have a 1:1 mapping; the
+## same handle cannot be used by multiple routes.
+@export var handle: StdRouteHandle
+
+## params is a frozen schema for this route's parameters. Clone it to create a mutable
+## instance for use with navigation methods (e.g. `route.params.clone()`).
+@export var params: StdRouteParams
+
 ## segment is the route path segment for this route (e.g., &"game", &"pause"); it's used
 ## to construct the full route path by joining it with all ancestor route segments.
 @export var segment: StringName = &""
-
-## The handle that uniquely identifies this route. Navigation to this route is
-## performed exclusively through this handle. A route and its handle have a 1:1
-## mapping; the same handle cannot be used by multiple routes.
-@export var handle: StdRouteHandle
 
 @export_subgroup("Nesting")
 
@@ -53,9 +57,9 @@ const DEPENDENCY_WAIT_MODE_REJECT := DependencyWaitMode.DEPENDENCY_WAIT_MODE_REJ
 @export_group("Hooks")
 
 ## hooks is a list of navigation hooks to execute during navigation. Hooks can block
-## navigation, redirect to different routes, or execute side effects; they will be run
-## in order and not skipped, even if execution fails (though "after" events are skipped
-## if the navigation did not succeed).
+## navigation, redirect to different routes, or execute side effects. Hooks are run in
+## order; if a hook returns BLOCK or REDIRECT, subsequent hooks are skipped. "After"
+## hooks are only run if the navigation succeeds.
 @export var hooks: Array[StdRouteHook]
 
 @export_group("Dependencies")
@@ -71,6 +75,7 @@ const DEPENDENCY_WAIT_MODE_REJECT := DependencyWaitMode.DEPENDENCY_WAIT_MODE_REJ
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _path: StringName = &""
+var _router: StdRouter = null  ## NOTE: Injected by `StdRouter` during registration.
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -88,13 +93,56 @@ func get_full_path() -> StringName:
 	while current:
 		if current is StdRoute:
 			segments.append(current.segment)
+		elif current is StdRouter:
+			break
 
 		current = current.get_parent()
 
 	segments.reverse()
 
 	assert(not segments.is_empty(), "invalid state; missing route path segments")
-	return StringName("/" + "/".join(segments))
+
+	_path = StringName("/" + "/".join(segments))
+	return _path
+
+
+## pop exits this route, returning to the previous route in the navigation history
+## stack. Returns an error if this route is not the current route.
+func pop(
+	parameters = null,
+	controller: StdRouterController = null,
+	interrupt: bool = false,
+) -> Error:
+	assert(_router, "route not registered with a router")
+
+	var topmost: StdRoute = _router.get_topmost_route()
+	if topmost != self:
+		assert(false, "invalid state; pop on inactive route")
+		return ERR_DOES_NOT_EXIST
+
+	return _router.pop(parameters, controller, interrupt)
+
+
+## push navigates to this route and adds it onto the navigation history stack; the
+## previous route can be returned to via `pop()`.
+func push(
+	parameters = null,
+	controller: StdRouterController = null,
+	interrupt: bool = false,
+) -> Error:
+	assert(_router, "route not registered with a router")
+	return _router.push(self, parameters, controller, interrupt)
+
+
+## replace navigates to this route and clears the current navigation history stack; this
+## route becomes the new history root.
+func replace(
+	parameters = null,
+	controller: StdRouterController = null,
+	interrupt: bool = false,
+) -> Error:
+	assert(_router, "route not registered with a router")
+	return _router.replace(self, parameters, controller, interrupt)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -102,4 +150,9 @@ func get_full_path() -> StringName:
 
 func _ready() -> void:
 	assert(segment, "invalid configuration; missing required property.")
-	assert(handle, "invalid configuration; missing required property.")
+
+	if handle == null:
+		handle = StdRouteHandle.new()
+
+	if params != null:
+		params = params.frozen() as StdRouteParams
