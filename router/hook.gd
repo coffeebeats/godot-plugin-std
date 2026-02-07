@@ -31,7 +31,9 @@ class Result:
 	## action is the action the router should take based on this hook's execution.
 	var action: Action = Action.ACTION_CONTINUE
 
-	## redirect_to is the route to redirect to (only used when action is REDIRECT).
+	## redirect_to is the handle of the route to redirect to (only used when action
+	## is REDIRECT). This remains a StdRouteHandle (not StdRoute) for cross-scene
+	## compatibility — handles are resources that can be referenced anywhere.
 	var redirect_to: StdRouteHandle = null
 
 	## redirect_params are parameters for a redirect action.

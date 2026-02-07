@@ -45,9 +45,29 @@ const CHILD_DEPENDENCY_LOAD_RECURSIVE := (
 ## If null, no transition is played.
 @export var transition_exit: StdRouteTransition
 
+@export_group("Interrupts")
+
+## allow_interrupt controls whether in-flight transitions to or from this route can be
+## interrupted by new navigation requests. When false, new interrupt requests are queued
+## until this route's transition completes.
+@export var allow_interrupt: bool = true
+
 @export_group("Dependencies")
 
 ## child_dependency_load_mode controls whether child route dependencies are loaded when
 ## this route is activated.
 @export
 var child_dependency_load_mode: ChildDependencyLoadMode = CHILD_DEPENDENCY_LOAD_OFF
+
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## get_scene returns the packed scene for this route. The scene should already be loaded
+## via the dependency system; this method retrieves it from the cache.
+func get_scene() -> PackedScene:
+	if not scene_path:
+		return null
+	# Scene should already be loaded via dependency system.
+	return ResourceLoader.load(
+		scene_path, "PackedScene", ResourceLoader.CACHE_MODE_REUSE
+	)
