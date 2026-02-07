@@ -70,9 +70,10 @@ jobs:
           target-branch: "godot-v${{ steps.version.outputs.major-minor }}"
           godot-editor-version: "v${{ steps.version.outputs.semantic }}"
           file-excludes: |
-            AGENTS.md
-            CLAUDE.md
+            **/AGENTS.md
+            **/CLAUDE.md
 
             **/example
             **/examples
             **/*_test.gd
+            **/*_test.gd.uid
