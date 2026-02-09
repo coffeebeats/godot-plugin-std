@@ -15,7 +15,7 @@ const _TYPE_HINT_PACKED_SCENE := "PackedScene"
 
 ## ProcessCallback is an enumeration of supported engine callbacks in which to run
 ## background loading status checks.
-enum ProcessCallback { # gdlint:ignore=class-definitions-order
+enum ProcessCallback {  # gdlint:ignore=class-definitions-order
 	PROCESS_CALLBACK_PHYSICS = 0,
 	PROCESS_CALLBACK_IDLE = 1,
 }
@@ -89,7 +89,7 @@ class Result:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create(&"std/screen/loader") # gdlint:ignore=class-definitions-order,max-line-length
+static var _logger := StdLogger.create(&"std/screen/loader")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _loading: Dictionary = {}
 
@@ -165,7 +165,7 @@ func load(path: String) -> Result:
 
 func _init() -> void:
 	process_callback = process_callback
-	process_mode = Node.PROCESS_MODE_DISABLED # Disable until a request is made.
+	process_mode = Node.PROCESS_MODE_DISABLED  # Disable until a request is made.
 
 
 func _physics_process(delta: float) -> void:
@@ -204,7 +204,7 @@ func _update(_delta: float) -> void:
 		else:
 			(
 				_logger
-				.warn(
+				. warn(
 					"Failed to load scene.",
 					{
 						&"path": result.path,
