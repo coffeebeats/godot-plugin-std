@@ -4,7 +4,6 @@
 ## StdConfigSchemaMeta is an internal config item that stores schema version metadata.
 ##
 
-class_name StdConfigSchemaMeta
 extends StdConfigItem
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
