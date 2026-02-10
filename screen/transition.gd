@@ -26,8 +26,12 @@ var reset_on_interrupt: bool = true
 
 ## start begins the screen transition effect on the given scene. The `is_entering`
 ## parameter indicates whether the scene is entering (`true`) or exiting (`false`) view.
-func start(manager: Node, scene: Node, is_entering: bool) -> void:
-	_start(manager, scene, is_entering)
+func start(
+	context: StdScreenTransitionContext,
+	scene: Node,
+	is_entering: bool,
+) -> void:
+	_start(context, scene, is_entering)
 
 
 ## stop halts the transition without emitting `completed`. Visual state is left as-is so
@@ -50,7 +54,11 @@ func reset() -> void:
 ## deferred).
 ##
 ## NOTE: Override this method to implement custom transition behavior.
-func _start(_manager: Node, _scene: Node, _is_entering: bool) -> void:
+func _start(
+	_context: StdScreenTransitionContext,
+	_scene: Node,
+	_is_entering: bool,
+) -> void:
 	_done()
 
 
