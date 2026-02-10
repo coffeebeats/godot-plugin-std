@@ -120,7 +120,7 @@ func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
 
 
 func _deserialize_var(bytes: PackedByteArray) -> Variant:
-	if bytes.size() < VARIANT_ENCODING_LENGTH_MIN:
+	if bytes.size() < _get_minimum_size():
 		return null
 
 	return bytes_to_var(bytes)
@@ -129,6 +129,10 @@ func _deserialize_var(bytes: PackedByteArray) -> Variant:
 func _get_filepath() -> String:
 	assert(false, "unimplemented")
 	return ""
+
+
+func _get_minimum_size() -> int:
+	return VARIANT_ENCODING_LENGTH_MIN
 
 
 func _serialize_var(variant: Variant) -> PackedByteArray:
@@ -159,7 +163,10 @@ func _worker_impl() -> Error:
 			var read_result := _config_read_bytes(path)
 
 			var data: Variant = null
-			if read_result.error == OK and read_result.bytes.size() >= 4:
+			if (
+				read_result.error == OK
+				and read_result.bytes.size() >= _get_minimum_size()
+			):
 				data = _deserialize_var(read_result.bytes)
 
 			# Backup fallback: try backups if main file was corrupt or missing.
@@ -178,7 +185,7 @@ func _worker_impl() -> Error:
 					if read_bak_result.error != OK:
 						continue
 
-					if read_bak_result.bytes.size() < VARIANT_ENCODING_LENGTH_MIN:
+					if read_bak_result.bytes.size() < _get_minimum_size():
 						continue
 
 					data = _deserialize_var(read_bak_result.bytes)

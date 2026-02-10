@@ -81,7 +81,7 @@ func _enter_tree() -> void:
 ## from_bytes deserializes a `Config` from the provided binary buffer; returns `null` if
 ## the data is invalid.
 func from_bytes(bytes: PackedByteArray) -> Config:
-	if bytes.size() < (HEADER_BYTE_LENGTH + VARIANT_ENCODING_LENGTH_MIN):
+	if bytes.size() < _get_minimum_size():
 		return null
 
 	var mode_byte := bytes[0]
@@ -222,6 +222,10 @@ func _deserialize_var(bytes: PackedByteArray) -> Variant:
 # NOTE: This method must be overridden.
 func _get_filepath() -> String:
 	return path
+
+
+func _get_minimum_size() -> int:
+	return HEADER_BYTE_LENGTH + VARIANT_ENCODING_LENGTH_MIN
 
 
 func _serialize_var(variant: Variant) -> PackedByteArray:
