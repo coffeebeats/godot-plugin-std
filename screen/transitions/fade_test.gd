@@ -8,6 +8,7 @@ extends GutTest
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const Context := preload("../context.gd")
 const Manager := preload("../manager.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -23,7 +24,8 @@ func test_exit_fade_tweens_overlay_to_opaque():
 	var scene := _create_scene()
 
 	# When: An exit fade is started.
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_for_signal(fade.completed, 2.0)
 
 	# Then: The overlay is opaque.
@@ -39,7 +41,8 @@ func test_enter_fade_tweens_overlay_to_transparent():
 	var overlay := _ensure_overlay(1.0)
 
 	# When: An enter fade is started.
-	fade.start(_manager, scene, true)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, true)
 	await wait_for_signal(fade.completed, 2.0)
 
 	# Then: The overlay is transparent.
@@ -53,7 +56,8 @@ func test_fade_emits_completed_on_finish():
 	watch_signals(fade)
 
 	# When: An exit fade runs to completion.
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_for_signal(fade.completed, 2.0)
 
 	# Then: The completed signal was emitted.
@@ -67,7 +71,8 @@ func test_stop_preserves_overlay_alpha():
 	var scene := _create_scene()
 
 	# When: An exit fade is started and stopped mid-way.
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_process_frames(2)
 	fade.stop()
 
@@ -78,21 +83,24 @@ func test_stop_preserves_overlay_alpha():
 	assert_lt(overlay.modulate.a, 1.0)
 
 
-func test_reset_restores_overlay_alpha():
+func test_reset_frees_overlay_and_removes_metadata():
 	# Given: A fade transition with a long duration.
 	var fade := _create_fade()
 	fade.duration = 0.5
 	var scene := _create_scene()
 
 	# When: An exit fade is started and reset mid-way.
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_process_frames(2)
-	fade.reset()
-
-	# Then: The overlay alpha is restored to transparent.
 	var overlay := _get_overlay()
 	assert_not_null(overlay)
-	assert_almost_eq(overlay.modulate.a, 0.0, 0.01)
+	fade.reset()
+	await wait_physics_frames(2)
+
+	# Then: The overlay is freed and metadata is removed.
+	assert_false(is_instance_valid(overlay))
+	assert_null(_get_overlay())
 
 
 func test_overlay_shared_across_transitions():
@@ -102,10 +110,12 @@ func test_overlay_shared_across_transitions():
 	var scene := _create_scene()
 
 	# When: Both transitions run.
-	fade_a.start(_manager, scene, false)
+	var ctx_a := Context.new(_manager)
+	fade_a.start(ctx_a, scene, false)
 	await wait_for_signal(fade_a.completed, 2.0)
 
-	fade_b.start(_manager, scene, true)
+	var ctx_b := Context.new(_manager)
+	fade_b.start(ctx_b, scene, true)
 	await wait_for_signal(fade_b.completed, 2.0)
 
 	# Then: Both used the same overlay instance.
@@ -119,7 +129,8 @@ func test_overlay_color_updates_on_start():
 	var scene := _create_scene()
 
 	# When: The fade starts.
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_for_signal(fade.completed, 2.0)
 
 	# Then: The overlay color matches.
@@ -135,7 +146,8 @@ func test_stop_does_not_emit_completed():
 	watch_signals(fade)
 
 	# When: The fade is started and stopped.
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_process_frames(2)
 	fade.stop()
 	await wait_physics_frames(2)
@@ -152,7 +164,8 @@ func test_reset_does_not_emit_completed():
 	watch_signals(fade)
 
 	# When: The fade is started and reset.
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_process_frames(2)
 	fade.reset()
 	await wait_physics_frames(2)
@@ -167,7 +180,8 @@ func test_overlay_mouse_filter_is_ignore():
 	var scene := _create_scene()
 
 	# When: The fade starts (creating the overlay).
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_for_signal(fade.completed, 2.0)
 
 	# Then: The overlay does not intercept mouse input.
@@ -176,7 +190,7 @@ func test_overlay_mouse_filter_is_ignore():
 
 
 func test_fade_uses_proportional_duration():
-	# Given: A fade transition with a 0.2s duration and an overlay already at 0.5 alpha.
+	# Given: A fade with a 0.2s duration and an overlay already at 0.5 alpha.
 	var fade := _create_fade()
 	fade.duration = 0.2
 	var scene := _create_scene()
@@ -184,7 +198,8 @@ func test_fade_uses_proportional_duration():
 
 	# When: An enter fade is started (target 0.0, remaining 0.5).
 	var start_time := Time.get_ticks_msec()
-	fade.start(_manager, scene, true)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, true)
 	await wait_for_signal(fade.completed, 2.0)
 	var elapsed := Time.get_ticks_msec() - start_time
 
@@ -198,13 +213,15 @@ func test_fade_reuse_after_stop():
 	fade.duration = 0.5
 	var scene := _create_scene()
 
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_process_frames(2)
 	fade.stop()
 
 	# When: The same fade resource is started again.
 	fade.duration = 0.01
-	fade.start(_manager, scene, true)
+	var ctx2 := Context.new(_manager)
+	fade.start(ctx2, scene, true)
 	await wait_for_signal(fade.completed, 2.0)
 
 	# Then: The second fade completes successfully.
@@ -221,7 +238,8 @@ func test_fade_with_zero_duration():
 	watch_signals(fade)
 
 	# When: An exit fade is started.
-	fade.start(_manager, scene, false)
+	var ctx := Context.new(_manager)
+	fade.start(ctx, scene, false)
 	await wait_for_signal(fade.completed, 2.0)
 
 	# Then: The fade completes and the overlay reaches the target.
@@ -256,7 +274,8 @@ func _create_scene() -> Control:
 
 
 func _ensure_overlay(alpha: float) -> ColorRect:
-	var overlay := _create_fade()._get_or_create_overlay(_manager)
+	var ctx := Context.new(_manager)
+	var overlay := _create_fade()._get_or_create_overlay(ctx)
 	overlay.modulate.a = alpha
 	return overlay
 

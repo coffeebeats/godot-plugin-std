@@ -3,16 +3,12 @@
 ##
 ## StdScreenTransitionFade is a fade-to-color transition that uses a shared `ColorRect`
 ## overlay to fade the screen in or out. The overlay is stored as metadata on the
-## manager node so multiple fade transitions in the same stack share a single overlay
-## instance.
+## manager node (via the transition context) so multiple fade transitions in the same
+## stack share a single overlay instance.
 ##
 
 class_name StdScreenTransitionFade
 extends StdScreenTransition
-
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const Signals := preload("../../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -34,8 +30,8 @@ const _FADE_OVERLAY_KEY := &"_std_fade_overlay"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create(&"std/screen/transition-fade")  # gdlint:ignore=class-definitions-order,max-line-length
-
+var _context: StdScreenTransitionContext = null
+var _is_entering: bool = false
 var _overlay: ColorRect = null
 var _tween: Tween = null
 
@@ -49,9 +45,17 @@ func _init() -> void:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _start(manager: Node, scene: Node, is_entering: bool) -> void:
-	_overlay = _get_or_create_overlay(manager)
+func _start(
+	context: StdScreenTransitionContext,
+	_scene: Node,
+	is_entering: bool,
+) -> void:
+	_context = context
+	_is_entering = is_entering
+	_overlay = _get_or_create_overlay(context)
 	_overlay.color = color
+
+	context.block_input()
 
 	var target: float = 0.0 if is_entering else 1.0
 	var adjusted := duration * absf(_overlay.modulate.a - target)
@@ -59,16 +63,16 @@ func _start(manager: Node, scene: Node, is_entering: bool) -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
 
-	_tween = scene.get_tree().create_tween()
+	_tween = context.create_tween()
 
 	(
 		_tween
-		. tween_property(_overlay, ^"modulate:a", target, adjusted)
-		. set_ease(ease_type)
-		. set_trans(transition_type)
+		.tween_property(_overlay, ^"modulate:a", target, adjusted)
+		.set_ease(ease_type)
+		.set_trans(transition_type)
 	)
 
-	_tween.tween_callback(_done)
+	_tween.tween_callback(_on_tween_completed)
 
 
 func _stop() -> void:
@@ -81,28 +85,32 @@ func _stop() -> void:
 func _reset() -> void:
 	_stop()
 
+	if _context:
+		_context.allow_input()
+
 	if _overlay and is_instance_valid(_overlay):
-		_overlay.modulate.a = 0.0
+		_overlay.queue_free()
+
+		if _context:
+			_context.remove_manager_meta(_FADE_OVERLAY_KEY)
 
 	_overlay = null
+	_context = null
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _get_or_create_overlay returns the shared fade overlay for the given manager node.
-## Creates one if it doesn't exist yet.
-func _get_or_create_overlay(manager: Node) -> ColorRect:
-	if manager.has_meta(_FADE_OVERLAY_KEY):
-		var existing: ColorRect = manager.get_meta(_FADE_OVERLAY_KEY)
-		if manager.get_child(-1) == existing:
+## _get_or_create_overlay returns the shared fade overlay for the transition context, or
+## creates one if it doesn't exist yet.
+func _get_or_create_overlay(context: StdScreenTransitionContext) -> ColorRect:
+	if context.has_manager_meta(_FADE_OVERLAY_KEY):
+		var existing: ColorRect = context.get_manager_meta(_FADE_OVERLAY_KEY)
+		if is_instance_valid(existing):
+			if not existing.is_inside_tree():
+				context.push_node(existing)
+
 			return existing
-
-		_logger.warn("Overlay not last child of manager; recreating.")
-		assert(false, "invalid state; overlay not last child of manager")
-
-		if is_instance_valid(existing) and existing.is_inside_tree():
-			existing.queue_free()
 
 	var overlay := ColorRect.new()
 	overlay.name = &"FadeOverlay"
@@ -111,35 +119,22 @@ func _get_or_create_overlay(manager: Node) -> ColorRect:
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 
-	manager.add_child(overlay, Engine.is_editor_hint())
-	manager.set_meta(_FADE_OVERLAY_KEY, overlay)
-
-	# NOTE: Capture logger locally to avoid implicit self-capture in the lambda, which
-	## would prevent this Resource from being freed.
-	var logger := _logger
-	var reorder_overlay := func():
-		if not is_instance_valid(manager):
-			logger.warn("Found invalid manager node during overlay reorder.")
-			assert(false, "invalid state; manager node invalid")
-			return
-		if not is_instance_valid(overlay):
-			logger.warn("Found invalid overlay node during overlay reorder.")
-			assert(false, "invalid state; overlay node invalid")
-			return
-		if overlay.get_parent() != manager:
-			logger.warn("Found incorrect overlay parent during overlay reorder.")
-			assert(false, "invalid state; manager not overlay parent")
-			return
-		if manager.get_child(-1) != overlay:
-			manager.move_child(overlay, -1)
-
-	Signals.connect_safe(manager.child_order_changed, reorder_overlay)
-
-	# NOTE: Disconnect the reorder callback before the manager exits the tree to
-	# prevent spurious errors when children are freed during teardown.
-	Signals.connect_safe(
-		manager.tree_exiting,
-		func(): Signals.disconnect_safe(manager.child_order_changed, reorder_overlay),
-	)
+	context.push_node(overlay)
+	context.set_manager_meta(_FADE_OVERLAY_KEY, overlay)
 
 	return overlay
+
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+## _on_tween_completed is called when the fade tween finishes.
+func _on_tween_completed() -> void:
+	if _context:
+		_context.allow_input()
+
+		if _is_entering and _overlay and is_instance_valid(_overlay):
+			_context.pop_node(_overlay)
+
+		_context = null
+
+	_done()
