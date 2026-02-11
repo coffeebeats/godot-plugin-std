@@ -15,9 +15,7 @@ const CHECKSUM_BYTE_LENGTH := 16
 const COMPRESSION_MODE_BYTE_LENGTH := 1
 const UNCOMPRESSED_SIZE_BYTE_LENGTH := 8
 const HEADER_BYTE_LENGTH := (
-	COMPRESSION_MODE_BYTE_LENGTH
-	+ UNCOMPRESSED_SIZE_BYTE_LENGTH
-	+ CHECKSUM_BYTE_LENGTH
+	COMPRESSION_MODE_BYTE_LENGTH + UNCOMPRESSED_SIZE_BYTE_LENGTH + CHECKSUM_BYTE_LENGTH
 )
 
 enum CompressionMode {
@@ -89,10 +87,12 @@ func from_bytes(bytes: PackedByteArray) -> Config:
 		return null
 
 	var payload := bytes.slice(HEADER_BYTE_LENGTH)
-	var checksum := bytes.slice(
-		COMPRESSION_MODE_BYTE_LENGTH
-		+ UNCOMPRESSED_SIZE_BYTE_LENGTH,
-		HEADER_BYTE_LENGTH,
+	var checksum := (
+		bytes
+		. slice(
+			COMPRESSION_MODE_BYTE_LENGTH + UNCOMPRESSED_SIZE_BYTE_LENGTH,
+			HEADER_BYTE_LENGTH,
+		)
 	)
 
 	if _compute_checksum(payload) != checksum:
@@ -126,7 +126,7 @@ func to_bytes(
 		mode = CompressionMode.NONE
 
 	var data := config._data.duplicate(true)
-	_sort_config_data(data) # Ensure deterministic ordering.
+	_sort_config_data(data)  # Ensure deterministic ordering.
 
 	var payload := var_to_bytes(data)
 	var size := payload.size()
@@ -134,9 +134,12 @@ func to_bytes(
 	if mode > CompressionMode.NONE:
 		var compressed := payload.compress(mode - 1)
 		if compressed.is_empty():
-			_logger.warn(
-				"Compression failed; falling back to uncompressed.",
-				{&"mode": mode},
+			(
+				_logger
+				. warn(
+					"Compression failed; falling back to uncompressed.",
+					{&"mode": mode},
+				)
 			)
 
 			mode = CompressionMode.NONE
@@ -208,10 +211,12 @@ func _deserialize_var(bytes: PackedByteArray) -> Variant:
 	if not config:
 		return null
 
-	var checksum := bytes.slice(
-		COMPRESSION_MODE_BYTE_LENGTH
-		+ UNCOMPRESSED_SIZE_BYTE_LENGTH,
-		HEADER_BYTE_LENGTH,
+	var checksum := (
+		bytes
+		. slice(
+			COMPRESSION_MODE_BYTE_LENGTH + UNCOMPRESSED_SIZE_BYTE_LENGTH,
+			HEADER_BYTE_LENGTH,
+		)
 	)
 
 	result.set_checksum(checksum.hex_encode())
@@ -234,10 +239,12 @@ func _serialize_var(variant: Variant) -> PackedByteArray:
 
 	var out := to_bytes(config, compression_mode)
 
-	var checksum := out.slice(
-		COMPRESSION_MODE_BYTE_LENGTH
-		+ UNCOMPRESSED_SIZE_BYTE_LENGTH,
-		HEADER_BYTE_LENGTH,
+	var checksum := (
+		out
+		. slice(
+			COMPRESSION_MODE_BYTE_LENGTH + UNCOMPRESSED_SIZE_BYTE_LENGTH,
+			HEADER_BYTE_LENGTH,
+		)
 	)
 
 	_worker_mutex.lock()

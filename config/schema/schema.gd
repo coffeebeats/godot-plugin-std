@@ -46,19 +46,25 @@ func check_migrations() -> Error:
 
 	for migration in migrations:
 		if migration.version_from in seen:
-			_logger.error(
-				"Duplicate migration version_from.",
-				{&"version_from": migration.version_from},
+			(
+				_logger
+				. error(
+					"Duplicate migration version_from.",
+					{&"version_from": migration.version_from},
+				)
 			)
 			return ERR_INVALID_PARAMETER
 
 		if migration.version_from >= version:
-			_logger.error(
-				"Migration version_from >= schema version.",
-				{
-					&"version_from": migration.version_from,
-					&"schema_version": version,
-				},
+			(
+				_logger
+				. error(
+					"Migration version_from >= schema version.",
+					{
+						&"version_from": migration.version_from,
+						&"schema_version": version,
+					},
+				)
 			)
 			return ERR_INVALID_PARAMETER
 
@@ -189,8 +195,5 @@ func _apply_migrations(config: Config, from: int) -> void:
 	)
 
 	for migration in migrations:
-		if (
-			migration.version_from >= from
-			and migration.version_from < version
-		):
+		if migration.version_from >= from and migration.version_from < version:
 			migration._migrate(config)

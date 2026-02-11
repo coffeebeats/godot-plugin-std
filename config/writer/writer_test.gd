@@ -266,9 +266,7 @@ func test_falls_back_to_backup_on_corrupted_main():
 		FileAccess.file_exists(abs_path),
 		"Main file should be restored after backup recovery",
 	)
-	var restored: Dictionary = bytes_to_var(
-		FileAccess.get_file_as_bytes(abs_path)
-	)
+	var restored: Dictionary = bytes_to_var(FileAccess.get_file_as_bytes(abs_path))
 	assert_eq(
 		restored[&"data"][&"value"],
 		42,
@@ -325,9 +323,7 @@ func test_falls_back_to_backup_when_main_file_missing():
 		FileAccess.file_exists(abs_path),
 		"Main file should be restored after backup recovery",
 	)
-	var restored: Dictionary = bytes_to_var(
-		FileAccess.get_file_as_bytes(abs_path)
-	)
+	var restored: Dictionary = bytes_to_var(FileAccess.get_file_as_bytes(abs_path))
 	assert_eq(
 		restored[&"data"][&"value"],
 		42,
@@ -365,24 +361,16 @@ func test_rotates_backups_and_evicts_oldest():
 	assert_false(FileAccess.file_exists(bak4_path), ".bak4 should not exist")
 
 	# Then: Verify contents — main=4, .bak=3, .bak2=2, .bak3=1.
-	var main_data: Dictionary = bytes_to_var(
-		FileAccess.get_file_as_bytes(abs_path)
-	)
+	var main_data: Dictionary = bytes_to_var(FileAccess.get_file_as_bytes(abs_path))
 	assert_eq(main_data[&"data"][&"value"], 4, "Main should contain value 4")
 
-	var bak_data: Dictionary = bytes_to_var(
-		FileAccess.get_file_as_bytes(bak_path)
-	)
+	var bak_data: Dictionary = bytes_to_var(FileAccess.get_file_as_bytes(bak_path))
 	assert_eq(bak_data[&"data"][&"value"], 3, ".bak should contain value 3")
 
-	var bak2_data: Dictionary = bytes_to_var(
-		FileAccess.get_file_as_bytes(bak2_path)
-	)
+	var bak2_data: Dictionary = bytes_to_var(FileAccess.get_file_as_bytes(bak2_path))
 	assert_eq(bak2_data[&"data"][&"value"], 2, ".bak2 should contain value 2")
 
-	var bak3_data: Dictionary = bytes_to_var(
-		FileAccess.get_file_as_bytes(bak3_path)
-	)
+	var bak3_data: Dictionary = bytes_to_var(FileAccess.get_file_as_bytes(bak3_path))
 	assert_eq(bak3_data[&"data"][&"value"], 1, ".bak3 should contain value 1")
 
 

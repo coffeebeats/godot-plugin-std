@@ -89,7 +89,7 @@ func test_config_writer_load_config_skips_invalid_tmp_file_data():
 	# Given: Invalid data is stored at the temporary file path.
 	var file := FileAccess.open(path + ".tmp", FileAccess.WRITE)
 	assert_not_null(file)
-	file.store_buffer(var_to_bytes({&"category": {&"key": 1}})) # Missing checksum.
+	file.store_buffer(var_to_bytes({&"category": {&"key": 1}}))  # Missing checksum.
 	file.close()
 
 	# Given: The config instance is reset.
@@ -122,7 +122,9 @@ func test_serialize_produces_deterministic_output():
 	var bytes_b := writer.to_bytes(config_b)
 
 	# Then: The output is identical.
-	assert_eq(bytes_a, bytes_b, "Same data in different order should produce identical bytes")
+	assert_eq(
+		bytes_a, bytes_b, "Same data in different order should produce identical bytes"
+	)
 
 
 func test_to_bytes_from_bytes_round_trip():
@@ -201,9 +203,7 @@ func test_binary_falls_back_to_backup_on_corrupted_main():
 		FileAccess.file_exists(abs_path),
 		"Main file should be restored after backup recovery",
 	)
-	var restored := writer.from_bytes(
-		FileAccess.get_file_as_bytes(abs_path)
-	)
+	var restored := writer.from_bytes(FileAccess.get_file_as_bytes(abs_path))
 	assert_not_null(
 		restored,
 		"Restored main file should contain valid data",
@@ -260,9 +260,7 @@ func test_binary_falls_back_to_backup_when_main_file_missing():
 		FileAccess.file_exists(abs_path),
 		"Main file should be restored after backup recovery",
 	)
-	var restored := writer.from_bytes(
-		FileAccess.get_file_as_bytes(abs_path)
-	)
+	var restored := writer.from_bytes(FileAccess.get_file_as_bytes(abs_path))
 	assert_not_null(
 		restored,
 		"Restored main file should contain valid data",
@@ -292,15 +290,11 @@ func test_from_bytes_rejects_invalid_compression_mode():
 
 
 func test_to_bytes_from_bytes_round_trip_all_compression_modes(
-	mode = use_parameters(
-		StdConfigWriterBinary.CompressionMode.values()
-	),
+	mode = use_parameters(StdConfigWriterBinary.CompressionMode.values()),
 ):
 	# Given: A Config with data.
 	var config := Config.new()
-	config.set_string(
-		&"data", &"content", "Hello, compressed world!"
-	)
+	config.set_string(&"data", &"content", "Hello, compressed world!")
 	config.set_int(&"data", &"count", 999)
 
 	# When: Serialized and deserialized with the given mode.
@@ -347,9 +341,12 @@ func test_from_bytes_rejects_mismatched_uncompressed_size():
 	var bytes := writer.to_bytes(config)
 
 	# When: The uncompressed size field is tampered with.
-	bytes.encode_s64(
-		StdConfigWriterBinary.COMPRESSION_MODE_BYTE_LENGTH,
-		999,
+	(
+		bytes
+		. encode_s64(
+			StdConfigWriterBinary.COMPRESSION_MODE_BYTE_LENGTH,
+			999,
+		)
 	)
 
 	# Then: from_bytes returns null.
@@ -369,9 +366,7 @@ func test_from_bytes_rejects_non_dictionary_variant():
 	var checksum := ctx.finish()
 
 	var size_bytes := PackedByteArray()
-	size_bytes.resize(
-		StdConfigWriterBinary.UNCOMPRESSED_SIZE_BYTE_LENGTH
-	)
+	size_bytes.resize(StdConfigWriterBinary.UNCOMPRESSED_SIZE_BYTE_LENGTH)
 	size_bytes.encode_s64(0, payload.size())
 
 	var bytes := PackedByteArray()
