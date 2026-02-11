@@ -190,6 +190,12 @@ func _worker_impl() -> Error:
 
 					data = _deserialize_var(read_bak_result.bytes)
 					if data is Dictionary:
+						var copy_err := _file_copy(path_bak, path)
+						if copy_err != OK:
+							_logger.warn(
+								"Failed to restore main file from backup.",
+								{&"error": copy_err, &"path": path_bak},
+							)
 						break
 
 			# If data recovered from any source, use it.
