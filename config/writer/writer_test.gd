@@ -261,6 +261,20 @@ func test_falls_back_to_backup_on_corrupted_main():
 		"Should recover first store's data from backup",
 	)
 
+	# Then: The main file was restored from the backup.
+	assert_true(
+		FileAccess.file_exists(abs_path),
+		"Main file should be restored after backup recovery",
+	)
+	var restored: Dictionary = bytes_to_var(
+		FileAccess.get_file_as_bytes(abs_path)
+	)
+	assert_eq(
+		restored[&"data"][&"value"],
+		42,
+		"Restored main file should contain backup data",
+	)
+
 
 func test_falls_back_to_backup_when_main_file_missing():
 	# Given: A test file path.
@@ -304,6 +318,20 @@ func test_falls_back_to_backup_when_main_file_missing():
 		config_loaded.get_int(&"data", &"value", 0),
 		42,
 		"Should recover first store's data from backup",
+	)
+
+	# Then: The main file was restored from the backup.
+	assert_true(
+		FileAccess.file_exists(abs_path),
+		"Main file should be restored after backup recovery",
+	)
+	var restored: Dictionary = bytes_to_var(
+		FileAccess.get_file_as_bytes(abs_path)
+	)
+	assert_eq(
+		restored[&"data"][&"value"],
+		42,
+		"Restored main file should contain backup data",
 	)
 
 

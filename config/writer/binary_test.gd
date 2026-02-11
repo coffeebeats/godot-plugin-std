@@ -196,6 +196,24 @@ func test_binary_falls_back_to_backup_on_corrupted_main():
 		"Should recover backup data (first store)",
 	)
 
+	# Then: The main file was restored from the backup.
+	assert_true(
+		FileAccess.file_exists(abs_path),
+		"Main file should be restored after backup recovery",
+	)
+	var restored := writer.from_bytes(
+		FileAccess.get_file_as_bytes(abs_path)
+	)
+	assert_not_null(
+		restored,
+		"Restored main file should contain valid data",
+	)
+	assert_eq(
+		restored.get_int(&"game", &"score", 0),
+		100,
+		"Restored main file should contain backup data",
+	)
+
 
 func test_binary_falls_back_to_backup_when_main_file_missing():
 	# Given: A binary writer with backup_count = 1.
@@ -235,6 +253,24 @@ func test_binary_falls_back_to_backup_when_main_file_missing():
 		config_loaded.get_int(&"game", &"score", 0),
 		100,
 		"Should recover backup data (first store)",
+	)
+
+	# Then: The main file was restored from the backup.
+	assert_true(
+		FileAccess.file_exists(abs_path),
+		"Main file should be restored after backup recovery",
+	)
+	var restored := writer.from_bytes(
+		FileAccess.get_file_as_bytes(abs_path)
+	)
+	assert_not_null(
+		restored,
+		"Restored main file should contain valid data",
+	)
+	assert_eq(
+		restored.get_int(&"game", &"score", 0),
+		100,
+		"Restored main file should contain backup data",
 	)
 
 
