@@ -9,14 +9,20 @@
 class_name StdScreenTransitionContext
 extends RefCounted
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Controller := preload("manager/controller.gd")
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var _controller: Controller
 var _manager: Node
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _init(manager: Node) -> void:
+func _init(manager: Node, controller: Controller) -> void:
+	_controller = controller
 	_manager = manager
 
 
@@ -25,12 +31,12 @@ func _init(manager: Node) -> void:
 
 ## allow_input re-enables input processing on the topmost scene overlay.
 func allow_input() -> void:
-	_manager._allow_scene_input()
+	_controller.allow_input()
 
 
 ## block_input disables input processing on the topmost scene overlay.
 func block_input() -> void:
-	_manager._block_scene_input()
+	_controller.block_input()
 
 
 ## create_tween creates a new Tween via the scene tree.
@@ -50,6 +56,7 @@ func get_manager_meta(
 func has_manager_meta(key: StringName) -> bool:
 	return _manager.has_meta(key)
 
+
 ## pop_node removes a node from the manager without freeing it.
 func pop_node(node: Node) -> void:
 	if node.is_inside_tree() and node.get_parent() == _manager:
@@ -65,6 +72,7 @@ func push_node(node: Node) -> void:
 ## remove_manager_meta removes metadata from the manager node.
 func remove_manager_meta(key: StringName) -> void:
 	_manager.remove_meta(key)
+
 
 ## set_manager_meta sets metadata on the manager node.
 func set_manager_meta(key: StringName, value: Variant) -> void:
