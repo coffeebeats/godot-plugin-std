@@ -16,16 +16,16 @@ signal completed
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## reset_on_interrupt controls whether the manager resets visual state when interrupting
-## this transition. When `true` (default), visual state is restored to its pre-
-## transition value. Set to `false` for transitions (like fades) where the next
-## transition should pick up from the current visual state.
+## this transition. When true (default), visual state is restored to its pre-transition
+## value. Set to false for transitions (like fades) where the next transition should
+## pick up from the current visual state.
 var reset_on_interrupt: bool = true
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## start begins the screen transition effect on the given scene. The `is_entering`
-## parameter indicates whether the scene is entering (`true`) or exiting (`false`) view.
+## parameter indicates whether the scene is entering (true) or exiting (false) view.
 func start(
 	context: StdScreenTransitionContext,
 	scene: Node,

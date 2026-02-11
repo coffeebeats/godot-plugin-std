@@ -67,9 +67,9 @@ func _start(
 
 	(
 		_tween
-		.tween_property(_overlay, ^"modulate:a", target, adjusted)
-		.set_ease(ease_type)
-		.set_trans(transition_type)
+		. tween_property(_overlay, ^"modulate:a", target, adjusted)
+		. set_ease(ease_type)
+		. set_trans(transition_type)
 	)
 
 	_tween.tween_callback(_on_tween_completed)
@@ -123,6 +123,7 @@ func _get_or_create_overlay(context: StdScreenTransitionContext) -> ColorRect:
 	context.set_manager_meta(_FADE_OVERLAY_KEY, overlay)
 
 	return overlay
+
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 

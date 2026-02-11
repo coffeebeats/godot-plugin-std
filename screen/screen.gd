@@ -11,7 +11,6 @@ extends Resource
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-
 ## close_requested is emitted when a close trigger (overlay click or close action) fires
 ## on this screen's overlay. Emitted on *all* screens in the overlay in reverse stack
 ## order (topmost first). Call `cancel.call()` from any handler to abort the close for
@@ -57,29 +56,6 @@ signal uncovered(scene: Node)
 ## disabled when another screen is pushed on top.
 @export var pause_when_covered: bool = true
 
-@export_group("Input handling")
-
-## block_input_below controls whether this screen creates a new input isolation layer.
-## When `true` (default), a new overlay is created that blocks both mouse and keyboard
-## input from reaching screens lower in the stack. When `false`, this screen's scene
-## joins the overlay of the screen below.
-@export var block_input_below: bool = true
-
-## overlay_click_to_close is a bitmask of mouse buttons that trigger a close request
-## when the overlay background (scrim) is clicked. Uses MouseButtonMask values (1=Left,
-## 2=Right, 4=Middle). Set to 0 (default) to disable.
-@export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
-
-## close_action is the input action (e.g. &"ui_cancel") that triggers a close request
-## when no scene control consumes it; empty (default) disables action-to-close.
-@export var close_action: StringName = &""
-
-## close_animate_intermediate controls whether closing this screen's overlay animates
-## all exit transitions sequentially. When false (default), only the bottom screen in
-## the overlay plays its exit animation; upper screens are torn down instantly. Only the
-## bottom-most screen's value is used.
-@export var close_animate_intermediate: bool = false
-
 @export_group("Transitions")
 
 @export_subgroup("Enter")
@@ -105,6 +81,29 @@ signal uncovered(scene: Node)
 ## preload_scenes is a list of scene paths to begin loading in the background after this
 ## screen finishes entering.
 @export_file("*.tscn", "*.scn") var preload_scenes: PackedStringArray = []
+
+@export_group("Input")
+
+## block_input_below controls whether this screen creates a new input isolation layer.
+## When true (default), a new overlay is created that blocks both mouse and keyboard
+## input from reaching screens lower in the stack. When false, this screen's scene joins
+## the overlay of the screen below.
+@export var block_input_below: bool = true
+
+## overlay_click_to_close is a bitmask of mouse buttons that trigger a close request
+## when the overlay background (scrim) is clicked. Uses MouseButtonMask values (1=Left,
+## 2=Right, 4=Middle). Set to 0 (default) to disable.
+@export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
+
+## close_action is the input action (e.g. &"ui_cancel") that triggers a close request
+## when no scene control consumes it; empty (default) disables action-to-close.
+@export var close_action: StringName = &""
+
+## close_animate_intermediate controls whether closing this screen's overlay animates
+## all exit transitions sequentially. When false (default), only the bottom screen in
+## the overlay plays its exit animation; upper screens are torn down instantly. Only the
+## bottom-most screen's value is used.
+@export var close_animate_intermediate: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
