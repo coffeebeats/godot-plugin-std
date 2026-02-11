@@ -32,6 +32,7 @@ const PROPERTY_USAGE_SERDE := PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_ST
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+# gdlint:ignore=class-definitions-order
 static var _logger := StdLogger.create(&"std/config/schema")
 
 var _meta := Metadata.new()

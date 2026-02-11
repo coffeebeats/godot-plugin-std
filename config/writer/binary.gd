@@ -18,7 +18,7 @@ const HEADER_BYTE_LENGTH := (
 	COMPRESSION_MODE_BYTE_LENGTH + UNCOMPRESSED_SIZE_BYTE_LENGTH + CHECKSUM_BYTE_LENGTH
 )
 
-enum CompressionMode {
+enum CompressionMode {  # gdlint:ignore=class-definitions-order
 	NONE = 0,
 	FASTLZ = 1,
 	DEFLATE = 2,
@@ -113,7 +113,7 @@ func from_bytes(bytes: PackedByteArray) -> Config:
 
 	var config := Config.new()
 	config._data = value
-	return config
+	return config  # gdlint:ignore=max-returns
 
 
 ## to_bytes serializes a `Config` to binary format with optional compression.
