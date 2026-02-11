@@ -65,8 +65,7 @@ const Debounce := preload("../timer/debounce.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-# gdlint:ignore=class-definitions-order
-static var _logger := StdLogger.create(&"std/statistic/store")
+static var _logger := StdLogger.create(&"std/statistic/store")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _debounce: Debounce = null
 var _leaderboards: Dictionary = {}

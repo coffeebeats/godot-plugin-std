@@ -49,8 +49,7 @@ const Signals := preload("../event/signal.gd")
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 @warning_ignore("UNUSED_PRIVATE_CLASS_VARIABLE")
-# gdlint:ignore=class-definitions-order
-static var _logger := StdLogger.create(&"std/condition")
+static var _logger := StdLogger.create(&"std/condition")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _is_currently_allowed: bool = false
 
