@@ -76,15 +76,19 @@ func test_enqueue_or_run_reentrant_defers_operation():
 	assert_not_called(spy, "called")
 
 
-func test_enqueue_or_run_reentrant_drains_on_next_frame():
+func test_enqueue_or_run_reentrant_drains_on_complete():
 	# Given: A spy to track inner execution.
 	var spy = double(Spy).new()
 
 	# Given: An idle queue.
 	assert_false(_queue.is_operating())
 
-	# Given: A queue with a deferred operation from reentrancy.
-	_queue.enqueue_or_run(func(): _queue.enqueue_or_run(func(): spy.called()))
+	# Given: A completed operation that enqueued a nested one.
+	_queue.enqueue_or_run(
+		func():
+			_queue.enqueue_or_run(func(): spy.called())
+			_queue.complete(),
+	)
 
 	# When: A frame passes, allowing `call_deferred` to fire.
 	await get_tree().process_frame
@@ -100,12 +104,25 @@ func test_enqueue_or_run_reentrant_preserves_fifo_order():
 	# Given: An idle queue.
 	assert_false(_queue.is_operating())
 
-	# Given: Multiple deferred operations are enqueued/run.
+	# Given: Multiple deferred operations are enqueued and completed.
 	_queue.enqueue_or_run(
 		func():
-			_queue.enqueue_or_run(func(): spy.called("1"))
-			_queue.enqueue_or_run(func(): spy.called("2"))
-			_queue.enqueue_or_run(func(): spy.called("3"))
+			_queue.enqueue_or_run(
+				func():
+					spy.called("1")
+					_queue.complete(),
+			)
+			_queue.enqueue_or_run(
+				func():
+					spy.called("2")
+					_queue.complete(),
+			)
+			_queue.enqueue_or_run(
+				func():
+					spy.called("3")
+					_queue.complete(),
+			)
+			_queue.complete(),
 	)
 
 	# When: Enough frames pass for all deferred operations to drain.
@@ -127,8 +144,17 @@ func test_clear_prevents_queued_operations_from_running():
 	# Given: Multiple deferred operations are enqueued.
 	_queue.enqueue_or_run(
 		func():
-			_queue.enqueue_or_run(func(): spy.called("first"))
-			_queue.enqueue_or_run(func(): spy.called("second"))
+			_queue.enqueue_or_run(
+				func():
+					spy.called("first")
+					_queue.complete(),
+			)
+			_queue.enqueue_or_run(
+				func():
+					spy.called("second")
+					_queue.complete(),
+			)
+			_queue.complete(),
 	)
 
 	# When: The queue is cleared before the deferred calls fire.

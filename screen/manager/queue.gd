@@ -41,7 +41,8 @@ func complete() -> void:
 
 
 ## enqueue_or_run queues an operation for deferred execution when called reentrantly
-## (from a lifecycle signal handler), or runs it immediately when idle.
+## (from a lifecycle signal handler), or runs it immediately when idle. The operation
+## must call `complete()` when finished to advance the queue.
 func enqueue_or_run(operation: Callable) -> void:
 	if _is_operating:
 		_queue.append(operation)
@@ -49,8 +50,7 @@ func enqueue_or_run(operation: Callable) -> void:
 
 	_is_operating = true
 	operation.call()
-
-	_drain()
+	_is_operating = false
 
 
 ## is_operating returns whether an operation is currently executing.
@@ -61,11 +61,8 @@ func is_operating() -> bool:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _drain clears the operating flag and schedules the next queued operation (if any) via
-## call_deferred.
+## _drain schedules the next queued operation (if any) via call_deferred.
 func _drain() -> void:
-	_is_operating = false
-
 	if _queue.is_empty():
 		return
 
@@ -78,4 +75,4 @@ func _drain() -> void:
 func _run_deferred(operation: Callable) -> void:
 	_is_operating = true
 	operation.call()
-	_drain()
+	_is_operating = false
