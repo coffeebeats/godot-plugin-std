@@ -134,6 +134,26 @@ func test_enqueue_or_run_reentrant_preserves_fifo_order():
 	assert_eq(get_call_parameters(spy.called, 2), ["3"])
 
 
+func test_enqueue_or_run_during_async_phase_drains():
+	# Given: A spy to track execution.
+	var spy = double(Spy).new()
+
+	# Given: An operation in its async phase (sync returned, `complete` not yet called).
+	_queue.enqueue_or_run(func(): pass)
+
+	# When: A new operation is submitted externally.
+	_queue.enqueue_or_run(func(): spy.called())
+
+	# Then: Not run synchronously (scheduled for next frame).
+	assert_not_called(spy, "called")
+
+	# When: A frame passes, allowing call_deferred to fire.
+	await get_tree().process_frame
+
+	# Then: The new operation has executed.
+	assert_called(spy, "called")
+
+
 func test_clear_prevents_queued_operations_from_running():
 	# Given: A spy to track inner execution.
 	var spy = double(Spy).new()
