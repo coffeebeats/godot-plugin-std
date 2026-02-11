@@ -17,7 +17,7 @@ const Config := preload("../config.gd")
 const DISK_BLOCK_SIZE := 4096
 const VARIANT_ENCODING_LENGTH_MIN := 4
 
-enum Command {UNSPECIFIED, LOAD, STORE} # gdlint:ignore=class-definitions-order
+enum Command { UNSPECIFIED, LOAD, STORE, COPY }  # gdlint:ignore=class-definitions-order
 
 
 class ReadResult:
@@ -34,8 +34,39 @@ class ReadResult:
 
 var _pending: Command = Command.UNSPECIFIED
 var _pending_config: Config = null
+var _pending_copy_from: String = ""
+var _pending_copy_to: String = ""
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## copy_file enqueues an asynchronous file copy from `from` to `to` on the worker thread
+## (both paths must be absolute). Note that this method enforces that the target disk
+## has sufficient space.
+func copy_file(
+	from: String,
+	to: String,
+) -> StdThreadWorkerResult:
+	(
+		_logger
+		. info(
+			"Copying file.",
+			{&"from": from, &"to": to},
+		)
+	)
+
+	_worker_mutex.lock()
+
+	if _pending != Command.UNSPECIFIED:
+		_worker_mutex.unlock()
+		return StdThreadWorkerResult.failed(ERR_BUSY)
+
+	_pending = Command.COPY
+	_pending_copy_from = from
+	_pending_copy_to = to
+	_worker_mutex.unlock()
+
+	return run()
 
 
 ## get_filepath returns the target file path at which the configuration data is stored.
@@ -62,7 +93,8 @@ func load_config(config: Config) -> StdThreadWorkerResult:
 	return run()
 
 
-## store_config persists the provided 'Config' instance's contents to the file.
+## store_config persists the provided 'Config' instance's contents to the file. Note
+## that this method enforces that the target disk has sufficient space.
 func store_config(config: Config) -> StdThreadWorkerResult:
 	_logger.info("Storing configuration in file.", {&"path": _get_filepath()})
 
@@ -107,7 +139,7 @@ func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
 	err = _file_write(data)
 	if err != OK:
 		assert(false, "invalid state; failed to close file")
-		return err # NOTE: No need to close; only error is file not found.
+		return err  # NOTE: No need to close; only error is file not found.
 
 	err = _file_close()
 	if err != OK:
@@ -148,7 +180,15 @@ func _worker_impl() -> Error:
 	var config := _pending_config
 	_pending_config = null
 
+	var copy_from := _pending_copy_from
+	_pending_copy_from = ""
+	var copy_to := _pending_copy_to
+	_pending_copy_to = ""
+
 	_worker_mutex.unlock()
+
+	if pending == Command.COPY:
+		return _handle_copy(copy_from, copy_to)
 
 	if not config:
 		assert(false, "invalid state; missing config")
@@ -160,75 +200,12 @@ func _worker_impl() -> Error:
 
 	match pending:
 		Command.LOAD:
-			var read_result := _config_read_bytes(path)
-
-			var data: Variant = null
-			if (
-				read_result.error == OK
-				and read_result.bytes.size() >= _get_minimum_size()
-			):
-				data = _deserialize_var(read_result.bytes)
-
-			# Backup fallback: try backups if main file was corrupt or missing.
-			if (
-				not data is Dictionary
-				and backup_count > 0
-				and read_result.error in [OK, ERR_FILE_NOT_FOUND]
-			):
-				for i in range(backup_count):
-					var path_bak := _get_bak_filepath(i)
-
-					if not FileAccess.file_exists(path_bak):
-						continue
-
-					var read_bak_result := _read_file_bytes(path_bak)
-					if read_bak_result.error != OK:
-						continue
-
-					if read_bak_result.bytes.size() < _get_minimum_size():
-						continue
-
-					data = _deserialize_var(read_bak_result.bytes)
-					if data is Dictionary:
-						var copy_err := _file_copy(path_bak, path)
-						if copy_err != OK:
-							_logger.warn(
-								"Failed to restore main file from backup.",
-								{&"error": copy_err, &"path": path_bak},
-							)
-						break
-
-			# If data recovered from any source, use it.
-			if data is Dictionary:
-				config.lock()
-				config._data = data
-				config.unlock()
-
-				return OK
-
-			# No data recovered.
-			if read_result.error != OK:
-				return read_result.error
-
-			return ERR_INVALID_DATA
-
+			return _handle_load(config, path)
 		Command.STORE:
-			config.lock()
-			var bytes := _serialize_var(config._data)
-			config.unlock()
-
-			var disk_err := _check_disk_space(path, bytes.size())
-			if disk_err != OK:
-				_logger.error(
-					"Not enough disk space to write file.",
-					{&"path": path, &"error": disk_err},
-				)
-				return disk_err
-
-			return _config_write_bytes(path, bytes)
+			return _handle_store(config, path)
 
 	assert(false, "invalid argument; missing command")
-	return ERR_BUG # gdlint:ignore=max-returns
+	return ERR_BUG  # gdlint:ignore=max-returns
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -247,9 +224,7 @@ func _check_disk_space(path: String, size: int) -> Error:
 
 	@warning_ignore("integer_division")
 	var space_required := (
-		(size + DISK_BLOCK_SIZE - 1)
-		/ DISK_BLOCK_SIZE
-		* DISK_BLOCK_SIZE
+		(size + DISK_BLOCK_SIZE - 1) / DISK_BLOCK_SIZE * DISK_BLOCK_SIZE
 	)
 
 	# NOTE: `space_left` will be `0` on unsupported platforms, so ignore that value.
@@ -262,22 +237,112 @@ func _check_disk_space(path: String, size: int) -> Error:
 
 ## _get_bak_filepath returns the absolute path to the backup file at the given depth.
 func _get_bak_filepath(depth: int = 0) -> String:
-	var base := FilePath.make_project_path_absolute(
-		_get_filepath()
-	)
+	var base := FilePath.make_project_path_absolute(_get_filepath())
 
-	return (
-		base + ".bak"
-		if depth <= 0
-		else base + ".bak%d" % (depth + 1)
-	)
+	return base + ".bak" if depth <= 0 else base + ".bak%d" % (depth + 1)
 
 
 ## _get_tmp_filepath returns the absolute path to the temporary write file.
 func _get_tmp_filepath() -> String:
-	return FilePath.make_project_path_absolute(
-		_get_filepath()
-	) + ".tmp"
+	return FilePath.make_project_path_absolute(_get_filepath()) + ".tmp"
+
+
+func _handle_copy(from: String, to: String) -> Error:
+	var source := FileAccess.open(from, FileAccess.READ)
+	if source:
+		var size := source.get_length()
+		source.close()
+		var disk_err := _check_disk_space(to, size)
+		if disk_err != OK:
+			(
+				_logger
+				. error(
+					"Not enough disk space to copy file.",
+					{&"path": to, &"error": disk_err},
+				)
+			)
+			return disk_err
+
+	return _file_copy(from, to)
+
+
+func _handle_load(
+	config: Config,
+	path: String,
+) -> Error:
+	var read_result := _config_read_bytes(path)
+
+	var data: Variant = null
+	if read_result.error == OK and read_result.bytes.size() >= _get_minimum_size():
+		data = _deserialize_var(read_result.bytes)
+
+	# Backup fallback: try backups if main file was corrupt or missing.
+	if (
+		not data is Dictionary
+		and backup_count > 0
+		and read_result.error in [OK, ERR_FILE_NOT_FOUND]
+	):
+		for i in range(backup_count):
+			var path_bak := _get_bak_filepath(i)
+
+			if not FileAccess.file_exists(path_bak):
+				continue
+
+			var read_bak_result := _read_file_bytes(path_bak)
+			if read_bak_result.error != OK:
+				continue
+
+			if read_bak_result.bytes.size() < _get_minimum_size():
+				continue
+
+			data = _deserialize_var(read_bak_result.bytes)
+			if data is Dictionary:
+				var copy_err := _file_copy(path_bak, path)
+				if copy_err != OK:
+					(
+						_logger
+						. warn(
+							"Failed to restore main file from backup.",
+							{&"error": copy_err, &"path": path_bak},
+						)
+					)
+				break
+
+	# If data recovered from any source, use it.
+	if data is Dictionary:
+		config.lock()
+		config._data = data
+		config.unlock()
+
+		return OK
+
+	# No data recovered.
+	if read_result.error != OK:
+		return read_result.error
+
+	return ERR_INVALID_DATA
+
+
+func _handle_store(
+	config: Config,
+	path: String,
+) -> Error:
+	config.lock()
+	var bytes := _serialize_var(config._data)
+	config.unlock()
+
+	var disk_err := _check_disk_space(path, bytes.size())
+	if disk_err != OK:
+		(
+			_logger
+			. error(
+				"Not enough disk space to write file.",
+				{&"path": path, &"error": disk_err},
+			)
+		)
+		return disk_err
+
+	return _config_write_bytes(path, bytes)
 
 
 ## _read_file_bytes reads the raw contents from the specified file path using managed
@@ -332,9 +397,12 @@ func _rotate_backups(config_path: String) -> void:
 
 	var copy_err := _file_copy(config_path, bak)
 	if copy_err != OK:
-		_logger.warn(
-			"Backup rotation failed; rolling back.",
-			{&"error": copy_err, &"path": config_path},
+		(
+			_logger
+			. warn(
+				"Backup rotation failed; rolling back.",
+				{&"error": copy_err, &"path": config_path},
+			)
 		)
 
 		# Reverse the shifts: move .bak{i} -> .bak{i-1} for each shifted file.
