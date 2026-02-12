@@ -31,8 +31,7 @@ signal removed(instance: StdSoundInstance)
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-# gdlint:ignore=class-definitions-order
-static var _logger := StdLogger.create(&"std/sound/group")
+static var _logger := StdLogger.create(&"std/sound/group")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _mute: int = 0
 var _playing: Array[StdSoundInstance] = []

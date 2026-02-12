@@ -35,8 +35,7 @@ const Debounce := preload("../timer/debounce.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-# gdlint:ignore=class-definitions-order
-static var _logger := StdLogger.create(&"std/setting/repository")
+static var _logger := StdLogger.create(&"std/setting/repository")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _debounce: Debounce = null
 
