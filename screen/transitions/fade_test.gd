@@ -10,11 +10,25 @@ extends GutTest
 
 const Context := preload("../context.gd")
 const Controller := preload("../manager/controller.gd")
-const Manager := preload("../manager/manager.gd")
+
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+
+class MockManager:
+	extends Node
+
+	signal transition_done
+
+	func _get_current_overlay() -> Node:
+		return null
+
+	func _on_transitions_settled() -> void:
+		pass
+
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _manager: Manager = null
+var _mock: MockManager = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -26,7 +40,7 @@ func test_exit_fade_tweens_overlay_to_opaque():
 
 	# When: An exit fade is started.
 	_start_fade(fade, scene, false)
-	await wait_for_signal(fade.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
 	# Then: The overlay is opaque.
 	var overlay := _get_overlay()
@@ -42,24 +56,24 @@ func test_enter_fade_tweens_overlay_to_transparent():
 
 	# When: An enter fade is started.
 	_start_fade(fade, scene, true)
-	await wait_for_signal(fade.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
 	# Then: The overlay is transparent.
 	assert_almost_eq(overlay.modulate.a, 0.0, 0.01)
 
 
-func test_fade_emits_completed_on_finish():
+func test_fade_invokes_done_on_finish():
 	# Given: A fade transition.
 	var fade := _create_fade()
 	var scene := _create_scene()
-	watch_signals(fade)
+	watch_signals(_mock)
 
 	# When: An exit fade runs to completion.
 	_start_fade(fade, scene, false)
-	await wait_for_signal(fade.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
-	# Then: The completed signal was emitted.
-	assert_signal_emit_count(fade, "completed", 1)
+	# Then: The done callback was invoked exactly once.
+	assert_signal_emit_count(_mock, "transition_done", 1)
 
 
 func test_stop_preserves_overlay_alpha():
@@ -107,10 +121,10 @@ func test_overlay_shared_across_transitions():
 
 	# When: Both transitions run.
 	_start_fade(fade_a, scene, false)
-	await wait_for_signal(fade_a.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
 	_start_fade(fade_b, scene, true)
-	await wait_for_signal(fade_b.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
 	# Then: Both used the same overlay instance.
 	assert_same(fade_a._overlay, fade_b._overlay)
@@ -124,19 +138,19 @@ func test_overlay_color_updates_on_start():
 
 	# When: The fade starts.
 	_start_fade(fade, scene, false)
-	await wait_for_signal(fade.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
 	# Then: The overlay color matches.
 	var overlay := _get_overlay()
 	assert_eq(overlay.color, Color.RED)
 
 
-func test_stop_does_not_emit_completed():
+func test_stop_does_not_invoke_done():
 	# Given: A fade transition with a long duration.
 	var fade := _create_fade()
 	fade.duration = 0.5
 	var scene := _create_scene()
-	watch_signals(fade)
+	watch_signals(_mock)
 
 	# When: The fade is started and stopped.
 	_start_fade(fade, scene, false)
@@ -144,16 +158,16 @@ func test_stop_does_not_emit_completed():
 	fade.stop()
 	await wait_physics_frames(2)
 
-	# Then: The completed signal was not emitted.
-	assert_signal_not_emitted(fade, "completed")
+	# Then: The done callback was not invoked.
+	assert_signal_not_emitted(_mock, "transition_done")
 
 
-func test_reset_does_not_emit_completed():
+func test_reset_does_not_invoke_done():
 	# Given: A fade transition with a long duration.
 	var fade := _create_fade()
 	fade.duration = 0.5
 	var scene := _create_scene()
-	watch_signals(fade)
+	watch_signals(_mock)
 
 	# When: The fade is started and reset.
 	_start_fade(fade, scene, false)
@@ -161,8 +175,8 @@ func test_reset_does_not_emit_completed():
 	fade.reset()
 	await wait_physics_frames(2)
 
-	# Then: The completed signal was not emitted.
-	assert_signal_not_emitted(fade, "completed")
+	# Then: The done callback was not invoked.
+	assert_signal_not_emitted(_mock, "transition_done")
 
 
 func test_overlay_mouse_filter_is_ignore():
@@ -172,7 +186,7 @@ func test_overlay_mouse_filter_is_ignore():
 
 	# When: The fade starts (creating the overlay).
 	_start_fade(fade, scene, false)
-	await wait_for_signal(fade.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
 	# Then: The overlay does not intercept mouse input.
 	var overlay := _get_overlay()
@@ -189,7 +203,7 @@ func test_fade_uses_proportional_duration():
 	# When: An enter fade is started (target 0.0, remaining 0.5).
 	var start_time := Time.get_ticks_msec()
 	_start_fade(fade, scene, true)
-	await wait_for_signal(fade.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 	var elapsed := Time.get_ticks_msec() - start_time
 
 	# Then: The fade completes in roughly half the configured duration.
@@ -209,7 +223,7 @@ func test_fade_reuse_after_stop():
 	# When: The same fade resource is started again.
 	fade.duration = 0.01
 	_start_fade(fade, scene, true)
-	await wait_for_signal(fade.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
 	# Then: The second fade completes successfully.
 	var overlay := _get_overlay()
@@ -222,14 +236,14 @@ func test_fade_with_zero_duration():
 	var fade := _create_fade()
 	fade.duration = 0.0
 	var scene := _create_scene()
-	watch_signals(fade)
+	watch_signals(_mock)
 
 	# When: An exit fade is started.
 	_start_fade(fade, scene, false)
-	await wait_for_signal(fade.completed, 2.0)
+	await wait_for_signal(_mock.transition_done, 2.0)
 
 	# Then: The fade completes and the overlay reaches the target.
-	assert_signal_emitted(fade, "completed")
+	assert_signal_emitted(_mock, "transition_done")
 	var overlay := _get_overlay()
 	assert_not_null(overlay)
 	assert_almost_eq(overlay.modulate.a, 1.0, 0.01)
@@ -239,16 +253,16 @@ func test_fade_with_zero_duration():
 
 
 func before_each():
-	_manager = Manager.new()
-	_manager.name = &"TestManager"
-	add_child_autofree(_manager)
+	_mock = MockManager.new()
+	_mock.name = &"TestManager"
+	add_child_autofree(_mock)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
 func _create_context() -> Context:
-	return Context.new(_manager, Controller.new(_manager))
+	return Context.new(_mock, Controller.new(_mock))
 
 
 func _create_fade() -> StdScreenTransitionFade:
@@ -259,7 +273,7 @@ func _create_fade() -> StdScreenTransitionFade:
 
 func _create_scene() -> Control:
 	var scene := Control.new()
-	_manager.add_child(scene)
+	_mock.add_child(scene)
 	return scene
 
 
@@ -273,8 +287,8 @@ func _ensure_overlay(alpha: float) -> ColorRect:
 
 func _get_overlay() -> ColorRect:
 	var key := &"_std_fade_overlay"
-	if _manager.has_meta(key):
-		return _manager.get_meta(key)
+	if _mock.has_meta(key):
+		return _mock.get_meta(key)
 	return null
 
 
@@ -283,7 +297,9 @@ func _start_fade(
 	scene: Node,
 	is_entering: bool,
 ) -> void:
-	fade.start(_create_context(), scene, is_entering)
+	var ctx := _create_context()
+	ctx._on_done = _mock.transition_done.emit
+	fade.start(ctx, scene, is_entering)
 	var overlay := _get_overlay()
 	if overlay:
 		autofree(overlay)
