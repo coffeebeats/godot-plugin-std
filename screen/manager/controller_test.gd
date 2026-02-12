@@ -93,7 +93,7 @@ func test_run_duplicates_transition_resource():
 	_controller.run_exit(
 		screen,
 		_create_scene(),
-		func() -> void: pass ,
+		func() -> void: pass,
 		Callable(),
 	)
 

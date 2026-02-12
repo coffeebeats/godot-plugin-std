@@ -35,7 +35,7 @@ signal screen_popped(screen: StdScreen)
 signal screen_pushed(screen: StdScreen)
 
 ## screen_replaced is emitted after a replace operation completes.
-signal screen_replaced(old: StdScreen, new: StdScreen)
+signal screen_replaced(prev: StdScreen, next: StdScreen)
 
 ## screen_uncovered is emitted when a covering screen is popped.
 signal screen_uncovered(screen: StdScreen, scene: Node)
@@ -45,6 +45,12 @@ signal screen_uncovered(screen: StdScreen, scene: Node)
 const Signals := preload("../../event/signal.gd")
 const OperationQueue := preload("queue.gd")
 const Controller := preload("controller.gd")
+
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## _META_PROCESS_MODE is the metadata key used to save a scene's process mode before the
+## manager disables it.
+const _META_PROCESS_MODE := &"std/screen/manager:process_mode"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -223,6 +229,11 @@ func reset(
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _exit_tree() -> void:
+	_transitions.stop_all(true)
+	_queue.clear()
+
+
 func _input(event: InputEvent) -> void:
 	if _stack.is_empty() or _queue.is_operating():
 		return
@@ -346,8 +357,13 @@ func _mount_and_enter(
 	skip_enter: bool,
 	on_complete: Callable,
 	post_enter: Callable = Callable(),
+	reuse_overlay: StdScreenOverlay = null,
 ) -> void:
-	var overlay := _get_or_create_overlay(screen.block_input_below)
+	var overlay: StdScreenOverlay
+	if is_instance_valid(reuse_overlay) and screen.block_input_below:
+		overlay = reuse_overlay
+	else:
+		overlay = _get_or_create_overlay(screen.block_input_below)
 	overlay.add_child(scene)
 
 	_stack.append(screen)
@@ -366,8 +382,7 @@ func _mount_and_enter(
 		_restore_focus(scene)
 
 		if screen.preload_scenes.size() > 0:
-			# TODO: Provide a way to block on scene loading.
-			_loader.load_all(screen.preload_scenes)
+			_loader.load_all_scenes(screen.preload_scenes)
 
 		if post_enter.is_valid():
 			post_enter.call()
@@ -418,22 +433,15 @@ func _pop_impl(
 
 	_restore_focus(new_top_scene)
 
-	var after_exit := func() -> void:
+	var teardown := func() -> void:
+		_teardown_scene(screen, scene)
 		screen_popped.emit(screen)
 
-		assert(on_complete.is_valid(), "invalid state; invalid 'on_complete' callback")
-		on_complete.call()
-
 	if skip_exit:
-		_teardown_scene(screen, scene)
-		after_exit.call()
+		teardown.call()
+		on_complete.call()
 	else:
-		_transitions.run_exit(
-			screen,
-			scene,
-			func() -> void: _teardown_scene(screen, scene),
-			after_exit,
-		)
+		_transitions.run_exit(screen, scene, teardown, on_complete)
 
 
 ## _pop_to_depth_at recursively pops until target depth.
@@ -528,23 +536,24 @@ func _replace_impl(
 	instance: Node,
 	on_complete: Callable,
 ) -> void:
-	var old_screen: StdScreen = _stack[-1]
-	var old_scene: Node = _scenes[old_screen]
+	var screen_prev: StdScreen = _stack[-1]
+	var scene_prev: Node = _scenes[screen_prev]
+	var overlay_prev: StdScreenOverlay = _overlays.get(screen_prev)
 
-	old_screen.exiting.emit(old_scene)
-	screen_exiting.emit(old_screen, old_scene)
+	screen_prev.exiting.emit(scene_prev)
+	screen_exiting.emit(screen_prev, scene_prev)
 
 	_stack.pop_back()
-	_scenes.erase(old_screen)
+	_scenes.erase(screen_prev)
 
 	# NOTE: Unlike `_pop_impl`, `_update_stack_state` is intentionally skipped here. The
-	## screen below stays covered throughout the replace (old exits then new enters), so
-	## its state should not change.
+	# screen below stays covered throughout the replace (old exits then new enters), so
+	# its state should not change.
 
 	_transitions.run_exit(
-		old_screen,
-		old_scene,
-		func() -> void: _teardown_scene(old_screen, old_scene),
+		screen_prev,
+		scene_prev,
+		func() -> void: _teardown_scene(screen_prev, scene_prev, false),
 		func() -> void:
 			_resolve_scene_then(
 				screen,
@@ -554,10 +563,16 @@ func _replace_impl(
 						(
 							screen_replaced
 							. emit(
-								old_screen,
+								screen_prev,
 								screen,
 							)
 						)
+
+						if (
+							is_instance_valid(overlay_prev)
+							and overlay_prev not in _overlays.values()
+						):
+							overlay_prev.queue_free()
 
 					_mount_and_enter(
 						screen,
@@ -565,6 +580,7 @@ func _replace_impl(
 						false,
 						on_complete,
 						post,
+						overlay_prev,
 					),
 			),
 	)
@@ -584,6 +600,7 @@ func _reset_impl(
 			s.exiting.emit(sc)
 			screen_exiting.emit(s, sc)
 			_teardown_scene(s, sc)
+			screen_popped.emit(s)
 
 	_stack.clear()
 	_scenes.clear()
@@ -591,7 +608,7 @@ func _reset_impl(
 	_overlays.clear()
 
 	# Remove any INTERNAL_MODE_BACK children left by transitions (e.g. fade overlay).
-	## Skip the loader (INTERNAL_MODE_FRONT) and regular children.
+	# Skip the loader (INTERNAL_MODE_FRONT) and regular children.
 	var regular := get_children(false)
 	for child in get_children(true):
 		if child == _loader or child in regular:
@@ -627,12 +644,7 @@ func _resolve_scene_then(
 		"missing scene_path and no instance",
 	)
 
-	var result: StdScreenLoader.Result = (
-		_loader
-		. load(
-			screen.scene_path,
-		)
-	)
+	var result: StdScreenLoader.Result = _loader.load_scene(screen.scene_path)
 	if result.is_done():
 		assert(
 			result.get_error() == OK,
@@ -661,10 +673,12 @@ func _resolve_scene_then(
 
 
 ## _teardown_scene disconnects signal handlers, emits the `exited` signal, and frees the
-## scene node.
+## scene node. When `free_overlay` is false, only the scene is freed; the overlay stays
+## in the tree for reuse (e.g. during replace).
 func _teardown_scene(
 	screen: StdScreen,
 	scene: Node,
+	free_overlay: bool = true,
 ) -> void:
 	screen.disconnect_signal_handlers(scene)
 	screen.exited.emit(scene)
@@ -674,8 +688,14 @@ func _teardown_scene(
 	var overlay: StdScreenOverlay = _overlays.get(screen)
 	_overlays.erase(screen)
 
+	if not free_overlay:
+		if is_instance_valid(scene):
+			scene.queue_free()
+
+		return
+
 	# Free the scene. If the overlay is still used by another screen, just free the
-	## scene only (removing it from the overlay). Otherwise, free the whole overlay.
+	# scene only (removing it from the overlay). Otherwise, free the whole overlay.
 	var still_used := overlay and _overlays.values().has(overlay)
 	if still_used:
 		if is_instance_valid(scene):
@@ -747,8 +767,10 @@ func _update_close_actions() -> void:
 			_close_actions.append(screen.close_action)
 
 
-## _update_process_modes sets process modes for all scenes in the stack. The top scene
-## inherits; covered scenes are optionally disabled.
+## _update_process_modes sets process modes for all scenes in the stack. The top scene's
+## process mode is restored from metadata (if the manager previously disabled it);
+## covered scenes are optionally disabled. Process mode is saved/restored via metadata
+## to avoid overwriting user-set modes like `PROCESS_MODE_ALWAYS`.
 func _update_process_modes() -> void:
 	for i in range(_stack.size()):
 		var screen: StdScreen = _stack[i]
@@ -757,8 +779,25 @@ func _update_process_modes() -> void:
 			continue
 
 		if i == _stack.size() - 1:
-			scene.process_mode = Node.PROCESS_MODE_INHERIT
+			if scene.has_meta(_META_PROCESS_MODE):
+				scene.process_mode = (
+					scene
+					. get_meta(
+						_META_PROCESS_MODE,
+					)
+				)
+
+				scene.remove_meta(_META_PROCESS_MODE)
 		elif screen.pause_when_covered:
+			if not scene.has_meta(_META_PROCESS_MODE):
+				(
+					scene
+					. set_meta(
+						_META_PROCESS_MODE,
+						scene.process_mode,
+					)
+				)
+
 			scene.process_mode = Node.PROCESS_MODE_DISABLED
 
 
