@@ -130,12 +130,13 @@ func _get_or_create_overlay(context: StdScreenTransitionContext) -> ColorRect:
 
 ## _on_tween_completed is called when the fade tween finishes.
 func _on_tween_completed() -> void:
-	if _context:
-		_context.allow_input()
+	if not _context:
+		return
 
-		if _is_entering and _overlay and is_instance_valid(_overlay):
-			_context.pop_node(_overlay)
+	_context.allow_input()
 
-		_context = null
+	if _is_entering and _overlay and is_instance_valid(_overlay):
+		_context.pop_node(_overlay)
 
-	_done()
+	_context.done()
+	_context = null

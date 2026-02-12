@@ -8,11 +8,11 @@
 
 extends RefCounted
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const Signals := preload("../../event/signal.gd")
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
+
+## _active_contexts maps each in-flight transition to the context that was created for
+## it. Used to clear the done callback when stopping transitions.
+var _active_contexts: Dictionary[StdScreenTransition, StdScreenTransitionContext] = {}
 
 ## _active_transitions tracks all in-flight transitions so they can be stopped on
 ## interruption.
@@ -79,19 +79,14 @@ func run_enter(
 
 	var cleanup := func() -> void:
 		_active_transitions.erase(transition)
+		_active_contexts.erase(transition)
 		if screen.block_on_enter:
 			if on_complete.is_valid():
 				on_complete.call()
 
 	var context := StdScreenTransitionContext.new(_manager, self)
-	(
-		Signals
-		. connect_safe(
-			transition.completed,
-			cleanup,
-			CONNECT_ONE_SHOT,
-		)
-	)
+	context._on_done = cleanup
+	_active_contexts[transition] = context
 
 	transition.start(context, scene, true)
 
@@ -125,6 +120,7 @@ func run_exit(
 
 	var cleanup := func() -> void:
 		_active_transitions.erase(transition)
+		_active_contexts.erase(transition)
 		_cancel_cleanup.erase(transition)
 		teardown.call()
 
@@ -133,14 +129,8 @@ func run_exit(
 				on_complete.call()
 
 	var context := StdScreenTransitionContext.new(_manager, self)
-	(
-		Signals
-		. connect_safe(
-			transition.completed,
-			cleanup,
-			CONNECT_ONE_SHOT,
-		)
-	)
+	context._on_done = cleanup
+	_active_contexts[transition] = context
 
 	transition.start(context, scene, false)
 
@@ -155,14 +145,10 @@ func run_exit(
 ## `cancel_cleanup` callbacks are skipped (the caller handles all teardowns itself).
 func stop_all(force_reset: bool = false) -> void:
 	for transition in _active_transitions.duplicate():
-		for connection in transition.completed.get_connections():
-			(
-				Signals
-				. disconnect_safe(
-					transition.completed,
-					connection["callable"],
-				)
-			)
+		# Clear the done callback to prevent stale invocations after stop/reset.
+		var context: StdScreenTransitionContext = _active_contexts.get(transition)
+		if context:
+			context._on_done = Callable()
 
 		if force_reset or transition.reset_on_interrupt:
 			transition.reset()
@@ -175,6 +161,7 @@ func stop_all(force_reset: bool = false) -> void:
 			_cancel_cleanup[transition].call()
 
 	_active_transitions.clear()
+	_active_contexts.clear()
 	_cancel_cleanup.clear()
 	_input_block_count = 0
 	_unblock_overlay()

@@ -17,6 +17,7 @@ const Controller := preload("manager/controller.gd")
 
 var _controller: Controller
 var _manager: Node
+var _on_done: Callable = Callable()
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -42,6 +43,16 @@ func block_input() -> void:
 ## create_tween creates a new Tween via the scene tree.
 func create_tween() -> Tween:
 	return _manager.get_tree().create_tween()
+
+
+## done notifies the controller that the transition has finished. Called by transition
+## subclasses when their effect completes.
+func done() -> void:
+	var cb := _on_done
+	_on_done = Callable()  # Clear to prevent double-calling.
+
+	if cb.is_valid():
+		cb.call()
 
 
 ## get_manager_meta returns the manager's metadata for the given key.

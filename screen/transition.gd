@@ -8,11 +8,6 @@
 class_name StdScreenTransition
 extends Resource
 
-# -- SIGNALS ------------------------------------------------------------------------- #
-
-## completed is emitted when the screen transition effect has finished.
-signal completed
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## reset_on_interrupt controls whether the manager resets visual state when interrupting
@@ -34,8 +29,8 @@ func start(
 	_start(context, scene, is_entering)
 
 
-## stop halts the transition without emitting `completed`. Visual state is left as-is so
-## the next transition can pick up from the current position.
+## stop halts the transition. Visual state is left as-is so the next transition can pick
+## up from the current position.
 func stop() -> void:
 	_stop()
 
@@ -50,16 +45,16 @@ func reset() -> void:
 
 
 ## _start is a virtual method that begins the transition effect on the given scene.
-## Subclasses *must* call `_done()` when the transition completes (immediately or
+## Subclasses *must* call `context.done()` when the transition completes (immediately or
 ## deferred).
 ##
 ## NOTE: Override this method to implement custom transition behavior.
 func _start(
-	_context: StdScreenTransitionContext,
+	context: StdScreenTransitionContext,
 	_scene: Node,
 	_is_entering: bool,
 ) -> void:
-	_done()
+	context.done()
 
 
 ## _stop halts the transition while leaving visual state unchanged.
@@ -74,11 +69,3 @@ func _stop() -> void:
 ## NOTE: Override this method to implement custom transition behavior.
 func _reset() -> void:
 	_stop()
-
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-## _done signals that the transition has finished. Subclasses MUST call this.
-func _done() -> void:
-	completed.emit()

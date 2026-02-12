@@ -78,8 +78,9 @@ signal uncovered(scene: Node)
 
 @export_group("Dependencies")
 
-## preload_scenes is a list of scene paths to begin loading in the background after this
-## screen finishes entering.
+## preload_scenes is a list of scene paths that must be loaded before this screen's
+## enter transition starts. Loaded resources are held in memory for the screen's
+## lifetime in the stack.
 @export_file("*.tscn", "*.scn") var preload_scenes: PackedStringArray = []
 
 @export_group("Input")

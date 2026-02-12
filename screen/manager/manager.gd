@@ -50,7 +50,7 @@ const Controller := preload("controller.gd")
 
 ## _META_PROCESS_MODE is the metadata key used to save a scene's process mode before the
 ## manager disables it.
-const _META_PROCESS_MODE := &"std/screen/manager:process_mode"
+const _META_PROCESS_MODE := &"addons_std_screen_manager_process_mode"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -76,6 +76,10 @@ var _loader: StdScreenLoader = null
 
 ## _overlays maps each `StdScreen` to its `StdScreenOverlay`.
 var _overlays: Dictionary[StdScreen, StdScreenOverlay] = {}
+
+## _preloads holds preload dependency results for each active screen, keeping loaded
+## resources alive via reference counting for the screen's stack lifetime.
+var _preloads: Dictionary[StdScreen, Dictionary] = {}
 
 ## _queue is the reentrancy-safe operation queue.
 var _queue: OperationQueue = null
@@ -124,6 +128,20 @@ func get_scene() -> Node:
 ## is_current returns whether the given screen is the topmost.
 func is_current(screen: StdScreen) -> bool:
 	return get_current_screen() == screen
+
+
+## load_screen starts loading the screen's scene and, optionally, all of its declared
+## preload dependencies. Returns a dictionary of results keyed by resource path.
+func load_screen(
+	screen: StdScreen,
+	include_dependencies: bool = true,
+) -> Dictionary:
+	var paths := PackedStringArray()
+	if screen.scene_path:
+		paths.append(screen.scene_path)
+	if include_dependencies:
+		paths.append_array(screen.preload_scenes)
+	return _loader.load_all_scenes(paths)
 
 
 ## pop removes the topmost screen from the stack and returns focus to the new top.
@@ -329,6 +347,27 @@ func _do_reset(
 # Lifecycle
 
 
+func _await_all_loaded(
+	results: Dictionary,
+	on_done: Callable,
+) -> void:
+	for result in results.values():
+		if result.is_done():
+			assert(result.get_error() == OK, "failed to load dependency")
+			continue
+
+		Signals.connect_safe(
+			result.done,
+			func() -> void:
+				assert(result.get_error() == OK, "failed to load dependency")
+				_await_all_loaded(results, on_done),
+			CONNECT_ONE_SHOT,
+		)
+		return
+
+	on_done.call()
+
+
 func _get_or_create_overlay(block_input_below: bool) -> StdScreenOverlay:
 	var overlay: StdScreenOverlay = null
 	if not block_input_below and not _stack.is_empty():
@@ -380,9 +419,6 @@ func _mount_and_enter(
 		screen_entered.emit(screen, scene)
 
 		_restore_focus(scene)
-
-		if screen.preload_scenes.size() > 0:
-			_loader.load_all_scenes(screen.preload_scenes)
 
 		if post_enter.is_valid():
 			post_enter.call()
@@ -606,6 +642,7 @@ func _reset_impl(
 	_scenes.clear()
 	_focus.clear()
 	_overlays.clear()
+	_preloads.clear()
 
 	# Remove any INTERNAL_MODE_BACK children left by transitions (e.g. fade overlay).
 	# Skip the loader (INTERNAL_MODE_FRONT) and regular children.
@@ -629,45 +666,45 @@ func _reset_impl(
 	)
 
 
-## _resolve_scene_then calls the callback with the resolved scene.
+## _resolve_scene_then resolves the screen's scene and loads its preload dependencies,
+## then calls `on_done` with the instantiated scene once everything is ready. Preload
+## results are stored in `_preloads` to keep resources alive on the stack.
 func _resolve_scene_then(
 	screen: StdScreen,
 	instance: Node,
 	on_done: Callable,
 ) -> void:
+	var dep_results: Dictionary = {}
+	if screen.preload_scenes.size() > 0:
+		dep_results = _loader.load_all_scenes(screen.preload_scenes)
+
+	var with_deps := func(scene_instance: Node) -> void:
+		_await_all_loaded(
+			dep_results,
+			func() -> void:
+				if not dep_results.is_empty():
+					_preloads[screen] = dep_results
+				on_done.call(scene_instance),
+		)
+
 	if instance:
-		on_done.call(instance)
+		with_deps.call(instance)
 		return
 
-	assert(
-		screen.scene_path != "",
-		"missing scene_path and no instance",
-	)
+	assert(screen.scene_path != "", "missing scene_path and no instance")
 
 	var result: StdScreenLoader.Result = _loader.load_scene(screen.scene_path)
 	if result.is_done():
-		assert(
-			result.get_error() == OK,
-			"failed to load scene",
-		)
-		assert(
-			result.scene != null,
-			"loaded scene was null",
-		)
-		on_done.call(result.scene.instantiate())
+		assert(result.get_error() == OK, "failed to load scene")
+		assert(result.scene != null, "loaded scene was null")
+		with_deps.call(result.scene.instantiate())
 	else:
 		Signals.connect_safe(
 			result.done,
 			func() -> void:
-				assert(
-					result.get_error() == OK,
-					"failed to load scene",
-				)
-				assert(
-					result.scene != null,
-					"loaded scene was null",
-				)
-				on_done.call(result.scene.instantiate()),
+				assert(result.get_error() == OK, "failed to load scene")
+				assert(result.scene != null, "loaded scene was null")
+				with_deps.call(result.scene.instantiate()),
 			CONNECT_ONE_SHOT,
 		)
 
@@ -684,6 +721,8 @@ func _teardown_scene(
 	screen.exited.emit(scene)
 	screen_exited.emit(screen, scene)
 	_focus.erase(scene)
+
+	_preloads.erase(screen)
 
 	var overlay: StdScreenOverlay = _overlays.get(screen)
 	_overlays.erase(screen)
@@ -829,9 +868,14 @@ func _restore_focus(scene: Node) -> void:
 		saved.grab_focus()
 		return
 
-	# Delegate to the input cursor with the overlay as focus root.
+	if not is_instance_valid(_cursor):
+		return
+
 	var overlay := _get_current_overlay()
 	var root: Control = overlay if overlay else scene as Control
+	if not root or not root.is_visible_in_tree():
+		return
+
 	_cursor.set_focus_root(root)
 
 

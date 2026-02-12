@@ -36,12 +36,14 @@ class MockTransition:
 	var stopped := false
 	var was_reset := false
 	var is_entering_arg: bool
+	var _ctx: StdScreenTransitionContext
 
 	func _start(
-		_context: StdScreenTransitionContext,
+		context: StdScreenTransitionContext,
 		_scene: Node,
 		is_entering: bool,
 	) -> void:
+		_ctx = context
 		started = true
 		is_entering_arg = is_entering
 
@@ -52,8 +54,9 @@ class MockTransition:
 		_stop()
 		was_reset = true
 
+	## complete triggers transition completion from tests.
 	func complete() -> void:
-		_done()
+		_ctx.done()
 
 
 class Spy:
@@ -184,8 +187,7 @@ func test_block_input_tolerates_null_overlay():
 func test_run_enter_blocking_delays_on_complete():
 	# Given: A screen with a blocking enter transition.
 	var screen := Screen.new()
-	var transition := MockTransition.new()
-	screen.transition_enter = transition
+	screen.transition_enter = MockTransition.new()
 	screen.block_on_enter = true
 	var spy = double(Spy).new()
 
@@ -193,11 +195,12 @@ func test_run_enter_blocking_delays_on_complete():
 	_controller.run_enter(screen, _create_scene(), func(): spy.called())
 
 	# Then: Transition started but callback is deferred.
-	assert_true(transition.started)
+	var active: MockTransition = _controller._active_transitions[0]
+	assert_true(active.started)
 	assert_not_called(spy, "called")
 
 	# When: The transition completes.
-	transition.complete()
+	active.complete()
 
 	# Then: The callback fires.
 	assert_called(spy, "called")
@@ -218,43 +221,42 @@ func test_run_enter_immediate_callback_without_transition():
 func test_run_enter_nonblocking_completes_immediately():
 	# Given: A non-blocking enter transition.
 	var screen := Screen.new()
-	var transition := MockTransition.new()
-	screen.transition_enter = transition
+	screen.transition_enter = MockTransition.new()
 	var spy = double(Spy).new()
 
 	# When: run_enter is called.
 	_controller.run_enter(screen, _create_scene(), func(): spy.called())
 
 	# Then: The callback fires immediately despite the in-flight transition.
-	assert_true(transition.started)
+	var active: MockTransition = _controller._active_transitions[0]
+	assert_true(active.started)
 	assert_called(spy, "called")
 
 
 func test_run_enter_tracks_and_cleans_up_transition():
 	# Given: A screen with an enter transition.
 	var screen := Screen.new()
-	var transition := MockTransition.new()
-	screen.transition_enter = transition
+	screen.transition_enter = MockTransition.new()
 	screen.block_on_enter = true
 
 	# When: run_enter is called.
 	_controller.run_enter(screen, _create_scene(), Callable())
 
 	# Then: The transition is tracked.
-	assert_has(_controller._active_transitions, transition)
+	assert_eq(_controller._active_transitions.size(), 1)
+	var active: MockTransition = _controller._active_transitions[0]
 
 	# When: The transition completes.
-	transition.complete()
+	active.complete()
 
 	# Then: The transition is removed from tracking.
-	assert_does_not_have(_controller._active_transitions, transition)
+	assert_eq(_controller._active_transitions.size(), 0)
 
 
 func test_run_exit_blocking_delays_teardown_and_callback():
 	# Given: A screen with a blocking exit transition.
 	var screen := Screen.new()
-	var transition := MockTransition.new()
-	screen.transition_exit = transition
+	screen.transition_exit = MockTransition.new()
 	screen.block_on_exit = true
 	var spy = double(Spy).new()
 
@@ -267,11 +269,12 @@ func test_run_exit_blocking_delays_teardown_and_callback():
 	)
 
 	# Then: Neither has fired yet.
-	assert_true(transition.started)
+	var active: MockTransition = _controller._active_transitions[0]
+	assert_true(active.started)
 	assert_not_called(spy, "called")
 
 	# When: The transition completes.
-	transition.complete()
+	active.complete()
 
 	# Then: Both fire.
 	assert_called(spy, "called", ["teardown"])
@@ -299,8 +302,7 @@ func test_run_exit_immediate_teardown_without_transition():
 func test_run_exit_nonblocking_callback_immediate():
 	# Given: A non-blocking exit transition.
 	var screen := Screen.new()
-	var transition := MockTransition.new()
-	screen.transition_exit = transition
+	screen.transition_exit = MockTransition.new()
 	var spy = double(Spy).new()
 
 	# When: run_exit is called.
@@ -312,12 +314,13 @@ func test_run_exit_nonblocking_callback_immediate():
 	)
 
 	# Then: `on_complete` fires immediately; teardown waits for transition to finish.
-	assert_true(transition.started)
+	var active: MockTransition = _controller._active_transitions[0]
+	assert_true(active.started)
 	assert_not_called(spy, "called", ["teardown"])
 	assert_called(spy, "called", ["complete"])
 
 	# When: The transition completes.
-	transition.complete()
+	active.complete()
 
 	# Then: Teardown fires.
 	assert_called(spy, "called", ["teardown"])
@@ -355,20 +358,20 @@ func test_stop_all_clears_state_and_unblocks_overlay():
 	)
 
 
-func test_stop_all_disconnects_completed_signals():
+func test_stop_all_prevents_done_callback():
 	# Given: An in-flight blocking enter transition.
 	var spy = double(Spy).new()
 	var screen := Screen.new()
-	var transition := MockTransition.new()
-	screen.transition_enter = transition
+	screen.transition_enter = MockTransition.new()
 	screen.block_on_enter = true
 	_controller.run_enter(screen, _create_scene(), func(): spy.called())
+	var active: MockTransition = _controller._active_transitions[0]
 
 	# When: All transitions are stopped.
 	_controller.stop_all()
 
 	# Then: Completing the transition afterward does not fire the callback.
-	transition.complete()
+	active.complete()
 	assert_not_called(spy, "called")
 
 
@@ -443,24 +446,20 @@ func _create_scene() -> Control:
 
 
 func _start_enter_transition() -> MockTransition:
-	var transition := MockTransition.new()
-
 	var screen := Screen.new()
-	screen.transition_enter = transition
+	screen.transition_enter = MockTransition.new()
 	screen.block_on_enter = true
 
 	_controller.run_enter(screen, _create_scene(), Callable())
 
-	return transition
+	return _controller._active_transitions[0]
 
 
 func _start_exit_transition(
 	teardown := Callable(),
 ) -> MockTransition:
-	var transition := MockTransition.new()
-
 	var screen := Screen.new()
-	screen.transition_exit = transition
+	screen.transition_exit = MockTransition.new()
 	screen.block_on_exit = true
 
 	var td: Callable = teardown
@@ -468,4 +467,4 @@ func _start_exit_transition(
 		td = double(Spy).new().called
 	_controller.run_exit(screen, _create_scene(), td, Callable())
 
-	return transition
+	return _controller._active_transitions[0]
