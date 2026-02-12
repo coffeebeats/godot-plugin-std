@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.1.0 (2026-02-12)
+
+## What's Changed
+* feat(config,save): add rotating backups and schema migrations to config files by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/337
+* fix(logging): add silent mode for logger during headless execution (CI/CD) by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/339
+* feat(screen): create a scene stack for managing a stack of screens by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/340
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.0.6...v4.1.0
+
 ## 4.0.6 (2026-02-07)
 
 ## What's Changed

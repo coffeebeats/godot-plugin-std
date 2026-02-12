@@ -26,9 +26,11 @@ enum Status {
 	OK = 1,
 	EMPTY = 2,
 	BROKEN = 3,
+	DISK_FULL = 4,
 }
 
 const STATUS_BROKEN := Status.BROKEN
+const STATUS_DISK_FULL := Status.DISK_FULL
 const STATUS_EMPTY := Status.EMPTY
 const STATUS_OK := Status.OK
 const STATUS_UNKNOWN := Status.UNKNOWN
@@ -50,14 +52,50 @@ func load_save_data(data: StdSaveData) -> Status:
 	assert(result is Result, "invalid state; missing result")
 
 	var err: Error = await result.done
-	if err == OK:
-		data.reset()
-		data.load(config)
+	if err != OK:
+		var status := _handle_result(err)
+		save_loaded.emit(data, status)
+		return status
 
-	var status := _handle_result(err)
-	save_loaded.emit(data, status)
+	var saved_version := data.get_saved_version(config)
+	if saved_version < data.version:
+		var bak_result := _create_named_backup("v%d.bak" % saved_version)
+		if bak_result:
+			var bak_err: Error = await bak_result.done
+			if bak_err != OK:
+				(
+					_logger
+					. warn(
+						"Failed to create pre-migration backup.",
+						{
+							&"error": bak_err,
+							&"version": saved_version,
+						},
+					)
+				)
 
-	return status
+	data.reset()
+	if not data.load(config):
+		save_loaded.emit(data, STATUS_BROKEN)
+		return STATUS_BROKEN
+
+	# Persist migrated data so migration doesn't re-run.
+	if saved_version < data.version:
+		var cfg := Config.new()
+		data.store(cfg)
+		var store_result := store_config(cfg)
+		var store_err: Error = await store_result.done
+		if store_err != OK:
+			(
+				_logger
+				. warn(
+					"Failed to persist migrated save data.",
+					{&"error": store_err},
+				)
+			)
+
+	save_loaded.emit(data, STATUS_OK)
+	return STATUS_OK
 
 
 ## load_save_data_sync synchronously hydrates the provided save data resource with the
@@ -72,14 +110,51 @@ func load_save_data_sync(data: StdSaveData) -> Status:
 	assert(result is Result, "invalid state; missing result")
 
 	var err: Error = result.wait()
-	if err == OK:
-		data.reset()
-		data.load(config)
+	if err != OK:
+		var status := _handle_result(err)
+		save_loaded.emit(data, status)
+		return status
 
-	var status := _handle_result(err)
-	save_loaded.emit(data, status)
+	var saved_version := data.get_saved_version(config)
 
-	return status
+	if saved_version < data.version:
+		var bak_result := _create_named_backup("v%d.bak" % saved_version)
+		if bak_result:
+			var bak_err: Error = bak_result.wait()
+			if bak_err != OK:
+				(
+					_logger
+					. warn(
+						"Failed to create pre-migration backup.",
+						{
+							&"error": bak_err,
+							&"version": saved_version,
+						},
+					)
+				)
+
+	data.reset()
+	if not data.load(config):
+		save_loaded.emit(data, STATUS_BROKEN)
+		return STATUS_BROKEN
+
+	# Persist migrated data so migration doesn't re-run.
+	if saved_version < data.version:
+		var cfg := Config.new()
+		data.store(cfg)
+		var store_result := store_config(cfg)
+		var store_err: Error = store_result.wait()
+		if store_err != OK:
+			(
+				_logger
+				. warn(
+					"Failed to persist migrated save data.",
+					{&"error": store_err},
+				)
+			)
+
+	save_loaded.emit(data, STATUS_OK)
+	return STATUS_OK
 
 
 ## store_save_data asynchronously persists the provided save data to this writer's
@@ -116,7 +191,7 @@ func store_save_data_sync(data: StdSaveData) -> Status:
 	var result: Result = store_config(config)
 	assert(result is Result, "invalid state; missing result")
 
-	var err: Error = await result.done
+	var err: Error = result.wait()
 
 	var status := _handle_result(err)
 	save_stored.emit(data, status)
@@ -153,6 +228,20 @@ func _get_save_directory() -> String:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _create_named_backup enqueues a one-off backup copy at `{filepath}.{extension}` on
+## the worker thread. Returns `null` if the backup already exists (idempotent).
+func _create_named_backup(
+	extension: String,
+) -> StdThreadWorkerResult:
+	var filepath := FilePath.make_project_path_absolute(_get_filepath())
+	var path_bak := filepath + "." + extension
+
+	if FileAccess.file_exists(path_bak):
+		return null
+
+	return copy_file(filepath, path_bak)
+
+
 func _is_save_directory_empty() -> bool:
 	var directory := _get_save_directory()
 	if not directory:
@@ -178,6 +267,16 @@ func _handle_result(err: Error) -> Status:
 
 		ERR_FILE_NOT_FOUND:
 			return STATUS_EMPTY if _is_save_directory_empty() else STATUS_BROKEN
+
+		ERR_FILE_CANT_WRITE:
+			(
+				_logger
+				. error(
+					"Disk full or write permission denied.",
+					{&"error": err},
+				)
+			)
+			return STATUS_DISK_FULL
 
 		ERR_INVALID_DATA:
 			return STATUS_BROKEN

@@ -23,8 +23,7 @@ signal reclaimed(object: Variant)
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-# gdlint:ignore=class-definitions-order
-static var _logger := StdLogger.create("std/sound/pool")
+static var _logger := StdLogger.create("std/sound/pool")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _pool: Array[Variant] = []
 
