@@ -74,6 +74,7 @@ func run_enter(
 
 		return
 
+	transition = transition.duplicate()
 	_active_transitions.append(transition)
 
 	var cleanup := func() -> void:
@@ -117,6 +118,7 @@ func run_exit(
 
 		return
 
+	transition = transition.duplicate()
 	_active_transitions.append(transition)
 
 	_cancel_cleanup[transition] = teardown
