@@ -96,20 +96,21 @@ var _loading: Dictionary = {}
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## load_all loads each of the provided packed scene files in the background and returns
-## a list of result handles; these can be used to track the progress of each request.
-func load_all(paths: PackedStringArray) -> Dictionary[String, Result]:
+## load_all_scenes loads each of the provided packed scene files in the background and
+## returns a list of result handles; these can be used to track the progress of each
+## request.
+func load_all_scenes(paths: PackedStringArray) -> Dictionary[String, Result]:
 	var out: Dictionary[String, Result] = {}
 
 	for resource_path in paths:
-		out[resource_path] = self.load(resource_path)
+		out[resource_path] = load_scene(resource_path)
 
 	return out
 
 
-## load loads the provided packed scene file in the background and returns a handle to
-## track the progress of the request and access the loaded resource.
-func load(path: String) -> Result:
+## load_scene loads the provided packed scene file in the background and returns a
+## handle to track the progress of the request and access the loaded resource.
+func load_scene(path: String) -> Result:
 	assert(path.begins_with("res://"), "expected path to be absolute")
 	assert(
 		path.ends_with(".tscn") or path.ends_with(".scn"),

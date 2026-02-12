@@ -1,3 +1,5 @@
+# gdlint:ignore=max-public-methods
+
 ##
 ## screen/manager/controller_test.gd
 ##
@@ -67,6 +69,37 @@ var _mock: MockManager = null
 var _controller: Controller = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
+
+
+func test_run_duplicates_transition_resource():
+	# Given: A screen with enter and exit transitions.
+	var screen := Screen.new()
+	var enter_transition := MockTransition.new()
+	var exit_transition := MockTransition.new()
+	screen.transition_enter = enter_transition
+	screen.transition_exit = exit_transition
+	screen.block_on_enter = true
+	screen.block_on_exit = true
+
+	# When: run_enter is called.
+	_controller.run_enter(screen, _create_scene(), Callable())
+
+	# Then: The tracked transition is a duplicate, not the original.
+	assert_eq(_controller._active_transitions.size(), 1)
+	assert_ne(_controller._active_transitions[0], enter_transition)
+
+	# When: All transitions are stopped, then run_exit is called.
+	_controller.stop_all()
+	_controller.run_exit(
+		screen,
+		_create_scene(),
+		func() -> void: pass ,
+		Callable(),
+	)
+
+	# Then: The tracked transition is a duplicate, not the original.
+	assert_eq(_controller._active_transitions.size(), 1)
+	assert_ne(_controller._active_transitions[0], exit_transition)
 
 
 func test_allow_input_clamps_at_zero():
