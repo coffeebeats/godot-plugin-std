@@ -55,6 +55,11 @@ func _start(
 	_overlay = _get_or_create_overlay(context)
 	_overlay.color = color
 
+	# When entering with a fresh overlay (no prior exit transition), start fully opaque
+	# so the fade-in has something to fade from.
+	if is_entering and _overlay.modulate.a == 0.0:
+		_overlay.modulate.a = 1.0
+
 	context.block_input()
 
 	var target: float = 0.0 if is_entering else 1.0
