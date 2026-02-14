@@ -12,21 +12,15 @@ extends StdScreenTransition
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const _FADE_OVERLAY_KEY := &"_std_fade_overlay"
+const _FADE_OVERLAY_KEY := &"_addons_std_fade_overlay"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## color is the color to fade to/from (typically black).
 @export var color: Color = Color.BLACK
 
-## duration is the base time in seconds for a full fade.
-@export_range(0.0, 4.0) var duration: float = 0.6
-
-## ease_type controls the easing applied to the fade tween.
-@export var ease_type: Tween.EaseType = Tween.EASE_IN
-
-## transition_type controls the transition curve for the fade tween.
-@export var transition_type: Tween.TransitionType = Tween.TRANS_CUBIC
+## curve configures the timing and easing for the fade tween.
+@export var curve: StdTweenCurve = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -50,6 +44,8 @@ func _start(
 	_scene: Node,
 	is_entering: bool,
 ) -> void:
+	assert(curve is StdTweenCurve, "invalid config; missing curve")
+
 	_context = context
 	_is_entering = is_entering
 	_overlay = _get_or_create_overlay(context)
@@ -63,19 +59,14 @@ func _start(
 	context.block_input()
 
 	var target: float = 0.0 if is_entering else 1.0
-	var adjusted := duration * absf(_overlay.modulate.a - target)
+	var adjusted := curve.duration * absf(_overlay.modulate.a - target)
 
 	if _tween and _tween.is_valid():
 		_tween.kill()
 
 	_tween = context.create_tween()
 
-	(
-		_tween
-		. tween_property(_overlay, ^"modulate:a", target, adjusted)
-		. set_ease(ease_type)
-		. set_trans(transition_type)
-	)
+	curve.tween_property(_tween, _overlay, ^"modulate:a", target, adjusted)
 
 	_tween.tween_callback(_on_tween_completed)
 
