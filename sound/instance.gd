@@ -73,16 +73,10 @@ func mute() -> void:
 	player.volume_db -= MUTE_VOLUME_DB
 
 
-@warning_ignore("INT_AS_ENUM_WITHOUT_CAST")
-@warning_ignore("INT_AS_ENUM_WITHOUT_MATCH")
-
-
 ## start begins audio playback. Must be called as the associated audio players are not
 ## configured to auto-play.
 func start(
-	fade_in: float = 0.0,
-	fade_transition: Tween.TransitionType = -1,
-	fade_ease: Tween.EaseType = -1,
+	fade_curve: StdTweenCurve = null,
 	start_db: float = -24.0,
 ) -> void:
 	assert(player is Node, "invalid state; missing player")
@@ -90,8 +84,11 @@ func start(
 
 	_logger.debug("Playing sound event.", {&"stream": stream.resource_path})
 
-	if fade_in:
-		assert(fade_in < stream.get_length(), "invalid config; fade exceeds stream")
+	if fade_curve and fade_curve.duration > 0.0:
+		assert(
+			fade_curve.duration < stream.get_length(),
+			"invalid config; fade exceeds stream",
+		)
 
 		var target: float = player.volume_db
 		player.volume_db = start_db
@@ -99,27 +96,17 @@ func start(
 		assert(not _tween, "invalid state; found dangling tween")
 		_tween = player.get_tree().create_tween()
 
-		var fade := _tween.tween_property(player, ^"volume_db", target, fade_in)
-		if fade_ease > -1:
-			fade.set_ease(fade_ease)
-		if fade_transition > -1:
-			fade.set_trans(fade_transition)
+		fade_curve.tween_property(_tween, player, ^"volume_db", target)
 
 		_tween.tween_callback(func(): _tween = null)
 
 	player.play()
 
 
-@warning_ignore("INT_AS_ENUM_WITHOUT_CAST")
-@warning_ignore("INT_AS_ENUM_WITHOUT_MATCH")
-
-
 ## stop terminates audio playback, rendering this instance invalid/complete. Safe to
 ## call multiple times, even after audio playback has completed.
 func stop(
-	fade_out: float = 0.0,
-	fade_transition: Tween.TransitionType = -1,
-	fade_ease: Tween.EaseType = -1,
+	fade_curve: StdTweenCurve = null,
 	end_db: float = -24.0,
 ) -> void:
 	if _is_done:
@@ -128,6 +115,8 @@ func stop(
 	if _tween:
 		_tween.kill()
 		_tween = null
+
+	var fade_out := fade_curve.duration if fade_curve else 0.0
 
 	if player.playing and fade_out <= 0.0:
 		player.stop()
@@ -138,7 +127,7 @@ func stop(
 
 	_logger.debug("Stopping sound event.", {&"stream": stream.resource_path})
 
-	if fade_out:
+	if fade_curve and fade_out > 0.0:
 		assert(
 			(
 				fade_out
@@ -153,11 +142,7 @@ func stop(
 
 		_tween = player.get_tree().create_tween()
 
-		var fade := _tween.tween_property(player, ^"volume_db", end_db, fade_out)
-		if fade_ease > -1:
-			fade.set_ease(fade_ease)
-		if fade_transition > -1:
-			fade.set_trans(fade_transition)
+		fade_curve.tween_property(_tween, player, ^"volume_db", end_db)
 
 		_tween.tween_callback(player.stop)
 		_tween.tween_callback(done.emit)
