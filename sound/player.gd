@@ -27,17 +27,12 @@ const GROUP_SOUND_PLAYER := &"std/sound:player"
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
-@warning_ignore("INT_AS_ENUM_WITHOUT_CAST")
-@warning_ignore("INT_AS_ENUM_WITHOUT_MATCH")
-
 
 ## play instantiates and plays the provided sound event. The sound can be faded in using
-## the provided fade parameters.
+## the provided fade curve.
 func play(
 	event: StdSoundEvent,
-	fade_in: float = 0.0,
-	fade_transition: Tween.TransitionType = -1,
-	fade_ease: Tween.EaseType = -1,
+	fade_curve: StdTweenCurve = null,
 ) -> StdSoundInstance:
 	assert(event is StdSoundEvent, "invalid argument; wrong type")
 
@@ -63,7 +58,7 @@ func play(
 	var instance := event.instantiate(player)
 	instance.done.connect(pool.reclaim.bind(player), CONNECT_ONE_SHOT)
 
-	instance.start(fade_in, fade_transition, fade_ease)
+	instance.start(fade_curve)
 
 	return instance
 

@@ -79,7 +79,7 @@ func test_fade_invokes_done_on_finish():
 func test_stop_preserves_overlay_alpha():
 	# Given: A fade transition with a long duration.
 	var fade := _create_fade()
-	fade.duration = 0.5
+	fade.curve.duration = 0.5
 	var scene := _create_scene()
 
 	# When: An exit fade is started and stopped mid-way.
@@ -97,7 +97,7 @@ func test_stop_preserves_overlay_alpha():
 func test_reset_frees_overlay_and_removes_metadata():
 	# Given: A fade transition with a long duration.
 	var fade := _create_fade()
-	fade.duration = 0.5
+	fade.curve.duration = 0.5
 	var scene := _create_scene()
 
 	# When: An exit fade is started and reset mid-way.
@@ -148,7 +148,7 @@ func test_overlay_color_updates_on_start():
 func test_stop_does_not_invoke_done():
 	# Given: A fade transition with a long duration.
 	var fade := _create_fade()
-	fade.duration = 0.5
+	fade.curve.duration = 0.5
 	var scene := _create_scene()
 	watch_signals(_mock)
 
@@ -165,7 +165,7 @@ func test_stop_does_not_invoke_done():
 func test_reset_does_not_invoke_done():
 	# Given: A fade transition with a long duration.
 	var fade := _create_fade()
-	fade.duration = 0.5
+	fade.curve.duration = 0.5
 	var scene := _create_scene()
 	watch_signals(_mock)
 
@@ -196,7 +196,7 @@ func test_overlay_mouse_filter_is_ignore():
 func test_fade_uses_proportional_duration():
 	# Given: A fade with a 0.2s duration and an overlay already at 0.5 alpha.
 	var fade := _create_fade()
-	fade.duration = 0.2
+	fade.curve.duration = 0.2
 	var scene := _create_scene()
 	_ensure_overlay(0.5)
 
@@ -213,7 +213,7 @@ func test_fade_uses_proportional_duration():
 func test_fade_reuse_after_stop():
 	# Given: A fade transition that has been started and stopped.
 	var fade := _create_fade()
-	fade.duration = 0.5
+	fade.curve.duration = 0.5
 	var scene := _create_scene()
 
 	_start_fade(fade, scene, false)
@@ -221,7 +221,7 @@ func test_fade_reuse_after_stop():
 	fade.stop()
 
 	# When: The same fade resource is started again.
-	fade.duration = 0.01
+	fade.curve.duration = 0.01
 	_start_fade(fade, scene, true)
 	await wait_for_signal(_mock.transition_done, 2.0)
 
@@ -234,7 +234,7 @@ func test_fade_reuse_after_stop():
 func test_fade_with_zero_duration():
 	# Given: A fade transition with zero duration.
 	var fade := _create_fade()
-	fade.duration = 0.0
+	fade.curve.duration = 0.0
 	var scene := _create_scene()
 	watch_signals(_mock)
 
@@ -267,7 +267,8 @@ func _create_context() -> Context:
 
 func _create_fade() -> StdScreenTransitionFade:
 	var fade := StdScreenTransitionFade.new()
-	fade.duration = 0.01
+	fade.curve = StdTweenCurve.new()
+	fade.curve.duration = 0.01
 	return fade
 
 
@@ -286,7 +287,7 @@ func _ensure_overlay(alpha: float) -> ColorRect:
 
 
 func _get_overlay() -> ColorRect:
-	var key := &"_std_fade_overlay"
+	var key := &"_addons_std_fade_overlay"
 	if _mock.has_meta(key):
 		return _mock.get_meta(key)
 	return null
