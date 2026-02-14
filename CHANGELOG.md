@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.2.0 (2026-02-14)
+
+## What's Changed
+* fix(screen): handle fade-in without prior fade-out by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/341
+* feat(tween): create a resource for reifying tween parameters by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/343
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.1.0...v4.2.0
+
 ## 4.1.0 (2026-02-12)
 
 ## What's Changed
