@@ -81,6 +81,10 @@ var _overlays: Dictionary[StdScreen, StdScreenOverlay] = {}
 ## resources alive via reference counting for the screen's stack lifetime.
 var _preloads: Dictionary[StdScreen, Dictionary] = {}
 
+## _retained_nodes holds nodes registered by transitions for cleanup on shutdown or
+## reset. These are keyed by a transition-defined identifier.
+var _retained_nodes: Dictionary[StringName, Node] = {}
+
 ## _queue is the reentrancy-safe operation queue.
 var _queue: OperationQueue = null
 
@@ -248,8 +252,7 @@ func reset(
 
 
 func _exit_tree() -> void:
-	_transitions.stop_all(true)
-	_queue.clear()
+	_teardown()
 
 
 func _input(event: InputEvent) -> void:
@@ -261,6 +264,11 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_request_close_overlay(event)
 			break
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_teardown()
 
 
 func _ready() -> void:
@@ -283,6 +291,23 @@ func _ready() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _free_retained_nodes frees all nodes registered by transitions and clears the
+## registry.
+func _free_retained_nodes() -> void:
+	for node in _retained_nodes.values():
+		if is_instance_valid(node):
+			node.free.call_deferred()
+	_retained_nodes.clear()
+
+
+## _teardown frees all retained transition nodes and stops in-flight transitions.
+func _teardown() -> void:
+	_transitions.stop_all(true)
+	_queue.clear()
+	_free_retained_nodes()
+
 
 # Operations
 
@@ -643,15 +668,7 @@ func _reset_impl(
 	_focus.clear()
 	_overlays.clear()
 	_preloads.clear()
-
-	# Remove any INTERNAL_MODE_BACK children left by transitions (e.g. fade overlay).
-	# Skip the loader (INTERNAL_MODE_FRONT) and regular children.
-	var regular := get_children(false)
-	for child in get_children(true):
-		if child == _loader or child in regular:
-			continue
-
-		child.queue_free()
+	_free_retained_nodes()
 
 	_resolve_scene_then(
 		screen,

@@ -19,6 +19,8 @@ class MockManager:
 
 	signal transition_done
 
+	var _retained_nodes: Dictionary[StringName, Node] = {}
+
 	func _get_current_overlay() -> Node:
 		return null
 
@@ -94,7 +96,7 @@ func test_stop_preserves_overlay_alpha():
 	assert_lt(overlay.modulate.a, 1.0)
 
 
-func test_reset_frees_overlay_and_removes_metadata():
+func test_reset_frees_overlay_and_removes_retained_node():
 	# Given: A fade transition with a long duration.
 	var fade := _create_fade()
 	fade.curve.duration = 0.5
@@ -108,7 +110,7 @@ func test_reset_frees_overlay_and_removes_metadata():
 	fade.reset()
 	await wait_physics_frames(2)
 
-	# Then: The overlay is freed and metadata is removed.
+	# Then: The overlay is freed and retained node is removed.
 	assert_false(is_instance_valid(overlay))
 	assert_null(_get_overlay())
 
@@ -249,6 +251,44 @@ func test_fade_with_zero_duration():
 	assert_almost_eq(overlay.modulate.a, 1.0, 0.01)
 
 
+func test_enter_fade_retains_overlay_after_completion():
+	# Given: A fade transition that completes an enter.
+	var fade := _create_fade()
+	var scene := _create_scene()
+	_ensure_overlay(1.0)
+
+	# When: The enter fade completes.
+	_start_fade(fade, scene, true)
+	await wait_for_signal(_mock.transition_done, 2.0)
+
+	# Then: The overlay is retained (not in tree, but tracked).
+	var overlay := _get_overlay()
+	assert_not_null(overlay)
+	assert_true(is_instance_valid(overlay))
+	assert_false(overlay.is_inside_tree())
+
+
+func test_retained_overlay_freed_on_manager_teardown():
+	# Given: A fade transition that has completed (overlay retained but not in tree).
+	var fade := _create_fade()
+	var scene := _create_scene()
+	_ensure_overlay(1.0)
+	_start_fade(fade, scene, true)
+	await wait_for_signal(_mock.transition_done, 2.0)
+	var overlay := _get_overlay()
+	assert_not_null(overlay)
+
+	# When: The retained nodes are freed (simulating manager teardown).
+	for node in _mock._retained_nodes.values():
+		if is_instance_valid(node):
+			node.free()
+	_mock._retained_nodes.clear()
+
+	# Then: The overlay is freed and no longer tracked.
+	assert_false(is_instance_valid(overlay))
+	assert_null(_get_overlay())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -288,9 +328,7 @@ func _ensure_overlay(alpha: float) -> ColorRect:
 
 func _get_overlay() -> ColorRect:
 	var key := &"_addons_std_fade_overlay"
-	if _mock.has_meta(key):
-		return _mock.get_meta(key)
-	return null
+	return _mock._retained_nodes.get(key)
 
 
 func _start_fade(
