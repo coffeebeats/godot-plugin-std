@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.2.1 (2026-02-15)
+
+## What's Changed
+* fix(screen): replace screen manager metadata API with retained nodes by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/344
+* fix(screen): cache scene instances on pop for reuse on next push by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/346
+* fix(screen): propagate cover/uncover notifications to scene subtrees by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/347
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.2.0...v4.2.1
+
 ## 4.2.0 (2026-02-14)
 
 ## What's Changed
