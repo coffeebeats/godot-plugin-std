@@ -61,11 +61,11 @@ const _META_PROCESS_MODE := &"addons_std_screen_manager_process_mode"
 
 ## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree when the screen is
 ## covered by another. This value can be overridden to avoid collisions if needed.
-static var NOTIFICATION_SCREEN_COVERED: int = (1 << 50) + 1
+static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 ## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
 ## screen is popped. This value can be overridden to avoid collisions if needed.
-static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 50) + 2
+static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 ## _logger is the logger instance for this class.
 static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length

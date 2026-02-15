@@ -51,6 +51,12 @@ extends Control
 		if load_on_visible == value:
 			load_on_visible = not value
 
+@export_subgroup("Screen manager")
+
+## load_on_uncovered reloads the action set when the screen containing this loader is
+## uncovered (i.e. when a screen pushed on top of it is popped).
+@export var load_on_uncovered: bool = true
+
 @export_group("Action set layer")
 
 ## action_set_layer is an `StdInputActionSetLayer` that will be enabled by the
@@ -112,6 +118,15 @@ extends Control
 		if disable_on_visible == value:
 			disable_on_visible = not value
 
+@export_subgroup("Screen manager")
+
+## enable_on_uncovered enables the action set layer when the screen is uncovered.
+@export var enable_on_uncovered: bool = true
+
+## disable_on_covered disables the action set layer when another screen is pushed on top
+## of the screen containing this loader.
+@export var disable_on_covered: bool = true
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -168,6 +183,16 @@ func _exit_tree() -> void:
 
 func _notification(what) -> void:
 	match what:
+		StdScreenManager.NOTIFICATION_SCREEN_COVERED:
+			if action_set_layer and disable_on_covered:
+				disable_action_set_layer()
+
+		StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED:
+			if action_set and load_on_uncovered:
+				load_action_set()
+			if action_set_layer and enable_on_uncovered:
+				enable_action_set_layer()
+
 		NOTIFICATION_VISIBILITY_CHANGED:
 			if is_visible_in_tree():
 				if action_set and load_on_visible:
