@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.3.0 (2026-02-15)
+
+## What's Changed
+* fix(screen): clear the scene cache on teardown by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/348
+* feat(input): allow specifying an anchor priority by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/350
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.2.1...v4.3.0
+
 ## 4.2.1 (2026-02-15)
 
 ## What's Changed

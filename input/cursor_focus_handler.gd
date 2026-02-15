@@ -32,10 +32,17 @@ const Signals := preload("../event/signal.gd")
 ## control is a path to the `Control` node whose focus state will be managed.
 @export var control: NodePath = NodePath("..")
 
+@export_group("Anchoring")
+
 ## use_as_anchor determines whether the target `Control` node is eligible for focus if
 ## no better UI elements are eligible upon switching to focus-based navigation. In
-## effect, the target node will be focus when the cursor is hidden.
+## effect, the target node will be focused when the cursor is hidden.
 @export var use_as_anchor: bool = false
+
+## priority determines which anchor receives focus when multiple anchor-enabled focus
+## handlers are visible in the scene. The highest priority anchor wins. If multiple
+## anchors share the same priority, the last registered one is selected.
+@export var priority: int = 0
 
 @export_category("Button")
 
@@ -71,45 +78,39 @@ func is_hovered() -> bool:
 	return _hovered
 
 
-## get_focus_target returns the last registered focus anchor that's visible in the scene
-## tree. Note that this does _not_ account for hovered nodes - only those selected to be
-## "anchors" in the scene.
+## get_focus_target returns the highest-priority registered focus anchor that's visible
+## in the scene tree. If multiple anchors share the same priority, the last registered
+## one is selected. Note that this does _not_ account for hovered nodes - only those
+## selected to be "anchors" in the scene.
 ##
-## The `anchor` parameter is an optional node which, when specified, restricts the
-## selected focus target to be a descendent of that node.
+## The `ancestor` parameter is an optional node which, when specified, restricts the
+## selected focus target to be a descendant of that node.
 static func get_focus_target(ancestor: Control = null) -> Control:
-	if not _anchors:
-		return null
+	var best: StdInputCursorFocusHandler = null
 
-	var i: int = len(_anchors) - 1
-	while i >= 0:
-		var anchor := _anchors[i]
-
+	for anchor in _anchors:
 		if not anchor is StdInputCursorFocusHandler:
 			assert(false, "invalid state; wrong node type")
-			i -= 1
 			continue
 
 		if not anchor._control is Control:
 			assert(false, "invalid state; invalid target node")
-			i -= 1
 			continue
 
 		# Skip disabled buttons if configured.
 		if anchor.block_focus_and_hover_on_disable and anchor._control_disabled:
-			i -= 1
 			continue
 
 		var target := anchor._control
-		if (
-			target.is_visible_in_tree()
-			and (not ancestor or ancestor.is_ancestor_of(target))
-		):
-			return target
+		if not target.is_visible_in_tree():
+			continue
+		if ancestor and not ancestor.is_ancestor_of(target):
+			continue
 
-		i -= 1
+		if best == null or anchor.priority >= best.priority:
+			best = anchor
 
-	return null
+	return best._control if best else null
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -127,7 +128,7 @@ func _enter_tree() -> void:
 func _notification(what) -> void:
 	match what:
 		NOTIFICATION_VISIBILITY_CHANGED:
-			if visible and _cursor is StdInputCursor:
+			if is_visible_in_tree() and _cursor is StdInputCursor:
 				_cursor.report_focus_handler_visible(self)
 
 
@@ -171,7 +172,7 @@ func _ready() -> void:
 
 	# Broadcast that a new anchor handler has entered the scene. This ensures that when
 	# a new scene is loaded the UI can seamlessly select a new focus target.
-	if use_as_anchor and visible:
+	if use_as_anchor and is_visible_in_tree():
 		# NOTE: Defer this call in case the rest of the scene hasn't finished loading.
 		_cursor.report_focus_handler_visible.call_deferred(self)
 
