@@ -49,7 +49,7 @@ func create_tween() -> Tween:
 ## subclasses when their effect completes.
 func done() -> void:
 	var cb := _on_done
-	_on_done = Callable() # Clear to prevent double-calling.
+	_on_done = Callable()  # Clear to prevent double-calling.
 
 	if cb.is_valid():
 		cb.call()

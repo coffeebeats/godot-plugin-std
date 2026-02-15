@@ -578,9 +578,7 @@ func test_push_emits_lifecycle_signals_in_order():
 	assert_signal_emitted_with_parameters(
 		_manager, "screen_covered", [first_screen, first_scene]
 	)
-	assert_signal_emitted_with_parameters(
-		_manager, "screen_pushed", [second_screen]
-	)
+	assert_signal_emitted_with_parameters(_manager, "screen_pushed", [second_screen])
 
 
 func test_pop_emits_lifecycle_signals_in_order():
@@ -911,7 +909,7 @@ func test_teardown_frees_retained_nodes():
 	assert_freed(node_b, "retained node b")
 	assert_eq(_manager._retained_nodes.size(), 0)
 
-	add_child(_manager) # NOTE: Re-add so autofree works.
+	add_child(_manager)  # NOTE: Re-add so autofree works.
 
 
 func test_reset_clears_retained_nodes():
