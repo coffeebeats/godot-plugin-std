@@ -930,6 +930,40 @@ func test_exit_tree_stops_transitions_and_clears_queue():
 	add_child(_manager)
 
 
+func test_teardown_frees_retained_nodes():
+	# Given: A manager with retained nodes.
+	var node_a := Control.new()
+	var node_b := Control.new()
+	_manager._retained_nodes[&"a"] = node_a
+	_manager._retained_nodes[&"b"] = node_b
+
+	# When: The manager is removed from the tree (triggers teardown).
+	_manager.get_parent().remove_child(_manager)
+	await wait_idle_frames(1)
+
+	# Then: The retained nodes are freed and the dictionary is cleared.
+	assert_freed(node_a, "retained node a")
+	assert_freed(node_b, "retained node b")
+	assert_eq(_manager._retained_nodes.size(), 0)
+
+	add_child(_manager) # NOTE: Re-add so autofree works.
+
+
+func test_reset_clears_retained_nodes():
+	# Given: A manager with a screen and retained nodes.
+	await _do_push()
+	var retained := Control.new()
+	_manager._retained_nodes[&"test"] = retained
+
+	# When: The stack is reset.
+	_manager.reset(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The retained node is freed and the dictionary is cleared.
+	assert_freed(retained, "retained node")
+	assert_eq(_manager._retained_nodes.size(), 0)
+
+
 func test_self_replace_supported():
 	# Given: A manager with one screen.
 	var screen := _create_screen()
