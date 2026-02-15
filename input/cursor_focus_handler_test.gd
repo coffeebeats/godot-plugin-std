@@ -100,6 +100,35 @@ func test_get_focus_target_returns_last_registered_anchor() -> void:
 	assert_eq(StdInputCursorFocusHandler.get_focus_target(), button2)
 
 
+func test_get_focus_target_returns_highest_priority_anchor() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: Two buttons with focus handlers as anchors at different priorities.
+	var button1 := Button.new()
+	button1.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button1)
+
+	var handler1 := StdInputCursorFocusHandler.new()
+	handler1.control = NodePath("..")
+	handler1.use_as_anchor = true
+	handler1.priority = 10
+	button1.add_child(handler1)
+
+	var button2 := Button.new()
+	button2.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button2)
+
+	var handler2 := StdInputCursorFocusHandler.new()
+	handler2.control = NodePath("..")
+	handler2.use_as_anchor = true
+	handler2.priority = 0
+	button2.add_child(handler2)
+
+	# Then: The higher priority anchor is returned despite being registered first.
+	assert_eq(StdInputCursorFocusHandler.get_focus_target(), button1)
+
+
 func test_anchor_is_removed_on_exit_tree() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
