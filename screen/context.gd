@@ -55,17 +55,14 @@ func done() -> void:
 		cb.call()
 
 
-## get_manager_meta returns the manager's metadata for the given key.
-func get_manager_meta(
-	key: StringName,
-	default: Variant = null,
-) -> Variant:
-	return _manager.get_meta(key, default)
+## get_retained_node returns a previously retained node by key, or null if not found.
+func get_retained_node(key: StringName) -> Node:
+	return _manager._retained_nodes.get(key)
 
 
-## has_manager_meta checks whether the manager has the given metadata key.
-func has_manager_meta(key: StringName) -> bool:
-	return _manager.has_meta(key)
+## has_retained_node returns whether a node is retained under the given key.
+func has_retained_node(key: StringName) -> bool:
+	return key in _manager._retained_nodes
 
 
 ## pop_node removes a node from the manager without freeing it.
@@ -74,17 +71,21 @@ func pop_node(node: Node) -> void:
 		_manager.remove_child(node)
 
 
+## pop_retained_node removes a retained node by key and returns it. The caller is
+## responsible for freeing the returned node.
+func pop_retained_node(key: StringName) -> Node:
+	var node: Node = _manager._retained_nodes.get(key)
+	_manager._retained_nodes.erase(key)
+	return node
+
+
 ## push_node adds a node as an internal-back child of the manager, rendering it on top
 ## of all regular (scene overlay) children.
 func push_node(node: Node) -> void:
 	_manager.add_child(node, false, Node.INTERNAL_MODE_BACK)
 
 
-## remove_manager_meta removes metadata from the manager node.
-func remove_manager_meta(key: StringName) -> void:
-	_manager.remove_meta(key)
-
-
-## set_manager_meta sets metadata on the manager node.
-func set_manager_meta(key: StringName, value: Variant) -> void:
-	_manager.set_meta(key, value)
+## retain_node registers a node with the manager for cleanup on shutdown or reset, keyed
+## by a transition-defined identifier.
+func retain_node(key: StringName, node: Node) -> void:
+	_manager._retained_nodes[key] = node

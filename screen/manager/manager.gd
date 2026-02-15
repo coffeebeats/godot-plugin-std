@@ -59,8 +59,20 @@ const _META_PROCESS_MODE := &"addons_std_screen_manager_process_mode"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree when the screen is
+## covered by another. This value can be overridden to avoid collisions if needed.
+static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+
+## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
+## screen is popped. This value can be overridden to avoid collisions if needed.
+static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+
 ## _logger is the logger instance for this class.
 static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
+
+## _cache maps `StdScreen` resources to their cached scene instances. Scenes are cached
+## when `screen.cache_instance` is true and the screen is popped from the stack.
+var _cache: Dictionary[StdScreen, Node] = {}
 
 ## _close_actions is the list of input actions that will close the topmost overlay.
 var _close_actions := PackedStringArray()
@@ -80,6 +92,10 @@ var _overlays: Dictionary[StdScreen, StdScreenOverlay] = {}
 ## _preloads holds preload dependency results for each active screen, keeping loaded
 ## resources alive via reference counting for the screen's stack lifetime.
 var _preloads: Dictionary[StdScreen, Dictionary] = {}
+
+## _retained_nodes holds nodes registered by transitions for cleanup on shutdown or
+## reset. These are keyed by a transition-defined identifier.
+var _retained_nodes: Dictionary[StringName, Node] = {}
 
 ## _queue is the reentrancy-safe operation queue.
 var _queue: OperationQueue = null
@@ -248,8 +264,7 @@ func reset(
 
 
 func _exit_tree() -> void:
-	_transitions.stop_all(true)
-	_queue.clear()
+	_teardown()
 
 
 func _input(event: InputEvent) -> void:
@@ -261,6 +276,11 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_request_close_overlay(event)
 			break
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_teardown()
 
 
 func _ready() -> void:
@@ -283,6 +303,23 @@ func _ready() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _free_retained_nodes frees all nodes registered by transitions and clears the
+## registry.
+func _free_retained_nodes() -> void:
+	for node in _retained_nodes.values():
+		if is_instance_valid(node):
+			node.free.call_deferred()
+	_retained_nodes.clear()
+
+
+## _teardown frees all retained transition nodes and stops in-flight transitions.
+func _teardown() -> void:
+	_transitions.stop_all(true)
+	_queue.clear()
+	_free_retained_nodes()
+
 
 # Operations
 
@@ -466,6 +503,7 @@ func _pop_impl(
 				new_top_scene,
 			)
 		)
+		new_top_scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
 
 	_restore_focus(new_top_scene)
 
@@ -553,6 +591,7 @@ func _push_impl(
 							previous,
 						)
 					)
+					previous.propagate_notification(NOTIFICATION_SCREEN_COVERED)
 
 				screen_pushed.emit(screen)
 
@@ -643,15 +682,7 @@ func _reset_impl(
 	_focus.clear()
 	_overlays.clear()
 	_preloads.clear()
-
-	# Remove any INTERNAL_MODE_BACK children left by transitions (e.g. fade overlay).
-	# Skip the loader (INTERNAL_MODE_FRONT) and regular children.
-	var regular := get_children(false)
-	for child in get_children(true):
-		if child == _loader or child in regular:
-			continue
-
-		child.queue_free()
+	_free_retained_nodes()
 
 	_resolve_scene_then(
 		screen,
@@ -691,6 +722,15 @@ func _resolve_scene_then(
 		with_deps.call(instance)
 		return
 
+	# Check the cache for a previously stored instance.
+	var cached: Node = _cache.get(screen)
+	if cached and is_instance_valid(cached):
+		_cache.erase(screen)
+		with_deps.call(cached)
+		return
+
+	_cache.erase(screen)
+
 	assert(screen.scene_path != "", "missing scene_path and no instance")
 
 	var result: StdScreenLoader.Result = _loader.load_scene(screen.scene_path)
@@ -727,22 +767,31 @@ func _teardown_scene(
 	var overlay: StdScreenOverlay = _overlays.get(screen)
 	_overlays.erase(screen)
 
-	if not free_overlay:
-		if is_instance_valid(scene):
-			scene.queue_free()
+	# If the screen opts in, detach the scene and store it instead of freeing it.
+	# Otherwise, free the scene normally.
+	var should_cache := screen.cache_instance and is_instance_valid(scene)
+	if should_cache:
+		if scene.get_parent():
+			scene.get_parent().remove_child(scene)
 
-		return
-
-	# Free the scene. If the overlay is still used by another screen, just free the
-	# scene only (removing it from the overlay). Otherwise, free the whole overlay.
-	var still_used := overlay and _overlays.values().has(overlay)
-	if still_used:
-		if is_instance_valid(scene):
-			scene.queue_free()
-	elif overlay and is_instance_valid(overlay):
-		overlay.queue_free()
+		_cache[screen] = scene
 	elif is_instance_valid(scene):
 		scene.queue_free()
+
+	if not free_overlay:
+		return
+
+	# Free the overlay if it is no longer used by any screen in the stack.
+	var still_used := overlay and _overlays.values().has(overlay)
+	if not still_used and overlay and is_instance_valid(overlay):
+		overlay.queue_free()
+
+	# If caching was toggled off while there's a stale entry, clean it up.
+	if not screen.cache_instance and screen in _cache:
+		var cached: Node = _cache[screen]
+		_cache.erase(screen)
+		if is_instance_valid(cached):
+			cached.queue_free()
 
 
 # State

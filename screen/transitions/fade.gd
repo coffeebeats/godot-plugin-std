@@ -84,11 +84,10 @@ func _reset() -> void:
 	if _context:
 		_context.allow_input()
 
-	if _overlay and is_instance_valid(_overlay):
-		_overlay.queue_free()
-
-		if _context:
-			_context.remove_manager_meta(_FADE_OVERLAY_KEY)
+	if _context:
+		var retained := _context.pop_retained_node(_FADE_OVERLAY_KEY)
+		if retained and is_instance_valid(retained):
+			retained.queue_free()
 
 	_overlay = null
 	_context = null
@@ -100,13 +99,18 @@ func _reset() -> void:
 ## _get_or_create_overlay returns the shared fade overlay for the transition context, or
 ## creates one if it doesn't exist yet.
 func _get_or_create_overlay(context: StdScreenTransitionContext) -> ColorRect:
-	if context.has_manager_meta(_FADE_OVERLAY_KEY):
-		var existing: ColorRect = context.get_manager_meta(_FADE_OVERLAY_KEY)
+	if context.has_retained_node(_FADE_OVERLAY_KEY):
+		var existing: ColorRect = context.get_retained_node(_FADE_OVERLAY_KEY)
 		if is_instance_valid(existing):
 			if not existing.is_inside_tree():
 				context.push_node(existing)
 
 			return existing
+
+		# Stale entry — pop and free it.
+		var stale := context.pop_retained_node(_FADE_OVERLAY_KEY)
+		if stale and is_instance_valid(stale):
+			stale.queue_free()
 
 	var overlay := ColorRect.new()
 	overlay.name = &"FadeOverlay"
@@ -116,7 +120,7 @@ func _get_or_create_overlay(context: StdScreenTransitionContext) -> ColorRect:
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 
 	context.push_node(overlay)
-	context.set_manager_meta(_FADE_OVERLAY_KEY, overlay)
+	context.retain_node(_FADE_OVERLAY_KEY, overlay)
 
 	return overlay
 
