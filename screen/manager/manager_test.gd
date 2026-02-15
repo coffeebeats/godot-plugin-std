@@ -3,10 +3,7 @@
 ##
 ## screen/manager/manager_test.gd
 ##
-## Tests for 'StdScreenManager': stack operations, accessors, transitions,
-## interrupts, reentrancy, process mode, overlay creation/teardown, lifecycle
-## signals, signal ordering, focus management, overlay configuration, and
-## close behavior.
+## Tests pertaining to 'StdScreenManager'.
 ##
 
 extends GutTest
@@ -332,18 +329,37 @@ func test_pop_to_with_animate_intermediate_plays_all():
 	assert_true(_get_active_transition(1).started)
 
 
-func test_pause_when_covered_false_keeps_process_mode():
-	# Given: A screen that does not pause when covered.
+func test_process_mode_disabled_when_covered_and_restored_on_pop():
+	# Given: A screen with pause_when_covered=true (default).
 	var first := _create_screen()
-	first.pause_when_covered = false
+	first.pause_when_covered = true
 	var first_scene := Control.new()
 	await _do_push(first, first_scene)
 
 	# When: A second screen is pushed.
 	await _do_push()
 
-	# Then: The first scene's process mode is unchanged.
-	assert_ne(first_scene.process_mode, Node.PROCESS_MODE_DISABLED)
+	# Then: The first scene's process mode is disabled.
+	assert_eq(first_scene.process_mode, Node.PROCESS_MODE_DISABLED)
+
+	# When: The second screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The first scene's process mode is restored.
+	assert_eq(first_scene.process_mode, Node.PROCESS_MODE_INHERIT)
+
+	# Given: A screen with pause_when_covered=false.
+	var second := _create_screen()
+	second.pause_when_covered = false
+	var second_scene := Control.new()
+	await _do_push(second, second_scene)
+
+	# When: A third screen is pushed.
+	await _do_push()
+
+	# Then: The second scene's process mode is unchanged.
+	assert_ne(second_scene.process_mode, Node.PROCESS_MODE_DISABLED)
 
 
 func test_interrupted_exit_frees_scene():
@@ -533,38 +549,41 @@ func test_close_requested_cancellation_aborts_close():
 	assert_true(_manager.is_current(top))
 
 
-func test_push_emits_lifecycle_signals():
-	# Given: A screen manager with signal tracking.
-	var screen := _create_screen()
-	var scene := Control.new()
-	watch_signals(_manager)
-
-	# When: A screen is pushed.
-	await _do_push(screen, scene)
-
-	# Then: Lifecycle signals are emitted with correct parameters.
-	assert_signal_emitted_with_parameters(_manager, "screen_entering", [screen, scene])
-	assert_signal_emitted_with_parameters(_manager, "screen_entered", [screen, scene])
-	assert_signal_emitted_with_parameters(_manager, "screen_pushed", [screen])
-
-
-func test_push_emits_covered_on_previous():
-	# Given: A manager with one screen.
+func test_push_emits_lifecycle_signals_in_order():
+	# Given: A manager with one screen and signal order tracking.
 	var first_screen := _create_screen()
 	var first_scene := Control.new()
 	await _do_push(first_screen, first_scene)
+
+	var second_screen := _create_screen()
+	var second_scene := Control.new()
+	var order: Array[String] = []
+	_manager.screen_entering.connect(func(_s, _sc): order.append("entering"))
+	_manager.screen_entered.connect(func(_s, _sc): order.append("entered"))
+	_manager.screen_covered.connect(func(_s, _sc): order.append("covered"))
+	_manager.screen_pushed.connect(func(_s): order.append("pushed"))
 	watch_signals(_manager)
 
 	# When: A second screen is pushed.
-	await _do_push()
+	await _do_push(second_screen, second_scene)
 
-	# Then: The first screen emits covered with correct parameters.
+	# Then: Signals fire in the correct order with correct parameters.
+	assert_eq(order, ["entering", "entered", "covered", "pushed"])
+	assert_signal_emitted_with_parameters(
+		_manager, "screen_entering", [second_screen, second_scene]
+	)
+	assert_signal_emitted_with_parameters(
+		_manager, "screen_entered", [second_screen, second_scene]
+	)
 	assert_signal_emitted_with_parameters(
 		_manager, "screen_covered", [first_screen, first_scene]
 	)
+	assert_signal_emitted_with_parameters(
+		_manager, "screen_pushed", [second_screen]
+	)
 
 
-func test_pop_emits_lifecycle_signals():
+func test_pop_emits_lifecycle_signals_in_order():
 	# Given: A manager with two screens.
 	var first := _create_screen()
 	var first_scene := Control.new()
@@ -572,23 +591,30 @@ func test_pop_emits_lifecycle_signals():
 	var second := _create_screen()
 	var second_scene := Control.new()
 	await _do_push(second, second_scene)
+
+	var order: Array[String] = []
+	_manager.screen_exiting.connect(func(_s, _sc): order.append("exiting"))
+	_manager.screen_uncovered.connect(func(_s, _sc): order.append("uncovered"))
+	_manager.screen_exited.connect(func(_s, _sc): order.append("exited"))
+	_manager.screen_popped.connect(func(_s): order.append("popped"))
 	watch_signals(_manager)
 
 	# When: The top screen is popped.
 	_manager.pop()
 	await wait_idle_frames(1)
 
-	# Then: Exit and pop signals are emitted with correct parameters.
+	# Then: Signals fire in the correct order with correct parameters.
+	assert_eq(order, ["exiting", "uncovered", "exited", "popped"])
 	assert_signal_emitted_with_parameters(
 		_manager, "screen_exiting", [second, second_scene]
 	)
 	assert_signal_emitted_with_parameters(
 		_manager, "screen_exited", [second, second_scene]
 	)
-	assert_signal_emitted_with_parameters(_manager, "screen_popped", [second])
 	assert_signal_emitted_with_parameters(
 		_manager, "screen_uncovered", [first, first_scene]
 	)
+	assert_signal_emitted_with_parameters(_manager, "screen_popped", [second])
 
 
 func test_replace_emits_lifecycle_in_correct_order():
@@ -717,25 +743,6 @@ func test_replace_with_blocking_exit_delays_new_screen():
 	assert_signal_emitted(_manager, "screen_replaced")
 
 
-func test_push_signal_ordering_with_previous_screen():
-	# Given: A manager with one screen and signal order tracking.
-	await _do_push()
-	var order: Array[String] = []
-	_manager.screen_entering.connect(func(_s, _sc): order.append("entering"))
-	_manager.screen_entered.connect(func(_s, _sc): order.append("entered"))
-	_manager.screen_covered.connect(func(_s, _sc): order.append("covered"))
-	_manager.screen_pushed.connect(func(_s): order.append("pushed"))
-
-	# When: A second screen is pushed.
-	await _do_push()
-
-	# Then: Signals fire in the correct order.
-	assert_eq(
-		order,
-		["entering", "entered", "covered", "pushed"],
-	)
-
-
 func test_pop_nonblocking_exit_emits_exited_before_popped():
 	# Given: Two screens; second has a non-blocking exit transition.
 	await _do_push()
@@ -760,27 +767,6 @@ func test_pop_nonblocking_exit_emits_exited_before_popped():
 
 	# Then: exited fires before popped.
 	assert_eq(order, ["exited", "popped"])
-
-
-func test_pop_signal_ordering():
-	# Given: A manager with two screens and signal order tracking.
-	await _do_push()
-	await _do_push()
-	var order: Array[String] = []
-	_manager.screen_exiting.connect(func(_s, _sc): order.append("exiting"))
-	_manager.screen_uncovered.connect(func(_s, _sc): order.append("uncovered"))
-	_manager.screen_exited.connect(func(_s, _sc): order.append("exited"))
-	_manager.screen_popped.connect(func(_s): order.append("popped"))
-
-	# When: The top screen is popped.
-	_manager.pop()
-	await wait_idle_frames(1)
-
-	# Then: Signals fire in the correct order.
-	assert_eq(
-		order,
-		["exiting", "uncovered", "exited", "popped"],
-	)
 
 
 func test_focus_saved_and_restored_on_pop():
@@ -871,27 +857,6 @@ func test_close_animate_intermediate_plays_exit_transitions():
 	# Then: Both exit transitions were started.
 	assert_true(_get_active_transition(0).started)
 	assert_true(_get_active_transition(1).started)
-
-
-func test_process_mode_restored_after_pop():
-	# Given: A first screen with pause_when_covered=true.
-	var first := _create_screen()
-	first.pause_when_covered = true
-	var first_scene := Control.new()
-	await _do_push(first, first_scene)
-
-	# When: A second screen is pushed.
-	await _do_push()
-
-	# Then: The first scene's process mode is disabled.
-	assert_eq(first_scene.process_mode, Node.PROCESS_MODE_DISABLED)
-
-	# When: The second screen is popped.
-	_manager.pop()
-	await wait_idle_frames(1)
-
-	# Then: The first scene's process mode is restored.
-	assert_eq(first_scene.process_mode, Node.PROCESS_MODE_INHERIT)
 
 
 func test_duplicate_replace_rejected():
