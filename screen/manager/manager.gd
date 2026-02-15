@@ -59,6 +59,14 @@ const _META_PROCESS_MODE := &"addons_std_screen_manager_process_mode"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree when the screen is
+## covered by another. This value can be overridden to avoid collisions if needed.
+static var NOTIFICATION_SCREEN_COVERED: int = (1 << 50) + 1
+
+## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
+## screen is popped. This value can be overridden to avoid collisions if needed.
+static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 50) + 2
+
 ## _logger is the logger instance for this class.
 static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
 
@@ -495,6 +503,7 @@ func _pop_impl(
 				new_top_scene,
 			)
 		)
+		new_top_scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
 
 	_restore_focus(new_top_scene)
 
@@ -582,6 +591,7 @@ func _push_impl(
 							previous,
 						)
 					)
+					previous.propagate_notification(NOTIFICATION_SCREEN_COVERED)
 
 				screen_pushed.emit(screen)
 
