@@ -52,6 +52,11 @@ signal uncovered(scene: Node)
 ## must provide a pre-built instance to push/replace/reset methods.
 @export_file("*.tscn", "*.scn") var scene_path: String = ""
 
+## cache_instance prevents the manager from freeing the scene on pop. The scene is
+## removed from the tree and stored internally. On the next push of this screen, the
+## cached instance is reused (re-added to tree) instead of instantiating from scene_path.
+@export var cache_instance: bool = false
+
 ## pause_when_covered controls whether this screen's scene has its process mode set to
 ## disabled when another screen is pushed on top.
 @export var pause_when_covered: bool = true
