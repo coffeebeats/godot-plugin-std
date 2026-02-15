@@ -62,6 +62,10 @@ const _META_PROCESS_MODE := &"addons_std_screen_manager_process_mode"
 ## _logger is the logger instance for this class.
 static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
 
+## _cache maps `StdScreen` resources to their cached scene instances. Scenes are cached
+## when `screen.cache_instance` is true and the screen is popped from the stack.
+var _cache: Dictionary[StdScreen, Node] = {}
+
 ## _close_actions is the list of input actions that will close the topmost overlay.
 var _close_actions := PackedStringArray()
 
@@ -708,6 +712,15 @@ func _resolve_scene_then(
 		with_deps.call(instance)
 		return
 
+	# Check the cache for a previously stored instance.
+	var cached: Node = _cache.get(screen)
+	if cached and is_instance_valid(cached):
+		_cache.erase(screen)
+		with_deps.call(cached)
+		return
+
+	_cache.erase(screen)
+
 	assert(screen.scene_path != "", "missing scene_path and no instance")
 
 	var result: StdScreenLoader.Result = _loader.load_scene(screen.scene_path)
@@ -744,22 +757,31 @@ func _teardown_scene(
 	var overlay: StdScreenOverlay = _overlays.get(screen)
 	_overlays.erase(screen)
 
-	if not free_overlay:
-		if is_instance_valid(scene):
-			scene.queue_free()
+	# If the screen opts in, detach the scene and store it instead of freeing it.
+	# Otherwise, free the scene normally.
+	var should_cache := screen.cache_instance and is_instance_valid(scene)
+	if should_cache:
+		if scene.get_parent():
+			scene.get_parent().remove_child(scene)
 
-		return
-
-	# Free the scene. If the overlay is still used by another screen, just free the
-	# scene only (removing it from the overlay). Otherwise, free the whole overlay.
-	var still_used := overlay and _overlays.values().has(overlay)
-	if still_used:
-		if is_instance_valid(scene):
-			scene.queue_free()
-	elif overlay and is_instance_valid(overlay):
-		overlay.queue_free()
+		_cache[screen] = scene
 	elif is_instance_valid(scene):
 		scene.queue_free()
+
+	if not free_overlay:
+		return
+
+	# Free the overlay if it is no longer used by any screen in the stack.
+	var still_used := overlay and _overlays.values().has(overlay)
+	if not still_used and overlay and is_instance_valid(overlay):
+		overlay.queue_free()
+
+	# If caching was toggled off while there's a stale entry, clean it up.
+	if not screen.cache_instance and screen in _cache:
+		var cached: Node = _cache[screen]
+		_cache.erase(screen)
+		if is_instance_valid(cached):
+			cached.queue_free()
 
 
 # State
