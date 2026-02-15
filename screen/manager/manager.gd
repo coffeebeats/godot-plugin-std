@@ -320,6 +320,12 @@ func _teardown() -> void:
 	_queue.clear()
 	_free_retained_nodes()
 
+	# Clear scene cache on teardown.
+	for node in _cache.values():
+		if is_instance_valid(node):
+			node.free.call_deferred()
+	_cache.clear()
+
 
 # Operations
 
