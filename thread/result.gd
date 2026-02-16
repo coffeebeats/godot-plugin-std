@@ -29,6 +29,7 @@ static func failed(error: Error) -> StdThreadWorkerResult:
 	var result := StdThreadWorkerResult.new()
 	result._is_done = true
 	result._error = error
+	result.done.emit.call_deferred(error)
 	return result
 
 
