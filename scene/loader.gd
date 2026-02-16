@@ -102,6 +102,8 @@ func load(path: String) -> Result:
 		result.status = ResourceLoader.THREAD_LOAD_LOADED
 		result.scene = ResourceLoader.load(path, "PackedScene")
 
+		result.done.emit.call_deferred()
+
 		return result
 
 	_logger.info("Loading scene file.", {&"path": path})
