@@ -390,6 +390,7 @@ func _do_reset(
 # Lifecycle
 
 
+# TODO(#351): Replace asserts with runtime error handling.
 func _await_all_loaded(
 	results: Dictionary,
 	on_done: Callable,
