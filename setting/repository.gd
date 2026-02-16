@@ -6,7 +6,6 @@
 ## configuration to the specified writer node.
 ##
 
-@tool
 class_name StdSettingsRepository
 extends Node
 
