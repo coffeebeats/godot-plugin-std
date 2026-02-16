@@ -38,6 +38,7 @@ const Debounce := preload("../timer/debounce.gd")
 static var _logger := StdLogger.create(&"std/setting/repository")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _debounce: Debounce = null
+var _store_pending: bool = false
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -49,6 +50,9 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	if scope and scope.config:
+		Signals.disconnect_safe(scope.config.changed, _on_config_changed)
+
 	_debounce = null
 
 	assert(scope is StdSettingsScope, "invalid state: missing scope")
@@ -58,13 +62,19 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	if not writer is StdConfigWriter:
+		scope.is_loaded = true
+		scope.loaded.emit.call_deferred()  # Defer so observers connect first.
 		return
 
-	# The writer's thread starts in `StdThreadWorker._ready()`; tree ordering
-	# may cause its `_ready()` to fire after the repository's.
-	if not writer.is_node_ready():
-		await writer.ready
+	_setup_sync.call_deferred()
 
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _setup_sync configures the debounce timer and initiates an asynchronous config load.
+## This is called via `call_deferred` to ensure the writer's thread has started.
+func _setup_sync() -> void:
 	if not is_inside_tree():
 		return
 
@@ -75,28 +85,12 @@ func _ready() -> void:
 	add_child(_debounce, false, INTERNAL_MODE_FRONT)
 	Signals.connect_safe(_debounce.timeout, _on_debounce_timeout)
 
-	# Sync configuration changes to the configured writer.
-	var err := _sync_config()
-	if err != OK:
-		assert(false, "failed to sync config with writer")
-		(
-			_logger
-			. error(
-				"Failed to sync config to file.",
-				{&"error": err, &"path": writer.get_filepath()},
-			)
-		)
+	_sync_config()
 
 
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-## _sync_config hydrates the scope's 'Config' with the writer's file contents and then
-## saves the config to disk each time a change is detected.
-##
-## NOTE: If the 'Config' is already being synced then nothing occurs. Synchronization
-## will automatically be cleaned up on tree exit.
-func _sync_config() -> Error:
+## _sync_config initiates an asynchronous load of the scope's configuration from the
+## writer's backing store.
+func _sync_config() -> void:
 	assert(writer is StdConfigWriter, "invalid state; missing config writer")
 	assert(
 		writer.is_inside_tree(),
@@ -115,18 +109,32 @@ func _sync_config() -> Error:
 		)
 	)
 
-	var err := scope.config.changed.connect(_on_config_changed) as Error
-	if err != OK:
-		return err
-
-	err = writer.load_config(scope.config).wait()
-	if err != OK and err != ERR_FILE_NOT_FOUND:  # A missing file is okay.
-		return err
-
-	return OK
+	var result := writer.load_config(scope.config)
+	Signals.connect_safe(result.done, _on_load_completed, CONNECT_ONE_SHOT)
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_load_completed(err: Error) -> void:
+	if not is_inside_tree():
+		return
+
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		assert(false, "failed to sync config with writer")
+		(
+			_logger
+			. error(
+				"Failed to load config from file.",
+				{&"error": err, &"path": writer.get_filepath()},
+			)
+		)
+		return
+
+	Signals.connect_safe(scope.config.changed, _on_config_changed)
+
+	scope.is_loaded = true
+	scope.loaded.emit()
 
 
 func _on_config_changed(_category: StringName, _key: StringName) -> void:
@@ -134,7 +142,19 @@ func _on_config_changed(_category: StringName, _key: StringName) -> void:
 
 
 func _on_debounce_timeout() -> void:
-	var err := writer.store_config(scope.config).wait()
+	var result := writer.store_config(scope.config)
+	Signals.connect_safe(result.done, _on_store_completed, CONNECT_ONE_SHOT)
+
+
+func _on_store_completed(err: Error) -> void:
+	if err == ERR_BUSY:
+		_store_pending = true
+		return
+
+	if _store_pending:
+		_store_pending = false
+		_debounce.start()
+
 	if err != OK:
 		(
 			_logger
