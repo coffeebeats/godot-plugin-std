@@ -121,7 +121,6 @@ func _on_load_completed(err: Error) -> void:
 		return
 
 	if err != OK and err != ERR_FILE_NOT_FOUND:
-		assert(false, "failed to sync config with writer")
 		(
 			_logger
 			. error(
@@ -129,6 +128,7 @@ func _on_load_completed(err: Error) -> void:
 				{&"error": err, &"path": writer.get_filepath()},
 			)
 		)
+		assert(false, "failed to sync config with writer")
 
 	Signals.connect_safe(scope.config.changed, _on_config_changed)
 

@@ -80,14 +80,28 @@ func _enter_tree() -> void:
 ## the data is invalid.
 func from_bytes(bytes: PackedByteArray) -> Config:
 	if bytes.size() < _get_minimum_size():
+		(
+			_logger
+			. warn(
+				"Deserialization failed; buffer too small.",
+				{&"minimum": _get_minimum_size(), &"size": bytes.size()},
+			)
+		)
 		return null
 
 	var mode_byte := bytes[0]
 	if mode_byte > CompressionMode.GZIP:
+		(
+			_logger
+			. warn(
+				"Deserialization failed; invalid mode.",
+				{&"mode": mode_byte},
+			)
+		)
 		return null
 
 	var payload := bytes.slice(HEADER_BYTE_LENGTH)
-	var checksum := (
+	var checksum_expected := (
 		bytes
 		. slice(
 			COMPRESSION_MODE_BYTE_LENGTH + UNCOMPRESSED_SIZE_BYTE_LENGTH,
@@ -95,7 +109,18 @@ func from_bytes(bytes: PackedByteArray) -> Config:
 		)
 	)
 
-	if _compute_checksum(payload) != checksum:
+	var checksum_actual := _compute_checksum(payload)
+	if checksum_actual != checksum_expected:
+		(
+			_logger
+			. warn(
+				"Deserialization failed; checksum mismatch.",
+				{
+					&"actual": checksum_actual.hex_encode(),
+					&"expected": checksum_expected.hex_encode(),
+				},
+			)
+		)
 		return null
 
 	var size := bytes.decode_s64(COMPRESSION_MODE_BYTE_LENGTH)
@@ -103,12 +128,27 @@ func from_bytes(bytes: PackedByteArray) -> Config:
 	if mode_byte > CompressionMode.NONE:
 		payload = payload.decompress(size, mode_byte - 1)
 		if payload.is_empty():
+			_logger.warn("Deserialization failed; decompression failed.")
 			return null
 	elif payload.size() != size:
+		(
+			_logger
+			. warn(
+				"Deserialization failed; size mismatch.",
+				{&"actual": payload.size(), &"expected": size},
+			)
+		)
 		return null
 
 	var value: Variant = bytes_to_var(payload)
 	if not value is Dictionary:
+		(
+			_logger
+			. warn(
+				"Deserialization failed; unexpected type.",
+				{&"type": typeof(value)},
+			)
+		)
 		return null
 
 	var config := Config.new()
@@ -168,7 +208,21 @@ func _create_worker_result() -> StdThreadWorkerResult:
 
 func _config_read_bytes(config_path: String) -> ReadResult:
 	var tmp_config_path := _get_tmp_filepath()
-	if not FileAccess.file_exists(tmp_config_path):
+	var has_tmp := FileAccess.file_exists(tmp_config_path)
+
+	(
+		_logger
+		. debug(
+			"Reading config bytes.",
+			{
+				&"has_tmp": has_tmp,
+				&"path": config_path,
+				&"tmp_path": tmp_config_path,
+			},
+		)
+	)
+
+	if not has_tmp:
 		return _read_file_bytes(config_path)
 
 	# '.tmp' file exists; check whether it was completely written.
