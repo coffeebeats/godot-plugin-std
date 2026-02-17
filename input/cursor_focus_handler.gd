@@ -196,7 +196,8 @@ func _update_input_state(is_cursor_visible: bool) -> void:
 	# receiving focus or hover.
 	if _is_outside_focus_root:
 		_control.focus_mode = FOCUS_NONE
-		_control.mouse_filter = MOUSE_FILTER_IGNORE
+		if not is_cursor_visible:
+			_control.mouse_filter = MOUSE_FILTER_IGNORE
 		return
 
 	if not is_cursor_visible:

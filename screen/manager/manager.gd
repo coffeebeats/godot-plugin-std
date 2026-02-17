@@ -1,4 +1,5 @@
 # gdlint:ignore=max-public-methods
+# gdlint:disable=max-file-lines
 
 ##
 ## screen/manager/manager.gd
@@ -517,6 +518,8 @@ func _pop_impl(
 	var teardown := func() -> void:
 		_teardown_scene(screen, scene)
 		screen_popped.emit(screen)
+		if _cursor.get_is_visible():
+			_force_hover_recalculation.call_deferred()
 
 	if skip_exit:
 		teardown.call()
@@ -903,21 +906,19 @@ func _update_stack_state() -> void:
 # Focus / Input
 
 
+## _force_hover_recalculation dispatches a synthetic mouse motion event at the current
+## cursor position to force Godot to re-evaluate hover state after a screen pop.
+func _force_hover_recalculation() -> void:
+	var ev := InputEventMouseMotion.new()
+	ev.position = get_viewport().get_mouse_position()
+	ev.relative = Vector2.ZERO
+	Input.parse_input_event(ev)
+
+
 ## _restore_focus restores saved focus for a scene, falling back to the `StdInputCursor`
 ## to select an appropriate control.
 func _restore_focus(scene: Node) -> void:
 	if not is_instance_valid(scene) or not scene is Control:
-		return
-
-	# Try saved focus first.
-	var saved: Control = _focus.get(scene)
-	if (
-		saved
-		and is_instance_valid(saved)
-		and saved.is_visible_in_tree()
-		and saved.focus_mode != Control.FOCUS_NONE
-	):
-		saved.grab_focus()
 		return
 
 	if not is_instance_valid(_cursor):
@@ -927,6 +928,22 @@ func _restore_focus(scene: Node) -> void:
 	var root: Control = overlay if overlay else scene as Control
 	if not root or not root.is_visible_in_tree():
 		return
+
+	var saved: Control = _focus.get(scene)
+	if saved and is_instance_valid(saved) and saved.is_visible_in_tree():
+		# Defer grab_focus via one-shot to run AFTER focus handlers
+		# restore focus_mode (they process focus_root_changed first).
+		Signals.connect_safe(
+			_cursor.focus_root_changed,
+			func(_root: Control) -> void:
+				if (
+					is_instance_valid(saved)
+					and saved.is_visible_in_tree()
+					and saved.focus_mode != Control.FOCUS_NONE
+				):
+					saved.grab_focus(),
+			CONNECT_ONE_SHOT,
+		)
 
 	_cursor.set_focus_root(root)
 
