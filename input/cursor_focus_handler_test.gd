@@ -191,7 +191,7 @@ func test_cursor_visibility_change_toggles_focus_mode() -> void:
 
 
 func test_focus_root_change_disables_controls_outside_root() -> void:
-	# Given: A cursor in the scene.
+	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
 	# Given: A modal container.
@@ -211,9 +211,10 @@ func test_focus_root_change_disables_controls_outside_root() -> void:
 	# When: Focus root is set to the modal.
 	cursor.focus_root_changed.emit(modal)
 
-	# Then: The button outside has focus and mouse disabled.
+	# Then: The button outside has focus disabled; mouse_filter is unchanged because
+	# the cursor is visible (the overlay scrim blocks input via MOUSE_FILTER_STOP).
 	assert_eq(button_outside.focus_mode, Control.FOCUS_NONE)
-	assert_eq(button_outside.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_eq(button_outside.mouse_filter, Control.MOUSE_FILTER_STOP)
 
 
 func test_focus_root_change_to_null_restores_controls() -> void:
@@ -234,10 +235,10 @@ func test_focus_root_change_to_null_restores_controls() -> void:
 	handler.control = NodePath("..")
 	button.add_child(handler)
 
-	# Given: Focus root was set to modal (button disabled).
+	# Given: Focus root was set to modal (button outside root).
 	cursor.focus_root_changed.emit(modal)
 	assert_eq(button.focus_mode, Control.FOCUS_NONE)
-	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_STOP)
 
 	# When: Focus root is cleared.
 	cursor.focus_root_changed.emit(null)
@@ -245,6 +246,61 @@ func test_focus_root_change_to_null_restores_controls() -> void:
 	# Then: Button is restored based on cursor visibility.
 	assert_eq(button.focus_mode, Control.FOCUS_NONE)
 	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_STOP)
+
+
+func test_focus_root_change_preserves_mouse_filter_when_cursor_visible() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A modal container.
+	var modal := Control.new()
+	add_child_autofree(modal)
+
+	# Given: A button outside the modal with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	button.add_child(handler)
+
+	# When: Focus root is set to the modal (button is outside root).
+	cursor.focus_root_changed.emit(modal)
+
+	# Then: focus_mode is FOCUS_NONE but mouse_filter is unchanged.
+	assert_eq(button.focus_mode, Control.FOCUS_NONE)
+	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_STOP)
+
+
+func test_focus_root_change_disables_mouse_filter_when_cursor_hidden() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A modal container.
+	var modal := Control.new()
+	add_child_autofree(modal)
+
+	# Given: A button outside the modal with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child_autofree(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	button.add_child(handler)
+
+	# Given: Cursor is hidden.
+	cursor.cursor_visibility_changed.emit(false)
+
+	# When: Focus root is set to the modal (button is outside root).
+	cursor.focus_root_changed.emit(modal)
+
+	# Then: Both focus_mode and mouse_filter are disabled.
+	assert_eq(button.focus_mode, Control.FOCUS_NONE)
+	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 
 
 func test_focus_root_change_keeps_controls_inside_root_enabled() -> void:
