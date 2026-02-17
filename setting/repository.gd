@@ -129,12 +129,11 @@ func _on_load_completed(err: Error) -> void:
 				{&"error": err, &"path": writer.get_filepath()},
 			)
 		)
-		return
 
 	Signals.connect_safe(scope.config.changed, _on_config_changed)
 
 	scope.is_loaded = true
-	scope.loaded.emit()
+	scope.loaded.emit.call_deferred()
 
 
 func _on_config_changed(_category: StringName, _key: StringName) -> void:
