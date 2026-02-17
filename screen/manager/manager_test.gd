@@ -1,4 +1,5 @@
-# gdlint:ignore=max-public-methods,max-file-lines
+# gdlint:ignore=max-public-methods
+# gdlint:disable=max-file-lines
 
 ##
 ## screen/manager/manager_test.gd
@@ -780,6 +781,39 @@ func test_focus_saved_and_restored_on_pop():
 
 	# When: A second screen is pushed, then popped.
 	await _do_push()
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: Focus is restored to the button.
+	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_focus_restored_on_pop_even_when_focus_mode_cleared():
+	# Given: A first screen with a focusable button.
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(null, first_scene)
+	button.grab_focus()
+
+	# Given: A handler simulating focus handler behavior.
+	var cursor := (
+		StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR) as StdInputCursor
+	)
+	cursor.focus_root_changed.connect(
+		func(root: Control) -> void:
+			if root and not root.is_ancestor_of(button):
+				button.focus_mode = Control.FOCUS_NONE
+			else:
+				button.focus_mode = Control.FOCUS_ALL,
+	)
+
+	# When: A second screen is pushed (button outside focus root).
+	await _do_push()
+	assert_eq(button.focus_mode, Control.FOCUS_NONE)
+
+	# When: The second screen is popped.
 	_manager.pop()
 	await wait_idle_frames(1)
 

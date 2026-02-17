@@ -134,7 +134,7 @@ func show_cursor() -> void:
 	if _cursor_visible:
 		return
 
-	_cursor_visible = false
+	_cursor_visible = true
 	_time_since_mouse_motion = 0.0
 	_on_properties_changed()
 
