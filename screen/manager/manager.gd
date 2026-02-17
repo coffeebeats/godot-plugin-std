@@ -390,6 +390,7 @@ func _do_reset(
 # Lifecycle
 
 
+# TODO(#351): Replace asserts with runtime error handling.
 func _await_all_loaded(
 	results: Dictionary,
 	on_done: Callable,
@@ -739,20 +740,16 @@ func _resolve_scene_then(
 
 	assert(screen.scene_path != "", "missing scene_path and no instance")
 
-	var result: StdScreenLoader.Result = _loader.load_scene(screen.scene_path)
-	if result.is_done():
-		assert(result.get_error() == OK, "failed to load scene")
-		assert(result.scene != null, "loaded scene was null")
-		with_deps.call(result.scene.instantiate())
-	else:
-		Signals.connect_safe(
-			result.done,
-			func() -> void:
-				assert(result.get_error() == OK, "failed to load scene")
-				assert(result.scene != null, "loaded scene was null")
-				with_deps.call(result.scene.instantiate()),
-			CONNECT_ONE_SHOT,
-		)
+	# TODO(#351): Replace asserts with runtime error handling.
+	var result := _loader.load_scene(screen.scene_path)
+	Signals.connect_safe(
+		result.done,
+		func() -> void:
+			assert(result.get_error() == OK, "failed to load scene")
+			assert(result.scene != null, "loaded scene was null")
+			with_deps.call(result.scene.instantiate()),
+		CONNECT_ONE_SHOT,
+	)
 
 
 ## _teardown_scene disconnects signal handlers, emits the `exited` signal, and frees the

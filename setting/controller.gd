@@ -10,6 +10,10 @@
 class_name StdSettingsController
 extends Node
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Signals := preload("../event/signal.gd")
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## target is the path to the node which should be controlled/observed.
@@ -37,6 +41,18 @@ extends Node
 @onready var _target: Node = get_node(target)
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		return
+
+	if disabled is StdSettingsPropertyBool:
+		Signals.disconnect_safe(disabled.value_changed, _on_disabled_value_changed)
+
+	var property := _get_property()
+	if property and property.scope:
+		Signals.disconnect_safe(property.scope.loaded, _initialize)
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -74,7 +90,11 @@ func _ready() -> void:
 		var err := disabled.value_changed.connect(_on_disabled_value_changed)
 		assert(err == OK, "failed to connect to signal")
 
-	_initialize()
+	var scope := _get_property().scope
+	if scope.is_loaded:
+		_initialize()
+	else:
+		scope.loaded.connect(_initialize, CONNECT_ONE_SHOT)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #

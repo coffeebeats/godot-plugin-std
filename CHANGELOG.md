@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.3.1 (2026-02-17)
+
+## What's Changed
+* fix(thread): ensure a thread worker result always emits `done` signal by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/352
+* fix(setting): remove sync targets; make config loading asynchronous by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/354
+* fix(setting): disconnect some lingering signal connects; ensure scope `loaded` signal always deferred by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/355
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.3.0...v4.3.1
+
 ## 4.3.0 (2026-02-15)
 
 ## What's Changed
