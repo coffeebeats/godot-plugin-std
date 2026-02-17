@@ -517,6 +517,8 @@ func _pop_impl(
 	var teardown := func() -> void:
 		_teardown_scene(screen, scene)
 		screen_popped.emit(screen)
+		if _cursor.get_is_visible():
+			_force_hover_recalculation.call_deferred()
 
 	if skip_exit:
 		teardown.call()
@@ -901,6 +903,15 @@ func _update_stack_state() -> void:
 
 
 # Focus / Input
+
+
+## _force_hover_recalculation dispatches a synthetic mouse motion event at the current
+## cursor position to force Godot to re-evaluate hover state after a screen pop.
+func _force_hover_recalculation() -> void:
+	var ev := InputEventMouseMotion.new()
+	ev.position = get_viewport().get_mouse_position()
+	ev.relative = Vector2.ZERO
+	Input.parse_input_event(ev)
 
 
 ## _restore_focus restores saved focus for a scene, falling back to the `StdInputCursor`
