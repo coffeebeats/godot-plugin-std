@@ -920,17 +920,6 @@ func _restore_focus(scene: Node) -> void:
 	if not is_instance_valid(scene) or not scene is Control:
 		return
 
-	# Try saved focus first.
-	var saved: Control = _focus.get(scene)
-	if (
-		saved
-		and is_instance_valid(saved)
-		and saved.is_visible_in_tree()
-		and saved.focus_mode != Control.FOCUS_NONE
-	):
-		saved.grab_focus()
-		return
-
 	if not is_instance_valid(_cursor):
 		return
 
@@ -938,6 +927,22 @@ func _restore_focus(scene: Node) -> void:
 	var root: Control = overlay if overlay else scene as Control
 	if not root or not root.is_visible_in_tree():
 		return
+
+	var saved: Control = _focus.get(scene)
+	if saved and is_instance_valid(saved) and saved.is_visible_in_tree():
+		# Defer grab_focus via one-shot to run AFTER focus handlers
+		# restore focus_mode (they process focus_root_changed first).
+		Signals.connect_safe(
+			_cursor.focus_root_changed,
+			func(_root: Control) -> void:
+				if (
+					is_instance_valid(saved)
+					and saved.is_visible_in_tree()
+					and saved.focus_mode != Control.FOCUS_NONE
+				):
+					saved.grab_focus(),
+			CONNECT_ONE_SHOT,
+		)
 
 	_cursor.set_focus_root(root)
 
