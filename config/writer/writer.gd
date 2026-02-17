@@ -194,7 +194,11 @@ func _worker_impl() -> Error:
 		assert(false, "invalid state; missing config")
 		return ERR_DOES_NOT_EXIST
 
-	var path := FilePath.make_project_path_absolute(_get_filepath())
+	var filepath := _get_filepath()
+	if not filepath:
+		return ERR_FILE_BAD_PATH
+
+	var path := FilePath.make_project_path_absolute(filepath)
 	if not path:
 		return ERR_FILE_BAD_PATH
 
@@ -272,6 +276,25 @@ func _handle_load(
 ) -> Error:
 	var read_result := _config_read_bytes(path)
 
+	var modified_time := FileAccess.get_modified_time(path)
+	(
+		_logger
+		. debug(
+			"Read config bytes from file.",
+			{
+				&"error": read_result.error,
+				&"modified":
+				(
+					Time.get_date_string_from_unix_time(modified_time)
+					if modified_time
+					else ""
+				),
+				&"path": path,
+				&"size": read_result.bytes.size(),
+			},
+		)
+	)
+
 	var data: Variant = null
 	if read_result.error == OK and read_result.bytes.size() >= _get_minimum_size():
 		data = _deserialize_var(read_result.bytes)
@@ -342,7 +365,17 @@ func _handle_store(
 		)
 		return disk_err
 
-	return _config_write_bytes(path, bytes)
+	var err := _config_write_bytes(path, bytes)
+
+	(
+		_logger
+		. debug(
+			"Stored config bytes to file.",
+			{&"error": err, &"path": path, &"size": bytes.size()},
+		)
+	)
+
+	return err
 
 
 ## _read_file_bytes reads the raw contents from the specified file path using managed
