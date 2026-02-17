@@ -10,6 +10,12 @@
 class_name StdSettingsScope
 extends Resource
 
+# -- SIGNALS ------------------------------------------------------------------------- #
+
+## loaded is emitted once the scope's configuration has been hydrated from disk.
+@warning_ignore("unused_signal")
+signal loaded
+
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Config := preload("../config/config.gd")
@@ -18,6 +24,9 @@ const Config := preload("../config/config.gd")
 
 ## config is a `Config` instance that contains configuration values for the scope.
 var config: Config = Config.new()
+
+## is_loaded tracks whether configuration data has been hydrated from storage.
+var is_loaded: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

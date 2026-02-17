@@ -23,6 +23,7 @@ Follows GDScript style guide. Key project-specific conventions:
 
 - Lines are limited to 88 characters.
 - Overridden methods (whether private or engine) go in the `<PRIVATE|ENGINE> METHODS (OVERRIDES)` section.
+- Alphabetize methods within their sections.
 - Organize files in this section order with visual separators (separators are omitted if section is empty):
 
   ```gdscript

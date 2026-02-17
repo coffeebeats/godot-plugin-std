@@ -86,13 +86,21 @@ func reload(device: int = DEVICE_ID_ALL) -> void:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _exit_tree() -> void:
+	if scope:
+		Signals.disconnect_safe(scope.loaded, _on_scope_loaded)
+
+		if scope.config:
+			Signals.disconnect_safe(scope.config.changed, _on_config_changed)
+
+
 func _ready() -> void:
 	assert(scope is StdSettingsScope, "invalid config; missing bindings scope")
 
-	Signals.connect_safe(scope.config.changed, _on_config_changed)
-
-	# Clear bindings upon initialization.
-	reload(DEVICE_ID_ALL)
+	if scope.is_loaded:
+		_on_scope_loaded()
+	else:
+		scope.loaded.connect(_on_scope_loaded, CONNECT_ONE_SHOT)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -290,3 +298,8 @@ func _reset(_device: int) -> void:
 
 func _on_config_changed(_category: StringName, _key: StringName) -> void:
 	reload()
+
+
+func _on_scope_loaded() -> void:
+	Signals.connect_safe(scope.config.changed, _on_config_changed)
+	reload(DEVICE_ID_ALL)
