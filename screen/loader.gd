@@ -111,10 +111,9 @@ func load_all_scenes(paths: PackedStringArray) -> Dictionary[String, Result]:
 ## load_scene loads the provided packed scene file in the background and returns a
 ## handle to track the progress of the request and access the loaded resource.
 func load_scene(path: String) -> Result:
-	assert(path.begins_with("res://"), "expected path to be absolute")
 	assert(
-		path.ends_with(".tscn") or path.ends_with(".scn"),
-		"expected path to be a packed scene",
+		path.begins_with("res://") or path.begins_with("uid://"),
+		"expected path to be absolute or a UID",
 	)
 
 	var is_loading: bool = path in _loading
