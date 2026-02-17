@@ -60,6 +60,11 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	for p in _connected:
+		p.value_changed.disconnect(_connected[p])
+
+	_connected = {}
+
 	for s in _pending_scopes:
 		Signals.disconnect_safe(s.loaded, _on_scope_loaded)
 
