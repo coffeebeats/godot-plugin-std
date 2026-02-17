@@ -130,6 +130,47 @@ func test_unset_hovered_clears_hovered_control() -> void:
 	assert_true(cursor.set_hovered(other))
 
 
+func test_show_cursor_makes_cursor_visible() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The cursor is hidden.
+	cursor.hide_cursor()
+	assert_false(cursor.get_is_visible())
+
+	# When: show_cursor is called.
+	cursor.show_cursor()
+
+	# Then: The cursor is visible.
+	assert_true(cursor.get_is_visible())
+
+
+func test_show_cursor_noop_when_already_visible() -> void:
+	# Given: A cursor added to the scene (starts visible).
+	add_child_autofree(cursor)
+	assert_true(cursor.get_is_visible())
+	watch_signals(cursor)
+
+	# When: show_cursor is called while already visible.
+	cursor.show_cursor()
+
+	# Then: The cursor is still visible and no signal was emitted.
+	assert_true(cursor.get_is_visible())
+	assert_signal_not_emitted(cursor, "cursor_visibility_changed")
+
+
+func test_hide_cursor_makes_cursor_hidden() -> void:
+	# Given: A cursor added to the scene (starts visible).
+	add_child_autofree(cursor)
+	assert_true(cursor.get_is_visible())
+
+	# When: hide_cursor is called.
+	cursor.hide_cursor()
+
+	# Then: The cursor is hidden.
+	assert_false(cursor.get_is_visible())
+
+
 func test_unset_hovered_rejects_wrong_control() -> void:
 	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
