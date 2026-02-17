@@ -1,4 +1,5 @@
-# gdlint:ignore=max-public-methods,max-file-lines
+# gdlint:ignore=max-public-methods
+# gdlint:disable=max-file-lines
 
 ##
 ## screen/manager/manager_test.gd
