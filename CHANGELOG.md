@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.3.2 (2026-02-17)
+
+## What's Changed
+* chore(config): add more logging along config file I/O paths by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/356
+* fix(input): address multiple hover/focus state bugs by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/358
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.3.1...v4.3.2
+
 ## 4.3.1 (2026-02-17)
 
 ## What's Changed
