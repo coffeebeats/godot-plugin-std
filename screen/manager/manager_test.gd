@@ -797,9 +797,9 @@ func test_focus_restored_on_pop_even_when_focus_mode_cleared():
 	button.grab_focus()
 
 	# Given: A handler simulating focus handler behavior.
-	var cursor := StdGroup.get_sole_member(
-		StdInputCursor.GROUP_INPUT_CURSOR
-	) as StdInputCursor
+	var cursor := (
+		StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR) as StdInputCursor
+	)
 	cursor.focus_root_changed.connect(
 		func(root: Control) -> void:
 			if root and not root.is_ancestor_of(button):
