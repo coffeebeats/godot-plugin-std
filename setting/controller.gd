@@ -47,6 +47,9 @@ func _exit_tree() -> void:
 	if Engine.is_editor_hint():
 		return
 
+	if disabled is StdSettingsPropertyBool:
+		Signals.disconnect_safe(disabled.value_changed, _on_disabled_value_changed)
+
 	var property := _get_property()
 	if property and property.scope:
 		Signals.disconnect_safe(property.scope.loaded, _initialize)
