@@ -165,14 +165,14 @@ func pop(force: bool = false) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
 	if not force:
-		var screen := _stack.back() as StdScreen
-		var state := [false]
-		screen.close_requested.emit(
-			null,
-			func() -> void: state[0] = true,
-		)
-		if state[0]:
-			return
+		var screen: StdScreen = _stack.back()
+		assert(screen is StdScreen, "invalid state; missing screen")
+
+		if screen:
+			var state := [false]
+			screen.close_requested.emit(null, func() -> void: state[0] = true)
+			if state[0]:
+				return
 
 	pop_to_depth(_stack.size() - 1)
 
