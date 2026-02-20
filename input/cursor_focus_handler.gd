@@ -50,6 +50,11 @@ const Signals := preload("../event/signal.gd")
 ## `Control` node from receiving hover and focus effects if it's disabled.
 @export var block_focus_and_hover_on_disable: bool = true
 
+## clear_press_on_cover controls whether a non-toggle `BaseButton`'s pressed and hovered
+## visual state is cleared when the control moves outside the focus root (e.g. when an
+## overlay covers it).
+@export var clear_press_on_cover: bool = true
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 # gdlint:ignore=class-definitions-order
@@ -252,5 +257,23 @@ func _on_cursor_visibility_changed(is_cursor_visible: bool) -> void:
 
 
 func _on_focus_root_changed(root: Control) -> void:
+	var was_outside := _is_outside_focus_root
 	_is_outside_focus_root = root != null and not root.is_ancestor_of(_control)
 	_update_input_state(_cursor.get_is_visible())
+
+	# NOTE: When a non-toggle 'BaseButton' transitions from inside to outside the focus
+	# root (e.g. an overlay is pushed), clear stale pressed and hovered visual state.
+	#
+	# Toggle buttons are excluded because 'is_pressed()' returns the toggle state, and
+	# sending 'NOTIFICATION_FOCUS_EXIT' would spuriously affect checked checkboxes.
+	if (
+		clear_press_on_cover
+		and _is_outside_focus_root
+		and not was_outside
+		and _control is BaseButton
+		and not _control.toggle_mode
+	):
+		if _control.is_pressed():
+			_control.notification(Control.NOTIFICATION_FOCUS_EXIT)
+		if _control.is_hovered():
+			_control.notification(Control.NOTIFICATION_MOUSE_EXIT)
