@@ -1,3 +1,5 @@
+# gdlint:ignore=max-public-methods
+
 ##
 ## Tests pertaining to the `StdInputCursorFocusHandler` class.
 ##
@@ -190,31 +192,35 @@ func test_cursor_visibility_change_toggles_focus_mode() -> void:
 	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_STOP)
 
 
-func test_focus_root_change_disables_controls_outside_root() -> void:
-	# Given: A cursor in the scene (starts visible).
-	add_child_autofree(cursor)
+func test_focus_root_change_disables_controls_outside_root(
+	params = use_parameters(
+		(
+			ParameterFactory
+			. named_parameters(
+				["cursor_visible", "expected_mouse_filter"],
+				[
+					[true, Control.MOUSE_FILTER_STOP],
+					[false, Control.MOUSE_FILTER_IGNORE],
+				]
+			)
+		)
+	)
+) -> void:
+	# Given: A button with a focus handler outside a modal.
+	var parts := _setup_outside_focus_root()
+	var button: Button = parts[0]
+	var modal: Control = parts[2]
 
-	# Given: A modal container.
-	var modal := Control.new()
-	add_child_autofree(modal)
-
-	# Given: A button outside the modal with a focus handler.
-	var button_outside := Button.new()
-	button_outside.focus_mode = Control.FOCUS_ALL
-	button_outside.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child_autofree(button_outside)
-
-	var handler := StdInputCursorFocusHandler.new()
-	handler.control = NodePath("..")
-	button_outside.add_child(handler)
+	# Given: Cursor visibility is set.
+	if not params.cursor_visible:
+		cursor.cursor_visibility_changed.emit(false)
 
 	# When: Focus root is set to the modal.
 	cursor.focus_root_changed.emit(modal)
 
-	# Then: The button outside has focus disabled; mouse_filter is unchanged because
-	# the cursor is visible (the overlay scrim blocks input via MOUSE_FILTER_STOP).
-	assert_eq(button_outside.focus_mode, Control.FOCUS_NONE)
-	assert_eq(button_outside.mouse_filter, Control.MOUSE_FILTER_STOP)
+	# Then: Focus disabled; mouse_filter depends on cursor visibility.
+	assert_eq(button.focus_mode, Control.FOCUS_NONE)
+	assert_eq(button.mouse_filter, params.expected_mouse_filter)
 
 
 func test_focus_root_change_to_null_restores_controls() -> void:
@@ -246,61 +252,6 @@ func test_focus_root_change_to_null_restores_controls() -> void:
 	# Then: Button is restored based on cursor visibility.
 	assert_eq(button.focus_mode, Control.FOCUS_NONE)
 	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_STOP)
-
-
-func test_focus_root_change_preserves_mouse_filter_when_cursor_visible() -> void:
-	# Given: A cursor in the scene (starts visible).
-	add_child_autofree(cursor)
-
-	# Given: A modal container.
-	var modal := Control.new()
-	add_child_autofree(modal)
-
-	# Given: A button outside the modal with a focus handler.
-	var button := Button.new()
-	button.focus_mode = Control.FOCUS_ALL
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child_autofree(button)
-
-	var handler := StdInputCursorFocusHandler.new()
-	handler.control = NodePath("..")
-	button.add_child(handler)
-
-	# When: Focus root is set to the modal (button is outside root).
-	cursor.focus_root_changed.emit(modal)
-
-	# Then: focus_mode is FOCUS_NONE but mouse_filter is unchanged.
-	assert_eq(button.focus_mode, Control.FOCUS_NONE)
-	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_STOP)
-
-
-func test_focus_root_change_disables_mouse_filter_when_cursor_hidden() -> void:
-	# Given: A cursor in the scene.
-	add_child_autofree(cursor)
-
-	# Given: A modal container.
-	var modal := Control.new()
-	add_child_autofree(modal)
-
-	# Given: A button outside the modal with a focus handler.
-	var button := Button.new()
-	button.focus_mode = Control.FOCUS_ALL
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child_autofree(button)
-
-	var handler := StdInputCursorFocusHandler.new()
-	handler.control = NodePath("..")
-	button.add_child(handler)
-
-	# Given: Cursor is hidden.
-	cursor.cursor_visibility_changed.emit(false)
-
-	# When: Focus root is set to the modal (button is outside root).
-	cursor.focus_root_changed.emit(modal)
-
-	# Then: Both focus_mode and mouse_filter are disabled.
-	assert_eq(button.focus_mode, Control.FOCUS_NONE)
-	assert_eq(button.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 
 
 func test_focus_root_change_keeps_controls_inside_root_enabled() -> void:
@@ -496,6 +447,118 @@ func test_get_focus_target_with_disabled_anchor(
 		assert_null(got)
 
 
+func test_clear_press_on_focus_root_exit_sends_focus_exit_to_pressed_button() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+	var modal := Control.new()
+	add_child_autofree(modal)
+
+	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
+	# mode (see https://github.com/godotengine/godot/issues/73557).
+	var sv := SubViewport.new()
+	sv.size = Vector2i(400, 300)
+	add_child_autofree(sv)
+
+	# Given: A button inside the SubViewport with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.size = Vector2(100, 40)
+	sv.add_child(button)
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The button is pressed via SubViewport input dispatch.
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = Vector2(50, 20)
+	sv.push_input(ev)
+	await get_tree().process_frame
+	assert_true(button.is_pressed(), "precondition: button should be pressed")
+
+	# When: Focus root is set to the modal (button moves outside).
+	cursor.focus_root_changed.emit(modal)
+
+	# Then: The button is no longer pressed.
+	assert_false(button.is_pressed())
+
+	button.remove_child(handler)
+	handler.free()
+
+
+func test_clear_press_on_focus_root_exit_clears_hovered_button() -> void:
+	# Given: A hovered button with a focus handler outside a modal.
+	var parts := _setup_outside_focus_root()
+	var button: Button = parts[0]
+	var modal: Control = parts[2]
+	button.notification(Control.NOTIFICATION_MOUSE_ENTER)
+	assert_true(button.is_hovered())
+
+	# When: Focus root is set to the modal.
+	cursor.focus_root_changed.emit(modal)
+
+	# Then: The button is no longer hovered.
+	assert_false(button.is_hovered())
+
+
+func test_clear_press_on_focus_root_exit_skips_toggle_buttons() -> void:
+	# Given: A checked toggle checkbox with a focus handler outside a modal.
+	add_child_autofree(cursor)
+	var modal := Control.new()
+	add_child_autofree(modal)
+	var checkbox := CheckBox.new()
+	checkbox.focus_mode = Control.FOCUS_ALL
+	checkbox.mouse_filter = Control.MOUSE_FILTER_STOP
+	checkbox.button_pressed = true
+	add_child_autofree(checkbox)
+	_add_handler(checkbox)
+
+	# When: Focus root is set to the modal.
+	cursor.focus_root_changed.emit(modal)
+
+	# Then: The checkbox toggle state is NOT cleared.
+	assert_true(checkbox.button_pressed)
+
+
+func test_clear_press_on_focus_root_exit_disabled_preserves_state() -> void:
+	# Given: A hovered button with clear_press_on_focus_root_exit disabled.
+	var parts := _setup_outside_focus_root()
+	var button: Button = parts[0]
+	var handler: StdInputCursorFocusHandler = parts[1]
+	var modal: Control = parts[2]
+	handler.clear_press_on_focus_root_exit = false
+	button.notification(Control.NOTIFICATION_MOUSE_ENTER)
+	assert_true(button.is_hovered())
+
+	# When: Focus root is set to the modal.
+	cursor.focus_root_changed.emit(modal)
+
+	# Then: The button is still hovered.
+	assert_true(button.is_hovered())
+
+
+func test_clear_press_on_focus_root_exit_noop_already_outside() -> void:
+	# Given: A button already outside focus root (modal_a).
+	var parts := _setup_outside_focus_root()
+	var button: Button = parts[0]
+	var modal_a: Control = parts[2]
+	cursor.focus_root_changed.emit(modal_a)
+
+	# Given: A second modal and stale hover on the button.
+	var modal_b := Control.new()
+	add_child_autofree(modal_b)
+	button.notification(Control.NOTIFICATION_MOUSE_ENTER)
+	assert_true(button.is_hovered())
+
+	# When: Focus root changes to modal_b (button still outside).
+	cursor.focus_root_changed.emit(modal_b)
+
+	# Then: Hover is NOT cleared (was already outside; not a transition).
+	assert_true(button.is_hovered())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -514,3 +577,25 @@ func before_each() -> void:
 
 func after_each() -> void:
 	cursor = null
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _add_handler(control: Control) -> StdInputCursorFocusHandler:
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("..")
+	control.add_child(handler)
+	return handler
+
+
+func _setup_outside_focus_root() -> Array:
+	add_child_autofree(cursor)
+	var modal := Control.new()
+	add_child_autofree(modal)
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child_autofree(button)
+	var handler := _add_handler(button)
+	return [button, handler, modal]
