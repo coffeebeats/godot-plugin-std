@@ -537,16 +537,33 @@ func test_pop_cancelled_by_close_requested():
 	var top := _create_screen()
 	await _do_push(top)
 	top.close_requested.connect(
-		func(_event: InputEvent, cancel: Callable) -> void: cancel.call(),
+		func(_event, cancel): cancel.call(),
 	)
 
-	# When: The close action is simulated.
-	_manager._request_close_overlay(InputEventKey.new())
+	# When: pop() is called (default force=false).
+	_manager.pop()
 	await wait_idle_frames(1)
 
-	# Then: The stack is unchanged (close was cancelled).
+	# Then: The stack is unchanged (pop was cancelled).
 	assert_eq(_manager.get_depth(), 2)
 	assert_true(_manager.is_current(top))
+
+
+func test_pop_force_skips_close_requested():
+	# Given: Two screens; top has a close_requested handler that cancels.
+	await _do_push()
+	var top := _create_screen()
+	await _do_push(top)
+	top.close_requested.connect(
+		func(_event, cancel): cancel.call(),
+	)
+
+	# When: pop(true) is called with force.
+	_manager.pop(true)
+	await wait_idle_frames(1)
+
+	# Then: The screen was popped despite the cancel handler.
+	assert_eq(_manager.get_depth(), 1)
 
 
 func test_push_emits_lifecycle_signals_in_order():

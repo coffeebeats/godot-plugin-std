@@ -158,9 +158,22 @@ func load_screen(
 	return _loader.load_all_scenes(paths)
 
 
-## pop removes the topmost screen from the stack and returns focus to the new top.
-func pop() -> void:
+## pop removes the topmost screen from the stack and returns focus to
+## the new top. When force is false (default), emits close_requested on
+## the top screen first; any handler can cancel.call() to abort.
+func pop(force: bool = false) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
+
+	if not force:
+		var screen := _stack.back() as StdScreen
+		var state := [false]
+		screen.close_requested.emit(
+			null,
+			func() -> void: state[0] = true,
+		)
+		if state[0]:
+			return
+
 	pop_to_depth(_stack.size() - 1)
 
 
