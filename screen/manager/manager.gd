@@ -75,9 +75,6 @@ static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=c
 ## when `screen.cache_instance` is true and the screen is popped from the stack.
 var _cache: Dictionary[StdScreen, Node] = {}
 
-## _close_actions is the list of input actions that will close the topmost overlay.
-var _close_actions := PackedStringArray()
-
 ## _cursor is the input cursor singleton used for focus management.
 var _cursor: StdInputCursor = null
 
@@ -266,17 +263,6 @@ func reset(
 
 func _exit_tree() -> void:
 	_teardown()
-
-
-func _input(event: InputEvent) -> void:
-	if _stack.is_empty() or _queue.is_operating():
-		return
-
-	for action in _close_actions:
-		if event.is_action_pressed(action):
-			get_viewport().set_input_as_handled()
-			_request_close_overlay(event)
-			break
 
 
 func _notification(what: int) -> void:
@@ -849,20 +835,6 @@ func _update_overlay_config() -> void:
 	overlay.click_to_close = mask
 
 
-## _update_close_actions recalculates the set of input actions that close the topmost
-## overlay.
-func _update_close_actions() -> void:
-	_close_actions = PackedStringArray()
-
-	var overlay := _get_current_overlay()
-	if not is_instance_valid(overlay):
-		return
-
-	for screen in _get_overlay_screens(overlay):
-		if not screen.close_action.is_empty():
-			_close_actions.append(screen.close_action)
-
-
 ## _update_process_modes sets process modes for all scenes in the stack. The top scene's
 ## process mode is restored from metadata (if the manager previously disabled it);
 ## covered scenes are optionally disabled. Process mode is saved/restored via metadata
@@ -897,12 +869,11 @@ func _update_process_modes() -> void:
 			scene.process_mode = Node.PROCESS_MODE_DISABLED
 
 
-## _update_stack_state recalculates process modes, overlay configuration, and close
-## actions for the current stack.
+## _update_stack_state recalculates process modes and overlay configuration for the
+## current stack.
 func _update_stack_state() -> void:
 	_update_process_modes()
 	_update_overlay_config()
-	_update_close_actions()
 
 
 # Focus / Input

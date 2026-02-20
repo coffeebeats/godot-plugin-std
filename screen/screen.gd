@@ -11,10 +11,8 @@ extends Resource
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-## close_requested is emitted when a close trigger (overlay click or close action) fires
-## on this screen's overlay. Emitted on *all* screens in the overlay in reverse stack
-## order (topmost first). Call `cancel.call()` from any handler to abort the close for
-## the entire overlay. If no handler cancels, all screens in the overlay are popped.
+## close_requested is emitted when a close is requested for this screen via `pop()` or
+## an overlay background click. Call `cancel.call()` from any handler to abort closing.
 @warning_ignore("unused_signal")
 signal close_requested(event: InputEvent, cancel: Callable)
 
@@ -100,10 +98,6 @@ signal uncovered(scene: Node)
 ## when the overlay background (scrim) is clicked. Uses MouseButtonMask values (1=Left,
 ## 2=Right, 4=Middle). Set to 0 (default) to disable.
 @export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
-
-## close_action is the input action (e.g. &"ui_cancel") that triggers a close request
-## when no scene control consumes it; empty (default) disables action-to-close.
-@export var close_action: StringName = &""
 
 ## close_animate_intermediate controls whether closing this screen's overlay animates
 ## all exit transitions sequentially. When false (default), only the bottom screen in

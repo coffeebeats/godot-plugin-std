@@ -531,11 +531,10 @@ func test_pop_frees_unshared_overlay_preserves_shared():
 	assert_not_freed(shared, "shared overlay")
 
 
-func test_close_requested_cancellation_aborts_close():
-	# Given: Two screens where the top has close_action.
+func test_pop_cancelled_by_close_requested():
+	# Given: Two screens; top has a close_requested handler that cancels.
 	await _do_push()
 	var top := _create_screen()
-	top.close_action = &"ui_cancel"
 	await _do_push(top)
 	top.close_requested.connect(
 		func(_event: InputEvent, cancel: Callable) -> void: cancel.call(),
@@ -867,16 +866,14 @@ func test_pop_recalculates_hover_when_cursor_visible():
 
 
 func test_overlay_config_aggregates_across_screens():
-	# Given: A base screen with close_action and click_to_close.
+	# Given: A base screen with click_to_close.
 	var base := _create_screen()
-	base.close_action = &"ui_cancel"
 	base.overlay_click_to_close = 1
 	var base_scene := Control.new()
 	await _do_push(base, base_scene)
 
 	# When: A non-blocking screen is pushed into the same overlay.
 	var second := _create_screen(null, null, false)
-	second.close_action = &"ui_back"
 	second.overlay_click_to_close = 2
 	await _do_push(second)
 
@@ -884,15 +881,10 @@ func test_overlay_config_aggregates_across_screens():
 	var overlay := base_scene.get_parent() as Overlay
 	assert_eq(overlay.click_to_close, 3)
 
-	# Then: Both close actions are present.
-	assert_has(_manager._close_actions, "ui_cancel")
-	assert_has(_manager._close_actions, "ui_back")
-
 
 func test_close_requested_propagates_topmost_first():
 	# Given: A base and two non-blocking screens in the same overlay.
 	var base := _create_screen()
-	base.close_action = &"ui_cancel"
 	await _do_push(base)
 	var second := _create_screen(null, null, false)
 	await _do_push(second)
@@ -917,7 +909,6 @@ func test_close_requested_propagates_topmost_first():
 func test_close_animate_intermediate_plays_exit_transitions():
 	# Given: A base screen with close_animate_intermediate enabled.
 	var base := _create_screen()
-	base.close_action = &"ui_cancel"
 	base.close_animate_intermediate = true
 	await _do_push(base)
 
