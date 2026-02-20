@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.3.4 (2026-02-20)
+
+## What's Changed
+* refactor(screen): create separate `StdScreenPusher` node, make `pop()` cancelable by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/362
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.3.3...v4.3.4
+
 ## 4.3.3 (2026-02-20)
 
 ## What's Changed
