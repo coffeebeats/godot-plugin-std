@@ -789,7 +789,7 @@ func test_focus_saved_and_restored_on_pop():
 
 
 func test_focus_restored_on_pop_even_when_focus_mode_cleared():
-	# Given: A first screen with a focusable button.
+	# Given: A first screen with a focused button.
 	var first_scene := Control.new()
 	var button := Button.new()
 	button.focus_mode = Control.FOCUS_ALL
@@ -797,10 +797,8 @@ func test_focus_restored_on_pop_even_when_focus_mode_cleared():
 	await _do_push(null, first_scene)
 	button.grab_focus()
 
-	# Given: A handler simulating focus handler behavior.
-	var cursor := (
-		StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR) as StdInputCursor
-	)
+	# Given: A handler that clears focus_mode when button leaves focus root.
+	var cursor := _get_cursor()
 	cursor.focus_root_changed.connect(
 		func(root: Control) -> void:
 			if root and not root.is_ancestor_of(button):
@@ -809,16 +807,63 @@ func test_focus_restored_on_pop_even_when_focus_mode_cleared():
 				button.focus_mode = Control.FOCUS_ALL,
 	)
 
-	# When: A second screen is pushed (button outside focus root).
+	# When: A second screen is pushed then popped.
 	await _do_push()
 	assert_eq(button.focus_mode, Control.FOCUS_NONE)
-
-	# When: The second screen is popped.
 	_manager.pop()
 	await wait_idle_frames(1)
 
 	# Then: Focus is restored to the button.
 	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_pop_recalculates_hover_when_cursor_visible():
+	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
+	# mode (see https://github.com/godotengine/godot/issues/73557).
+	var sv := SubViewport.new()
+	sv.size = Vector2i(400, 300)
+	add_child_autofree(sv)
+	sv.notification(Viewport.NOTIFICATION_VP_MOUSE_ENTER)
+
+	# Given: A manager inside the SubViewport with a visible cursor.
+	var sv_manager := Manager.new()
+	sv.add_child(sv_manager)
+	await wait_idle_frames(1)
+	_get_cursor().show_cursor()
+
+	# Given: A base screen with a hoverable button.
+	var base := Control.new()
+	var button := Button.new()
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.size = Vector2(100, 40)
+	base.add_child(button)
+	sv_manager.push(_create_screen(), base)
+	await wait_idle_frames(1)
+
+	# Given: The button is hovered.
+	var motion := InputEventMouseMotion.new()
+	motion.position = Vector2(50, 20)
+	motion.relative = Vector2(50, 20)
+	sv.push_input(motion)
+	await get_tree().process_frame
+	assert_true(button.is_hovered(), "precondition: button hovered")
+
+	# When: A second screen is pushed and mouse motion sent while covered.
+	sv_manager.push(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+	var covered := InputEventMouseMotion.new()
+	covered.position = Vector2(50, 20)
+	covered.relative = Vector2.ZERO
+	sv.push_input(covered)
+	await get_tree().process_frame
+	assert_false(button.is_hovered(), "precondition: button not hovered")
+
+	# When: The second screen is popped.
+	sv_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The button regains hover after recalculation.
+	assert_true(button.is_hovered(), "button should be hovered after pop")
 
 
 func test_overlay_config_aggregates_across_screens():
@@ -923,7 +968,6 @@ func test_exit_tree_stops_transitions_and_clears_queue():
 	assert_true(active.was_reset)
 	assert_eq(_manager._queue._queue.size(), 0)
 
-	# Cleanup: re-add so autofree works.
 	add_child(_manager)
 
 
@@ -1025,3 +1069,7 @@ func _get_active_transition(
 	index: int = 0,
 ) -> MockTransition:
 	return _manager._transitions._active_transitions[index]
+
+
+func _get_cursor() -> StdInputCursor:
+	return StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
