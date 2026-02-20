@@ -110,6 +110,10 @@ func _find_manager() -> StdScreenManager:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
+func _on_covered(_scene: Node) -> void:
+	_is_current = false
+
+
 func _on_entering(_scene: Node) -> void:
 	_is_in_stack = true
 	_is_current = true
@@ -117,10 +121,6 @@ func _on_entering(_scene: Node) -> void:
 
 func _on_exited(_scene: Node) -> void:
 	_is_in_stack = false
-	_is_current = false
-
-
-func _on_covered(_scene: Node) -> void:
 	_is_current = false
 
 
