@@ -519,7 +519,7 @@ func _pop_impl(
 		_teardown_scene(screen, scene)
 		screen_popped.emit(screen)
 		if _cursor.get_is_visible():
-			_force_hover_recalculation.call_deferred()
+			_force_hover_recalculation()
 
 	if skip_exit:
 		teardown.call()
