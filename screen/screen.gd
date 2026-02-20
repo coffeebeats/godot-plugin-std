@@ -59,7 +59,7 @@ signal uncovered(scene: Node)
 
 ## pause_when_covered controls whether this screen's scene has its process mode set to
 ## disabled when another screen is pushed on top.
-@export var pause_when_covered: bool = true
+@export var pause_when_covered: bool = false
 
 @export_group("Transitions")
 

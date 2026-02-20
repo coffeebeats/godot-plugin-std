@@ -519,7 +519,7 @@ func _pop_impl(
 		_teardown_scene(screen, scene)
 		screen_popped.emit(screen)
 		if _cursor.get_is_visible():
-			_force_hover_recalculation.call_deferred()
+			_force_hover_recalculation()
 
 	if skip_exit:
 		teardown.call()
@@ -788,8 +788,10 @@ func _teardown_scene(
 		return
 
 	# Free the overlay if it is no longer used by any screen in the stack.
-	var still_used := overlay and _overlays.values().has(overlay)
-	if not still_used and overlay and is_instance_valid(overlay):
+	if overlay and not _overlays.values().has(overlay) and is_instance_valid(overlay):
+		if overlay.is_inside_tree():
+			overlay.get_parent().remove_child(overlay)
+
 		overlay.queue_free()
 
 	# If caching was toggled off while there's a stale entry, clean it up.
@@ -908,11 +910,14 @@ func _update_stack_state() -> void:
 
 ## _force_hover_recalculation dispatches a synthetic mouse motion event at the current
 ## cursor position to force Godot to re-evaluate hover state after a screen pop.
+##
+## NOTE: The overlay must already be removed from the tree for this to work.
 func _force_hover_recalculation() -> void:
-	var ev := InputEventMouseMotion.new()
-	ev.position = get_viewport().get_mouse_position()
-	ev.relative = Vector2.ZERO
-	Input.parse_input_event(ev)
+	var viewport := get_viewport()
+	var event := InputEventMouseMotion.new()
+	event.position = viewport.get_mouse_position()
+	event.relative = Vector2.ZERO
+	viewport.push_input(event)
 
 
 ## _restore_focus restores saved focus for a scene, falling back to the `StdInputCursor`

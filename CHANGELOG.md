@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.3.3 (2026-02-20)
+
+## What's Changed
+* fix(screen): relax overly-strict/redundant assertion on what can be loaded by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/359
+* fix(input,screen): fix multiple hover/focus bugs by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/361
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.3.2...v4.3.3
+
 ## 4.3.2 (2026-02-17)
 
 ## What's Changed
