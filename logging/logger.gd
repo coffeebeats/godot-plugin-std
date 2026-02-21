@@ -11,6 +11,10 @@
 class_name StdLogger
 extends RefCounted
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const Levels := preload("level.gd")
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 enum Mode { RICH, COMPACT, SILENT }
