@@ -39,19 +39,19 @@ func play(
 	var player: Node = null
 	var pool: StdObjectPool = null
 
-	if event is StdSoundEvent:
-		pool = pool_1d
-		assert(pool is StdAudioStreamPlayerPool1D, "invalid state; missing pool")
-
-		player = pool_1d.claim()
-		assert(player is AudioStreamPlayer, "invalid state; missing player")
-
 	if event is StdSoundEvent2D:
 		pool = pool_2d
 		assert(pool is StdAudioStreamPlayerPool2D, "invalid state; missing pool")
 
 		player = pool_2d.claim()
 		assert(player is AudioStreamPlayer2D, "invalid state; missing player")
+
+	elif event is StdSoundEvent:
+		pool = pool_1d
+		assert(pool is StdAudioStreamPlayerPool1D, "invalid state; missing pool")
+
+		player = pool_1d.claim()
+		assert(player is AudioStreamPlayer, "invalid state; missing player")
 
 	assert(player and pool, "invalid state; unrecognized event type")
 
