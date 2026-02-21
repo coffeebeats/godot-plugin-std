@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.0.0 (2026-02-21)
+
+## What's Changed
+* fix(input): add missing UID file for `StdInputEvent` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/366
+* chore(scene)!: remove obsolete `scene` system by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/368
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.4.0...v5.0.0
+
 ## 4.4.0 (2026-02-21)
 
 ## What's Changed
