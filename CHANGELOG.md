@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.4.0 (2026-02-21)
+
+## What's Changed
+* feat(input): create utility for pushing synthetic input events by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/364
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.3.4...v4.4.0
+
 ## 4.3.4 (2026-02-20)
 
 ## What's Changed
