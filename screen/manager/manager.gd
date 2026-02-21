@@ -707,8 +707,10 @@ func _reset_impl(
 
 
 ## _resolve_scene_then resolves the screen's scene and loads its preload dependencies,
-## then calls `on_done` with the instantiated scene once everything is ready. Preload
-## results are stored in `_preloads` to keep resources alive on the stack.
+## then calls `on_done` with the instantiated scene once everything is ready.
+##
+## NOTE: The callback is always invoked deferred, never synchronously within the calling
+## frame. Preload results are stored in `_preloads` to keep resources alive on the stack.
 func _resolve_scene_then(
 	screen: StdScreen,
 	instance: Node,
@@ -728,14 +730,14 @@ func _resolve_scene_then(
 		)
 
 	if instance:
-		with_deps.call(instance)
+		with_deps.call_deferred(instance)
 		return
 
 	# Check the cache for a previously stored instance.
 	var cached: Node = _cache.get(screen)
 	if cached and is_instance_valid(cached):
 		_cache.erase(screen)
-		with_deps.call(cached)
+		with_deps.call_deferred(cached)
 		return
 
 	_cache.erase(screen)
