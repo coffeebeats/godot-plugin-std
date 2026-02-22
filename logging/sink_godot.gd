@@ -1,10 +1,8 @@
 ##
 ## std/logging/sink_godot.gd
 ##
-## StdLogSinkGodot is the default log sink. In the editor, error and warning messages
-## are routed through `push_error()`/`push_warning()`; all other output uses print
-## methods. Outside of the editor, all messages use print methods with the formatted
-## string.
+## StdLogSinkGodot is the default log sink that routes messages through Godot's standard
+## logging functions.
 ##
 
 class_name StdLogSinkGodot
@@ -22,13 +20,15 @@ func output(
 	_ctx: Dictionary,
 	use_bbcode: bool,
 ) -> void:
-	var is_editor := Engine.is_editor_hint()
+	var push_msg := msg if use_bbcode else formatted
 
-	if is_editor and level == LogLevels.LEVEL_ERROR:
-		push_error(msg)
-	elif is_editor and level == LogLevels.LEVEL_WARN:
-		push_warning(msg)
-	elif use_bbcode:
-		print_rich(formatted)
-	else:
-		print(formatted)
+	match level:
+		LogLevels.LEVEL_ERROR:
+			push_error(push_msg)
+		LogLevels.LEVEL_WARN:
+			push_warning(push_msg)
+		_:
+			if use_bbcode:
+				print_rich(formatted)
+			else:
+				print(formatted)
