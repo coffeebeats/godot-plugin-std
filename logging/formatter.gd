@@ -26,5 +26,7 @@ const LogLevels := preload("level.gd")
 ## format produces a single-line string representation of the given log data.
 ##
 ## NOTE: This method should be overridden to customize log output.
-func format(_name: StringName, _level: int, _msg: String, _ctx: Dictionary) -> String:
+func format(
+	_name: StringName, _level: int, _ts: float, _msg: String, _ctx: Dictionary
+) -> String:
 	return ""

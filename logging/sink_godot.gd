@@ -15,6 +15,7 @@ extends StdLogSink
 func output(
 	_name: StringName,
 	level: int,
+	_ts: float,
 	msg: String,
 	formatted: String,
 	_ctx: Dictionary,

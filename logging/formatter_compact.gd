@@ -11,13 +11,18 @@ extends StdLogFormatter
 # -- PUBLIC METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func format(name: StringName, level: int, msg: String, ctx: Dictionary) -> String:
-	var out: String
-
-	if name:
-		out = str(name, " ", LogLevels.level_name(level), " ", msg)
-	else:
-		out = str(LogLevels.level_name(level), " ", msg)
+func format(
+	name: StringName, level: int, ts: float, msg: String, ctx: Dictionary
+) -> String:
+	var prefix := str(name, " ") if name else ""
+	var out := str(
+		Time.get_datetime_string_from_unix_time(int(ts)),
+		" ",
+		prefix,
+		LogLevels.level_name(level),
+		" ",
+		msg,
+	)
 
 	for key in ctx:
 		out += str(" ", key, "=", ctx[key])

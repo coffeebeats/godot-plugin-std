@@ -24,6 +24,7 @@ const LogLevels := preload("level.gd")
 func output(
 	_name: StringName,
 	_level: int,
+	_ts: float,
 	_msg: String,
 	_formatted: String,
 	_ctx: Dictionary,

@@ -43,10 +43,6 @@ const Level := LogLevels.Level  # gdlint:ignore=constant-name
 ## included in the logged context fields.
 @export var include_frame_process: bool = false
 
-## include_timestamp determines whether the current unix timestamp will be included in
-## the logged context fields.
-@export var include_timestamp: bool = false
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 static var _formatter: StdLogFormatter = StdLogFormatterCompact.new()
@@ -149,7 +145,6 @@ func with(ctx: Dictionary, suffix: StringName = &"") -> StdLogger:
 
 	logger.include_frame_physics = include_frame_physics
 	logger.include_frame_process = include_frame_process
-	logger.include_timestamp = include_timestamp
 
 	return logger
 
@@ -165,13 +160,6 @@ func with_physics_frame(enabled: bool = true) -> StdLogger:
 ## and returns it.
 func with_process_frame(enabled: bool = true) -> StdLogger:
 	include_frame_process = enabled
-	return self
-
-
-## with_timestamp updates this logger's `include_timestamp` property and
-## returns it.
-func with_timestamp(enabled: bool = true) -> StdLogger:
-	include_timestamp = enabled
 	return self
 
 
@@ -213,16 +201,15 @@ func warn(msg: String, ctx: Dictionary = {}) -> void:
 
 
 func _emit(level: Level, msg: String, ctx: Dictionary) -> void:
-	var formatted := _formatter.format(name, level, msg, ctx)
-	_sink.output(name, level, msg, formatted, ctx, _formatter.bbcode)
+	var ts := Time.get_unix_time_from_system()
+	var formatted := _formatter.format(name, level, ts, msg, ctx)
+	_sink.output(name, level, ts, msg, formatted, ctx, _formatter.bbcode)
 
 
 func _merge_context(ctx: Dictionary) -> Dictionary:
 	ctx = ctx.duplicate()
 	ctx.merge(context, false)
 
-	if include_timestamp:
-		ctx[&"ts"] = Time.get_unix_time_from_system()
 	if include_frame_physics:
 		ctx[&"phf"] = Engine.get_physics_frames()
 	if include_frame_process:

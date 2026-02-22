@@ -36,7 +36,9 @@ extends StdLogFormatter
 
 
 ## format produces a single-line BBCode string of the log message.
-func format(name: StringName, level: int, msg: String, ctx: Dictionary) -> String:
+func format(
+	name: StringName, level: int, _ts: float, msg: String, ctx: Dictionary
+) -> String:
 	var out := ""
 
 	if name:

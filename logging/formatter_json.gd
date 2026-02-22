@@ -12,9 +12,12 @@ extends StdLogFormatter
 
 
 ## format produces a single-line JSON string of the log message.
-func format(name: StringName, level: int, msg: String, ctx: Dictionary) -> String:
+func format(
+	name: StringName, level: int, ts: float, msg: String, ctx: Dictionary
+) -> String:
 	var data := {}
 
+	data[&"ts"] = Time.get_datetime_string_from_unix_time(int(ts))
 	data[&"name"] = String(name)
 	data[&"level"] = level
 	data[&"msg"] = msg
