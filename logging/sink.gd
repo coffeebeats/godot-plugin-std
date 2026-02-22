@@ -10,6 +10,10 @@
 class_name StdLogSink
 extends Resource
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const LogLevels := preload("level.gd")
+
 # -- PUBLIC METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
