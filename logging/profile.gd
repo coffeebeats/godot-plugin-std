@@ -55,9 +55,9 @@ static func load_and_apply(path: String) -> void:
 func apply() -> void:
 	StdLogger.set_level(level)
 
-	StdLogger.clear_all_category_levels()
+	StdLogger.clear_level_overrides()
 	for prefix in level_overrides:
-		StdLogger.set_category_level(prefix, level_overrides[prefix])
+		StdLogger.set_level_override(prefix, level_overrides[prefix])
 
 	if formatter:
 		StdLogger.set_formatter(formatter)

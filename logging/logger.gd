@@ -1,11 +1,14 @@
 ##
 ## std/logging/logger.gd
 ##
-## StdLogger is a logging implementation which supports hierarchical logging contexts
-## and standard verbosity levels. Three output modes are auto-detected at startup:
-## `RICH` (colored BBCode in-editor), `COMPACT` (plain text for exported games), and
-## `SILENT` (suppressed during headless/CI runs); error and warning engine notifications
-## are preserved in all modes.
+## StdLogger is a logging implementation which supports hierarchical logging contexts,
+## standard verbosity levels, and pluggable formatting and output routing. Log messages
+## pass through a two-stage pipeline: a formatter produces a string, then a sink routes
+## the output to its destination.
+##
+## Per-category level filtering allows focusing on specific modules without changing the
+## global threshold. The default level is `WARN`, meaning debug and info messages are
+## off by default and function as opt-in breadcrumbs.
 ##
 
 class_name StdLogger
@@ -13,20 +16,13 @@ extends RefCounted
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Levels := preload("level.gd")
+const LogLevels := preload("level.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-enum Mode { RICH, COMPACT, SILENT }
-
-const _DEBUG_PREFIX_RICH := &"[b][color=cyan]DEBUG[/color]:[/b]"
-const _DEBUG_PREFIX_PLAIN := &"DEBUG:"
-const _ERROR_PREFIX_RICH := &"[b][color=red]ERROR[/color]:[/b]"
-const _ERROR_PREFIX_PLAIN := &"ERROR:"
-const _INFO_PREFIX_RICH := &"[b][color=green]INFO[/color]:[/b]"
-const _INFO_PREFIX_PLAIN := &"INFO:"
-const _WARN_PREFIX_RICH := &"[b][color=yellow]WARN[/color]:[/b]"
-const _WARN_PREFIX_PLAIN := &"WARN:"
+## Level re-exports the log severity enum from so that consumers can reference it as
+## `StdLogger.Level` without a separate preload.
+const Level := LogLevels.Level  # gdlint:ignore=constant-name
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -53,9 +49,22 @@ const _WARN_PREFIX_PLAIN := &"WARN:"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _mode: Mode = _detect_mode()  # gdlint:ignore=class-definitions-order
+static var _formatter: StdLogFormatter = StdLogFormatterCompact.new()
+static var _level_overrides: Dictionary = {}  # gdlint:ignore=class-definitions-order,max-line-len
+static var _level: Level = LogLevels.LEVEL_WARN  # gdlint:ignore=class-definitions-order
+static var _sink: StdLogSink = StdLogSinkGodot.new()  # gdlint:ignore=class-definitions-order
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## clear_level_override removes a per-category level override for the given prefix.
+static func clear_level_override(prefix: StringName) -> void:
+	_level_overrides.erase(prefix)
+
+
+## clear_level_overrides removes all per-category level overrides.
+static func clear_level_overrides() -> void:
+	_level_overrides.clear()
 
 
 ## create returns a new logger with the specified name and base context.
@@ -66,9 +75,58 @@ static func create(value: StringName, ctx: Dictionary = {}) -> StdLogger:
 	return logger
 
 
-## set_mode overrides the auto-detected output mode.
-static func set_mode(mode: Mode) -> void:
-	_mode = mode
+## get_effective_level returns the active log level for the given logger name. If a
+## category-level override matches (longest prefix wins), that level is returned;
+## otherwise the global level is used.
+static func get_effective_level(logger_name: StringName) -> Level:
+	var best_prefix := &""
+	var best_len := 0
+
+	for prefix in _level_overrides:
+		var p := String(prefix)
+		if String(logger_name).begins_with(p) and p.length() > best_len:
+			best_prefix = prefix
+			best_len = p.length()
+
+	if best_len > 0:
+		return _level_overrides[best_prefix]
+
+	return _level
+
+
+## set_formatter replaces the active formatter used by all loggers.
+static func set_formatter(formatter: StdLogFormatter) -> void:
+	if not formatter:
+		assert(false, "invalid argument: missing formatter")
+		return
+
+	_formatter = formatter
+
+
+## set_level sets the global log level threshold. Messages below this level are
+## suppressed unless a per-category override applies.
+static func set_level(level: Level) -> void:
+	if not level is Level:
+		assert(false, "invalid argument: missing level")
+		return
+
+	_level = level
+
+
+## set_level_override sets a per-category level override. Logger names matching the
+## given prefix (via `begins_with()`) will use this level instead of the global one;
+## the longest matching prefix wins.
+static func set_level_override(prefix: StringName, level: Level) -> void:
+	_level_overrides[prefix] = level
+
+
+## set_sink replaces the active sink used by all loggers.
+static func set_sink(sink: StdLogSink) -> void:
+	if not sink:
+		assert(false, "invalid argument: missing sink")
+		return
+
+	_sink = sink
 
 
 # Context methods
@@ -79,12 +137,12 @@ func named(value: StringName) -> StdLogger:
 	return self
 
 
-## with returns a new child logger; the provided context and suffix will be derived from
-## the current logger's context and name.
+## with returns a new child logger; the provided context and suffix will be
+## derived from the current logger's context and name.
 func with(ctx: Dictionary, suffix: StringName = &"") -> StdLogger:
 	var logger := StdLogger.new()
 
-	logger.name = StringName(name + "/" + suffix) if suffix else name
+	logger.name = (StringName(name + "/" + suffix) if suffix else name)
 
 	logger.context = context.duplicate()
 	logger.context.merge(ctx, true)
@@ -96,19 +154,22 @@ func with(ctx: Dictionary, suffix: StringName = &"") -> StdLogger:
 	return logger
 
 
-## with_timestamp updates this logger's `include_frame_physics` property and returns it.
+## with_physics_frame updates this logger's `include_frame_physics` property
+## and returns it.
 func with_physics_frame(enabled: bool = true) -> StdLogger:
 	include_frame_physics = enabled
 	return self
 
 
-## with_timestamp updates this logger's `include_frame_process` property and returns it.
+## with_process_frame updates this logger's `include_frame_process` property
+## and returns it.
 func with_process_frame(enabled: bool = true) -> StdLogger:
 	include_frame_process = enabled
 	return self
 
 
-## with_timestamp updates this logger's `include_timestamp` property and returns it.
+## with_timestamp updates this logger's `include_timestamp` property and
+## returns it.
 func with_timestamp(enabled: bool = true) -> StdLogger:
 	include_timestamp = enabled
 	return self
@@ -117,116 +178,58 @@ func with_timestamp(enabled: bool = true) -> StdLogger:
 # Log methods
 
 
+## debug logs a debug-level message with the provided context `ctx`. Debug
+## messages are suppressed in non-debug builds regardless of level settings.
+func debug(msg: String, ctx: Dictionary = {}) -> void:
+	if not OS.has_feature(&"debug"):
+		return
+	if not _should_log(LogLevels.LEVEL_DEBUG):
+		return
+	_emit(LogLevels.LEVEL_DEBUG, msg, _merge_context(ctx))
+
+
 ## error logs an error with the provided context `ctx`.
 func error(msg: String, ctx: Dictionary = {}) -> void:
-	if _mode == Mode.SILENT:
-		push_error(msg)
+	if not _should_log(LogLevels.LEVEL_ERROR):
 		return
-
-	var fields := _log(msg, _ERROR_PREFIX_RICH, _ERROR_PREFIX_PLAIN, ctx)
-	push_error(msg, fields)
-
-
-## warn logs a warning with the provided context `ctx`.
-func warn(msg: String, ctx: Dictionary = {}) -> void:
-	if _mode == Mode.SILENT:
-		push_warning(msg)
-		return
-
-	var fields := _log(msg, _WARN_PREFIX_RICH, _WARN_PREFIX_PLAIN, ctx)
-	push_warning(msg, fields)
+	_emit(LogLevels.LEVEL_ERROR, msg, _merge_context(ctx))
 
 
 ## info logs an info-level message with the provided context `ctx`.
 func info(msg: String, ctx: Dictionary = {}) -> void:
-	if _mode == Mode.SILENT:
+	if not _should_log(LogLevels.LEVEL_INFO):
 		return
+	_emit(LogLevels.LEVEL_INFO, msg, _merge_context(ctx))
 
-	_log(msg, _INFO_PREFIX_RICH, _INFO_PREFIX_PLAIN, ctx)
 
-
-## debug logs a debug-level message with the provided context `ctx`.
-func debug(msg: String, ctx: Dictionary = {}) -> void:
-	if not OS.has_feature(&"debug"):
+## warn logs a warning with the provided context `ctx`.
+func warn(msg: String, ctx: Dictionary = {}) -> void:
+	if not _should_log(LogLevels.LEVEL_WARN):
 		return
-
-	if _mode == Mode.SILENT:
-		return
-
-	_log(msg, _DEBUG_PREFIX_RICH, _DEBUG_PREFIX_PLAIN, ctx)
+	_emit(LogLevels.LEVEL_WARN, msg, _merge_context(ctx))
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-static func _detect_mode() -> Mode:
-	if not OS.has_feature("editor"):
-		return Mode.COMPACT
-
-	if DisplayServer.get_name() == "headless":
-		return Mode.SILENT
-
-	return Mode.RICH
+func _emit(level: Level, msg: String, ctx: Dictionary) -> void:
+	var formatted := _formatter.format(name, level, msg, ctx)
+	_sink.output(name, level, msg, formatted, ctx, _formatter.bbcode)
 
 
-func _format_context(ctx: Dictionary) -> String:
-	var is_rich := _mode == Mode.RICH
-	var fields := PackedStringArray()
-
-	if include_timestamp:
-		fields.append("ts=%f" % Time.get_unix_time_from_system())
-	if include_frame_physics:
-		fields.append("phf=%d" % Engine.get_physics_frames())
-	if include_frame_process:
-		fields.append("prf=%d" % Engine.get_process_frames())
-
-	for key in ctx:
-		var field := "%s=%s" % [key, str(ctx[key])]
-		if is_rich:
-			field = "[color=gray]%s[/color]" % field
-
-		fields.append(field)
-
-	if not fields:
-		return ""
-
-	if is_rich:
-		return "\n\t" + "\n\t".join(fields)
-
-	return " (%s)" % ",".join(fields)
-
-
-func _format_name() -> String:
-	if not name:
-		return ""
-
-	return (
-		"[%s]"
-		% ("[color=gray]%s[/color]" % name if _mode == Mode.RICH else String(name))
-	)
-
-
-func _log(
-	msg: String,
-	prefix_rich: StringName,
-	prefix_plain: StringName,
-	ctx: Dictionary,
-) -> String:
+func _merge_context(ctx: Dictionary) -> Dictionary:
 	ctx = ctx.duplicate()
 	ctx.merge(context, false)
 
-	var is_rich := _mode == Mode.RICH
+	if include_timestamp:
+		ctx[&"ts"] = Time.get_unix_time_from_system()
+	if include_frame_physics:
+		ctx[&"phf"] = Engine.get_physics_frames()
+	if include_frame_process:
+		ctx[&"prf"] = Engine.get_process_frames()
 
-	var message := "[color=white]%s[/color]" % msg if is_rich else msg
-	var prefix := "%s %s " % [_format_name(), prefix_rich if is_rich else prefix_plain]
+	return ctx
 
-	var fields: String = ""
-	if ctx:
-		fields = _format_context(ctx)
 
-	if is_rich:
-		print_rich(prefix, message, fields)
-	else:
-		print(prefix, message, fields)
-
-	return fields
+func _should_log(level: Level) -> bool:
+	return level >= StdLogger.get_effective_level(name)
