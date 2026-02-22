@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.5.0 (2026-02-22)
+
+## What's Changed
+* fix(input): add missing UID file for `StdInputEvent` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/366
+* fix(screen): always defer transition start to standardize timing by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/370
+* feat(sound): create simple player node for background sounds by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/371
+* feat(input): create utility node for triggering actions based on button presses by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/372
+* fix(input): add missing UID file for action trigger by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/373
+* feat(logging): add logging formatters and sinks by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/374
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.4.0...v4.5.0
+
 ## 4.4.0 (2026-02-21)
 
 ## What's Changed
