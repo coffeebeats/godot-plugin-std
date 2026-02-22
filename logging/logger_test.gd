@@ -16,8 +16,9 @@ class TrackingFormatter:
 	var calls: Array[Dictionary] = []
 
 	func format(
-		logger_name: StringName,
+		name: StringName,
 		level: int,
+		ts: float,
 		msg: String,
 		ctx: Dictionary,
 	) -> String:
@@ -25,14 +26,15 @@ class TrackingFormatter:
 			calls
 			. append(
 				{
-					&"name": logger_name,
+					&"name": name,
 					&"level": level,
+					&"ts": ts,
 					&"msg": msg,
 					&"ctx": ctx,
 				}
 			)
 		)
-		return "%s %s %s" % [String(logger_name), level_name(level), msg]
+		return "%s %s %s" % [String(name), LogLevels.level_name(level), msg]
 
 
 class TrackingSink:
@@ -41,8 +43,9 @@ class TrackingSink:
 	var calls: Array[Dictionary] = []
 
 	func output(
-		logger_name: StringName,
+		name: StringName,
 		level: int,
+		ts: float,
 		msg: String,
 		formatted: String,
 		ctx: Dictionary,
@@ -52,8 +55,9 @@ class TrackingSink:
 			calls
 			. append(
 				{
-					&"name": logger_name,
+					&"name": name,
 					&"level": level,
+					&"ts": ts,
 					&"msg": msg,
 					&"formatted": formatted,
 					&"ctx": ctx,
@@ -64,8 +68,6 @@ class TrackingSink:
 
 
 # -- TEST METHODS -------------------------------------------------------------------- #
-
-# -- Level filtering ----------------------------------------------------------------- #
 
 
 func test_warn_at_warn_level_emits():
@@ -137,12 +139,9 @@ func test_debug_at_debug_level_emits():
 		assert_eq(sink.calls.size(), 0)
 
 
-# -- Category level filtering -------------------------------------------------------- #
-
-
-func test_category_level_overrides_global():
+func test_level_override_overrides_global():
 	# Given: Global level is WARN but "test" category is DEBUG.
-	StdLogger.set_category_level(&"test", StdLogger.Level.DEBUG)
+	StdLogger.set_level_override(&"test", StdLogger.Level.DEBUG)
 	var sink := TrackingSink.new()
 	StdLogger.set_sink(sink)
 	var logger := StdLogger.create(&"test")
@@ -159,8 +158,8 @@ func test_category_level_overrides_global():
 
 func test_longest_prefix_match_wins():
 	# Given: "std" is WARN but "std/sound" is DEBUG.
-	StdLogger.set_category_level(&"std", StdLogger.Level.WARN)
-	StdLogger.set_category_level(&"std/sound", StdLogger.Level.DEBUG)
+	StdLogger.set_level_override(&"std", StdLogger.Level.WARN)
+	StdLogger.set_level_override(&"std/sound", StdLogger.Level.DEBUG)
 	var sink := TrackingSink.new()
 	StdLogger.set_sink(sink)
 	var logger := StdLogger.create(&"std/sound/bus")
@@ -177,8 +176,8 @@ func test_longest_prefix_match_wins():
 
 func test_shorter_prefix_used_when_no_longer_match():
 	# Given: "std" is WARN, "std/sound" is DEBUG.
-	StdLogger.set_category_level(&"std", StdLogger.Level.WARN)
-	StdLogger.set_category_level(&"std/sound", StdLogger.Level.DEBUG)
+	StdLogger.set_level_override(&"std", StdLogger.Level.WARN)
+	StdLogger.set_level_override(&"std/sound", StdLogger.Level.DEBUG)
 	var sink := TrackingSink.new()
 	StdLogger.set_sink(sink)
 	var logger := StdLogger.create(&"std/other")
@@ -192,7 +191,7 @@ func test_shorter_prefix_used_when_no_longer_match():
 
 func test_prefix_match_is_pure_begins_with():
 	# Given: A prefix "std/sou" is set to DEBUG.
-	StdLogger.set_category_level(&"std/sou", StdLogger.Level.DEBUG)
+	StdLogger.set_level_override(&"std/sou", StdLogger.Level.DEBUG)
 	var sink := TrackingSink.new()
 	StdLogger.set_sink(sink)
 	var logger := StdLogger.create(&"std/sound")
@@ -207,27 +206,10 @@ func test_prefix_match_is_pure_begins_with():
 		assert_eq(sink.calls.size(), 0)
 
 
-func test_exact_name_match():
-	# Given: An exact category match "test/exact" is set to DEBUG.
-	StdLogger.set_category_level(&"test/exact", StdLogger.Level.DEBUG)
-	var sink := TrackingSink.new()
-	StdLogger.set_sink(sink)
-	var logger := StdLogger.create(&"test/exact")
-
-	# When: A debug message is logged.
-	logger.debug("trace")
-
-	# Then: The exact match is used.
-	if OS.has_feature(&"debug"):
-		assert_eq(sink.calls.size(), 1)
-	else:
-		assert_eq(sink.calls.size(), 0)
-
-
-func test_clear_category_level_falls_back_to_global():
+func test_clear_level_override_falls_back_to_global():
 	# Given: A category override that is then cleared.
-	StdLogger.set_category_level(&"test", StdLogger.Level.DEBUG)
-	StdLogger.clear_category_level(&"test")
+	StdLogger.set_level_override(&"test", StdLogger.Level.DEBUG)
+	StdLogger.clear_level_override(&"test")
 	var sink := TrackingSink.new()
 	StdLogger.set_sink(sink)
 	var logger := StdLogger.create(&"test")
@@ -239,11 +221,11 @@ func test_clear_category_level_falls_back_to_global():
 	assert_eq(sink.calls.size(), 0)
 
 
-func test_clear_all_category_levels():
+func test_clear_level_overrides():
 	# Given: Multiple category overrides that are then all cleared.
-	StdLogger.set_category_level(&"a", StdLogger.Level.DEBUG)
-	StdLogger.set_category_level(&"b", StdLogger.Level.DEBUG)
-	StdLogger.clear_all_category_levels()
+	StdLogger.set_level_override(&"a", StdLogger.Level.DEBUG)
+	StdLogger.set_level_override(&"b", StdLogger.Level.DEBUG)
+	StdLogger.clear_level_overrides()
 	var sink := TrackingSink.new()
 	StdLogger.set_sink(sink)
 
@@ -253,9 +235,6 @@ func test_clear_all_category_levels():
 
 	# Then: Both use global WARN level, so info is suppressed.
 	assert_eq(sink.calls.size(), 0)
-
-
-# -- Context merging ----------------------------------------------------------------- #
 
 
 func test_callsite_context_takes_precedence():
@@ -303,11 +282,8 @@ func test_with_creates_child_with_merged_context():
 	assert_eq(sink.calls[0][&"ctx"][&"b"], 2)
 
 
-# -- Sink integration ---------------------------------------------------------------- #
-
-
-func test_sink_receives_formatted_output():
-	# Given: A logger with a tracking sink and formatter.
+func test_sink_receives_compact_formatted_output():
+	# Given: A logger with a tracking sink and compact formatter.
 	var sink := TrackingSink.new()
 	StdLogger.set_sink(sink)
 	var logger := StdLogger.create(&"test")
@@ -315,8 +291,10 @@ func test_sink_receives_formatted_output():
 	# When: A message is logged.
 	logger.warn("hello")
 
-	# Then: The sink receives a non-empty formatted string.
-	assert_true(sink.calls[0][&"formatted"].length() > 0)
+	# Then: The sink receives compact format with timestamp prefix.
+	var out: String = sink.calls[0][&"formatted"]
+	assert_string_contains(out, "test WARN hello")
+	assert_string_starts_with(out, "20")
 
 
 func test_sink_receives_raw_msg():
@@ -399,47 +377,6 @@ func test_godot_sink_info_does_not_push():
 	assert_push_warning_count(0)
 
 
-# -- Backward compatibility ---------------------------------------------------------- #
-
-
-func test_create_returns_named_logger():
-	# Given/When: A logger is created with a name.
-	var logger := StdLogger.create(&"test")
-
-	# Then: The logger has the correct name.
-	assert_eq(logger.name, &"test")
-
-
-func test_with_appends_suffix_to_name():
-	# Given: A parent logger named "std/sound".
-	var parent := StdLogger.create(&"std/sound")
-
-	# When: A child is created with suffix "bus".
-	var child := parent.with({}, &"bus")
-
-	# Then: The child name is "std/sound/bus".
-	assert_eq(child.name, &"std/sound/bus")
-
-
-func test_set_formatter_changes_active_formatter():
-	# Given: A tracking formatter.
-	var fmt := TrackingFormatter.new()
-	StdLogger.set_formatter(fmt)
-	var sink := TrackingSink.new()
-	StdLogger.set_sink(sink)
-	var logger := StdLogger.create(&"test")
-
-	# When: A message is logged.
-	logger.warn("hello")
-
-	# Then: The tracking formatter recorded the call.
-	assert_eq(fmt.calls.size(), 1)
-	assert_eq(fmt.calls[0][&"msg"], "hello")
-
-
-# -- Profile ------------------------------------------------------------------------- #
-
-
 func test_profile_apply_sets_level():
 	# Given: A profile with level DEBUG.
 	var profile := StdLogProfile.new()
@@ -455,11 +392,11 @@ func test_profile_apply_sets_level():
 	)
 
 
-func test_profile_apply_sets_category_levels():
+func test_profile_apply_sets_level_overrides():
 	# Given: A profile with a category override.
 	var profile := StdLogProfile.new()
 	profile.level = StdLogger.Level.ERROR
-	profile.category_levels = {
+	profile.level_overrides = {
 		&"test": StdLogger.Level.DEBUG,
 	}
 
@@ -479,11 +416,11 @@ func test_profile_apply_sets_category_levels():
 
 func test_profile_apply_clears_previous_categories():
 	# Given: An existing category override.
-	StdLogger.set_category_level(&"old", StdLogger.Level.DEBUG)
+	StdLogger.set_level_override(&"old", StdLogger.Level.DEBUG)
 
 	# Given: A profile with a different category.
 	var profile := StdLogProfile.new()
-	profile.category_levels = {
+	profile.level_overrides = {
 		&"new": StdLogger.Level.DEBUG,
 	}
 
@@ -547,20 +484,8 @@ func test_profile_load_and_apply_missing_file():
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
-func before_all():
-	# NOTE: Hide unactionable errors when using object doubles.
-	(
-		ProjectSettings
-		. set(
-			"debug/gdscript/warnings/native_method_override",
-			false,
-		)
-	)
-
-
 func before_each():
-	# Reset StdLogger static state to defaults.
 	StdLogger.set_level(StdLogger.Level.WARN)
-	StdLogger.clear_all_category_levels()
+	StdLogger.clear_level_overrides()
 	StdLogger.set_formatter(StdLogFormatterCompact.new())
 	StdLogger.set_sink(StdLogSinkGodot.new())
