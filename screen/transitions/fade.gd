@@ -25,7 +25,6 @@ const _FADE_OVERLAY_KEY := &"_addons_std_fade_overlay"
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _context: StdScreenTransitionContext = null
-var _is_entering: bool = false
 var _overlay: ColorRect = null
 var _tween: Tween = null
 
@@ -39,36 +38,31 @@ func _init() -> void:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _start(
-	context: StdScreenTransitionContext,
-	_scene: Node,
-	is_entering: bool,
-) -> void:
+func _enter(context: StdScreenTransitionContext) -> void:
 	assert(curve is StdTweenCurve, "invalid config; missing curve")
 
 	_context = context
-	_is_entering = is_entering
 	_overlay = _get_or_create_overlay(context)
 	_overlay.color = color
 
-	# When entering with a fresh overlay (no prior exit transition), start fully opaque
-	# so the fade-in has something to fade from.
-	if is_entering and _overlay.modulate.a == 0.0:
+	if context.current_scene:
+		# Phase 1: fade to black over current scene.
+		_fade_to(1.0, _on_enter_covered)
+	else:
+		# Initial push — start fully opaque, skip fade-out.
 		_overlay.modulate.a = 1.0
+		_on_enter_covered()
 
-	context.block_input()
 
-	var target: float = 0.0 if is_entering else 1.0
-	var adjusted := curve.duration * absf(_overlay.modulate.a - target)
+func _exit(context: StdScreenTransitionContext) -> void:
+	assert(curve is StdTweenCurve, "invalid config; missing curve")
 
-	if _tween and _tween.is_valid():
-		_tween.kill()
+	_context = context
+	_overlay = _get_or_create_overlay(context)
+	_overlay.color = color
 
-	_tween = context.create_tween()
-
-	curve.tween_property(_tween, _overlay, ^"modulate:a", target, adjusted)
-
-	_tween.tween_callback(_on_tween_completed)
+	# Phase 1: fade to black over popped scene.
+	_fade_to(1.0, _on_exit_covered)
 
 
 func _stop() -> void:
@@ -82,9 +76,6 @@ func _reset() -> void:
 	_stop()
 
 	if _context:
-		_context.allow_input()
-
-	if _context:
 		var retained := _context.pop_retained_node(_FADE_OVERLAY_KEY)
 		if retained and is_instance_valid(retained):
 			retained.queue_free()
@@ -94,6 +85,19 @@ func _reset() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _fade_to tweens the overlay's alpha to the target value and calls the callback on
+## completion. Uses proportional duration based on remaining distance.
+func _fade_to(target: float, on_complete: Callable) -> void:
+	var adjusted := curve.duration * absf(_overlay.modulate.a - target)
+
+	if _tween and _tween.is_valid():
+		_tween.kill()
+
+	_tween = _context.create_tween()
+	curve.tween_property(_tween, _overlay, ^"modulate:a", target, adjusted)
+	_tween.tween_callback(on_complete)
 
 
 ## _get_or_create_overlay returns the shared fade overlay for the transition context, or
@@ -128,15 +132,60 @@ func _get_or_create_overlay(context: StdScreenTransitionContext) -> ColorRect:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-## _on_tween_completed is called when the fade tween finishes.
-func _on_tween_completed() -> void:
+## _on_enter_covered is called when the fade-to-black phase completes during enter.
+func _on_enter_covered() -> void:
 	if not _context:
 		return
 
-	_context.allow_input()
+	_context.swap()
 
-	if _is_entering and _overlay and is_instance_valid(_overlay):
-		_context.pop_node(_overlay)
+	# Phase 2: fade from black to reveal new scene.
+	_fade_to(0.0, _on_enter_revealed)
 
+
+## _on_enter_revealed is called when the fade-from-black phase completes during enter.
+func _on_enter_revealed() -> void:
+	if not _context:
+		return
+
+	_context.pop_node(_overlay)
+	_context.done()
+	_context = null
+
+
+## _on_exit_covered is called when the fade-to-black phase completes during exit.
+func _on_exit_covered() -> void:
+	if not _context:
+		return
+
+	_context.unmount()
+
+	if _context.is_replace:
+		# Two-phase replace: skip the reveal and leave the overlay opaque. The
+		# entering screen's enter transition will handle fading it out. Connect a
+		# one-shot to clean up the overlay after the enter phase completes.
+		var overlay := _overlay
+		var manager := _context._manager
+		manager.screen_entered.connect(
+			func(_s: StdScreen, _sc: Node) -> void:
+				if is_instance_valid(overlay) and overlay.is_inside_tree():
+					overlay.get_parent().remove_child(overlay),
+			CONNECT_ONE_SHOT,
+		)
+
+		_context.done()
+		_context = null
+		return
+
+	# Phase 2: fade from black to reveal uncovered scene.
+	_fade_to(0.0, _on_exit_revealed)
+
+
+## _on_exit_revealed is called when the fade-from-black phase completes during exit.
+func _on_exit_revealed() -> void:
+	if not _context:
+		return
+
+	_context.pop_node(_overlay)
 	_context.done()
 	_context = null
