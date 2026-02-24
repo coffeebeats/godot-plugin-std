@@ -2,11 +2,22 @@
 ## screen/transition.gd
 ##
 ## StdScreenTransition is a base class for visual transition effects during screen
-## changes. This class should be extended to provide custom transition behavior.
+## changes. One transition handles the full visual lifecycle of one operation. The
+## transition controls the timeline via explicit context methods.
 ##
 
 class_name StdScreenTransition
 extends Resource
+
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+@export_group("Input")
+
+## block_input_enter controls whether input is automatically blocked during `_enter()`.
+@export var block_input_enter: bool = true
+
+## block_input_exit controls whether input is automatically blocked during `_exit()`.
+@export var block_input_exit: bool = true
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -19,14 +30,16 @@ var reset_on_interrupt: bool = true
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## start begins the screen transition effect on the given scene. The `is_entering`
-## parameter indicates whether the scene is entering (true) or exiting (false) view.
-func start(
-	context: StdScreenTransitionContext,
-	scene: Node,
-	is_entering: bool,
-) -> void:
-	_start(context, scene, is_entering)
+## enter begins the enter transition. Called by the manager for push and replace
+## operations. Delegates to the virtual _enter method.
+func enter(context: StdScreenTransitionContext) -> void:
+	_enter(context)
+
+
+## exit begins the exit transition. Called by the manager for pop operations.
+## Delegates to the virtual _exit method.
+func exit(context: StdScreenTransitionContext) -> void:
+	_exit(context)
 
 
 ## stop halts the transition. Visual state is left as-is so the next transition can pick
@@ -44,16 +57,24 @@ func reset() -> void:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-## _start is a virtual method that begins the transition effect on the given scene.
-## Subclasses *must* call `context.done()` when the transition completes (immediately or
-## deferred).
+## _enter runs when this screen arrives (push or replace). The context provides full
+## lifecycle control: loading, mounting, unmounting, and scene access. Default performs
+## an instant swap.
 ##
-## NOTE: Override this method to implement custom transition behavior.
-func _start(
-	context: StdScreenTransitionContext,
-	_scene: Node,
-	_is_entering: bool,
-) -> void:
+## NOTE: Override this method to implement custom transition behavior. Subclasses *must*
+## call `context.done()` when the transition completes.
+func _enter(context: StdScreenTransitionContext) -> void:
+	context.swap()
+	context.done()
+
+
+## _exit runs when this screen departs (pop). The context provides unmounting and scene
+## access. Default performs an instant unmount.
+##
+## NOTE: Override this method to implement custom transition behavior. Subclasses *must*
+## call `context.done()` when the transition completes.
+func _exit(context: StdScreenTransitionContext) -> void:
+	context.unmount()
 	context.done()
 
 

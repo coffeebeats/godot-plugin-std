@@ -59,34 +59,20 @@ signal uncovered(scene: Node)
 ## disabled when another screen is pushed on top.
 @export var pause_when_covered: bool = false
 
-@export_group("Transitions")
+@export_subgroup("Transition")
 
-@export_subgroup("Enter")
+## transition is the transition used for this screen's visual lifecycle. For push and
+## replace operations, `_enter()` is called. For pop operations, `_exit()` is called.
+@export var transition: StdScreenTransition
 
-## transition_enter is the transition played when this screen enters view.
-@export var transition_enter: StdScreenTransition
-
-## block_on_enter controls whether the manager waits for the enter transition to
-## complete before emitting entered/covered signals.
-@export var block_on_enter: bool = false
-
-@export_subgroup("Exit")
-
-## transition_exit is the transition played when this screen exits view.
-@export var transition_exit: StdScreenTransition
-
-## block_on_exit controls whether the manager waits for the exit transition to
-## complete before freeing the scene.
-@export var block_on_exit: bool = false
-
-@export_group("Dependencies")
+@export_subgroup("Dependencies")
 
 ## preload_scenes is a list of scene paths that must be loaded before this screen's
 ## enter transition starts. Loaded resources are held in memory for the screen's
 ## lifetime in the stack.
 @export_file("*.tscn", "*.scn") var preload_scenes: PackedStringArray = []
 
-@export_group("Input")
+@export_subgroup("Input")
 
 ## block_input_below controls whether this screen creates a new input isolation layer.
 ## When true (default), a new overlay is created that blocks both mouse and keyboard

@@ -87,7 +87,7 @@ func done() -> void:
 	_remove_blocker()
 
 	var cb := _on_done
-	_on_done = Callable() # Clear to prevent double-calling.
+	_on_done = Callable()  # Clear to prevent double-calling.
 
 	if cb.is_valid():
 		cb.call()

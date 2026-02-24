@@ -183,14 +183,12 @@ func before_each():
 
 
 func _create_screen(
-	transition_enter: StdScreenTransition = null,
-	transition_exit: StdScreenTransition = null,
+	transition: StdScreenTransition = null,
 	block_input_below: bool = true,
 ) -> StdScreen:
 	var screen := StdScreen.new()
 	screen.scene_path = _TEST_SCENE_PATH
-	screen.transition_enter = transition_enter
-	screen.transition_exit = transition_exit
+	screen.transition = transition
 	screen.block_input_below = block_input_below
 	return screen
 
