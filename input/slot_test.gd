@@ -4,6 +4,10 @@
 
 extends GutTest
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+const _TEST_ACTIONS: Array[StringName] = [&"test_action"]
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var slot: StdInputSlot = null
@@ -51,6 +55,77 @@ func test_input_slot_activates_keyboard_on_ready() -> void:
 	# Then: The keyboard is in the list of connected devices.
 	assert_eq(len(slot.get_connected_devices()), 1)
 	assert_has(slot.get_connected_devices(), got)
+
+
+func test_input_slot_does_not_swap_device_for_synthetic_action() -> void:
+	# Given: The input slot claims keyboard + mouse input.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = false
+
+	# Given: The input slot is added to the scene.
+	add_child_autofree(slot)
+
+	# Given: A joypad with device ID 0 is connected.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	# Given: The active device is the keyboard.
+	var kbm: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(kbm.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+	# Given: A joypad device reference for cleanup.
+	autofree(slot.get_connected_devices(false)[0])
+
+	# Given: A test action is registered as an active action.
+	slot._actions = [&"test_action"]
+
+	# When: A synthetic InputEventAction with DEVICE_ID_SYNTHETIC
+	# is dispatched.
+	var event := InputEventAction.new()
+	event.action = &"test_action"
+	event.device = StdInputEvent.DEVICE_ID_SYNTHETIC
+	event.pressed = true
+	slot._input(event)
+
+	# Then: The active device is still the keyboard.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got, kbm)
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_swaps_device_for_action_with_matching_id() -> void:
+	# Given: The input slot claims keyboard + mouse input.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = false
+
+	# Given: The input slot is added to the scene.
+	add_child_autofree(slot)
+
+	# Given: A joypad with device ID 0 is connected.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	# Given: The active device is the keyboard.
+	var kbm: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(kbm.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+	# Given: A test action is registered as an active action.
+	slot._actions = [&"test_action"]
+
+	# When: An InputEventAction with a device ID matching the
+	# connected joypad is dispatched (e.g. from Steam Input).
+	var event := InputEventAction.new()
+	event.action = &"test_action"
+	event.device = 0
+	event.pressed = true
+	slot._input(event)
+
+	# Then: The active device is the joypad.
+	var got: StdInputDevice = autofree(slot.get_active_device())
+	assert_ne(got, kbm)
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
 
 
 func test_input_slot_connects_and_disconnects_joypads() -> void:
@@ -178,14 +253,18 @@ func test_input_slot_swap_reconnects_joypads() -> void:
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
+func after_all() -> void:
+	for action in _TEST_ACTIONS:
+		InputMap.erase_action(action)
+
+
 func before_all() -> void:
-	# NOTE: Hide unactionable errors when using object doubles.
-	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
+	for action in _TEST_ACTIONS:
+		InputMap.add_action(action)
 
 
 func before_each() -> void:
 	# Construct input slot scene.
-
 	slot = StdInputSlot.new()
 	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
 	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
