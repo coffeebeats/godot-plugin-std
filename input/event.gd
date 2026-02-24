@@ -9,6 +9,13 @@
 class_name StdInputEvent
 extends Object
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## DEVICE_ID_SYNTHETIC is a sentinel device ID used for synthetic input actions
+## triggered by UI elements. This value is chosen to never collide with real joypad
+## device IDs (0-15) or Godot's reserved IDs (-1, -2).
+const DEVICE_ID_SYNTHETIC := 2 ^ 31 - 1
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -17,7 +24,7 @@ extends Object
 ## other nodes (e.g. `StdScreenPusher`).
 static func trigger_action(
 	action: StringName,
-	device: int = 0,
+	device: int = DEVICE_ID_SYNTHETIC,
 	pressed: bool = true,
 ) -> void:
 	var event := InputEventAction.new()
