@@ -62,14 +62,14 @@ const _META_PROCESS_MODE := &"addons_std_screen_manager_process_mode"
 
 ## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree when the screen is
 ## covered by another. This value can be overridden to avoid collisions if needed.
-static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 ## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
 ## screen is popped. This value can be overridden to avoid collisions if needed.
-static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 ## _logger is the logger instance for this class.
-static var _logger := StdLogger.create(&"std/screen/manager") # gdlint:ignore=class-definitions-order,max-line-length
+static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
 
 ## _cache maps `StdScreen` resources to their cached scene instances. Scenes are cached
 ## when `screen.cache_instance` is true and the screen is popped from the stack.
@@ -299,8 +299,8 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	_queue = OperationQueue.new(self )
-	_transitions = Controller.new(self )
+	_queue = OperationQueue.new(self)
+	_transitions = Controller.new(self)
 
 	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
 	assert(_cursor is StdInputCursor, "invalid config; missing 'StdInputCursor'")
@@ -384,7 +384,7 @@ func _do_push_all(
 		if s in _stack:
 			(
 				_logger
-				.warn(
+				. warn(
 					"Duplicate push ignored;" + " screen already in stack.",
 				)
 			)
@@ -405,7 +405,7 @@ func _do_replace(
 	if screen in _stack and not is_current(screen):
 		(
 			_logger
-			.warn(
+			. warn(
 				"Duplicate replace ignored;" + " screen already in stack.",
 			)
 		)
@@ -455,7 +455,7 @@ func _get_or_create_overlay(block_input_below: bool) -> StdScreenOverlay:
 		overlay = _overlays.get(_stack[-1])
 
 	assert(
-		not overlay or overlay.get_parent() == self ,
+		not overlay or overlay.get_parent() == self,
 		"invalid state; overlay not child of manager",
 	)
 
@@ -514,7 +514,7 @@ func _pop_impl(
 		return
 
 	# Set up the context for the exit transition.
-	var ctx := StdScreenTransitionContext.new(self )
+	var ctx := StdScreenTransitionContext.new(self)
 	ctx.current_scene = scene
 
 	# Unmount function: remove from stack, teardown, emit signals.
@@ -555,7 +555,7 @@ func _unmount_and_finish_pop(
 		new_top_screen.uncovered.emit(new_top_scene)
 		(
 			screen_uncovered
-			.emit(
+			. emit(
 				new_top_screen,
 				new_top_scene,
 			)
@@ -686,7 +686,7 @@ func _push_impl(
 			_cache.erase(screen)
 
 	# Set up the context for the enter transition.
-	var ctx := StdScreenTransitionContext.new(self )
+	var ctx := StdScreenTransitionContext.new(self)
 	ctx.current_scene = previous
 	if scene:
 		ctx.entering_scene = scene
@@ -695,7 +695,7 @@ func _push_impl(
 	if scene and screen.preload_scenes.size() > 0:
 		var dep_results := (
 			_loader
-			.load_all_scenes(
+			. load_all_scenes(
 				screen.preload_scenes,
 			)
 		)
@@ -780,8 +780,8 @@ func _replace_enter_phase(
 		return
 
 	# Enter with transition.
-	var ctx := StdScreenTransitionContext.new(self )
-	ctx.current_scene = null # Old scene already gone.
+	var ctx := StdScreenTransitionContext.new(self)
+	ctx.current_scene = null  # Old scene already gone.
 	ctx.entering_scene = scene
 	ctx.is_replace = true
 
@@ -838,7 +838,7 @@ func _replace_exit_phase(
 	enter_transition: StdScreenTransition,
 	on_complete: Callable,
 ) -> void:
-	var ctx := StdScreenTransitionContext.new(self )
+	var ctx := StdScreenTransitionContext.new(self)
 	ctx.current_scene = scene_prev
 	ctx.entering_scene = scene
 	ctx.is_replace = true
@@ -967,7 +967,7 @@ func _replace_impl(
 		instance,
 		func(scene: Node) -> void:
 			# Set up the context for the enter transition (handles full lifecycle).
-			var ctx := StdScreenTransitionContext.new(self )
+			var ctx := StdScreenTransitionContext.new(self)
 			ctx.current_scene = scene_prev
 			ctx.entering_scene = scene
 
@@ -1231,7 +1231,7 @@ func _update_process_modes() -> void:
 			if scene.has_meta(_META_PROCESS_MODE):
 				scene.process_mode = (
 					scene
-					.get_meta(
+					. get_meta(
 						_META_PROCESS_MODE,
 					)
 				)
@@ -1241,7 +1241,7 @@ func _update_process_modes() -> void:
 			if not scene.has_meta(_META_PROCESS_MODE):
 				(
 					scene
-					.set_meta(
+					. set_meta(
 						_META_PROCESS_MODE,
 						scene.process_mode,
 					)
