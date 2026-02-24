@@ -49,9 +49,9 @@ signal uncovered(scene: Node)
 ## ReplaceExitMode controls whether and how the exit phase runs during a replace
 ## operation. The entering screen declares this mode.
 enum ReplaceExitMode {
-	NONE = 0, ## NONE skips the exit transition entirely.
-	PREVIOUS = 1, ## PREVIOUS uses the exiting screen's transition for the exit phase.
-	SELF = 2, ## SELF uses this (entering) screen's transition for the exit phase.
+	NONE = 0,  ## NONE skips the exit transition entirely.
+	PREVIOUS = 1,  ## PREVIOUS uses the exiting screen's transition for the exit phase.
+	SELF = 2,  ## SELF uses this (entering) screen's transition for the exit phase.
 }
 
 const REPLACE_EXIT_MODE_NONE := ReplaceExitMode.NONE

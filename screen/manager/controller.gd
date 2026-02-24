@@ -1,31 +1,23 @@
 ##
 ## screen/manager/controller.gd
 ##
-## Manages transition lifecycle and input blocking for the screen manager. Input blocking
-## uses reference counting; the controller directly toggles the topmost overlay's process
-## mode, bypassing the manager's signal handlers.
+## Manages transition lifecycle for the screen manager. Tracks the active transition and
+## handles interruption via stop_all.
 ##
 
 extends RefCounted
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## _active_contexts maps each in-flight transition to the context that was created for
-## it. Used to clear the done callback when stopping transitions.
-var _active_contexts: Dictionary[StdScreenTransition, StdScreenTransitionContext] = {}
+## _active_context is the context for the current in-flight transition.
+var _active_context: StdScreenTransitionContext = null
 
-## _active_transitions tracks all in-flight transitions so they can be stopped on
-## interruption.
-var _active_transitions: Array[StdScreenTransition] = []
+## _active_transition is the current in-flight transition (duplicated from the resource).
+var _active_transition: StdScreenTransition = null
 
-## _cancel_cleanup maps in-flight transitions to cleanup callables that run when the
-## transition is stopped (prevents leaking exit scenes).
-var _cancel_cleanup: Dictionary[StdScreenTransition, Callable] = {}
-
-## _input_block_count tracks how many transitions are currently blocking scene input.
-## Input is only re-enabled when the count reaches zero, preventing a race where an
-## earlier-completing transition unblocks input while another is still running.
-var _input_block_count: int = 0
+## _cancel_cleanup is a callable that runs when the transition is stopped, ensuring
+## the stack reaches a consistent state (e.g. performing pending mount/unmount).
+var _cancel_cleanup: Callable = Callable()
 
 ## _manager is the Node used to create StdScreenTransitionContext instances.
 var _manager: Node
@@ -40,141 +32,73 @@ func _init(manager: Node) -> void:
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## allow_input decrements the input block reference count. When the count reaches zero,
-## the topmost overlay is re-enabled.
-func allow_input() -> void:
-	_input_block_count = maxi(0, _input_block_count - 1)
-	if _input_block_count == 0:
-		_unblock_overlay()
+## clear resets all tracked state without stopping or cleaning up the active transition.
+## Called by `_on_done` callbacks after the transition has already completed.
+func clear() -> void:
+	_active_transition = null
+	_active_context = null
+	_cancel_cleanup = Callable()
 
 
-## block_input increments the input block reference count. On the 0-to-1 transition, the
-## topmost overlay is disabled.
-func block_input() -> void:
-	_input_block_count += 1
-	if _input_block_count != 1:
-		return
-
-	var overlay: Node = _manager._get_current_overlay()
-	if overlay:
-		overlay.process_mode = Node.PROCESS_MODE_DISABLED
-
-
-## run_enter starts an enter transition and calls the callback when complete (or
-## immediately if non-blocking or no transition).
-func run_enter(
-	screen: StdScreen,
-	scene: Node,
-	on_complete: Callable,
+## run starts a transition with the given context. The transition is duplicated to avoid
+## mutating the original resource.
+func run(
+	transition: StdScreenTransition,
+	context: StdScreenTransitionContext,
+	is_enter: bool,
+	cancel_cleanup: Callable = Callable(),
 ) -> void:
-	var transition := screen.transition_enter
-	if transition == null:
-		if on_complete.is_valid():
-			on_complete.call()
+	var tx := transition.duplicate()
+	_active_transition = tx
+	_active_context = context
+	_cancel_cleanup = cancel_cleanup
 
-		return
-
-	transition = transition.duplicate()
-	_active_transitions.append(transition)
-
-	var cleanup := func() -> void:
-		_active_transitions.erase(transition)
-		_active_contexts.erase(transition)
-		if screen.block_on_enter:
-			if on_complete.is_valid():
-				on_complete.call()
-
-	var context := StdScreenTransitionContext.new(_manager, self)
-	context._on_done = cleanup
-	_active_contexts[transition] = context
-
-	transition.start(context, scene, true)
-
-	if not screen.block_on_enter:
-		if on_complete.is_valid():
-			on_complete.call()
+	if is_enter:
+		tx.enter(context)
+	else:
+		tx.exit(context)
 
 
-## run_exit handles an exit transition and scene cleanup. The teardown callable is
-## called on completion (or on interruption via stop_all).
-func run_exit(
-	screen: StdScreen,
-	scene: Node,
-	teardown: Callable,
-	on_complete: Callable,
-) -> void:
-	var transition: StdScreenTransition = screen.transition_exit
-
-	if transition == null:
-		teardown.call()
-
-		if on_complete.is_valid():
-			on_complete.call()
-
-		return
-
-	transition = transition.duplicate()
-	_active_transitions.append(transition)
-
-	_cancel_cleanup[transition] = teardown
-
-	var cleanup := func() -> void:
-		_active_transitions.erase(transition)
-		_active_contexts.erase(transition)
-		_cancel_cleanup.erase(transition)
-		teardown.call()
-
-		if screen.block_on_exit:
-			if on_complete.is_valid():
-				on_complete.call()
-
-	var context := StdScreenTransitionContext.new(_manager, self)
-	context._on_done = cleanup
-	_active_contexts[transition] = context
-
-	transition.start(context, scene, false)
-
-	if not screen.block_on_exit:
-		if on_complete.is_valid():
-			on_complete.call()
-
-
-## stop_all stops all in-flight transitions. Transitions with `reset_on_interrupt`
-## restore their visual state; others freeze for handoff. When `force_reset` is true,
-## all transitions are reset regardless of their `reset_on_interrupt` setting, and
-## `cancel_cleanup` callbacks are skipped (the caller handles all teardowns itself).
+## stop_all stops the in-flight transition. When `force_reset` is true, the transition
+## is always reset and `cancel_cleanup` is skipped (the caller handles all teardowns).
 func stop_all(force_reset: bool = false) -> void:
-	for transition in _active_transitions.duplicate():
-		# Clear the done callback to prevent stale invocations after stop/reset.
-		var context: StdScreenTransitionContext = _active_contexts.get(transition)
-		if context:
-			context._on_done = Callable()
+	if _active_transition == null:
+		return
 
-		if force_reset or transition.reset_on_interrupt:
-			transition.reset()
-		else:
-			transition.stop()
+	var transition := _active_transition
+	var context := _active_context
+	var cleanup := _cancel_cleanup
 
-		# Skip `cancel_cleanup` when force-resetting — the caller (`_reset_impl`)
-		# handles all teardowns itself, avoiding double lifecycle signals.
-		if not force_reset and transition in _cancel_cleanup:
-			_cancel_cleanup[transition].call()
+	# Clear state before calling stop/reset to prevent reentrant issues.
+	_active_transition = null
+	_active_context = null
+	_cancel_cleanup = Callable()
 
-	_active_transitions.clear()
-	_active_contexts.clear()
-	_cancel_cleanup.clear()
-	_input_block_count = 0
-	_unblock_overlay()
+	# Clear callbacks to prevent stale invocations after stop/reset. Invalidating
+	# _mount_fn also prevents deferred mounts when a scene finishes loading after
+	# the transition has been abandoned (the _resolve_scene_then callback checks
+	# this before setting entering_scene).
+	if context:
+		context._on_done = Callable()
+		context._mount_fn = Callable()
+		context._remove_blocker()
 
+	if force_reset or transition.reset_on_interrupt:
+		transition.reset()
+	else:
+		transition.stop()
 
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
+	# Free entering scenes that were never mounted (prevents orphan on
+	# teardown/reset when cancel_cleanup is skipped).
+	if (
+		force_reset
+		and context
+		and not context._did_mount
+		and is_instance_valid(context.entering_scene)
+	):
+		context.entering_scene.queue_free()
 
-
-## _unblock_overlay re-enables the topmost overlay and notifies the manager that
-## transitions have settled.
-func _unblock_overlay() -> void:
-	var overlay: Node = _manager._get_current_overlay()
-	if overlay:
-		overlay.process_mode = Node.PROCESS_MODE_INHERIT
-
-	_manager._on_transitions_settled()
+	# Run cancel_cleanup to ensure stack consistency (unless force-resetting, where
+	# the caller handles all teardowns itself).
+	if not force_reset and cleanup.is_valid():
+		cleanup.call()
