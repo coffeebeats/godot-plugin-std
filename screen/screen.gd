@@ -44,6 +44,20 @@ signal exiting(scene: Node)
 @warning_ignore("unused_signal")
 signal uncovered(scene: Node)
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## ReplaceExitMode controls whether and how the exit phase runs during a replace
+## operation. The entering screen declares this mode.
+enum ReplaceExitMode {
+	NONE = 0, ## NONE skips the exit transition entirely.
+	PREVIOUS = 1, ## PREVIOUS uses the exiting screen's transition for the exit phase.
+	SELF = 2, ## SELF uses this (entering) screen's transition for the exit phase.
+}
+
+const REPLACE_EXIT_MODE_NONE := ReplaceExitMode.NONE
+const REPLACE_EXIT_MODE_PREVIOUS := ReplaceExitMode.PREVIOUS
+const REPLACE_EXIT_MODE_SELF := ReplaceExitMode.SELF
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## scene_path is the path to the packed scene file. Optional; when empty, the caller
@@ -64,6 +78,10 @@ signal uncovered(scene: Node)
 ## transition is the transition used for this screen's visual lifecycle. For push and
 ## replace operations, `_enter()` is called. For pop operations, `_exit()` is called.
 @export var transition: StdScreenTransition
+
+## replace_exit controls whether the exit phase runs during a replace operation where
+## this screen enters the scene tree.
+@export var replace_exit: ReplaceExitMode = ReplaceExitMode.NONE
 
 @export_subgroup("Dependencies")
 

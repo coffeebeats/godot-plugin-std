@@ -33,6 +33,10 @@ var current_scene: Node = null
 ## scene finishes loading (when overlapping loading with transitions).
 var entering_scene: Node = null
 
+## is_replace is true when this context is part of a two-phase replace operation. This
+## lets transitions adapt their behavior (e.g. fade skips the reveal on exit).
+var is_replace: bool = false
+
 var _did_mount: bool = false
 var _did_unmount: bool = false
 var _manager: Node
