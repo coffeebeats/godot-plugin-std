@@ -62,14 +62,14 @@ const _META_PROCESS_MODE := &"addons_std_screen_manager_process_mode"
 
 ## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree when the screen is
 ## covered by another. This value can be overridden to avoid collisions if needed.
-static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 ## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
 ## screen is popped. This value can be overridden to avoid collisions if needed.
-static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 ## _logger is the logger instance for this class.
-static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
+static var _logger := StdLogger.create(&"std/screen/manager") # gdlint:ignore=class-definitions-order,max-line-length
 
 ## _cache maps `StdScreen` resources to their cached scene instances. Scenes are cached
 ## when `screen.cache_instance` is true and the screen is popped from the stack.
@@ -104,7 +104,7 @@ var _scenes: Dictionary[StdScreen, Node] = {}
 ## _stack is the screen stack. Index `0` is the bottom (base scene).
 var _stack: Array[StdScreen] = []
 
-## _transitions manages transition lifecycle and input blocking.
+## _transitions manages transition lifecycle.
 var _transitions: Controller = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -158,10 +158,13 @@ func load_screen(
 	return _loader.load_all_scenes(paths)
 
 
-## pop removes the topmost screen from the stack and returns focus to
-## the new top. When force is false (default), emits close_requested on
-## the top screen first; any handler can cancel.call() to abort.
-func pop(force: bool = false) -> void:
+## pop removes the topmost screen from the stack and returns focus to the new top. When
+## force is false (default), emits close_requested on the top screen first; any handler
+## can cancel.call() to abort.
+func pop(
+	force: bool = false,
+	transition: StdScreenTransition = null,
+) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
 	if not force:
@@ -170,11 +173,16 @@ func pop(force: bool = false) -> void:
 
 		if screen:
 			var state := [false]
-			screen.close_requested.emit(null, func() -> void: state[0] = true)
+			screen.close_requested.emit(
+				null,
+				func() -> void: state[0] = true,
+			)
 			if state[0]:
 				return
 
-	pop_to_depth(_stack.size() - 1)
+	_queue.enqueue_or_run(
+		func(): _do_pop(transition),
+	)
 
 
 ## pop_to pops screens until the given screen is on top. When `animate_intermediate` is
@@ -210,23 +218,28 @@ func pop_to_depth(
 
 
 ## push adds a screen on top of the stack and gives it focus.
-func push(screen: StdScreen, instance: Node = null) -> void:
+func push(
+	screen: StdScreen,
+	instance: Node = null,
+	transition: StdScreenTransition = null,
+) -> void:
 	assert(screen != null, "invalid argument: missing screen")
 
 	var instances: Array[Node] = []
 	if instance:
 		instances.append(instance)
 
-	push_all([screen] as Array[StdScreen], false, instances)
+	push_all([screen] as Array[StdScreen], false, instances, transition)
 
 
 ## push_all pushes multiple screens in sequence. When animate_intermediate is false
 ## (default), only the last screen's enter transition plays. Set to true to animate all.
-##  If instances are provided, they are used instead of loading from scene_path.
+## If instances are provided, they are used instead of loading from scene_path.
 func push_all(
 	screens: Array[StdScreen],
 	animate_intermediate: bool = false,
 	instances: Array[Node] = [],
+	transition: StdScreenTransition = null,
 ) -> void:
 	assert(
 		screens.size() > 0,
@@ -243,6 +256,7 @@ func push_all(
 				screens,
 				animate_intermediate,
 				instances,
+				transition,
 			),
 	)
 
@@ -251,12 +265,13 @@ func push_all(
 func replace(
 	screen: StdScreen,
 	instance: Node = null,
+	transition: StdScreenTransition = null,
 ) -> void:
 	assert(screen != null, "invalid argument: missing screen")
 	assert(_stack.size() > 0, "cannot replace on empty stack")
 
 	_queue.enqueue_or_run(
-		func(): _do_replace(screen, instance),
+		func(): _do_replace(screen, instance, transition),
 	)
 
 
@@ -284,8 +299,8 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	_queue = OperationQueue.new(self)
-	_transitions = Controller.new(self)
+	_queue = OperationQueue.new(self )
+	_transitions = Controller.new(self )
 
 	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
 	assert(_cursor is StdInputCursor, "invalid config; missing 'StdInputCursor'")
@@ -314,6 +329,17 @@ func _free_retained_nodes() -> void:
 	_retained_nodes.clear()
 
 
+## _resolve_transition returns the transition to use for an operation. Resolution order:
+## explicit parameter > screen's transition property > null (instant).
+func _resolve_transition(
+	screen: StdScreen,
+	explicit: StdScreenTransition,
+) -> StdScreenTransition:
+	if explicit:
+		return explicit
+	return screen.transition
+
+
 ## _teardown frees all retained transition nodes and stops in-flight transitions.
 func _teardown() -> void:
 	_transitions.stop_all(true)
@@ -330,6 +356,12 @@ func _teardown() -> void:
 # Operations
 
 
+## _do_pop is the operation body for a single pop.
+func _do_pop(transition: StdScreenTransition) -> void:
+	_transitions.stop_all()
+	_pop_impl(false, transition, _queue.complete)
+
+
 ## _do_pop_to_depth is the operation body for pop_to/pop_to_depth.
 func _do_pop_to_depth(
 	depth: int,
@@ -344,38 +376,43 @@ func _do_push_all(
 	screens: Array[StdScreen],
 	animate_intermediate: bool,
 	instances: Array[Node],
+	transition: StdScreenTransition,
 ) -> void:
+	_transitions.stop_all()
+
 	for s in screens:
 		if s in _stack:
 			(
 				_logger
-				. warn(
+				.warn(
 					"Duplicate push ignored;" + " screen already in stack.",
 				)
 			)
 			_queue.complete()
 			return
 
-	_transitions.stop_all()
-	_push_all_at(screens, 0, animate_intermediate, instances)
+	_push_all_at(screens, 0, animate_intermediate, instances, transition)
 
 
 ## _do_replace is the operation body for replace.
 func _do_replace(
 	screen: StdScreen,
 	instance: Node,
+	transition: StdScreenTransition,
 ) -> void:
+	_transitions.stop_all()
+
 	if screen in _stack and not is_current(screen):
 		(
 			_logger
-			. warn(
+			.warn(
 				"Duplicate replace ignored;" + " screen already in stack.",
 			)
 		)
 		_queue.complete()
 		return
-	_transitions.stop_all()
-	_replace_impl(screen, instance, _queue.complete)
+
+	_replace_impl(screen, instance, transition, _queue.complete)
 
 
 ## _do_reset is the operation body for reset.
@@ -418,7 +455,7 @@ func _get_or_create_overlay(block_input_below: bool) -> StdScreenOverlay:
 		overlay = _overlays.get(_stack[-1])
 
 	assert(
-		not overlay or overlay.get_parent() == self,
+		not overlay or overlay.get_parent() == self ,
 		"invalid state; overlay not child of manager",
 	)
 
@@ -431,15 +468,11 @@ func _get_or_create_overlay(block_input_below: bool) -> StdScreenOverlay:
 	return overlay
 
 
-## _mount_and_enter adds a scene to the tree, registers it in the stack, emits lifecycle
-## signals, and runs the enter transition. The optional `post_enter` callable runs after
-## the `entered` signal (e.g. to emit operation-specific signals like `screen_pushed`).
-func _mount_and_enter(
+## _mount_scene adds a scene to the tree, registers it in the stack, and emits the
+## entering signal.
+func _mount_scene(
 	screen: StdScreen,
 	scene: Node,
-	skip_enter: bool,
-	on_complete: Callable,
-	post_enter: Callable = Callable(),
 	reuse_overlay: StdScreenOverlay = null,
 ) -> void:
 	var overlay: StdScreenOverlay
@@ -458,34 +491,11 @@ func _mount_and_enter(
 	screen.entering.emit(scene)
 	screen_entering.emit(screen, scene)
 
-	var after_enter := func() -> void:
-		screen.entered.emit(scene)
-		screen_entered.emit(screen, scene)
 
-		_restore_focus(scene)
-
-		if post_enter.is_valid():
-			post_enter.call()
-
-		assert(on_complete.is_valid(), "invalid state; missing 'on_complete' callback")
-		on_complete.call()
-
-	if skip_enter:
-		after_enter.call()
-	else:
-		(
-			_transitions
-			. run_enter(
-				screen,
-				scene,
-				after_enter,
-			)
-		)
-
-
-## _pop_impl performs pop logic with callback-driven async.
+## _pop_impl performs pop logic with the unified transition model.
 func _pop_impl(
 	skip_exit: bool,
+	transition_override: StdScreenTransition,
 	on_complete: Callable,
 ) -> void:
 	var screen: StdScreen = _stack[-1]
@@ -494,6 +504,46 @@ func _pop_impl(
 	screen.exiting.emit(scene)
 	screen_exiting.emit(screen, scene)
 
+	var transition := _resolve_transition(screen, transition_override)
+
+	if skip_exit or transition == null:
+		# Instant pop: unmount, emit signals, complete.
+		_unmount_and_finish_pop(screen, scene)
+		screen_popped.emit(screen)
+		on_complete.call()
+		return
+
+	# Set up the context for the exit transition.
+	var ctx := StdScreenTransitionContext.new(self )
+	ctx.current_scene = scene
+
+	# Unmount function: remove from stack, teardown, emit signals.
+	ctx._unmount_fn = func() -> void: _unmount_and_finish_pop(screen, scene)
+
+	# Cancel cleanup: if the transition is interrupted before unmount, perform it.
+	var cancel_cleanup := func() -> void:
+		if not ctx._did_unmount:
+			_unmount_and_finish_pop(screen, scene)
+		screen_popped.emit(screen)
+
+	# After done(): emit popped, complete the operation.
+	ctx._on_done = func() -> void:
+		_transitions.clear()
+		screen_popped.emit(screen)
+		on_complete.call()
+
+	# Auto-block input if configured.
+	if transition.block_input_exit:
+		ctx.block_input()
+
+	_transitions.run(transition, ctx, false, cancel_cleanup)
+
+
+## _unmount_and_finish_pop handles the stack/signal work for a pop.
+func _unmount_and_finish_pop(
+	screen: StdScreen,
+	scene: Node,
+) -> void:
 	_stack.pop_back()
 	_scenes.erase(screen)
 
@@ -505,7 +555,7 @@ func _pop_impl(
 		new_top_screen.uncovered.emit(new_top_scene)
 		(
 			screen_uncovered
-			. emit(
+			.emit(
 				new_top_screen,
 				new_top_scene,
 			)
@@ -514,17 +564,9 @@ func _pop_impl(
 
 	_restore_focus(new_top_scene)
 
-	var teardown := func() -> void:
-		_teardown_scene(screen, scene)
-		screen_popped.emit(screen)
-		if _cursor.get_is_visible():
-			_force_hover_recalculation()
-
-	if skip_exit:
-		teardown.call()
-		on_complete.call()
-	else:
-		_transitions.run_exit(screen, scene, teardown, on_complete)
+	_teardown_scene(screen, scene)
+	if _cursor.get_is_visible():
+		_force_hover_recalculation()
 
 
 ## _pop_to_depth_at recursively pops until target depth.
@@ -541,132 +583,449 @@ func _pop_to_depth_at(
 
 	_pop_impl(
 		skip,
+		null,
 		func() -> void: _pop_to_depth_at(depth, animate_intermediate),
 	)
 
 
-## _push_all_at recursively pushes screens starting at index.
+## _push_all_at recursively pushes screens starting at index. For intermediate
+## screens with `animate_intermediate`, transitions are started then immediately
+## interrupted so cancel_cleanup mounts the screen synchronously.
 func _push_all_at(
 	screens: Array[StdScreen],
 	index: int,
 	animate_intermediate: bool,
 	instances: Array[Node],
+	transition: StdScreenTransition,
 ) -> void:
+	# For intermediate screens with animate_intermediate, push and immediately
+	# interrupt. This mounts each screen synchronously via cancel_cleanup.
+	while index < screens.size() - 1 and animate_intermediate:
+		@warning_ignore("CONFUSABLE_LOCAL_DECLARATION")
+		var instance: Node = instances[index] if instances.size() > index else null
+		var screen_trans := _resolve_transition(
+			screens[index],
+			null,
+		)
+		if screen_trans == null or instance == null:
+			break
+
+		_push_impl(screens[index], instance, false, null, Callable())
+		_transitions.stop_all()
+		index += 1
+
 	if index >= screens.size():
 		_queue.complete()
 		return
 
 	var is_last := index == screens.size() - 1
 	var skip := not is_last and not animate_intermediate
-	var inst: Node = instances[index] if instances.size() > index else null
+	var instance: Node = instances[index] if instances.size() > index else null
+	var tx: StdScreenTransition = transition if is_last else null
 
 	_push_impl(
 		screens[index],
-		inst,
+		instance,
 		skip,
+		tx,
 		func() -> void:
 			_push_all_at(
 				screens,
 				index + 1,
 				animate_intermediate,
 				instances,
+				transition,
 			),
 	)
 
 
-## _push_impl performs push logic with callback-driven async.
+## _push_impl performs push logic with the unified transition model.
 func _push_impl(
 	screen: StdScreen,
 	instance: Node,
 	skip_enter: bool,
+	transition_override: StdScreenTransition,
 	on_complete: Callable,
 ) -> void:
 	var previous := _current_scene()
+	var transition := _resolve_transition(screen, transition_override)
 
-	_resolve_scene_then(
-		screen,
-		instance,
-		func(scene: Node) -> void:
-			_save_focus(previous)
+	if skip_enter or transition == null:
+		# Instant push: load scene, then mount and emit signals.
+		_resolve_scene_then(
+			screen,
+			instance,
+			func(resolved: Node) -> void:
+				_save_focus(previous)
+				_mount_scene(screen, resolved)
 
-			var post := func() -> void:
-				if previous:
-					var prev_screen: StdScreen = _stack[_stack.size() - 2]
-					prev_screen.covered.emit(previous)
-					(
-						screen_covered
-						. emit(
-							prev_screen,
-							previous,
-						)
-					)
-					previous.propagate_notification(NOTIFICATION_SCREEN_COVERED)
+				screen.entered.emit(resolved)
+				screen_entered.emit(screen, resolved)
+				_restore_focus(resolved)
 
+				_emit_covered(previous)
 				screen_pushed.emit(screen)
+				on_complete.call(),
+		)
+		return
 
-			_mount_and_enter(
-				screen,
-				scene,
-				skip_enter,
-				on_complete,
-				post,
-			),
-	)
+	# Push with transition: start transition immediately, overlapping with scene
+	# loading if the scene is not immediately available.
+	_save_focus(previous)
+
+	# Resolve entering scene eagerly (check instance, then cache).
+	var scene: Node = null
+	if instance:
+		scene = instance
+	else:
+		var cached: Node = _cache.get(screen)
+		if cached and is_instance_valid(cached):
+			_cache.erase(screen)
+			scene = cached
+		else:
+			_cache.erase(screen)
+
+	# Set up the context for the enter transition.
+	var ctx := StdScreenTransitionContext.new(self )
+	ctx.current_scene = previous
+	if scene:
+		ctx.entering_scene = scene
+
+	# Start preload dependencies (non-blocking, kept alive via reference).
+	if scene and screen.preload_scenes.size() > 0:
+		var dep_results := (
+			_loader
+			.load_all_scenes(
+				screen.preload_scenes,
+			)
+		)
+		if not dep_results.is_empty():
+			_preloads[screen] = dep_results
+
+	# Mount function references ctx.entering_scene (set later if loading).
+	ctx._mount_fn = func() -> void: _mount_scene(screen, ctx.entering_scene)
+
+	# Cancel cleanup: ensure stack reaches a consistent state.
+	var cancel_cleanup := func() -> void:
+		if ctx.entering_scene:
+			if not ctx._did_mount:
+				_mount_scene(screen, ctx.entering_scene)
+
+			screen.entered.emit(ctx.entering_scene)
+			screen_entered.emit(screen, ctx.entering_scene)
+			_restore_focus(ctx.entering_scene)
+			_emit_covered(previous)
+			screen_pushed.emit(screen)
+		else:
+			# Scene not loaded yet; invalidate mount to prevent deferred mount.
+			ctx._mount_fn = Callable()
+
+	# After done(): emit entered, covered, pushed, complete.
+	ctx._on_done = func() -> void:
+		_transitions.clear()
+
+		screen.entered.emit(ctx.entering_scene)
+		screen_entered.emit(screen, ctx.entering_scene)
+		_restore_focus(ctx.entering_scene)
+		_emit_covered(previous)
+		screen_pushed.emit(screen)
+		on_complete.call()
+
+	# Auto-block input if configured.
+	if transition.block_input_enter:
+		ctx.block_input()
+
+	_transitions.run(transition, ctx, true, cancel_cleanup)
+
+	# If scene wasn't immediately available, load in background.
+	if not scene:
+		_resolve_scene_then(
+			screen,
+			null,
+			func(loaded_scene: Node) -> void:
+				if not ctx._mount_fn.is_valid():
+					# Push was abandoned; free the orphan scene.
+					if is_instance_valid(loaded_scene):
+						loaded_scene.queue_free()
+					return
+
+				ctx.entering_scene = loaded_scene
+				ctx.scene_loaded.emit(),
+		)
 
 
-## _replace_impl performs replace logic with callback-driven async.
+## _replace_enter_phase runs the enter phase of a two-phase replace after the exit
+## phase has completed.
+func _replace_enter_phase(
+	screen: StdScreen,
+	screen_prev: StdScreen,
+	scene: Node,
+	overlay_prev: StdScreenOverlay,
+	enter_transition: StdScreenTransition,
+	on_complete: Callable,
+) -> void:
+	if enter_transition == null:
+		# Instant enter: mount scene directly, emit signals, complete.
+		_mount_scene(screen, scene, overlay_prev)
+
+		# Free unused overlay.
+		if is_instance_valid(overlay_prev) and overlay_prev not in _overlays.values():
+			overlay_prev.queue_free()
+
+		screen.entered.emit(scene)
+		screen_entered.emit(screen, scene)
+		_restore_focus(scene)
+		screen_replaced.emit(screen_prev, screen)
+		on_complete.call()
+		return
+
+	# Enter with transition.
+	var ctx := StdScreenTransitionContext.new(self )
+	ctx.current_scene = null # Old scene already gone.
+	ctx.entering_scene = scene
+	ctx.is_replace = true
+
+	# Mount function: mount new scene, reusing the previous overlay.
+	ctx._mount_fn = func() -> void: _mount_scene(screen, scene, overlay_prev)
+
+	# Nothing to unmount in the enter phase.
+	ctx._unmount_fn = Callable()
+
+	# Cancel cleanup: mount if needed, emit signals.
+	var cancel_cleanup := func() -> void:
+		if not ctx._did_mount:
+			_mount_scene(screen, scene, overlay_prev)
+
+		# Free unused overlay.
+		if is_instance_valid(overlay_prev) and overlay_prev not in _overlays.values():
+			overlay_prev.queue_free()
+
+		screen.entered.emit(scene)
+		screen_entered.emit(screen, scene)
+		_restore_focus(scene)
+		screen_replaced.emit(screen_prev, screen)
+
+	# After done(): free unused overlay, emit signals, complete.
+	ctx._on_done = func() -> void:
+		_transitions.clear()
+
+		# Free unused overlay.
+		if is_instance_valid(overlay_prev) and overlay_prev not in _overlays.values():
+			overlay_prev.queue_free()
+
+		screen.entered.emit(scene)
+		screen_entered.emit(screen, scene)
+		_restore_focus(scene)
+		screen_replaced.emit(screen_prev, screen)
+		on_complete.call()
+
+	# Auto-block input if configured.
+	if enter_transition.block_input_enter:
+		ctx.block_input()
+
+	_transitions.run(enter_transition, ctx, true, cancel_cleanup)
+
+
+## _replace_exit_phase runs the exit phase of a two-phase replace. Once the exit
+## transition completes, chains to the enter phase (transition or instant).
+func _replace_exit_phase(
+	screen: StdScreen,
+	screen_prev: StdScreen,
+	scene: Node,
+	scene_prev: Node,
+	overlay_prev: StdScreenOverlay,
+	exit_transition: StdScreenTransition,
+	enter_transition: StdScreenTransition,
+	on_complete: Callable,
+) -> void:
+	var ctx := StdScreenTransitionContext.new(self )
+	ctx.current_scene = scene_prev
+	ctx.entering_scene = scene
+	ctx.is_replace = true
+
+	# Unmount function: pop old from stack, pre-erase overlay mapping to preserve the
+	# overlay node for the enter phase, then teardown the scene.
+	ctx._unmount_fn = func() -> void:
+		_stack.pop_back()
+		_scenes.erase(screen_prev)
+		_overlays.erase(screen_prev)
+		_teardown_scene(screen_prev, scene_prev)
+
+	# Nothing to mount in the exit phase.
+	ctx._mount_fn = Callable()
+
+	# Cancel cleanup: ensure old is unmounted and new is mounted with signals emitted.
+	var cancel_cleanup := func() -> void:
+		if not ctx._did_unmount:
+			_stack.pop_back()
+			_scenes.erase(screen_prev)
+			_overlays.erase(screen_prev)
+			_teardown_scene(screen_prev, scene_prev)
+
+		_mount_scene(screen, scene, overlay_prev)
+
+		# Free unused overlay.
+		if is_instance_valid(overlay_prev) and overlay_prev not in _overlays.values():
+			overlay_prev.queue_free()
+
+		screen.entered.emit(scene)
+		screen_entered.emit(screen, scene)
+		_restore_focus(scene)
+		screen_replaced.emit(screen_prev, screen)
+
+	# After exit done: clear the controller, then chain to the enter phase.
+	ctx._on_done = func() -> void:
+		_transitions.clear()
+		_replace_enter_phase(
+			screen,
+			screen_prev,
+			scene,
+			overlay_prev,
+			enter_transition,
+			on_complete,
+		)
+
+	# Auto-block input if configured.
+	if exit_transition.block_input_exit:
+		ctx.block_input()
+
+	_transitions.run(exit_transition, ctx, false, cancel_cleanup)
+
+
+## _replace_impl performs replace logic with the unified transition model.
 func _replace_impl(
 	screen: StdScreen,
 	instance: Node,
+	transition_override: StdScreenTransition,
 	on_complete: Callable,
 ) -> void:
 	var screen_prev: StdScreen = _stack[-1]
 	var scene_prev: Node = _scenes[screen_prev]
 	var overlay_prev: StdScreenOverlay = _overlays.get(screen_prev)
+	var enter_transition := _resolve_transition(screen, transition_override)
+
+	# Resolve the exit transition based on the entering screen's replace_exit mode.
+	var exit_transition: StdScreenTransition = null
+	if screen.replace_exit == StdScreen.ReplaceExitMode.PREVIOUS:
+		exit_transition = screen_prev.transition
+	elif screen.replace_exit == StdScreen.ReplaceExitMode.SELF:
+		exit_transition = screen.transition
 
 	screen_prev.exiting.emit(scene_prev)
 	screen_exiting.emit(screen_prev, scene_prev)
 
-	_stack.pop_back()
-	_scenes.erase(screen_prev)
+	if exit_transition != null:
+		# Two-phase replace: exit phase first, then chain to enter phase.
+		_resolve_scene_then(
+			screen,
+			instance,
+			func(scene: Node) -> void:
+				_replace_exit_phase(
+					screen,
+					screen_prev,
+					scene,
+					scene_prev,
+					overlay_prev,
+					exit_transition,
+					enter_transition,
+					on_complete,
+				),
+		)
+		return
 
-	# NOTE: Unlike `_pop_impl`, `_update_stack_state` is intentionally skipped here. The
-	# screen below stays covered throughout the replace (old exits then new enters), so
-	# its state should not change.
+	if enter_transition == null:
+		# Instant replace: unmount old, mount new, emit signals.
+		_stack.pop_back()
+		_scenes.erase(screen_prev)
+		_overlays.erase(screen_prev)
+		_teardown_scene(screen_prev, scene_prev)
 
-	_transitions.run_exit(
-		screen_prev,
-		scene_prev,
-		func() -> void: _teardown_scene(screen_prev, scene_prev, false),
-		func() -> void:
-			_resolve_scene_then(
-				screen,
-				instance,
-				func(scene: Node) -> void:
-					var post := func() -> void:
-						(
-							screen_replaced
-							. emit(
-								screen_prev,
-								screen,
-							)
-						)
+		_resolve_scene_then(
+			screen,
+			instance,
+			func(scene: Node) -> void:
+				_mount_scene(screen, scene, overlay_prev)
 
-						if (
-							is_instance_valid(overlay_prev)
-							and overlay_prev not in _overlays.values()
-						):
-							overlay_prev.queue_free()
+				# Free unused overlay.
+				if (
+					is_instance_valid(overlay_prev)
+					and overlay_prev not in _overlays.values()
+				):
+					overlay_prev.queue_free()
 
-					_mount_and_enter(
-						screen,
-						scene,
-						false,
-						on_complete,
-						post,
-						overlay_prev,
-					),
-			),
+				screen.entered.emit(scene)
+				screen_entered.emit(screen, scene)
+				_restore_focus(scene)
+				screen_replaced.emit(screen_prev, screen)
+				on_complete.call(),
+		)
+		return
+
+	# Enter-only replace: start loading eagerly.
+	_resolve_scene_then(
+		screen,
+		instance,
+		func(scene: Node) -> void:
+			# Set up the context for the enter transition (handles full lifecycle).
+			var ctx := StdScreenTransitionContext.new(self )
+			ctx.current_scene = scene_prev
+			ctx.entering_scene = scene
+
+			# Unmount function: pop old from stack, teardown.
+			ctx._unmount_fn = func() -> void:
+				_stack.pop_back()
+				_scenes.erase(screen_prev)
+				_overlays.erase(screen_prev)
+				_teardown_scene(screen_prev, scene_prev)
+
+			# Mount function: mount new scene.
+			ctx._mount_fn = func() -> void: _mount_scene(screen, scene, overlay_prev)
+
+			# Cancel cleanup: ensure both unmount and mount happened.
+			var cancel_cleanup := func() -> void:
+				if not ctx._did_unmount:
+					_stack.pop_back()
+					_scenes.erase(screen_prev)
+					_overlays.erase(screen_prev)
+					_teardown_scene(screen_prev, scene_prev)
+
+				if not ctx._did_mount:
+					_mount_scene(screen, scene, overlay_prev)
+
+				# Free unused overlay.
+				if (
+					is_instance_valid(overlay_prev)
+					and overlay_prev not in _overlays.values()
+				):
+					overlay_prev.queue_free()
+
+				screen.entered.emit(scene)
+				screen_entered.emit(screen, scene)
+				_restore_focus(scene)
+				screen_replaced.emit(screen_prev, screen)
+
+			# After done(): emit entered, replaced, complete.
+			ctx._on_done = func() -> void:
+				_transitions.clear()
+
+				# Free unused overlay.
+				if (
+					is_instance_valid(overlay_prev)
+					and overlay_prev not in _overlays.values()
+				):
+					overlay_prev.queue_free()
+
+				screen.entered.emit(scene)
+				screen_entered.emit(screen, scene)
+				_restore_focus(scene)
+				screen_replaced.emit(screen_prev, screen)
+				on_complete.call()
+
+			# Auto-block input if configured.
+			if enter_transition.block_input_enter:
+				ctx.block_input()
+
+			_transitions.run(enter_transition, ctx, true, cancel_cleanup),
 	)
 
 
@@ -697,12 +1056,14 @@ func _reset_impl(
 		screen,
 		instance,
 		func(scene: Node) -> void:
-			_mount_and_enter(
-				screen,
-				scene,
-				false,
-				on_complete,
-			),
+			_mount_scene(screen, scene)
+
+			screen.entered.emit(scene)
+			screen_entered.emit(screen, scene)
+			_restore_focus(scene)
+
+			screen_pushed.emit(screen)
+			on_complete.call(),
 	)
 
 
@@ -757,12 +1118,11 @@ func _resolve_scene_then(
 
 
 ## _teardown_scene disconnects signal handlers, emits the `exited` signal, and frees the
-## scene node. When `free_overlay` is false, only the scene is freed; the overlay stays
-## in the tree for reuse (e.g. during replace).
+## scene node. The overlay mapping for this screen should be erased before calling this
+## method if the overlay is being reused (e.g. during replace).
 func _teardown_scene(
 	screen: StdScreen,
 	scene: Node,
-	free_overlay: bool = true,
 ) -> void:
 	screen.disconnect_signal_handlers(scene)
 	screen.exited.emit(scene)
@@ -784,9 +1144,6 @@ func _teardown_scene(
 		_cache[screen] = scene
 	elif is_instance_valid(scene):
 		scene.queue_free()
-
-	if not free_overlay:
-		return
 
 	# Free the overlay if it is no longer used by any screen in the stack.
 	if overlay and not _overlays.values().has(overlay) and is_instance_valid(overlay):
@@ -812,6 +1169,22 @@ func _current_scene() -> Node:
 	return _scenes.get(screen) if screen else null
 
 
+## _emit_covered emits the covered signal and notification for the previous scene.
+func _emit_covered(previous: Node) -> void:
+	if not previous:
+		return
+
+	assert(
+		_stack.size() >= 2,
+		"invalid state; expected at least two screens on the stack",
+	)
+
+	var prev_screen: StdScreen = _stack[_stack.size() - 2]
+	prev_screen.covered.emit(previous)
+	screen_covered.emit(prev_screen, previous)
+	previous.propagate_notification(NOTIFICATION_SCREEN_COVERED)
+
+
 ## _get_current_overlay returns the overlay for the topmost screen, or `null` if the
 ## stack is empty.
 func _get_current_overlay() -> StdScreenOverlay:
@@ -828,13 +1201,6 @@ func _get_overlay_screens(overlay: StdScreenOverlay) -> Array[StdScreen]:
 			screens.append(screen)
 
 	return screens
-
-
-## _on_transitions_settled refreshes process modes and restores focus after all
-## transitions complete.
-func _on_transitions_settled() -> void:
-	_update_process_modes()
-	_restore_focus(_current_scene())
 
 
 ## _update_overlay_config recalculates the click-to-close mask for the topmost overlay.
@@ -865,7 +1231,7 @@ func _update_process_modes() -> void:
 			if scene.has_meta(_META_PROCESS_MODE):
 				scene.process_mode = (
 					scene
-					. get_meta(
+					.get_meta(
 						_META_PROCESS_MODE,
 					)
 				)
@@ -875,7 +1241,7 @@ func _update_process_modes() -> void:
 			if not scene.has_meta(_META_PROCESS_MODE):
 				(
 					scene
-					. set_meta(
+					.set_meta(
 						_META_PROCESS_MODE,
 						scene.process_mode,
 					)
