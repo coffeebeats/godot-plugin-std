@@ -1,8 +1,8 @@
 ##
 ## std/input/loader.gd
 ##
-## StdInputActionSetLoader is a node which facilitates loading and unloading actions
-## sets and layers based on scene tree state.
+## StdInputActionSetLoader is a node which facilitates loading and unloading action sets
+## and action set layers based on scene tree state.
 ##
 
 class_name StdInputActionSetLoader
@@ -57,11 +57,11 @@ extends Control
 ## uncovered (i.e. when a screen pushed on top of it is popped).
 @export var load_on_uncovered: bool = true
 
-@export_group("Action set layer")
+@export_group("Action set layers")
 
-## action_set_layer is an `StdInputActionSetLayer` that will be enabled by the
-## configured hooks.
-@export var action_set_layer: StdInputActionSet = null
+## action_set_layers is an array of `StdInputActionSetLayer` resources that will be
+## enabled by the configured hooks.
+@export var action_set_layers: Array[StdInputActionSetLayer] = []
 
 @export_subgroup("Scene tree")
 
@@ -130,30 +130,36 @@ extends Control
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## disable_action_set_layer disables the configured action set layer for the the player.
-func disable_action_set_layer() -> void:
-	assert(action_set_layer is StdInputActionSetLayer, "invalid state; missing layer")
+## disable_action_set_layers disables the configured action set layers for the player.
+func disable_action_set_layers() -> void:
+	assert(
+		not action_set_layers.is_empty(),
+		"invalid state; missing layers",
+	)
 
 	var slot := StdInputSlot.for_player(player_id)
 	assert(slot is StdInputSlot, "invalid state; missing input slot")
 
-	if not _is_action_set_layer_enabled():
-		return
+	var enabled := slot.list_action_set_layers()
+	for layer in action_set_layers:
+		if layer in enabled:
+			slot.disable_action_set_layer(layer)
 
-	slot.disable_action_set_layer(action_set_layer)
 
-
-## enable_action_set_layer enables the configured action set layer for the the player.
-func enable_action_set_layer() -> void:
-	assert(action_set_layer is StdInputActionSetLayer, "invalidstate; missinglayer")
+## enable_action_set_layers enables the configured action set layers for the player.
+func enable_action_set_layers() -> void:
+	assert(
+		not action_set_layers.is_empty(),
+		"invalid state; missing layers",
+	)
 
 	var slot := StdInputSlot.for_player(player_id)
-	assert(slot is StdInputSlot, "invalidstate; missinginputslot")
+	assert(slot is StdInputSlot, "invalid state; missing input slot")
 
-	if _is_action_set_layer_enabled():
-		return
-
-	slot.enable_action_set_layer(action_set_layer)
+	var enabled := slot.list_action_set_layers()
+	for layer in action_set_layers:
+		if layer not in enabled:
+			slot.enable_action_set_layer(layer)
 
 
 ## load_action_set loads the configured action set for the the player.
@@ -172,62 +178,50 @@ func load_action_set() -> void:
 func _enter_tree() -> void:
 	if action_set and load_on_enter:
 		load_action_set.call_deferred()
-	if action_set_layer and enable_on_enter:
-		enable_action_set_layer.call_deferred()
+	if not action_set_layers.is_empty() and enable_on_enter:
+		enable_action_set_layers.call_deferred()
 
 
 func _exit_tree() -> void:
-	if action_set_layer and disable_on_exit:
-		disable_action_set_layer()
+	if not action_set_layers.is_empty() and disable_on_exit:
+		disable_action_set_layers()
 
 
 func _notification(what) -> void:
 	match what:
 		StdScreenManager.NOTIFICATION_SCREEN_COVERED:
-			if action_set_layer and disable_on_covered:
-				disable_action_set_layer()
+			if not action_set_layers.is_empty() and disable_on_covered:
+				disable_action_set_layers()
 
 		StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED:
 			if action_set and load_on_uncovered:
 				load_action_set()
-			if action_set_layer and enable_on_uncovered:
-				enable_action_set_layer()
+			if not action_set_layers.is_empty() and enable_on_uncovered:
+				enable_action_set_layers()
 
 		NOTIFICATION_VISIBILITY_CHANGED:
 			if is_visible_in_tree():
 				if action_set and load_on_visible:
 					load_action_set()
 
-				if action_set_layer:
+				if not action_set_layers.is_empty():
 					if enable_on_visible:
-						enable_action_set_layer()
+						enable_action_set_layers()
 					elif disable_on_visible:
-						disable_action_set_layer()
+						disable_action_set_layers()
 			else:
 				if action_set and load_on_hidden:
 					load_action_set()
 
-				if action_set_layer:
+				if not action_set_layers.is_empty():
 					if disable_on_hidden:
-						disable_action_set_layer()
+						disable_action_set_layers()
 					elif enable_on_hidden:
-						enable_action_set_layer()
+						enable_action_set_layers()
 
 
 func _ready() -> void:
 	if action_set and load_on_ready:
 		load_action_set.call_deferred()
-	if action_set_layer and enable_on_ready:
-		enable_action_set_layer.call_deferred()
-
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-func _is_action_set_layer_enabled() -> bool:
-	assert(action_set_layer is StdInputActionSetLayer, "invalidstate; missingactionset")
-
-	var slot := StdInputSlot.for_player(player_id)
-	assert(slot is StdInputSlot, "invalidstate; missinginputslot")
-
-	return action_set_layer in slot.list_action_set_layers()
+	if not action_set_layers.is_empty() and enable_on_ready:
+		enable_action_set_layers.call_deferred()
