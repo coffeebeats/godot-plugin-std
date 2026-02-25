@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.5.1 (2026-02-25)
+
+## What's Changed
+* fix(input): don't let synthetic input actions cause focus swaps by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/375
+* fix(input): allow `StdInputActionSetLoader` to support multiple action set layers by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/378
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.5.0...v4.5.1
+
 ## 4.5.0 (2026-02-22)
 
 ## What's Changed
