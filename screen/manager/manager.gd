@@ -312,7 +312,7 @@ func _force_stop() -> void:
 	# Free entering scenes that were never mounted to prevent orphaned nodes. The scene
 	# is not in the tree and would otherwise leak.
 	if ctx and not ctx._did_mount and is_instance_valid(ctx.entering_scene):
-		ctx.entering_scene.queue_free()
+		ctx.entering_scene.free()
 
 	if ctx:
 		ctx._did_finish = true

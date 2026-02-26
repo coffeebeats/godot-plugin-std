@@ -51,7 +51,7 @@ func _stop() -> void:
 	if _overlay and is_instance_valid(_overlay):
 		if _overlay.is_inside_tree():
 			_overlay.get_parent().remove_child(_overlay)
-		_overlay.queue_free()
+		_overlay.free()
 
 	_overlay = null
 	_context = null
