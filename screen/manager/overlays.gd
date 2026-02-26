@@ -51,16 +51,12 @@ func get_current(stack: Array[StdScreen]) -> StdScreenOverlay:
 
 ## get_or_create returns or creates an overlay for the given screen. When
 ## `block_input_below` is false and the stack is non-empty, shares the top screen's
-## overlay. When `reuse` is provided and valid, it will be returned directly.
+## overlay.
 func get_or_create(
 	stack: Array[StdScreen],
 	block_input_below: bool,
 	on_background_clicked: Callable,
-	reuse: StdScreenOverlay = null,
 ) -> StdScreenOverlay:
-	if is_instance_valid(reuse) and block_input_below:
-		return reuse
-
 	if not block_input_below and not stack.is_empty():
 		var shared: StdScreenOverlay = _overlays.get(stack[-1])
 		assert(
@@ -70,7 +66,6 @@ func get_or_create(
 
 		if is_instance_valid(shared):
 			return shared
-
 
 	var overlay := StdScreenOverlay.new()
 	overlay.background_clicked.connect(on_background_clicked)
