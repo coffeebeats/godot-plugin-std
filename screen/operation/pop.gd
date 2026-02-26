@@ -25,7 +25,9 @@ static func create(depth: int, transition: StdScreenTransition = null) -> RefCou
 	op._transition = transition
 	return op
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
 
 func _execute(manager: StdScreenManager, done: Callable) -> void:
 	# Pop intermediate screens instantly (no transition - industry standard approach).

@@ -10,7 +10,7 @@ extends RefCounted
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 @warning_ignore("unused_private_class_variable")
-static var _logger := StdLogger.create(&"std/screen/operation") # gdlint:ignore=class-definitions-order,max-line-length
+static var _logger := StdLogger.create(&"std/screen/operation")  # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

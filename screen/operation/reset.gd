@@ -26,7 +26,9 @@ static func create(screen: StdScreen, instance: Node = null) -> RefCounted:
 	op._instance = instance
 	return op
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
 
 func _execute(manager: StdScreenManager, done: Callable) -> void:
 	# Teardown all existing scenes in reverse order.
