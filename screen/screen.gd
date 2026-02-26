@@ -44,20 +44,6 @@ signal exiting(scene: Node)
 @warning_ignore("unused_signal")
 signal uncovered(scene: Node)
 
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
-## ReplaceExitMode controls whether and how the exit phase runs during a replace
-## operation. The entering screen declares this mode.
-enum ReplaceExitMode {
-	NONE = 0,  ## NONE skips the exit transition entirely.
-	PREVIOUS = 1,  ## PREVIOUS uses the exiting screen's transition for the exit phase.
-	SELF = 2,  ## SELF uses this (entering) screen's transition for the exit phase.
-}
-
-const REPLACE_EXIT_MODE_NONE := ReplaceExitMode.NONE
-const REPLACE_EXIT_MODE_PREVIOUS := ReplaceExitMode.PREVIOUS
-const REPLACE_EXIT_MODE_SELF := ReplaceExitMode.SELF
-
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## scene_path is the path to the packed scene file. Optional; when empty, the caller
@@ -75,19 +61,14 @@ const REPLACE_EXIT_MODE_SELF := ReplaceExitMode.SELF
 
 @export_subgroup("Transition")
 
-## transition is the transition used for this screen's visual lifecycle. For push and
-## replace operations, `_enter()` is called. For pop operations, `_exit()` is called.
+## transition is the transition used for this screen's visual lifecycle.
 @export var transition: StdScreenTransition
-
-## replace_exit controls whether the exit phase runs during a replace operation where
-## this screen enters the scene tree.
-@export var replace_exit: ReplaceExitMode = ReplaceExitMode.NONE
 
 @export_subgroup("Dependencies")
 
 ## preload_scenes is a list of scene paths that must be loaded before this screen's
-## enter transition starts. Loaded resources are held in memory for the screen's
-## lifetime in the stack.
+## target scene may enter the scene tree.
+##
 @export_file("*.tscn", "*.scn") var preload_scenes: PackedStringArray = []
 
 @export_subgroup("Input")
@@ -99,22 +80,14 @@ const REPLACE_EXIT_MODE_SELF := ReplaceExitMode.SELF
 @export var block_input_below: bool = true
 
 ## overlay_click_to_close is a bitmask of mouse buttons that trigger a close request
-## when the overlay background (scrim) is clicked. Uses MouseButtonMask values (1=Left,
-## 2=Right, 4=Middle). Set to 0 (default) to disable.
+## when the overlay background (scrim) is clicked.
 @export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
-
-## close_animate_intermediate controls whether closing this screen's overlay animates
-## all exit transitions sequentially. When false (default), only the bottom screen in
-## the overlay plays its exit animation; upper screens are torn down instantly. Only the
-## bottom-most screen's value is used.
-@export var close_animate_intermediate: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## disconnect_signal_handlers disconnects all callbacks on this screen's lifecycle
-## signals that are bound to the given scene. Used to remove stale connections if the
-## same `StdScreen` is reused.
+## signals that are bound to the given scene.
 func disconnect_signal_handlers(scene: Node) -> void:
 	for s in [
 		close_requested,
