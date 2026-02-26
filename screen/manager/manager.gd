@@ -11,9 +11,11 @@ extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
+@warning_ignore("unused_signal")
 ## screen_covered is emitted when another screen is pushed on top.
 signal screen_covered(screen: StdScreen, scene: Node)
 
+@warning_ignore("unused_signal")
 ## screen_entered is emitted after a screen's enter transition completes.
 signal screen_entered(screen: StdScreen, scene: Node)
 
@@ -24,6 +26,7 @@ signal screen_entering(screen: StdScreen, scene: Node)
 ## screen_exited is emitted after a screen's exit transition completes.
 signal screen_exited(screen: StdScreen, scene: Node)
 
+@warning_ignore("unused_signal")
 ## screen_exiting is emitted before a screen's exit transition starts.
 signal screen_exiting(screen: StdScreen, scene: Node)
 
@@ -69,8 +72,6 @@ static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1 # gdlint:ignore=clas
 ## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
 ## screen is popped.
 static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
-
-static var _logger := StdLogger.create(&"std/screen/manager") # gdlint:ignore=class-definitions-order,max-line-length
 
 var _active_context: StdScreenTransitionContext = null
 var _active_transition: StdScreenTransition = null

@@ -14,9 +14,15 @@ const Context := preload("../context.gd")
 
 
 class MockManager:
-	extends Node
+	extends StdScreenManager
 
 	signal transition_done
+
+	func _exit_tree() -> void:
+		pass
+
+	func _ready() -> void:
+		pass
 
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -92,7 +98,7 @@ func test_overlay_color_updates_on_start():
 	var scene := _create_scene()
 
 	# When: The fade starts.
-	var ctx := _start_pop(fade, scene)
+	_start_pop(fade, scene)
 	await wait_process_frames(1)
 
 	# Then: The overlay color matches.

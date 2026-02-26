@@ -31,13 +31,20 @@ static func create(
 	op._transition = transition
 	return op
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
 func _execute(manager: StdScreenManager, done: Callable) -> void:
 	# Reject duplicate (non-self) replace.
 	if _screen in manager._stack and manager._stack[-1] != _screen:
-		manager._logger.warn("Duplicate replace ignored; screen already in stack.")
+		(
+			_logger
+			. warn(
+				"Ignored; screen already in stack.",
+				{&"op": &"replace"},
+			)
+		)
 		done.call()
 		return
 

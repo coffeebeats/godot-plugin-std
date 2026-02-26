@@ -39,10 +39,10 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	# Validate: no duplicates in stack.
 	if _screen in manager._stack:
 		(
-			manager
-			._logger
-			.warn(
-				"Duplicate push ignored;" + " screen already in stack.",
+			_logger
+			. warn(
+				"Ignored; screen already in stack.",
+				{&"op": &"push"},
 			)
 		)
 		done.call()
@@ -53,7 +53,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	# Resolve scene (await if async load needed).
 	var scene: Node = await (
 		manager
-		._resolve_scene(
+		. _resolve_scene(
 			_screen,
 			_instance,
 		)
@@ -66,7 +66,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 
 	var transition: StdScreenTransition = (
 		manager
-		._resolve_transition(
+		. _resolve_transition(
 			_screen,
 			_transition,
 		)

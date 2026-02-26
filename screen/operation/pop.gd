@@ -30,7 +30,9 @@ static func create(depth: int, transition: StdScreenTransition = null) -> RefCou
 func _execute(manager: StdScreenManager, done: Callable) -> void:
 	# Pop intermediate screens instantly (no transition - industry standard approach).
 	while manager._stack.size() > _depth + 1:
+		@warning_ignore("confusable_local_declaration")
 		var screen: StdScreen = manager._stack[-1]
+		@warning_ignore("confusable_local_declaration")
 		var scene: Node = manager._scenes[screen]
 
 		screen.exiting.emit(scene)
