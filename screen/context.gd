@@ -24,18 +24,21 @@ var current_scene: Node = null
 ## entering_scene is the entering scene instance. Null for pop operations.
 var entering_scene: Node = null
 
+## manager is the screen manager node that owns this transition context.
+var manager: Node
+
 var _did_mount: bool = false
 var _did_unmount: bool = false
 var _did_finish: bool = false
-var _manager: Node
 var _mount_fn: Callable = Callable()
 var _unmount_fn: Callable = Callable()
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _init(manager: Node) -> void:
-	_manager = manager
+func _init(node: StdScreenManager) -> void:
+	assert(node is StdScreenManager, "invalid argument; missing manager")
+	manager = node
 
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -43,7 +46,7 @@ func _init(manager: Node) -> void:
 
 ## create_tween creates a new Tween via the scene tree.
 func create_tween() -> Tween:
-	return _manager.get_tree().create_tween()
+	return manager.get_tree().create_tween()
 
 
 ## done signals that the transition completed normally. Emits the `finished` signal.
@@ -63,18 +66,6 @@ func mount() -> void:
 
 	_did_mount = true
 	_mount_fn.call()
-
-
-## pop_node removes a node from the manager without freeing it.
-func pop_node(node: Node) -> void:
-	if node.is_inside_tree() and node.get_parent() == _manager:
-		_manager.remove_child(node)
-
-
-## push_node adds a node as an internal-back child of the manager, rendering it on top
-## of all regular children.
-func push_node(node: Node) -> void:
-	_manager.add_child(node, false, Node.INTERNAL_MODE_BACK)
 
 
 ## swap performs an atomic unmount and then mount.

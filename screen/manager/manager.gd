@@ -29,15 +29,6 @@ signal screen_exited(screen: StdScreen, scene: Node)
 ## screen_exiting is emitted before a screen's exit transition starts.
 signal screen_exiting(screen: StdScreen, scene: Node)
 
-## screen_popped is emitted after a pop operation completes.
-signal screen_popped(screen: StdScreen)
-
-## screen_pushed is emitted after a push operation completes.
-signal screen_pushed(screen: StdScreen)
-
-## screen_replaced is emitted after a replace operation completes.
-signal screen_replaced(prev: StdScreen, next: StdScreen)
-
 ## screen_uncovered is emitted when a covering screen is popped.
 signal screen_uncovered(screen: StdScreen, scene: Node)
 

@@ -10,10 +10,6 @@
 class_name StdScreenTransitionFade
 extends StdScreenTransition
 
-# -- DEFINITIONS --------------------------------------------------------------------- #
-
-const _FADE_OVERLAY_KEY := &"_addons_std_fade_overlay"
-
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## color is the color to fade to/from (typically black).
@@ -27,13 +23,6 @@ const _FADE_OVERLAY_KEY := &"_addons_std_fade_overlay"
 var _context: StdScreenTransitionContext = null
 var _overlay: ColorRect = null
 var _tween: Tween = null
-
-# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
-
-
-func _init() -> void:
-	reset_on_interrupt = false
-
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
