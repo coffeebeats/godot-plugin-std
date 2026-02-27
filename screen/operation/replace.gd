@@ -67,7 +67,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	screen_prev.exiting.emit(scene_prev)
 	manager.screen_exiting.emit(screen_prev, scene_prev)
 
-	var transition := manager._resolve_transition(_screen, _transition)
+	var transition := manager._resolve_transition(_screen, _transition, &"push")
 
 	if transition == null:
 		# Instant replace: teardown old, mount new.

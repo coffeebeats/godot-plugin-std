@@ -350,6 +350,97 @@ func test_close_requested_propagates_topmost_first():
 	assert_eq(_manager.get_depth(), 1)
 
 
+func test_is_current_matches_topmost_screen():
+	# Given: Two screens pushed onto the stack.
+	var first := _create_screen()
+	var second := _create_screen()
+	await _do_push(first)
+	await _do_push(second)
+
+	# Then: Only the topmost screen reports as current.
+	assert_true(_manager.is_current(second))
+	assert_false(_manager.is_current(first))
+
+
+func test_transition_push_overrides_default_transition():
+	# Given: A screen with both transition and transition_push set.
+	# The two transitions use different block_input values so the
+	# active duplicate can be traced back to its source.
+	var default_tx := MockTransition.new()
+	default_tx.block_input = true
+	var push_tx := MockTransition.new()
+	push_tx.block_input = false
+	var screen := _create_screen(default_tx)
+	screen.transition_push = push_tx
+	await _do_push(screen)
+
+	# Then: The push-specific transition was used.
+	var active := _get_active_transition()
+	assert_true(active is MockTransition)
+	assert_true(active.push_started)
+	assert_false(
+		active.block_input,
+		"active should be a duplicate of push_tx",
+	)
+
+
+func test_transition_pop_overrides_default_transition():
+	# Given: Two screens; the top has transition_pop set.
+	# Different block_input values distinguish the transitions.
+	var default_tx := MockTransition.new()
+	default_tx.block_input = true
+	var pop_tx := MockTransition.new()
+	pop_tx.block_input = false
+	await _do_push()
+	var screen := _create_screen(default_tx)
+	screen.transition_pop = pop_tx
+	await _do_push(screen)
+
+	# Complete the push transition so the screen is fully entered.
+	var push_active := _get_active_transition()
+	push_active.do_mount()
+	push_active.complete()
+	await wait_idle_frames(1)
+
+	# When: The screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The pop-specific transition was used.
+	var active := _get_active_transition()
+	assert_true(active is MockTransition)
+	assert_true(active.pop_started)
+	assert_false(
+		active.block_input,
+		"active should be a duplicate of pop_tx",
+	)
+
+
+func test_replace_uses_transition_push_override():
+	# Given: A screen with transition_push set and a different
+	# default. block_input distinguishes the two.
+	var default_tx := MockTransition.new()
+	default_tx.block_input = true
+	var push_tx := MockTransition.new()
+	push_tx.block_input = false
+	await _do_push()
+	var screen := _create_screen(default_tx)
+	screen.transition_push = push_tx
+
+	# When: The top screen is replaced with screen.
+	_manager.replace(screen, Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The push-specific transition was used for replace.
+	var active := _get_active_transition()
+	assert_true(active is MockTransition)
+	assert_true(active.replace_started)
+	assert_false(
+		active.block_input,
+		"replace should use transition_push",
+	)
+
+
 func test_exit_tree_stops_transitions_and_clears_queue():
 	# Given: A screen with a transition.
 	var screen := _create_screen(MockTransition.new())

@@ -67,11 +67,11 @@ class _InputBlocker:
 
 ## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree when the screen is
 ## covered by another.
-static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 ## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
 ## screen is popped.
-static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 var _active_context: StdScreenTransitionContext = null
 var _active_transition: StdScreenTransition = null
@@ -106,6 +106,11 @@ func get_current_screen() -> StdScreen:
 ## get_depth returns the stack depth.
 func get_depth() -> int:
 	return _stack.size()
+
+
+## is_current returns whether the given screen is the topmost.
+func is_current(screen: StdScreen) -> bool:
+	return _current_screen() == screen
 
 
 ## get_scene returns the topmost scene instance, or null if empty.
@@ -147,7 +152,7 @@ func pop(force: bool = false, transition: StdScreenTransition = null) -> void:
 	var depth := _stack.size() - 1
 	var op := Pop.create(depth, transition)
 	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
+		func(): op._execute(self , _queue.complete),
 	)
 
 
@@ -159,7 +164,7 @@ func pop_to(screen: StdScreen) -> void:
 	var depth := idx + 1
 	var op := Pop.create(depth)
 	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
+		func(): op._execute(self , _queue.complete),
 	)
 
 
@@ -176,7 +181,7 @@ func push(
 
 	var op := Push.create(screen, instance, transition)
 	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
+		func(): op._execute(self , _queue.complete),
 	)
 
 
@@ -197,7 +202,7 @@ func replace(
 
 	var op := Replace.create(screen, instance, transition)
 	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
+		func(): op._execute(self , _queue.complete),
 	)
 
 
@@ -206,7 +211,7 @@ func reset(screen: StdScreen, instance: Node = null) -> void:
 	assert(screen != null, "invalid argument: missing screen")
 
 	var op := Reset.create(screen, instance)
-	_queue.enqueue_or_run(func(): op._execute(self, _queue.complete))
+	_queue.enqueue_or_run(func(): op._execute(self , _queue.complete))
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -222,11 +227,11 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	_queue = OperationQueue.new(self)
+	_queue = OperationQueue.new(self )
 
 	_cursor = (
 		StdGroup
-		. get_sole_member(
+		.get_sole_member(
 			StdInputCursor.GROUP_INPUT_CURSOR,
 		)
 	)
@@ -239,7 +244,7 @@ func _ready() -> void:
 	_loader.name = &"StdScreenLoader"
 	add_child(_loader, Engine.is_editor_hint(), INTERNAL_MODE_FRONT)
 
-	_overlays = Overlays.new(self)
+	_overlays = Overlays.new(self )
 
 	if initial:
 		push(initial)
@@ -283,7 +288,7 @@ func _current_screen() -> StdScreen:
 ## enqueuing.
 func _do_pop_to_depth(depth: int) -> void:
 	var op := Pop.create(depth)
-	op._execute(self, _queue.complete)
+	op._execute(self , _queue.complete)
 
 
 ## _force_hover_recalculation dispatches a synthetic mouse motion event to force Godot
@@ -333,7 +338,7 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 	if not is_instance_valid(overlay):
 		overlay = (
 			_overlays
-			. get_or_create(
+			.get_or_create(
 				_stack,
 				screen.block_input_below,
 				_request_close_overlay,
@@ -399,7 +404,7 @@ func _resolve_preloads(screen: StdScreen) -> void:
 
 	var dep_results := (
 		_loader
-		. load_all_scenes(
+		.load_all_scenes(
 			screen.preload_scenes,
 		)
 	)
@@ -444,14 +449,18 @@ func _resolve_scene(screen: StdScreen, instance: Node = null) -> Node:
 	return result.scene.instantiate()
 
 
-## _resolve_transition returns the transition to use for an operation. Resolution order:
-## explicit parameter > screen's transition > null.
+## _resolve_transition returns the transition to use for an operation.
 func _resolve_transition(
 	screen: StdScreen,
 	explicit: StdScreenTransition,
+	operation: StringName = &"",
 ) -> StdScreenTransition:
 	if explicit:
 		return explicit
+	if operation == &"push" and screen.transition_push:
+		return screen.transition_push
+	if operation == &"pop" and screen.transition_pop:
+		return screen.transition_pop
 	return screen.transition
 
 
@@ -568,14 +577,14 @@ func _unmount_scene(screen: StdScreen, scene: Node) -> void:
 		new_top_screen.uncovered.emit(new_top_scene)
 		(
 			screen_uncovered
-			. emit(
+			.emit(
 				new_top_screen,
 				new_top_scene,
 			)
 		)
 		(
 			new_top_scene
-			. propagate_notification(
+			.propagate_notification(
 				NOTIFICATION_SCREEN_UNCOVERED,
 			)
 		)
@@ -599,7 +608,7 @@ func _update_process_modes() -> void:
 			if scene.has_meta(_META_PROCESS_MODE):
 				scene.process_mode = (
 					scene
-					. get_meta(
+					.get_meta(
 						_META_PROCESS_MODE,
 					)
 				)
@@ -608,7 +617,7 @@ func _update_process_modes() -> void:
 			if not scene.has_meta(_META_PROCESS_MODE):
 				(
 					scene
-					. set_meta(
+					.set_meta(
 						_META_PROCESS_MODE,
 						scene.process_mode,
 					)

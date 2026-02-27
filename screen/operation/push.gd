@@ -69,6 +69,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		. _resolve_transition(
 			_screen,
 			_transition,
+			&"push",
 		)
 	)
 

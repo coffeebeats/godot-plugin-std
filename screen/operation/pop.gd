@@ -52,7 +52,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	screen.exiting.emit(scene)
 	manager.screen_exiting.emit(screen, scene)
 
-	var transition := manager._resolve_transition(screen, _transition)
+	var transition := manager._resolve_transition(screen, _transition, &"pop")
 
 	if transition == null:
 		manager._unmount_scene(screen, scene)
