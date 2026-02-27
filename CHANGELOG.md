@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.5.4 (2026-02-27)
+
+## What's Changed
+* chore(screen): better organize properties on screens and transitions by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/382
+* fix(screen): load scenes and dependencies alongside exit transitions by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/384
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.5.3...v4.5.4
+
 ## 4.5.3 (2026-02-27)
 
 ## What's Changed
