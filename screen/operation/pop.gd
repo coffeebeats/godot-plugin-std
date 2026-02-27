@@ -8,7 +8,7 @@ extends "operation.gd"
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Pop := preload("res://screen/operation/pop.gd")
+const Pop := preload("pop.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
