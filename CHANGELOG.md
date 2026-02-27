@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.5.2 (2026-02-27)
+
+## What's Changed
+* refactor(screen): merge enter/exit transition resource; fix transition lifecycle by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/377
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.5.1...v4.5.2
+
 ## 4.5.1 (2026-02-25)
 
 ## What's Changed
