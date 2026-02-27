@@ -52,22 +52,10 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	manager._overlays.clear()
 	manager._preloads.clear()
 
-	_resolve_and_load(
-		manager,
-		_screen,
-		_instance,
-		_do_reset.bind(manager, done),
-	)
+	var result: Array = manager._create_resolver(_screen, _instance)
+	var resolver: Callable = result[0]
+	var sync_scene: Node = result[1]
 
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-func _do_reset(
-	scene: Node,
-	manager: StdScreenManager,
-	done: Callable,
-) -> void:
 	var transition := manager._resolve_transition(_screen, _transition, &"push")
 
 	_run_transition(
@@ -75,10 +63,12 @@ func _do_reset(
 		transition,
 		&"push",
 		null,
-		scene,
-		func() -> void: manager._mount_scene(_screen, scene),
+		sync_scene,
+		func(scene: Node) -> void: manager._mount_scene(_screen, scene),
 		Callable(),
 		func() -> void:
+			var scene: Node = manager._scenes.get(_screen)
 			_emit_entered(manager, _screen, scene)
 			done.call(),
+		resolver,
 	)

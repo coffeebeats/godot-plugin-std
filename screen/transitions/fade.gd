@@ -14,8 +14,12 @@ extends StdScreenTransition
 ## color is the color to fade to/from (typically black).
 @export var color: Color = Color.BLACK
 
+@export_group("Curve")
+
 ## curve configures the timing and easing for the fade tween.
 @export var curve: StdTweenCurve = null
+
+@export_subgroup("Overrides")
 
 ## curve_cover overrides `curve` for the fade-to-opaque phase.
 @export var curve_cover: StdTweenCurve = null

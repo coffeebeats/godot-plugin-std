@@ -59,10 +59,12 @@ signal uncovered(scene: Node)
 ## disabled when another screen is pushed on top.
 @export var pause_when_covered: bool = false
 
-@export_subgroup("Transition")
+@export_group("Transition")
 
 ## transition is the default transition used for this screen's visual lifecycle.
 @export var transition: StdScreenTransition
+
+@export_subgroup("Overrides")
 
 ## transition_push overrides `transition` for push, replace, and reset operations.
 @export var transition_push: StdScreenTransition
@@ -70,14 +72,14 @@ signal uncovered(scene: Node)
 ## transition_pop overrides `transition` for pop operations.
 @export var transition_pop: StdScreenTransition
 
-@export_subgroup("Dependencies")
+@export_group("Dependencies")
 
-## preload_scenes is a list of scene paths that must be loaded before this screen's
-## target scene may enter the scene tree.
-##
-@export_file("*.tscn", "*.scn") var preload_scenes: PackedStringArray = []
+## dependency_scenes is a list of scene paths that are loaded alongside this screen's
+## target scene. Loading begins immediately when the operation starts, overlapping with
+## any exit transition; resolution blocks at mount time only if still in progress.
+@export_file("*.tscn", "*.scn") var dependency_scenes: PackedStringArray = []
 
-@export_subgroup("Input")
+@export_group("Input")
 
 ## block_input_below controls whether this screen creates a new input isolation layer.
 ## When true (default), a new overlay is created that blocks both mouse and keyboard
