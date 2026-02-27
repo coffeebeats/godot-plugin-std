@@ -61,8 +61,14 @@ signal uncovered(scene: Node)
 
 @export_subgroup("Transition")
 
-## transition is the transition used for this screen's visual lifecycle.
+## transition is the default transition used for this screen's visual lifecycle.
 @export var transition: StdScreenTransition
+
+## transition_push overrides `transition` for push and replace operations.
+@export var transition_push: StdScreenTransition
+
+## transition_pop overrides `transition` for pop operations.
+@export var transition_pop: StdScreenTransition
 
 @export_subgroup("Dependencies")
 
