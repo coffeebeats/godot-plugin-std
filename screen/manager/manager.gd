@@ -126,7 +126,7 @@ func load_screen(screen: StdScreen, include_dependencies: bool = true) -> Dictio
 	if screen.scene_path:
 		paths.append(screen.scene_path)
 	if include_dependencies:
-		paths.append_array(screen.dependency_scenes)
+		paths.append_array(screen.get_dependency_paths())
 	return _loader.load_all_scenes(paths)
 
 
@@ -300,7 +300,7 @@ func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 			scene_path = screen.scene_path
 			load_result = _loader.load_scene(scene_path)
 
-	var dep_paths := screen.dependency_scenes
+	var dep_paths := screen.get_dependency_paths()
 	if not dep_paths.is_empty():
 		_preloads[screen] = _loader.load_all_scenes(dep_paths)
 
