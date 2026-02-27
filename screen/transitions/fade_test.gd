@@ -195,6 +195,40 @@ func test_replace_fade_completes():
 	assert_signal_emitted(_mock, "transition_done")
 
 
+func test_curve_cover_overrides_cover_phase():
+	# Given: A fade with a fast cover curve and slow reveal curve.
+	var fade := _create_fade()
+	fade.curve = null
+	fade.curve_cover = StdTweenCurve.new()
+	fade.curve_cover.duration = 0.01
+	fade.curve_reveal = StdTweenCurve.new()
+	fade.curve_reveal.duration = 0.01
+	var scene := _create_scene()
+
+	# When: A push fade runs (both phases use their overrides).
+	_start_push(fade, scene, scene)
+	await wait_for_signal(_mock.transition_done, 2.0)
+
+	# Then: The fade completed (both phase curves were resolved).
+	assert_signal_emitted(_mock, "transition_done")
+
+
+func test_curve_reveal_overrides_reveal_phase():
+	# Given: A fade with a reveal curve override.
+	var fade := _create_fade()
+	fade.curve = null
+	fade.curve_reveal = StdTweenCurve.new()
+	fade.curve_reveal.duration = 0.01
+	var scene := _create_scene()
+
+	# When: A push fade starts with no current scene.
+	_start_push(fade, scene, null)
+	await wait_for_signal(_mock.transition_done, 2.0)
+
+	# Then: The fade completed using curve_reveal.
+	assert_signal_emitted(_mock, "transition_done")
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

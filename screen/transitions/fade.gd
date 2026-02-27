@@ -17,6 +17,12 @@ extends StdScreenTransition
 ## curve configures the timing and easing for the fade tween.
 @export var curve: StdTweenCurve = null
 
+## curve_cover overrides `curve` for the fade-to-opaque phase.
+@export var curve_cover: StdTweenCurve = null
+
+## curve_reveal overrides `curve` for the fade-to-transparent phase.
+@export var curve_reveal: StdTweenCurve = null
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _change_fn: Callable = Callable()
@@ -28,17 +34,14 @@ var _tween: Tween = null
 
 
 func _push(ctx: StdScreenTransitionContext) -> void:
-	assert(curve is StdTweenCurve, "invalid config; missing curve")
 	_start_curtain(ctx, ctx.mount)
 
 
 func _pop(ctx: StdScreenTransitionContext) -> void:
-	assert(curve is StdTweenCurve, "invalid config; missing curve")
 	_start_curtain(ctx, ctx.unmount)
 
 
 func _replace(ctx: StdScreenTransitionContext) -> void:
-	assert(curve is StdTweenCurve, "invalid config; missing curve")
 	_start_curtain(ctx, ctx.swap)
 
 
@@ -70,7 +73,9 @@ func _start_curtain(ctx: StdScreenTransitionContext, change_fn: Callable) -> voi
 
 	if ctx.current_scene:
 		# Fade to opaque over the current scene, then callback.
-		_fade_to(1.0, _on_covered)
+		var c := curve_cover if curve_cover else curve
+		assert(c is StdTweenCurve, "invalid config; missing curve")
+		_fade_to(c, 1.0, _on_covered)
 	else:
 		# Initial push: start fully opaque, skip fade-out.
 		_overlay.modulate.a = 1.0
@@ -79,21 +84,23 @@ func _start_curtain(ctx: StdScreenTransitionContext, change_fn: Callable) -> voi
 
 ## _fade_to tweens the overlay alpha to the target value and calls the callback on
 ## completion. Uses proportional duration based on remaining distance.
-func _fade_to(target: float, on_complete: Callable) -> void:
-	var adjusted := curve.duration * absf(_overlay.modulate.a - target)
+func _fade_to(curve_fade: StdTweenCurve, target: float, on_complete: Callable) -> void:
+	assert(curve_fade is StdTweenCurve, "invalid argument; missing curve")
+
+	var duration := curve_fade.duration * absf(_overlay.modulate.a - target)
 
 	if _tween and _tween.is_valid():
 		_tween.kill()
 
 	_tween = _context.create_tween()
 	(
-		curve
-		. tween_property(
+		curve_fade
+		.tween_property(
 			_tween,
 			_overlay,
 			^"modulate:a",
 			target,
-			adjusted,
+			duration,
 		)
 	)
 	_tween.tween_callback(on_complete)
@@ -125,7 +132,9 @@ func _on_covered() -> void:
 	_change_fn.call()
 
 	# Fade from opaque to transparent to reveal the new scene.
-	_fade_to(0.0, _on_revealed)
+	var c := curve_reveal if curve_reveal else curve
+	assert(c is StdTweenCurve, "invalid config; missing curve")
+	_fade_to(c, 0.0, _on_revealed)
 
 
 ## _on_revealed is called when the fade-to-transparent phase completes.
