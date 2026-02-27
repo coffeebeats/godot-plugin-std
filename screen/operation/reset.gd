@@ -46,16 +46,30 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	manager._overlays.clear()
 	manager._preloads.clear()
 
-	# Resolve the new base scene.
-	var scene: Node = await (manager._resolve_scene(_screen, _instance))
-
-	# Load preload dependencies.
-	await manager._resolve_preloads(_screen)
-
-	manager._mount_scene(_screen, scene)
-
-	_screen.entered.emit(scene)
-	manager.screen_entered.emit(_screen, scene)
-	manager._restore_focus(scene)
-
-	done.call()
+	manager._resolve_scene(
+		_screen,
+		_instance,
+		func(scene: Node) -> void:
+			manager._resolve_preloads(
+				_screen,
+				func() -> void:
+					(
+						manager
+						. _mount_scene(
+							_screen,
+							scene,
+						)
+					)
+					_screen.entered.emit(scene)
+					(
+						manager
+						. screen_entered
+						. emit(
+							_screen,
+							scene,
+						)
+					)
+					manager._restore_focus(scene)
+					done.call(),
+			),
+	)

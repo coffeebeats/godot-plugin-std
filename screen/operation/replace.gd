@@ -58,16 +58,44 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	if screen_prev.block_input_below and _screen.block_input_below:
 		overlay_prev = (manager._overlays.get_overlay(screen_prev))
 
-	# Resolve entering scene.
-	var scene: Node = await manager._resolve_scene(_screen, _instance)
+	manager._resolve_scene(
+		_screen,
+		_instance,
+		func(scene: Node) -> void:
+			manager._resolve_preloads(
+				_screen,
+				func() -> void:
+					_do_replace(
+						manager,
+						scene,
+						screen_prev,
+						scene_prev,
+						overlay_prev,
+						done,
+					),
+			),
+	)
 
-	# Load preload dependencies.
-	await manager._resolve_preloads(_screen)
 
+func _do_replace(
+	manager: StdScreenManager,
+	scene: Node,
+	screen_prev: StdScreen,
+	scene_prev: Node,
+	overlay_prev: StdScreenOverlay,
+	done: Callable,
+) -> void:
 	screen_prev.exiting.emit(scene_prev)
 	manager.screen_exiting.emit(screen_prev, scene_prev)
 
-	var transition := manager._resolve_transition(_screen, _transition, &"push")
+	var transition := (
+		manager
+		. _resolve_transition(
+			_screen,
+			_transition,
+			&"push",
+		)
+	)
 
 	if transition == null:
 		# Instant replace: teardown old, mount new.

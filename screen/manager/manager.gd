@@ -397,56 +397,100 @@ func _request_close_overlay(event: InputEvent) -> void:
 	)
 
 
-## _resolve_preloads loads preload dependencies for a screen and stores them.
-func _resolve_preloads(screen: StdScreen) -> void:
+## _resolve_preloads loads preload dependencies for a screen and invokes the callback
+## once all dependencies have finished loading.
+func _resolve_preloads(screen: StdScreen, callback: Callable) -> void:
 	if screen.preload_scenes.is_empty():
+		callback.call()
 		return
 
-	var dep_results := (
-		_loader
-		. load_all_scenes(
-			screen.preload_scenes,
-		)
-	)
+	var dep_results := _loader.load_all_scenes(screen.preload_scenes)
 	if dep_results.is_empty():
+		callback.call()
 		return
 
 	_preloads[screen] = dep_results
 
-	# Wait for all dependencies to finish loading.
+	var pending := [0]
+	for result in dep_results.values():
+		if result.is_done():
+			assert(
+				result.get_error() == OK,
+				"failed to load dependency",
+			)
+		else:
+			pending[0] += 1
+
+	if pending[0] == 0:
+		callback.call()
+		return
+
 	for result in dep_results.values():
 		if not result.is_done():
-			await result.done
-		assert(
-			result.get_error() == OK,
-			"failed to load dependency",
-		)
+			result.done.connect(
+				func() -> void:
+					assert(
+						result.get_error() == OK,
+						"failed to load dependency",
+					)
+					pending[0] -= 1
+					if pending[0] == 0:
+						callback.call(),
+				CONNECT_ONE_SHOT,
+			)
 
 
 ## _resolve_scene resolves a scene for the given screen: checks instance, then cache,
-## then triggers async load. Returns the scene node.
-func _resolve_scene(screen: StdScreen, instance: Node = null) -> Node:
+## then triggers async load. Invokes the callback with the resolved scene node.
+func _resolve_scene(
+	screen: StdScreen,
+	instance: Node,
+	callback: Callable,
+) -> void:
 	if instance:
-		return instance
+		callback.call(instance)
+		return
 
 	# Check cache.
 	var cached: Node = _cache.get(screen)
 	if cached and is_instance_valid(cached):
 		_cache.erase(screen)
-		return cached
+		callback.call(cached)
+		return
 
 	_cache.erase(screen)
 
-	assert(screen.scene_path != "", "missing scene_path and no instance")
+	assert(
+		screen.scene_path != "",
+		"missing scene_path and no instance",
+	)
 
 	var result := _loader.load_scene(screen.scene_path)
-	if not result.is_done():
-		await result.done
+	if result.is_done():
+		assert(
+			result.get_error() == OK,
+			"failed to load scene",
+		)
+		assert(
+			result.scene != null,
+			"loaded scene was null",
+		)
+		callback.call(result.scene.instantiate())
+		return
 
-	assert(result.get_error() == OK, "failed to load scene")
-	assert(result.scene != null, "loaded scene was null")
-
-	return result.scene.instantiate()
+	result.done.connect(
+		func() -> void:
+			assert(
+				result.get_error() == OK,
+				"failed to load scene",
+			)
+			assert(
+				result.scene != null,
+				"loaded scene was null",
+			)
+			callback.call(result.scene.instantiate()),
+		CONNECT_ONE_SHOT,
+	)
 
 
 ## _resolve_transition returns the transition to use for an operation.

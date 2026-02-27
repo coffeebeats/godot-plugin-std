@@ -50,18 +50,29 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 
 	var previous := manager._current_scene()
 
-	# Resolve scene (await if async load needed).
-	var scene: Node = await (
-		manager
-		. _resolve_scene(
-			_screen,
-			_instance,
-		)
+	manager._resolve_scene(
+		_screen,
+		_instance,
+		func(scene: Node) -> void:
+			manager._resolve_preloads(
+				_screen,
+				func() -> void:
+					_do_push(
+						manager,
+						scene,
+						previous,
+						done,
+					),
+			),
 	)
 
-	# Load preload dependencies.
-	await manager._resolve_preloads(_screen)
 
+func _do_push(
+	manager: StdScreenManager,
+	scene: Node,
+	previous: Node,
+	done: Callable,
+) -> void:
 	manager._save_focus(previous)
 
 	var transition: StdScreenTransition = (
