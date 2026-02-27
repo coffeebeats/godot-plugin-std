@@ -64,7 +64,7 @@ signal uncovered(scene: Node)
 ## transition is the default transition used for this screen's visual lifecycle.
 @export var transition: StdScreenTransition
 
-## transition_push overrides `transition` for push and replace operations.
+## transition_push overrides `transition` for push, replace, and reset operations.
 @export var transition_push: StdScreenTransition
 
 ## transition_pop overrides `transition` for pop operations.

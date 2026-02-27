@@ -207,11 +207,20 @@ func replace(
 
 
 ## reset clears the entire stack and pushes a new base screen.
-func reset(screen: StdScreen, instance: Node = null) -> void:
-	assert(screen != null, "invalid argument: missing screen")
+func reset(
+	screen: StdScreen,
+	instance: Node = null,
+	transition: StdScreenTransition = null,
+) -> void:
+	assert(
+		screen != null,
+		"invalid argument: missing screen",
+	)
 
-	var op := Reset.create(screen, instance)
-	_queue.enqueue_or_run(func(): op._execute(self, _queue.complete))
+	var op := Reset.create(screen, instance, transition)
+	_queue.enqueue_or_run(
+		func(): op._execute(self, _queue.complete),
+	)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #

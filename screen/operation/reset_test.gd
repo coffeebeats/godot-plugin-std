@@ -8,8 +8,13 @@ extends GutTest
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const TransitionTests := preload("../transition_test.gd")
 const Manager := preload("../manager/manager.gd")
 const Screen := preload("../screen.gd")
+
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant-name
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -95,6 +100,88 @@ func test_reset_single_screen_stack():
 	assert_eq(_manager.get_current_screen(), new_base)
 
 
+func test_reset_with_transition_delays_entered():
+	# Given: A manager with two screens.
+	await _do_push()
+	await _do_push()
+
+	var transition := MockTransition.new()
+	var new_base := _create_screen(transition)
+	watch_signals(_manager)
+
+	# When: The stack is reset with a transition.
+	_manager.reset(new_base, Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The transition started but entered not yet emitted.
+	var active := _get_active_transition()
+	assert_true(active.push_started)
+	assert_signal_not_emitted(
+		_manager,
+		"screen_entered",
+	)
+
+	# When: The transition performs swap and completes.
+	active.do_swap()
+	active.complete()
+	await wait_idle_frames(1)
+
+	# Then: The entered signal is emitted.
+	assert_signal_emitted(_manager, "screen_entered")
+	assert_signal_emitted_with_parameters(
+		_manager,
+		"screen_entered",
+		[new_base, _manager.get_scene()],
+	)
+
+
+func test_reset_without_transition_emits_entered_immediately():
+	# Given: A manager with two screens.
+	await _do_push()
+	await _do_push()
+	watch_signals(_manager)
+
+	# When: The stack is reset without a transition.
+	var new_base := _create_screen()
+	_manager.reset(new_base, Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The entered signal is emitted immediately.
+	assert_signal_emitted(_manager, "screen_entered")
+
+
+func test_reset_with_transition_blocks_input():
+	# Given: A manager with one screen.
+	await _do_push()
+
+	var transition := MockTransition.new()
+	transition.block_input = true
+	var new_base := _create_screen(transition)
+
+	# When: The stack is reset and the transition starts.
+	_manager.reset(new_base, Control.new())
+	await wait_idle_frames(1)
+	var active := _get_active_transition()
+	assert_true(active.push_started)
+
+	# Then: An input blocker is present.
+	var blocker := (
+		_manager
+		. get_node_or_null(
+			"TransitionInputBlocker",
+		)
+	)
+	assert_not_null(blocker)
+
+	# When: The transition completes.
+	active.do_swap()
+	active.complete()
+	await wait_idle_frames(1)
+
+	# Then: The input blocker is removed from the tree.
+	assert_false(blocker.is_inside_tree())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -130,3 +217,7 @@ func _do_push(
 		scene = Control.new()
 	_manager.push(screen, scene)
 	await wait_idle_frames(1)
+
+
+func _get_active_transition() -> MockTransition:
+	return _manager._active_transition
