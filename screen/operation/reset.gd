@@ -52,59 +52,33 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	manager._overlays.clear()
 	manager._preloads.clear()
 
-	manager._resolve_scene(
+	_resolve_and_load(
+		manager,
 		_screen,
 		_instance,
-		func(scene: Node) -> void:
-			manager._resolve_preloads(
-				_screen,
-				func() -> void: _do_reset(manager, scene, done),
-			),
+		_do_reset.bind(manager, done),
 	)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _do_reset(manager: StdScreenManager, scene: Node, done: Callable) -> void:
+func _do_reset(
+	scene: Node,
+	manager: StdScreenManager,
+	done: Callable,
+) -> void:
 	var transition := manager._resolve_transition(_screen, _transition, &"push")
 
-	if transition == null:
-		# Instant reset (no transition).
-		manager._mount_scene(_screen, scene)
-		_screen.entered.emit(scene)
-		manager.screen_entered.emit(_screen, scene)
-		manager._restore_focus(scene)
-		done.call()
-		return
-
-	# Transition reset — uses push transition since reset is "clear + push."
-	var tx := transition.duplicate()
-	var tx_ctx := StdScreenTransitionContext.new(manager)
-	tx_ctx.current_scene = null
-	tx_ctx.entering_scene = scene
-
-	tx_ctx._mount_fn = (func() -> void: manager._mount_scene(_screen, scene))
-
-	tx_ctx.finished.connect(
+	_run_transition(
+		manager,
+		transition,
+		&"push",
+		null,
+		scene,
+		func() -> void: manager._mount_scene(_screen, scene),
+		Callable(),
 		func() -> void:
-			manager._active_transition = null
-			manager._active_context = null
-
-			if transition.block_input:
-				manager._unblock_input()
-
-			_screen.entered.emit(scene)
-			manager.screen_entered.emit(_screen, scene)
-			manager._restore_focus(scene)
+			_emit_entered(manager, _screen, scene)
 			done.call(),
-		CONNECT_ONE_SHOT,
 	)
-
-	if transition.block_input:
-		manager._block_input()
-
-	manager._active_transition = tx
-	manager._active_context = tx_ctx
-
-	tx.push(tx_ctx)

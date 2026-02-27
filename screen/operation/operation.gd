@@ -10,7 +10,7 @@ extends RefCounted
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 @warning_ignore("unused_private_class_variable")
-static var _logger := StdLogger.create(&"std/screen/operation")  # gdlint:ignore=class-definitions-order,max-line-length
+static var _logger := StdLogger.create(&"std/screen/operation") # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -26,19 +26,83 @@ func _execute(_manager: StdScreenManager, _done: Callable) -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _emit_covered emits the covered signal and notification on the previous scene.
-func _emit_covered(manager: StdScreenManager, previous: Node) -> void:
-	if not previous:
-		return
+## _emit_entered emits the entered signal and restores focus on the given scene.
+func _emit_entered(
+	manager: StdScreenManager,
+	screen: StdScreen,
+	scene: Node,
+) -> void:
+	screen.entered.emit(scene)
+	manager.screen_entered.emit(screen, scene)
+	manager._restore_focus(scene)
 
-	assert(
-		manager._stack.size() >= 2,
-		"invalid state; expected at least two screens",
+
+## _resolve_and_load resolves the scene instance and preloads for a screen, then invokes
+## the callback with the resolved scene.
+func _resolve_and_load(
+	manager: StdScreenManager,
+	screen: StdScreen,
+	instance: Node,
+	callback: Callable,
+) -> void:
+	manager._resolve_scene(
+		screen,
+		instance,
+		func(scene: Node) -> void:
+			manager._resolve_preloads(
+				screen,
+				func() -> void: callback.call(scene),
+			),
 	)
 
-	var screen_prev: StdScreen = manager._stack[manager._stack.size() - 2]
 
-	screen_prev.covered.emit(previous)
-	manager.screen_covered.emit(screen_prev, previous)
+## _run_transition sets up and dispatches a transition for the given operation method.
+## When `transition` is null, a bare `StdScreenTransition` is used so that the default
+## instant mount/unmount/swap behavior is applied without input-blocker overhead.
+func _run_transition(
+	manager: StdScreenManager,
+	transition: StdScreenTransition,
+	method: StringName,
+	current_scene: Node,
+	entering_scene: Node,
+	mount_fn: Callable,
+	unmount_fn: Callable,
+	on_done: Callable,
+) -> void:
+	if transition == null:
+		transition = StdScreenTransition.new()
+		transition.block_input = false
 
-	previous.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
+	var tx := transition.duplicate()
+
+	var ctx := StdScreenTransitionContext.new(manager)
+	ctx.current_scene = current_scene
+	ctx.entering_scene = entering_scene
+	ctx._mount_fn = mount_fn
+	ctx._unmount_fn = unmount_fn
+
+	ctx.finished.connect(
+		func() -> void:
+			manager._active_transition = null
+			manager._active_context = null
+
+			if transition.block_input:
+				manager._unblock_input()
+
+			on_done.call(),
+		CONNECT_ONE_SHOT,
+	)
+
+	if transition.block_input:
+		manager._block_input()
+
+	manager._active_transition = tx
+	manager._active_context = ctx
+
+	match method:
+		&"push":
+			tx.push(ctx)
+		&"pop":
+			tx.pop(ctx)
+		&"replace":
+			tx.replace(ctx)

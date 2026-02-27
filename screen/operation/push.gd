@@ -50,32 +50,26 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 
 	var previous := manager._current_scene()
 
-	manager._resolve_scene(
+	_resolve_and_load(
+		manager,
 		_screen,
 		_instance,
-		func(scene: Node) -> void:
-			manager._resolve_preloads(
-				_screen,
-				func() -> void:
-					_do_push(
-						manager,
-						scene,
-						previous,
-						done,
-					),
-			),
+		_do_push.bind(manager, previous, done),
 	)
 
 
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
 func _do_push(
-	manager: StdScreenManager,
 	scene: Node,
+	manager: StdScreenManager,
 	previous: Node,
 	done: Callable,
 ) -> void:
 	manager._save_focus(previous)
 
-	var transition: StdScreenTransition = (
+	var transition := (
 		manager
 		. _resolve_transition(
 			_screen,
@@ -84,47 +78,34 @@ func _do_push(
 		)
 	)
 
-	if transition == null:
-		# Instant push.
-		manager._mount_scene(_screen, scene)
-
-		_screen.entered.emit(scene)
-		manager.screen_entered.emit(_screen, scene)
-		manager._restore_focus(scene)
-
-		_emit_covered(manager, previous)
-		done.call()
-		return
-
-	# Transition push — one-shot handler, no coroutine await.
-	var tx := transition.duplicate()
-	var tx_ctx := StdScreenTransitionContext.new(manager)
-	tx_ctx.current_scene = previous
-	tx_ctx.entering_scene = scene
-
-	tx_ctx._mount_fn = (func() -> void: manager._mount_scene(_screen, scene))
-
-	tx_ctx.finished.connect(
+	_run_transition(
+		manager,
+		transition,
+		&"push",
+		previous,
+		scene,
+		func() -> void: manager._mount_scene(_screen, scene),
+		Callable(),
 		func() -> void:
-			manager._active_transition = null
-			manager._active_context = null
-
-			if transition.block_input:
-				manager._unblock_input()
-
-			_screen.entered.emit(scene)
-			manager.screen_entered.emit(_screen, scene)
-			manager._restore_focus(scene)
-
+			_emit_entered(manager, _screen, scene)
 			_emit_covered(manager, previous)
 			done.call(),
-		CONNECT_ONE_SHOT,
 	)
 
-	if transition.block_input:
-		manager._block_input()
 
-	manager._active_transition = tx
-	manager._active_context = tx_ctx
+## _emit_covered emits the covered signal and notification on the previous scene.
+func _emit_covered(manager: StdScreenManager, previous: Node) -> void:
+	if not previous:
+		return
 
-	tx.push(tx_ctx)
+	assert(
+		manager._stack.size() >= 2,
+		"invalid state; expected at least two screens",
+	)
+
+	var screen_prev: StdScreen = manager._stack[manager._stack.size() - 2]
+
+	screen_prev.covered.emit(previous)
+	manager.screen_covered.emit(screen_prev, previous)
+
+	previous.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)

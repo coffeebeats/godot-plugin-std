@@ -58,28 +58,29 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	if screen_prev.block_input_below and _screen.block_input_below:
 		overlay_prev = (manager._overlays.get_overlay(screen_prev))
 
-	manager._resolve_scene(
+	_resolve_and_load(
+		manager,
 		_screen,
 		_instance,
-		func(scene: Node) -> void:
-			manager._resolve_preloads(
-				_screen,
-				func() -> void:
-					_do_replace(
-						manager,
-						scene,
-						screen_prev,
-						scene_prev,
-						overlay_prev,
-						done,
-					),
-			),
+		(
+			_do_replace
+			. bind(
+				manager,
+				screen_prev,
+				scene_prev,
+				overlay_prev,
+				done,
+			)
+		),
 	)
 
 
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
 func _do_replace(
-	manager: StdScreenManager,
 	scene: Node,
+	manager: StdScreenManager,
 	screen_prev: StdScreen,
 	scene_prev: Node,
 	overlay_prev: StdScreenOverlay,
@@ -97,65 +98,24 @@ func _do_replace(
 		)
 	)
 
-	if transition == null:
-		# Instant replace: teardown old, mount new.
-		manager._stack.pop_back()
-		manager._scenes.erase(screen_prev)
-		if is_instance_valid(overlay_prev):
-			manager._overlays.erase(screen_prev)
-		manager._teardown_scene(screen_prev, scene_prev)
-
-		if is_instance_valid(overlay_prev):
-			manager._overlays.register(_screen, overlay_prev)
-		manager._mount_scene(_screen, scene)
-
-		manager._overlays.free_if_unused(overlay_prev)
-
-		_screen.entered.emit(scene)
-		manager.screen_entered.emit(_screen, scene)
-		manager._restore_focus(scene)
-		done.call()
-		return
-
-	# Transition replace — one-shot handler, no coroutine await.
-	var tx := transition.duplicate()
-	var tx_ctx := StdScreenTransitionContext.new(manager)
-	tx_ctx.current_scene = scene_prev
-	tx_ctx.entering_scene = scene
-
-	tx_ctx._unmount_fn = func() -> void:
-		manager._stack.pop_back()
-		manager._scenes.erase(screen_prev)
-		if is_instance_valid(overlay_prev):
-			manager._overlays.erase(screen_prev)
-		manager._teardown_scene(screen_prev, scene_prev)
-
-	tx_ctx._mount_fn = func() -> void:
-		if is_instance_valid(overlay_prev):
-			manager._overlays.register(_screen, overlay_prev)
-		manager._mount_scene(_screen, scene)
-
-	tx_ctx.finished.connect(
+	_run_transition(
+		manager,
+		transition,
+		&"replace",
+		scene_prev,
+		scene,
 		func() -> void:
-			manager._active_transition = null
-			manager._active_context = null
-
-			if transition.block_input:
-				manager._unblock_input()
-
+			if is_instance_valid(overlay_prev):
+				manager._overlays.register(_screen, overlay_prev)
+			manager._mount_scene(_screen, scene),
+		func() -> void:
+			manager._stack.pop_back()
+			manager._scenes.erase(screen_prev)
+			if is_instance_valid(overlay_prev):
+				manager._overlays.erase(screen_prev)
+			manager._teardown_scene(screen_prev, scene_prev),
+		func() -> void:
 			manager._overlays.free_if_unused(overlay_prev)
-
-			_screen.entered.emit(scene)
-			manager.screen_entered.emit(_screen, scene)
-			manager._restore_focus(scene)
+			_emit_entered(manager, _screen, scene)
 			done.call(),
-		CONNECT_ONE_SHOT,
 	)
-
-	if transition.block_input:
-		manager._block_input()
-
-	manager._active_transition = tx
-	manager._active_context = tx_ctx
-
-	tx.replace(tx_ctx)
