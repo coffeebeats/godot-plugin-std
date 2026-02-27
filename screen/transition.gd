@@ -2,70 +2,76 @@
 ## screen/transition.gd
 ##
 ## StdScreenTransition is a base class for visual transition effects during screen
-## changes. This class should be extended to provide custom transition behavior.
+## changes. Each screen stack operation type has a dedicated virtual method; the
+## transition controls the timeline via explicit context methods.
 ##
 
 class_name StdScreenTransition
 extends Resource
 
-# -- INITIALIZATION ------------------------------------------------------------------ #
+# -- CONFIGURATION ------------------------------------------------------------------- #
 
-## reset_on_interrupt controls whether the manager resets visual state when interrupting
-## this transition. When true (default), visual state is restored to its pre-transition
-## value. Set to false for transitions (like fades) where the next transition should
-## pick up from the current visual state.
-var reset_on_interrupt: bool = true
+## block_input controls whether input is automatically blocked during transitions.
+@export var block_input: bool = true
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## start begins the screen transition effect on the given scene. The `is_entering`
-## parameter indicates whether the scene is entering (true) or exiting (false) view.
-func start(
-	context: StdScreenTransitionContext,
-	scene: Node,
-	is_entering: bool,
-) -> void:
-	_start(context, scene, is_entering)
+## push begins the push transition. Called by the push operation. Delegates to the
+## virtual `_push` method.
+func push(context: StdScreenTransitionContext) -> void:
+	_push(context)
 
 
-## stop halts the transition. Visual state is left as-is so the next transition can pick
-## up from the current position.
+## pop begins the pop transition. Called by the pop operation. Delegates to the virtual
+## `_pop` method.
+func pop(context: StdScreenTransitionContext) -> void:
+	_pop(context)
+
+
+## replace begins the replace transition. Called by the replace operation. Delegates to
+## the virtual `_replace` method.
+func replace(context: StdScreenTransitionContext) -> void:
+	_replace(context)
+
+
+## stop halts the transition; called only during force-stop (`_exit_tree` teardown).
 func stop() -> void:
 	_stop()
-
-
-## reset stops the transition and restores visual state to its pre-transition value.
-## Used for aborting a transition cleanly.
-func reset() -> void:
-	_reset()
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-## _start is a virtual method that begins the transition effect on the given scene.
-## Subclasses *must* call `context.done()` when the transition completes (immediately or
-## deferred).
+## _push runs when a screen is pushed. Default performs an instant mount.
 ##
-## NOTE: Override this method to implement custom transition behavior.
-func _start(
-	context: StdScreenTransitionContext,
-	_scene: Node,
-	_is_entering: bool,
-) -> void:
+## NOTE: Override this method for custom transition behavior. Subclasses *must* call
+## `context.done()` when the transition completes.
+func _push(context: StdScreenTransitionContext) -> void:
+	context.mount()
+	context.done()
+
+
+## _pop runs when a screen is popped. Default performs an instant unmount.
+##
+## NOTE: Override this method for custom transition behavior. Subclasses *must* call
+## `context.done()` when the transition completes.
+func _pop(context: StdScreenTransitionContext) -> void:
+	context.unmount()
+	context.done()
+
+
+## _replace runs when a screen is replaced. Default performs an instant swap.
+##
+## NOTE: Override this method for custom transition behavior. Subclasses *must* call
+## `context.done()` when the transition completes.
+func _replace(context: StdScreenTransitionContext) -> void:
+	context.swap()
 	context.done()
 
 
 ## _stop halts the transition while leaving visual state unchanged.
 ##
-## NOTE: Override this method to implement custom transition behavior.
+## NOTE: Override this method for custom transition behavior.
 func _stop() -> void:
 	pass
-
-
-## _reset halts the transition and restores visual state. Default calls `_stop()`.
-##
-## NOTE: Override this method to implement custom transition behavior.
-func _reset() -> void:
-	_stop()
