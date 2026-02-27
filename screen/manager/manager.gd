@@ -35,6 +35,7 @@ signal screen_uncovered(screen: StdScreen, scene: Node)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const Operation := preload("../operation/operation.gd")
 const OperationQueue := preload("queue.gd")
 const Overlays := preload("overlays.gd")
 const Pop := preload("../operation/pop.gd")
@@ -74,6 +75,7 @@ static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=cla
 static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 var _active_context: StdScreenTransitionContext = null
+var _active_op: Operation = null
 var _active_transition: StdScreenTransition = null
 var _cache: Dictionary[StdScreen, Node] = {}
 var _cursor: StdInputCursor = null
@@ -151,9 +153,7 @@ func pop(force: bool = false, transition: StdScreenTransition = null) -> void:
 
 	var depth := _stack.size() - 1
 	var op := Pop.create(depth, transition)
-	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
-	)
+	_queue.enqueue_or_run(func(): _execute_op(op))
 
 
 ## pop_to pops screens until the given screen is on top.
@@ -163,9 +163,7 @@ func pop_to(screen: StdScreen) -> void:
 
 	var depth := idx + 1
 	var op := Pop.create(depth)
-	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
-	)
+	_queue.enqueue_or_run(func(): _execute_op(op))
 
 
 ## push adds a screen on top of the stack.
@@ -180,9 +178,7 @@ func push(
 	)
 
 	var op := Push.create(screen, instance, transition)
-	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
-	)
+	_queue.enqueue_or_run(func(): _execute_op(op))
 
 
 ## replace swaps the topmost screen for a new one.
@@ -201,9 +197,7 @@ func replace(
 	)
 
 	var op := Replace.create(screen, instance, transition)
-	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
-	)
+	_queue.enqueue_or_run(func(): _execute_op(op))
 
 
 ## reset clears the entire stack and pushes a new base screen.
@@ -218,9 +212,7 @@ func reset(
 	)
 
 	var op := Reset.create(screen, instance, transition)
-	_queue.enqueue_or_run(
-		func(): op._execute(self, _queue.complete),
-	)
+	_queue.enqueue_or_run(func(): _execute_op(op))
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -297,7 +289,21 @@ func _current_screen() -> StdScreen:
 ## enqueuing.
 func _do_pop_to_depth(depth: int) -> void:
 	var op := Pop.create(depth)
-	op._execute(self, _queue.complete)
+	_execute_op(op)
+
+
+## _execute_op holds a strong reference to the operation for the duration of its
+## execution. Without this, the operation (a `RefCounted` subclass) can be freed during
+## async scene loading because GDScript lambdas and bound-method `Callable`s capture
+## `RefCounted` targets weakly.
+func _execute_op(op: Operation) -> void:
+	_active_op = op
+	op._execute(
+		self,
+		func() -> void:
+			_active_op = null
+			_queue.complete(),
+	)
 
 
 ## _force_hover_recalculation dispatches a synthetic mouse motion event to force Godot
