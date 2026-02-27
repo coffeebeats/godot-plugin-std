@@ -59,34 +59,25 @@ signal uncovered(scene: Node)
 ## disabled when another screen is pushed on top.
 @export var pause_when_covered: bool = false
 
-@export_group("Transitions")
+@export_subgroup("Transition")
 
-@export_subgroup("Enter")
+## transition is the default transition used for this screen's visual lifecycle.
+@export var transition: StdScreenTransition
 
-## transition_enter is the transition played when this screen enters view.
-@export var transition_enter: StdScreenTransition
+## transition_push overrides `transition` for push, replace, and reset operations.
+@export var transition_push: StdScreenTransition
 
-## block_on_enter controls whether the manager waits for the enter transition to
-## complete before emitting entered/covered signals.
-@export var block_on_enter: bool = false
+## transition_pop overrides `transition` for pop operations.
+@export var transition_pop: StdScreenTransition
 
-@export_subgroup("Exit")
-
-## transition_exit is the transition played when this screen exits view.
-@export var transition_exit: StdScreenTransition
-
-## block_on_exit controls whether the manager waits for the exit transition to
-## complete before freeing the scene.
-@export var block_on_exit: bool = false
-
-@export_group("Dependencies")
+@export_subgroup("Dependencies")
 
 ## preload_scenes is a list of scene paths that must be loaded before this screen's
-## enter transition starts. Loaded resources are held in memory for the screen's
-## lifetime in the stack.
+## target scene may enter the scene tree.
+##
 @export_file("*.tscn", "*.scn") var preload_scenes: PackedStringArray = []
 
-@export_group("Input")
+@export_subgroup("Input")
 
 ## block_input_below controls whether this screen creates a new input isolation layer.
 ## When true (default), a new overlay is created that blocks both mouse and keyboard
@@ -95,22 +86,14 @@ signal uncovered(scene: Node)
 @export var block_input_below: bool = true
 
 ## overlay_click_to_close is a bitmask of mouse buttons that trigger a close request
-## when the overlay background (scrim) is clicked. Uses MouseButtonMask values (1=Left,
-## 2=Right, 4=Middle). Set to 0 (default) to disable.
+## when the overlay background (scrim) is clicked.
 @export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
-
-## close_animate_intermediate controls whether closing this screen's overlay animates
-## all exit transitions sequentially. When false (default), only the bottom screen in
-## the overlay plays its exit animation; upper screens are torn down instantly. Only the
-## bottom-most screen's value is used.
-@export var close_animate_intermediate: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## disconnect_signal_handlers disconnects all callbacks on this screen's lifecycle
-## signals that are bound to the given scene. Used to remove stale connections if the
-## same `StdScreen` is reused.
+## signals that are bound to the given scene.
 func disconnect_signal_handlers(scene: Node) -> void:
 	for s in [
 		close_requested,

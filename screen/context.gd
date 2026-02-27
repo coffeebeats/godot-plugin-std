@@ -1,91 +1,84 @@
 ##
 ## screen/context.gd
 ##
-## StdScreenTransitionContext is a mediator between the screen manager and transitions.
-## It restricts what transitions can do with the manager and is created per-transition
-## invocation.
+## StdScreenTransitionContext is a mediator between screen operations and transitions.
+## It provides lifecycle primitives (mount, unmount, swap), scene access, visual
+## helpers, and a completion callback; recreated for each transition invocation.
 ##
 
 class_name StdScreenTransitionContext
 extends RefCounted
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
+# -- SIGNALS ------------------------------------------------------------------------- #
 
-const Controller := preload("manager/controller.gd")
+## finished is emitted when the transition completes normally. Operations connect a one-
+## shot handler to receive completion; force-stop prevents emission by setting
+## `_did_finish`.
+signal finished
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _controller: Controller
-var _manager: Node
-var _on_done: Callable = Callable()
+## current_scene is the scene on top before this operation (null if stack is empty).
+var current_scene: Node = null
+
+## entering_scene is the entering scene instance. Null for pop operations.
+var entering_scene: Node = null
+
+## manager is the screen manager node that owns this transition context.
+var manager: Node
+
+var _did_mount: bool = false
+var _did_unmount: bool = false
+var _did_finish: bool = false
+var _mount_fn: Callable = Callable()
+var _unmount_fn: Callable = Callable()
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _init(manager: Node, controller: Controller) -> void:
-	_controller = controller
-	_manager = manager
+func _init(node: StdScreenManager) -> void:
+	assert(node is StdScreenManager, "invalid argument; missing manager")
+	manager = node
 
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## allow_input re-enables input processing on the topmost scene overlay.
-func allow_input() -> void:
-	_controller.allow_input()
-
-
-## block_input disables input processing on the topmost scene overlay.
-func block_input() -> void:
-	_controller.block_input()
-
-
 ## create_tween creates a new Tween via the scene tree.
 func create_tween() -> Tween:
-	return _manager.get_tree().create_tween()
+	return manager.get_tree().create_tween()
 
 
-## done notifies the controller that the transition has finished. Called by transition
-## subclasses when their effect completes.
+## done signals that the transition completed normally. Emits the `finished` signal.
 func done() -> void:
-	var cb := _on_done
-	_on_done = Callable()  # Clear to prevent double-calling.
+	if _did_finish:
+		return
 
-	if cb.is_valid():
-		cb.call()
-
-
-## get_retained_node returns a previously retained node by key, or null if not found.
-func get_retained_node(key: StringName) -> Node:
-	return _manager._retained_nodes.get(key)
+	_did_finish = true
+	finished.emit()
 
 
-## has_retained_node returns whether a node is retained under the given key.
-func has_retained_node(key: StringName) -> bool:
-	return key in _manager._retained_nodes
+## mount adds the entering scene to the scene tree. This is a no-op if already mounted
+## or if no mount function is set.
+func mount() -> void:
+	if _did_mount or not _mount_fn.is_valid():
+		return
+
+	_did_mount = true
+	_mount_fn.call()
 
 
-## pop_node removes a node from the manager without freeing it.
-func pop_node(node: Node) -> void:
-	if node.is_inside_tree() and node.get_parent() == _manager:
-		_manager.remove_child(node)
+## swap performs an atomic unmount and then mount.
+func swap() -> void:
+	unmount()
+	mount()
 
 
-## pop_retained_node removes a retained node by key and returns it. The caller is
-## responsible for freeing the returned node.
-func pop_retained_node(key: StringName) -> Node:
-	var node: Node = _manager._retained_nodes.get(key)
-	_manager._retained_nodes.erase(key)
-	return node
+## unmount removes the exiting scene from the scene tree. This is a no-op if already
+## unmounted or if no unmount function is set.
+func unmount() -> void:
+	if _did_unmount or not _unmount_fn.is_valid():
+		return
 
-
-## push_node adds a node as an internal-back child of the manager, rendering it on top
-## of all regular (scene overlay) children.
-func push_node(node: Node) -> void:
-	_manager.add_child(node, false, Node.INTERNAL_MODE_BACK)
-
-
-## retain_node registers a node with the manager for cleanup on shutdown or reset, keyed
-## by a transition-defined identifier.
-func retain_node(key: StringName, node: Node) -> void:
-	_manager._retained_nodes[key] = node
+	_did_unmount = true
+	_unmount_fn.call()

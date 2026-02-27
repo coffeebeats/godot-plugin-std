@@ -33,7 +33,7 @@ func test_push_action_pushes_screen():
 
 	# Then: The target screen was pushed.
 	assert_eq(_manager.get_depth(), 2)
-	assert_true(_manager.is_current(target))
+	assert_eq(_manager.get_current_screen(), target)
 
 
 func test_close_action_pops_screen_when_current():
@@ -94,7 +94,7 @@ func test_toggle_action_pushes_when_absent_pops_when_current():
 
 	# Then: The screen is pushed.
 	assert_eq(_manager.get_depth(), 2)
-	assert_true(_manager.is_current(target))
+	assert_eq(_manager.get_current_screen(), target)
 
 	# When: The toggle action fires again (screen current).
 	_simulate_action(pusher, &"test_toggle")
@@ -183,14 +183,12 @@ func before_each():
 
 
 func _create_screen(
-	transition_enter: StdScreenTransition = null,
-	transition_exit: StdScreenTransition = null,
+	transition: StdScreenTransition = null,
 	block_input_below: bool = true,
 ) -> StdScreen:
 	var screen := StdScreen.new()
 	screen.scene_path = _TEST_SCENE_PATH
-	screen.transition_enter = transition_enter
-	screen.transition_exit = transition_exit
+	screen.transition = transition
 	screen.block_input_below = block_input_below
 	return screen
 

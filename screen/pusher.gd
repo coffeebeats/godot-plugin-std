@@ -71,8 +71,12 @@ func _ready() -> void:
 			_logger.warn("Action not in InputMap.", {&"action": action})
 	assert(pop_actions.all(InputMap.has_action), "invalid state; missing actions")
 
-	_is_in_stack = manager.get_index_of(screen) >= 0
-	_is_current = manager.is_current(screen)
+	_is_in_stack = false
+	for i in range(manager.get_depth()):
+		if manager.get_at(i) == screen:
+			_is_in_stack = true
+			break
+	_is_current = manager.get_current_screen() == screen
 
 
 func _unhandled_input(event: InputEvent) -> void:

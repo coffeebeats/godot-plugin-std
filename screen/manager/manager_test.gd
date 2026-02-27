@@ -1,53 +1,21 @@
-# gdlint:ignore=max-public-methods
-# gdlint:disable=max-file-lines
-
 ##
 ## screen/manager/manager_test.gd
 ##
-## Tests pertaining to 'StdScreenManager'.
+## Tests pertaining to `StdScreenManager`.
 ##
 
 extends GutTest
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const Screen := preload("../screen.gd")
-const Manager := preload("manager.gd")
 const Overlay := preload("../overlay.gd")
+const Screen := preload("../screen.gd")
+const TransitionTests := preload("../transition_test.gd")
+const Manager := preload("manager.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-
-class MockTransition:
-	extends "../transition.gd"
-
-	var started := false
-	var stopped := false
-	var was_reset := false
-	var is_entering_arg: bool
-
-	var _ctx: StdScreenTransitionContext
-
-	func _start(
-		context: StdScreenTransitionContext,
-		_scene: Node,
-		is_entering: bool,
-	) -> void:
-		_ctx = context
-		started = true
-		is_entering_arg = is_entering
-
-	func _stop() -> void:
-		stopped = true
-
-	func _reset() -> void:
-		_stop()
-		was_reset = true
-
-	## complete triggers transition completion from tests.
-	func complete() -> void:
-		_ctx.done()
-
+const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant-name
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -56,282 +24,8 @@ var _manager: Manager = null
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
-func test_push_adds_screen_to_stack():
-	# When: A screen is pushed.
-	var screen := _create_screen()
-	await _do_push(screen)
-
-	# Then: The stack has one screen.
-	assert_eq(_manager.get_depth(), 1)
-	assert_true(_manager.is_current(screen))
-
-
-func test_push_with_blocking_transition_emits_entered_after_complete():
-	# Given: A blocking enter transition.
-	var transition := MockTransition.new()
-	var screen := _create_screen(transition)
-	screen.block_on_enter = true
-	watch_signals(_manager)
-
-	# When: A screen with blocking transition is pushed.
-	await _do_push(screen)
-
-	# Then: The transition has started but entered not yet emitted.
-	var active := _get_active_transition()
-	assert_true(active.started)
-	assert_signal_not_emitted(_manager, "screen_entered")
-
-	# When: The transition completes.
-	active.complete()
-	await wait_idle_frames(1)
-
-	# Then: The entered signal is emitted.
-	assert_signal_emitted(_manager, "screen_entered")
-
-
-func test_push_with_nonblocking_transition_emits_entered_immediately():
-	# Given: A non-blocking enter transition.
-	var screen := _create_screen(MockTransition.new())
-	watch_signals(_manager)
-
-	# When: A screen with non-blocking transition is pushed.
-	await _do_push(screen)
-
-	# Then: The entered signal is emitted immediately.
-	var active := _get_active_transition()
-	assert_true(active.started)
-	assert_signal_emitted(_manager, "screen_entered")
-
-
-func test_pop_removes_top_screen():
-	# Given: A manager with two screens.
-	var first := _create_screen()
-	await _do_push(first)
-	await _do_push()
-
-	# When: The top screen is popped.
-	_manager.pop()
-	await wait_idle_frames(1)
-
-	# Then: Only the first remains.
-	assert_eq(_manager.get_depth(), 1)
-	assert_true(_manager.is_current(first))
-
-
-func test_replace_swaps_top_screen():
-	# Given: A manager with two screens.
-	var first := _create_screen()
-	await _do_push(first)
-	await _do_push()
-
-	# When: The top is replaced.
-	var replacement := _create_screen()
-	_manager.replace(replacement, Control.new())
-	await wait_idle_frames(1)
-
-	# Then: The stack depth is unchanged and new screen is on top.
-	assert_eq(_manager.get_depth(), 2)
-	assert_true(_manager.is_current(replacement))
-	assert_eq(_manager.get_at(0), first)
-
-
-func test_reset_clears_stack_and_pushes_new_base():
-	# Given: A manager with three screens.
-	await _do_push()
-	await _do_push()
-	await _do_push()
-
-	# When: The stack is reset with a new screen.
-	var new_base := _create_screen()
-	_manager.reset(new_base, Control.new())
-	await wait_idle_frames(1)
-
-	# Then: Only the new base remains.
-	assert_eq(_manager.get_depth(), 1)
-	assert_true(_manager.is_current(new_base))
-
-
-func test_pop_to_and_pop_to_depth():
-	# Given: A manager with three screens.
-	var first := _create_screen()
-	await _do_push(first)
-	await _do_push()
-	await _do_push()
-
-	# When: pop_to is called with the first screen.
-	_manager.pop_to(first)
-	await wait_idle_frames(1)
-
-	# Then: Only the first screen remains.
-	assert_eq(_manager.get_depth(), 1)
-	assert_true(_manager.is_current(first))
-
-	# Given: Two more screens are pushed.
-	await _do_push()
-	await _do_push()
-
-	# When: pop_to_depth is called with depth 1.
-	_manager.pop_to_depth(1)
-	await wait_idle_frames(1)
-
-	# Then: Only the first screen remains.
-	assert_eq(_manager.get_depth(), 1)
-	assert_true(_manager.is_current(first))
-
-
-func test_interrupt_resets_blocking_and_nonblocking_transitions():
-	# Given: A screen with a blocking enter transition.
-	var first := _create_screen(MockTransition.new())
-	first.block_on_enter = true
-	await _do_push(first)
-	var active_blocking := _get_active_transition()
-	assert_true(active_blocking.started)
-
-	# When: Another screen is pushed (which resets active transitions).
-	await _do_push()
-
-	# Then: The blocking transition was reset.
-	assert_true(active_blocking.was_reset)
-
-	# Given: A screen with a non-blocking enter transition.
-	var second := _create_screen(MockTransition.new())
-	await _do_push(second)
-	var active_nonblocking := _get_active_transition()
-	assert_true(active_nonblocking.started)
-
-	# When: Another screen is pushed.
-	await _do_push()
-
-	# Then: The non-blocking transition was also reset.
-	assert_true(active_nonblocking.was_reset)
-
-
-func test_interrupt_stops_without_reset_when_configured():
-	# Given: A blocking enter transition with reset_on_interrupt disabled.
-	var first := _create_screen(MockTransition.new())
-	first.block_on_enter = true
-	await _do_push(first)
-	var active := _get_active_transition()
-	active.reset_on_interrupt = false
-	assert_true(active.started)
-
-	# When: Another screen is pushed (which stops active transitions).
-	await _do_push()
-
-	# Then: The transition was stopped but not reset.
-	assert_true(active.stopped)
-	assert_false(active.was_reset)
-
-
-func test_push_all_pushes_multiple_screens():
-	# Given: Three screens and scenes.
-	var screens: Array[Screen] = [
-		_create_screen(),
-		_create_screen(),
-		_create_screen(),
-	]
-	var instances: Array[Node] = [
-		Control.new(),
-		Control.new(),
-		Control.new(),
-	]
-
-	# When: push_all is called with multiple screens.
-	_manager.push_all(screens, false, instances)
-	await wait_idle_frames(1)
-
-	# Then: All screens are on the stack.
-	assert_eq(_manager.get_depth(), 3)
-	assert_true(_manager.is_current(screens[2]))
-	assert_eq(_manager.get_at(0), screens[0])
-	assert_eq(_manager.get_at(1), screens[1])
-
-
-func test_push_all_skips_intermediate_transitions():
-	# Given: Screens with blocking transitions.
-	var screens: Array[Screen] = []
-	var instances: Array[Node] = []
-	for i in range(3):
-		var s := _create_screen(MockTransition.new())
-		s.block_on_enter = true
-		screens.append(s)
-		instances.append(Control.new())
-
-	# When: push_all is called without animate_intermediate.
-	_manager.push_all(screens, false, instances)
-	await wait_idle_frames(1)
-
-	# Then: Only the last transition was started.
-	assert_eq(
-		_manager._transitions._active_transitions.size(),
-		1,
-	)
-	assert_true(_get_active_transition().started)
-
-
-func test_push_all_with_animate_intermediate_plays_all():
-	# Given: Screens with non-blocking transitions.
-	var screens: Array[Screen] = []
-	var instances: Array[Node] = []
-	for i in range(3):
-		screens.append(_create_screen(MockTransition.new()))
-		instances.append(Control.new())
-
-	# When: push_all is called with animate_intermediate=true.
-	_manager.push_all(screens, true, instances)
-	await wait_idle_frames(1)
-
-	# Then: All transitions were started.
-	assert_true(_get_active_transition(0).started)
-	assert_true(_get_active_transition(1).started)
-	assert_true(_get_active_transition(2).started)
-
-
-func test_pop_to_skips_intermediate_transitions():
-	# Given: Three screens with blocking exit transitions.
-	var screens: Array[Screen] = []
-	for i in range(3):
-		var s := _create_screen(null, MockTransition.new())
-		s.block_on_exit = true
-		screens.append(s)
-	for s in screens:
-		await _do_push(s)
-
-	# When: pop_to is called to the first screen.
-	_manager.pop_to(screens[0], false)
-	await wait_idle_frames(1)
-
-	# Then: Only the topmost exit transition was started.
-	assert_eq(
-		_manager._transitions._active_transitions.size(),
-		1,
-	)
-	assert_true(_get_active_transition().started)
-
-
-func test_pop_to_with_animate_intermediate_plays_all():
-	# Given: Three screens with non-blocking exit transitions.
-	var screens: Array[Screen] = []
-	for i in range(3):
-		screens.append(_create_screen(null, MockTransition.new()))
-	for s in screens:
-		await _do_push(s)
-
-	# When: pop_to is called with animate_intermediate=true.
-	_manager.pop_to(screens[0], true)
-	await wait_idle_frames(1)
-
-	# Then: All exit transitions were started (except the first).
-	assert_eq(
-		_manager._transitions._active_transitions.size(),
-		2,
-	)
-	assert_true(_get_active_transition(0).started)
-	assert_true(_get_active_transition(1).started)
-
-
 func test_process_mode_disabled_when_covered_and_restored_on_pop():
-	# Given: A screen with pause_when_covered=true (default).
+	# Given: A screen with pause_when_covered=true.
 	var first := _create_screen()
 	first.pause_when_covered = true
 	var first_scene := Control.new()
@@ -363,67 +57,12 @@ func test_process_mode_disabled_when_covered_and_restored_on_pop():
 	assert_ne(second_scene.process_mode, Node.PROCESS_MODE_DISABLED)
 
 
-func test_interrupted_exit_frees_scene():
-	# Given: Two screens; the second has a non-blocking exit transition.
-	await _do_push()
-	var second := _create_screen(null, MockTransition.new())
-	var second_scene := Control.new()
-	await _do_push(second, second_scene)
-
-	# When: The second screen is popped then a third is pushed.
-	_manager.pop()
-	await wait_idle_frames(1)
-	var active := _get_active_transition()
-	assert_true(active.started)
-	await _do_push()
-	await wait_idle_frames(1)
-
-	# Then: The second scene is freed and transition was reset.
-	assert_freed(second_scene, "popped scene")
-	assert_true(active.was_reset)
-
-
-func test_interrupted_exit_stops_without_reset_when_configured():
-	# Given: A non-blocking exit with reset_on_interrupt disabled.
-	await _do_push()
-	var second := _create_screen(null, MockTransition.new())
-	var second_scene := Control.new()
-	await _do_push(second, second_scene)
-
-	# When: The second screen is popped then a third is pushed.
-	_manager.pop()
-	await wait_idle_frames(1)
-	var active := _get_active_transition()
-	active.reset_on_interrupt = false
-	await _do_push()
-	await wait_idle_frames(1)
-
-	# Then: The transition was stopped but not reset; scene freed.
-	assert_true(active.stopped)
-	assert_false(active.was_reset)
-	assert_freed(second_scene, "popped scene")
-
-
-func test_duplicate_screen_push_is_dropped():
-	# Given: A manager with one screen.
-	var screen := _create_screen()
-	await _do_push(screen)
-
-	# When: The same screen is pushed again.
-	var dup: Control = autofree(Control.new())
-	_manager.push(screen, dup)
-	await wait_idle_frames(1)
-
-	# Then: The stack depth remains 1.
-	assert_eq(_manager.get_depth(), 1)
-
-
 func test_queued_operations_from_signal_handlers():
-	# Given: A handler that pushes a second screen on screen_pushed.
+	# Given: A handler that pushes a second screen on screen_entered.
 	var first := _create_screen()
 	var second := _create_screen()
-	_manager.screen_pushed.connect(
-		func(_s): _manager.push(second, Control.new()),
+	_manager.screen_entered.connect(
+		func(_s, _sc): _manager.push(second, Control.new()),
 		CONNECT_ONE_SHOT,
 	)
 
@@ -437,8 +76,8 @@ func test_queued_operations_from_signal_handlers():
 	assert_eq(_manager.get_at(1), second)
 
 	# Given: A handler that pops on the next push.
-	_manager.screen_pushed.connect(
-		func(_s): _manager.pop(),
+	_manager.screen_entered.connect(
+		func(_s, _sc): _manager.pop(),
 		CONNECT_ONE_SHOT,
 	)
 
@@ -446,25 +85,10 @@ func test_queued_operations_from_signal_handlers():
 	await _do_push()
 	await wait_idle_frames(1)
 
-	# Then: The third was pushed then popped; stack is [first, second].
+	# Then: The third was pushed then popped.
 	assert_eq(_manager.get_depth(), 2)
 	assert_eq(_manager.get_at(0), first)
 	assert_eq(_manager.get_at(1), second)
-
-
-func test_pop_to_depth_noop_when_at_target():
-	# Given: A manager with two screens.
-	await _do_push()
-	await _do_push()
-	watch_signals(_manager)
-
-	# When: pop_to_depth is called with the current depth.
-	_manager.pop_to_depth(2)
-	await wait_idle_frames(1)
-
-	# Then: No signals are emitted and stack is unchanged.
-	assert_signal_not_emitted(_manager, "screen_exiting")
-	assert_eq(_manager.get_depth(), 2)
 
 
 func test_push_wraps_scene_in_overlay_with_mouse_stop():
@@ -474,10 +98,13 @@ func test_push_wraps_scene_in_overlay_with_mouse_stop():
 	# When: A screen is pushed.
 	await _do_push(null, scene)
 
-	# Then: The scene's parent is a StdScreenOverlay with MOUSE_FILTER_STOP.
+	# Then: The scene's parent is a StdScreenOverlay.
 	var overlay := scene.get_parent() as Overlay
 	assert_true(overlay is Overlay)
-	assert_eq(overlay.mouse_filter, Control.MOUSE_FILTER_STOP)
+	assert_eq(
+		overlay.mouse_filter,
+		Control.MOUSE_FILTER_STOP,
+	)
 
 
 func test_push_overlay_sharing_depends_on_block_input():
@@ -486,7 +113,7 @@ func test_push_overlay_sharing_depends_on_block_input():
 	await _do_push(null, first_scene)
 
 	# When: A non-blocking screen is pushed.
-	var nb := _create_screen(null, null, false)
+	var nb := _create_screen(null, false)
 	var nb_scene := Control.new()
 	await _do_push(nb, nb_scene)
 
@@ -519,7 +146,7 @@ func test_pop_frees_unshared_overlay_preserves_shared():
 	# Given: A base screen and a non-blocking screen.
 	var base_scene := Control.new()
 	await _do_push(null, base_scene)
-	var nb := _create_screen(null, null, false)
+	var nb := _create_screen(null, false)
 	await _do_push(nb)
 	var shared := base_scene.get_parent()
 
@@ -532,7 +159,7 @@ func test_pop_frees_unshared_overlay_preserves_shared():
 
 
 func test_pop_cancelled_by_close_requested():
-	# Given: Two screens; top has a close_requested handler that cancels.
+	# Given: Two screens; top has a handler that cancels.
 	await _do_push()
 	var top := _create_screen()
 	await _do_push(top)
@@ -546,11 +173,11 @@ func test_pop_cancelled_by_close_requested():
 
 	# Then: The stack is unchanged (pop was cancelled).
 	assert_eq(_manager.get_depth(), 2)
-	assert_true(_manager.is_current(top))
+	assert_eq(_manager.get_current_screen(), top)
 
 
 func test_pop_force_skips_close_requested():
-	# Given: Two screens; top has a close_requested handler that cancels.
+	# Given: Two screens; top has a handler that cancels.
 	await _do_push()
 	var top := _create_screen()
 	await _do_push(top)
@@ -562,226 +189,8 @@ func test_pop_force_skips_close_requested():
 	_manager.pop(true)
 	await wait_idle_frames(1)
 
-	# Then: The screen was popped despite the cancel handler.
+	# Then: The screen was popped.
 	assert_eq(_manager.get_depth(), 1)
-
-
-func test_push_emits_lifecycle_signals_in_order():
-	# Given: A manager with one screen and signal order tracking.
-	var first_screen := _create_screen()
-	var first_scene := Control.new()
-	await _do_push(first_screen, first_scene)
-
-	var second_screen := _create_screen()
-	var second_scene := Control.new()
-	var order: Array[String] = []
-	_manager.screen_entering.connect(func(_s, _sc): order.append("entering"))
-	_manager.screen_entered.connect(func(_s, _sc): order.append("entered"))
-	_manager.screen_covered.connect(func(_s, _sc): order.append("covered"))
-	_manager.screen_pushed.connect(func(_s): order.append("pushed"))
-	watch_signals(_manager)
-
-	# When: A second screen is pushed.
-	await _do_push(second_screen, second_scene)
-
-	# Then: Signals fire in the correct order with correct parameters.
-	assert_eq(order, ["entering", "entered", "covered", "pushed"])
-	assert_signal_emitted_with_parameters(
-		_manager, "screen_entering", [second_screen, second_scene]
-	)
-	assert_signal_emitted_with_parameters(
-		_manager, "screen_entered", [second_screen, second_scene]
-	)
-	assert_signal_emitted_with_parameters(
-		_manager, "screen_covered", [first_screen, first_scene]
-	)
-	assert_signal_emitted_with_parameters(_manager, "screen_pushed", [second_screen])
-
-
-func test_pop_emits_lifecycle_signals_in_order():
-	# Given: A manager with two screens.
-	var first := _create_screen()
-	var first_scene := Control.new()
-	await _do_push(first, first_scene)
-	var second := _create_screen()
-	var second_scene := Control.new()
-	await _do_push(second, second_scene)
-
-	var order: Array[String] = []
-	_manager.screen_exiting.connect(func(_s, _sc): order.append("exiting"))
-	_manager.screen_uncovered.connect(func(_s, _sc): order.append("uncovered"))
-	_manager.screen_exited.connect(func(_s, _sc): order.append("exited"))
-	_manager.screen_popped.connect(func(_s): order.append("popped"))
-	watch_signals(_manager)
-
-	# When: The top screen is popped.
-	_manager.pop()
-	await wait_idle_frames(1)
-
-	# Then: Signals fire in the correct order with correct parameters.
-	assert_eq(order, ["exiting", "uncovered", "exited", "popped"])
-	assert_signal_emitted_with_parameters(
-		_manager, "screen_exiting", [second, second_scene]
-	)
-	assert_signal_emitted_with_parameters(
-		_manager, "screen_exited", [second, second_scene]
-	)
-	assert_signal_emitted_with_parameters(
-		_manager, "screen_uncovered", [first, first_scene]
-	)
-	assert_signal_emitted_with_parameters(_manager, "screen_popped", [second])
-
-
-func test_replace_emits_lifecycle_in_correct_order():
-	# Given: A manager with one screen.
-	var old_screen := _create_screen()
-	await _do_push(old_screen)
-	var order: Array[String] = []
-	_manager.screen_exiting.connect(func(_s, _sc): order.append("exiting"))
-	_manager.screen_exited.connect(func(_s, _sc): order.append("exited"))
-	_manager.screen_entering.connect(func(_s, _sc): order.append("entering"))
-	_manager.screen_entered.connect(func(_s, _sc): order.append("entered"))
-	_manager.screen_replaced.connect(func(_o, _n): order.append("replaced"))
-	watch_signals(_manager)
-
-	# When: The top is replaced.
-	var new_screen := _create_screen()
-	_manager.replace(new_screen, Control.new())
-	await wait_idle_frames(1)
-
-	# Then: Signals fire in the correct order with correct parameters.
-	assert_eq(
-		order,
-		["exiting", "exited", "entering", "entered", "replaced"],
-	)
-	assert_signal_emitted_with_parameters(
-		_manager, "screen_replaced", [old_screen, new_screen]
-	)
-
-
-func test_reset_emits_lifecycle_for_all_screens():
-	# Given: A manager with three screens.
-	var screens: Array[Screen] = [
-		_create_screen(),
-		_create_screen(),
-		_create_screen(),
-	]
-	for s in screens:
-		await _do_push(s)
-	var exiting_screens: Array[Screen] = []
-	var popped_screens: Array[Screen] = []
-	var order: Array[String] = []
-	_manager.screen_exiting.connect(func(s, _sc): exiting_screens.append(s))
-	_manager.screen_exiting.connect(func(_s, _sc): order.append("exiting"))
-	_manager.screen_exited.connect(func(_s, _sc): order.append("exited"))
-	_manager.screen_popped.connect(func(s): popped_screens.append(s))
-	_manager.screen_popped.connect(func(_s): order.append("popped"))
-
-	# When: The stack is reset.
-	_manager.reset(_create_screen(), Control.new())
-	await wait_idle_frames(1)
-
-	# Then: All three received exiting in reverse stack order, each followed by exited.
-	assert_eq(exiting_screens, [screens[2], screens[1], screens[0]])
-	assert_eq(order[0], "exiting")
-	assert_eq(order[1], "exited")
-
-	# Then: screen_popped is emitted for all three in reverse order.
-	assert_eq(popped_screens, [screens[2], screens[1], screens[0]])
-
-
-func test_screen_signals_emitted_on_push_and_pop():
-	# Given: A base screen and a tracked screen.
-	await _do_push()
-	var screen := _create_screen()
-	watch_signals(screen)
-
-	# When: The screen is pushed.
-	await _do_push(screen)
-
-	# Then: Push lifecycle signals were emitted on the screen.
-	assert_signal_emitted(screen, "entering")
-	assert_signal_emitted(screen, "entered")
-
-	# When: The screen is popped.
-	_manager.pop()
-	await wait_idle_frames(1)
-
-	# Then: Pop lifecycle signals were emitted on the screen.
-	assert_signal_emitted(screen, "exiting")
-	assert_signal_emitted(screen, "exited")
-
-
-func test_pop_with_blocking_exit_delays_popped_signal():
-	# Given: Two screens; second has blocking exit.
-	await _do_push()
-	var second := _create_screen(null, MockTransition.new())
-	second.block_on_exit = true
-	await _do_push(second)
-	watch_signals(_manager)
-
-	# When: The top screen is popped.
-	_manager.pop()
-	await wait_idle_frames(1)
-	var active := _get_active_transition()
-	assert_true(active.started)
-	assert_signal_not_emitted(_manager, "screen_popped")
-
-	# When: The transition completes.
-	active.complete()
-	await wait_idle_frames(1)
-
-	# Then: The popped signal is emitted.
-	assert_signal_emitted(_manager, "screen_popped")
-
-
-func test_replace_with_blocking_exit_delays_new_screen():
-	# Given: A screen with a blocking exit transition.
-	var original := _create_screen(null, MockTransition.new())
-	original.block_on_exit = true
-	await _do_push(original)
-	watch_signals(_manager)
-
-	# When: The top is replaced.
-	_manager.replace(_create_screen(), Control.new())
-	await wait_idle_frames(1)
-	var active := _get_active_transition()
-	assert_true(active.started)
-	assert_signal_not_emitted(_manager, "screen_entering")
-
-	# When: The transition completes.
-	active.complete()
-	await wait_idle_frames(1)
-
-	# Then: The new screen has entered.
-	assert_signal_emitted(_manager, "screen_entered")
-	assert_signal_emitted(_manager, "screen_replaced")
-
-
-func test_pop_nonblocking_exit_emits_exited_before_popped():
-	# Given: Two screens; second has a non-blocking exit transition.
-	await _do_push()
-	var second := _create_screen(null, MockTransition.new())
-	await _do_push(second)
-	var order: Array[String] = []
-	_manager.screen_exited.connect(func(_s, _sc): order.append("exited"))
-	_manager.screen_popped.connect(func(_s): order.append("popped"))
-
-	# When: The top screen is popped.
-	_manager.pop()
-	await wait_idle_frames(1)
-	var active := _get_active_transition()
-	assert_true(active.started)
-
-	# Then: Neither exited nor popped has fired yet (non-blocking defers).
-	assert_eq(order, [])
-
-	# When: The transition completes.
-	active.complete()
-	await wait_idle_frames(1)
-
-	# Then: exited fires before popped.
-	assert_eq(order, ["exited", "popped"])
 
 
 func test_focus_saved_and_restored_on_pop():
@@ -793,7 +202,10 @@ func test_focus_saved_and_restored_on_pop():
 	first_scene.add_child(button)
 	await _do_push(first, first_scene)
 	button.grab_focus()
-	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+	assert_eq(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button,
+	)
 
 	# When: A second screen is pushed, then popped.
 	await _do_push()
@@ -801,7 +213,10 @@ func test_focus_saved_and_restored_on_pop():
 	await wait_idle_frames(1)
 
 	# Then: Focus is restored to the button.
-	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+	assert_eq(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button,
+	)
 
 
 func test_focus_restored_on_pop_even_when_focus_mode_cleared():
@@ -830,18 +245,21 @@ func test_focus_restored_on_pop_even_when_focus_mode_cleared():
 	await wait_idle_frames(1)
 
 	# Then: Focus is restored to the button.
-	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+	assert_eq(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button,
+	)
 
 
 func test_pop_recalculates_hover_when_cursor_visible():
 	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
-	# mode (see https://github.com/godotengine/godot/issues/73557).
+	# mode.
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)
 	sv.notification(Viewport.NOTIFICATION_VP_MOUSE_ENTER)
 
-	# Given: A manager inside the SubViewport with a visible cursor.
+	# Given: A manager inside the SubViewport.
 	var sv_manager := Manager.new()
 	sv.add_child(sv_manager)
 	await wait_idle_frames(1)
@@ -862,9 +280,12 @@ func test_pop_recalculates_hover_when_cursor_visible():
 	motion.relative = Vector2(50, 20)
 	sv.push_input(motion)
 	await get_tree().process_frame
-	assert_true(button.is_hovered(), "precondition: button hovered")
+	assert_true(
+		button.is_hovered(),
+		"precondition: button hovered",
+	)
 
-	# When: A second screen is pushed and mouse motion sent while covered.
+	# When: A second screen is pushed and mouse motion sent.
 	sv_manager.push(_create_screen(), Control.new())
 	await wait_idle_frames(1)
 	var covered := InputEventMouseMotion.new()
@@ -872,14 +293,20 @@ func test_pop_recalculates_hover_when_cursor_visible():
 	covered.relative = Vector2.ZERO
 	sv.push_input(covered)
 	await get_tree().process_frame
-	assert_false(button.is_hovered(), "precondition: button not hovered")
+	assert_false(
+		button.is_hovered(),
+		"precondition: button not hovered",
+	)
 
 	# When: The second screen is popped.
 	sv_manager.pop()
 	await wait_idle_frames(1)
 
 	# Then: The button regains hover after recalculation.
-	assert_true(button.is_hovered(), "button should be hovered after pop")
+	assert_true(
+		button.is_hovered(),
+		"button should be hovered after pop",
+	)
 
 
 func test_overlay_config_aggregates_across_screens():
@@ -889,23 +316,23 @@ func test_overlay_config_aggregates_across_screens():
 	var base_scene := Control.new()
 	await _do_push(base, base_scene)
 
-	# When: A non-blocking screen is pushed into the same overlay.
-	var second := _create_screen(null, null, false)
+	# When: A non-blocking screen is pushed.
+	var second := _create_screen(null, false)
 	second.overlay_click_to_close = 2
 	await _do_push(second)
 
-	# Then: The overlay click_to_close mask is the OR of both (3).
+	# Then: The overlay mask is the OR of both (3).
 	var overlay := base_scene.get_parent() as Overlay
 	assert_eq(overlay.click_to_close, 3)
 
 
 func test_close_requested_propagates_topmost_first():
-	# Given: A base and two non-blocking screens in the same overlay.
+	# Given: A base and two non-blocking screens.
 	var base := _create_screen()
 	await _do_push(base)
-	var second := _create_screen(null, null, false)
+	var second := _create_screen(null, false)
 	await _do_push(second)
-	var third := _create_screen(null, null, false)
+	var third := _create_screen(null, false)
 	await _do_push(third)
 
 	# Connect close_requested handlers that record order.
@@ -918,123 +345,117 @@ func test_close_requested_propagates_topmost_first():
 	_manager._request_close_overlay(InputEventKey.new())
 	await wait_idle_frames(1)
 
-	# Then: Propagation was topmost-first and all overlay screens popped.
+	# Then: Propagation was topmost-first and screens popped.
 	assert_eq(order, [third, second, base])
 	assert_eq(_manager.get_depth(), 1)
 
 
-func test_close_animate_intermediate_plays_exit_transitions():
-	# Given: A base screen with close_animate_intermediate enabled.
-	var base := _create_screen()
-	base.close_animate_intermediate = true
-	await _do_push(base)
-
-	# Given: Two non-blocking screens with exit transitions.
-	var second := _create_screen(null, MockTransition.new(), false)
-	await _do_push(second)
-	var third := _create_screen(null, MockTransition.new(), false)
-	await _do_push(third)
-
-	# When: A close is requested.
-	_manager._request_close_overlay(InputEventKey.new())
-	await wait_idle_frames(1)
-
-	# Then: Both exit transitions were started.
-	assert_true(_get_active_transition(0).started)
-	assert_true(_get_active_transition(1).started)
-
-
-func test_duplicate_replace_rejected():
-	# Given: A manager with two screens.
+func test_is_current_matches_topmost_screen():
+	# Given: Two screens pushed onto the stack.
 	var first := _create_screen()
 	var second := _create_screen()
 	await _do_push(first)
 	await _do_push(second)
 
-	# When: The top is replaced with the first (already in stack).
-	var dup: Control = autofree(Control.new())
-	_manager.replace(first, dup)
+	# Then: Only the topmost screen reports as current.
+	assert_true(_manager.is_current(second))
+	assert_false(_manager.is_current(first))
+
+
+func test_transition_push_overrides_default_transition():
+	# Given: A screen with both transition and transition_push set.
+	# The two transitions use different block_input values so the
+	# active duplicate can be traced back to its source.
+	var default_tx := MockTransition.new()
+	default_tx.block_input = true
+	var push_tx := MockTransition.new()
+	push_tx.block_input = false
+	var screen := _create_screen(default_tx)
+	screen.transition_push = push_tx
+	await _do_push(screen)
+
+	# Then: The push-specific transition was used.
+	var active := _get_active_transition()
+	assert_true(active is MockTransition)
+	assert_true(active.push_started)
+	assert_false(
+		active.block_input,
+		"active should be a duplicate of push_tx",
+	)
+
+
+func test_transition_pop_overrides_default_transition():
+	# Given: Two screens; the top has transition_pop set.
+	# Different block_input values distinguish the transitions.
+	var default_tx := MockTransition.new()
+	default_tx.block_input = true
+	var pop_tx := MockTransition.new()
+	pop_tx.block_input = false
+	await _do_push()
+	var screen := _create_screen(default_tx)
+	screen.transition_pop = pop_tx
+	await _do_push(screen)
+
+	# Complete the push transition so the screen is fully entered.
+	var push_active := _get_active_transition()
+	push_active.do_mount()
+	push_active.complete()
 	await wait_idle_frames(1)
 
-	# Then: The stack is unchanged.
-	assert_eq(_manager.get_depth(), 2)
-	assert_true(_manager.is_current(second))
+	# When: The screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The pop-specific transition was used.
+	var active := _get_active_transition()
+	assert_true(active is MockTransition)
+	assert_true(active.pop_started)
+	assert_false(
+		active.block_input,
+		"active should be a duplicate of pop_tx",
+	)
+
+
+func test_replace_uses_transition_push_override():
+	# Given: A screen with transition_push set and a different
+	# default. block_input distinguishes the two.
+	var default_tx := MockTransition.new()
+	default_tx.block_input = true
+	var push_tx := MockTransition.new()
+	push_tx.block_input = false
+	await _do_push()
+	var screen := _create_screen(default_tx)
+	screen.transition_push = push_tx
+
+	# When: The top screen is replaced with screen.
+	_manager.replace(screen, Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The push-specific transition was used for replace.
+	var active := _get_active_transition()
+	assert_true(active is MockTransition)
+	assert_true(active.replace_started)
+	assert_false(
+		active.block_input,
+		"replace should use transition_push",
+	)
 
 
 func test_exit_tree_stops_transitions_and_clears_queue():
-	# Given: A screen with a blocking enter transition.
+	# Given: A screen with a transition.
 	var screen := _create_screen(MockTransition.new())
-	screen.block_on_enter = true
 	await _do_push(screen)
 	var active := _get_active_transition()
-	assert_true(active.started)
+	assert_true(active.push_started)
 
 	# When: The manager is removed from the tree.
 	_manager.get_parent().remove_child(_manager)
 
-	# Then: The transition was force-reset and the queue is cleared.
-	assert_true(active.was_reset)
+	# Then: The transition was stopped and the queue cleared.
+	assert_true(active.stopped)
 	assert_eq(_manager._queue._queue.size(), 0)
 
 	add_child(_manager)
-
-
-func test_teardown_frees_retained_nodes():
-	# Given: A manager with retained nodes.
-	var node_a := Control.new()
-	var node_b := Control.new()
-	_manager._retained_nodes[&"a"] = node_a
-	_manager._retained_nodes[&"b"] = node_b
-
-	# When: The manager is removed from the tree (triggers teardown).
-	_manager.get_parent().remove_child(_manager)
-	await wait_idle_frames(1)
-
-	# Then: The retained nodes are freed and the dictionary is cleared.
-	assert_freed(node_a, "retained node a")
-	assert_freed(node_b, "retained node b")
-	assert_eq(_manager._retained_nodes.size(), 0)
-
-	add_child(_manager)  # NOTE: Re-add so autofree works.
-
-
-func test_reset_clears_retained_nodes():
-	# Given: A manager with a screen and retained nodes.
-	await _do_push()
-	var retained := Control.new()
-	_manager._retained_nodes[&"test"] = retained
-
-	# When: The stack is reset.
-	_manager.reset(_create_screen(), Control.new())
-	await wait_idle_frames(1)
-
-	# Then: The retained node is freed and the dictionary is cleared.
-	assert_freed(retained, "retained node")
-	assert_eq(_manager._retained_nodes.size(), 0)
-
-
-func test_self_replace_supported():
-	# Given: A manager with one screen.
-	var screen := _create_screen()
-	var first_scene := Control.new()
-	await _do_push(screen, first_scene)
-	var overlay := first_scene.get_parent() as Overlay
-	watch_signals(_manager)
-
-	# When: The top is replaced with the same screen and a new scene.
-	var new_scene := Control.new()
-	_manager.replace(screen, new_scene)
-	await wait_idle_frames(1)
-
-	# Then: The stack has depth 1 with the same screen and new scene.
-	assert_eq(_manager.get_depth(), 1)
-	assert_true(_manager.is_current(screen))
-	assert_eq(_manager.get_scene(), new_scene)
-	assert_signal_emitted_with_parameters(_manager, "screen_replaced", [screen, screen])
-
-	# Then: The overlay instance is reused (not freed and recreated).
-	assert_not_freed(overlay, "reused overlay")
-	assert_same(new_scene.get_parent(), overlay)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
@@ -1053,18 +474,19 @@ func before_each():
 
 
 func _create_screen(
-	transition_enter: StdScreenTransition = null,
-	transition_exit: StdScreenTransition = null,
+	transition: StdScreenTransition = null,
 	block_input_below: bool = true,
 ) -> Screen:
 	var screen := Screen.new()
-	screen.transition_enter = transition_enter
-	screen.transition_exit = transition_exit
+	screen.transition = transition
 	screen.block_input_below = block_input_below
 	return screen
 
 
-func _do_push(screen: Screen = null, scene: Control = null) -> void:
+func _do_push(
+	screen: Screen = null,
+	scene: Control = null,
+) -> void:
 	if not screen:
 		screen = _create_screen()
 	if not scene:
@@ -1073,11 +495,14 @@ func _do_push(screen: Screen = null, scene: Control = null) -> void:
 	await wait_idle_frames(1)
 
 
-func _get_active_transition(
-	index: int = 0,
-) -> MockTransition:
-	return _manager._transitions._active_transitions[index]
+func _get_active_transition() -> MockTransition:
+	return _manager._active_transition
 
 
 func _get_cursor() -> StdInputCursor:
-	return StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
+	return (
+		StdGroup
+		. get_sole_member(
+			StdInputCursor.GROUP_INPUT_CURSOR,
+		)
+	)
