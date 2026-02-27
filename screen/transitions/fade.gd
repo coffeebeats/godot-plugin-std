@@ -95,7 +95,7 @@ func _fade_to(curve_fade: StdTweenCurve, target: float, on_complete: Callable) -
 	_tween = _context.create_tween()
 	(
 		curve_fade
-		.tween_property(
+		. tween_property(
 			_tween,
 			_overlay,
 			^"modulate:a",
