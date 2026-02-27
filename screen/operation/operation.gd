@@ -37,25 +37,6 @@ func _emit_entered(
 	manager._restore_focus(scene)
 
 
-## _resolve_and_load resolves the scene instance and preloads for a screen, then invokes
-## the callback with the resolved scene.
-func _resolve_and_load(
-	manager: StdScreenManager,
-	screen: StdScreen,
-	instance: Node,
-	callback: Callable,
-) -> void:
-	manager._resolve_scene(
-		screen,
-		instance,
-		func(scene: Node) -> void:
-			manager._resolve_preloads(
-				screen,
-				func() -> void: callback.call(scene),
-			),
-	)
-
-
 ## _run_transition sets up and dispatches a transition for the given operation method.
 ## When `transition` is null, a bare `StdScreenTransition` is used so that the default
 ## instant mount/unmount/swap behavior is applied without input-blocker overhead.
@@ -68,6 +49,7 @@ func _run_transition(
 	mount_fn: Callable,
 	unmount_fn: Callable,
 	on_done: Callable,
+	resolver: Callable = Callable(),
 ) -> void:
 	if transition == null:
 		transition = StdScreenTransition.new()
@@ -79,6 +61,7 @@ func _run_transition(
 	ctx.current_scene = current_scene
 	ctx.entering_scene = entering_scene
 	ctx._mount_fn = mount_fn
+	ctx._resolver = resolver
 	ctx._unmount_fn = unmount_fn
 
 	ctx.finished.connect(

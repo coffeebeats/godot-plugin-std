@@ -49,24 +49,10 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		return
 
 	var previous := manager._current_scene()
+	var result: Array = manager._create_resolver(_screen, _instance)
+	var resolver: Callable = result[0]
+	var sync_scene: Node = result[1]
 
-	_resolve_and_load(
-		manager,
-		_screen,
-		_instance,
-		_do_push.bind(manager, previous, done),
-	)
-
-
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-func _do_push(
-	scene: Node,
-	manager: StdScreenManager,
-	previous: Node,
-	done: Callable,
-) -> void:
 	manager._save_focus(previous)
 
 	var transition := (
@@ -83,14 +69,19 @@ func _do_push(
 		transition,
 		&"push",
 		previous,
-		scene,
-		func() -> void: manager._mount_scene(_screen, scene),
+		sync_scene,
+		func(scene: Node) -> void: manager._mount_scene(_screen, scene),
 		Callable(),
 		func() -> void:
+			var scene: Node = manager._scenes.get(_screen)
 			_emit_entered(manager, _screen, scene)
 			_emit_covered(manager, previous)
 			done.call(),
+		resolver,
 	)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
 ## _emit_covered emits the covered signal and notification on the previous scene.

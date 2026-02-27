@@ -74,10 +74,10 @@ signal uncovered(scene: Node)
 
 @export_group("Dependencies")
 
-## preload_scenes is a list of scene paths that must be loaded before this screen's
-## target scene may enter the scene tree.
-##
-@export_file("*.tscn", "*.scn") var preload_scenes: PackedStringArray = []
+## dependency_scenes is a list of scene paths that are loaded alongside this screen's
+## target scene. Loading begins immediately when the operation starts, overlapping with
+## any exit transition; resolution blocks at mount time only if still in progress.
+@export_file("*.tscn", "*.scn") var dependency_scenes: PackedStringArray = []
 
 @export_group("Input")
 

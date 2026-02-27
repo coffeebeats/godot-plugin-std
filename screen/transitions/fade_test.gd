@@ -278,7 +278,7 @@ func _start_push(
 ) -> Context:
 	var ctx := _create_context(current_scene)
 	ctx.entering_scene = entering_scene
-	ctx._mount_fn = func() -> void: pass
+	ctx._mount_fn = func(_scene: Node) -> void: pass
 	ctx._unmount_fn = func() -> void: pass
 	ctx.finished.connect(
 		func(): _mock.transition_done.emit(),
@@ -309,7 +309,7 @@ func _start_replace(
 ) -> Context:
 	var ctx := _create_context(current_scene)
 	ctx.entering_scene = entering_scene
-	ctx._mount_fn = func() -> void: pass
+	ctx._mount_fn = func(_scene: Node) -> void: pass
 	ctx._unmount_fn = func() -> void: pass
 	ctx.finished.connect(
 		func(): _mock.transition_done.emit(),

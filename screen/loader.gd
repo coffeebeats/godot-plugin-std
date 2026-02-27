@@ -160,6 +160,27 @@ func load_scene(path: String) -> Result:
 	return _loading[path]
 
 
+## load_scene_sync blocks the calling thread until the load at `path` finishes, then
+## returns the loaded `PackedScene`. The path is removed from the internal loading
+## tracker so that `_update` does not double-process it. Only call this for paths that
+## are actively tracked.
+func load_scene_sync(path: String) -> PackedScene:
+	assert(path in _loading, "path not being loaded")
+
+	var result: Result = _loading[path]
+
+	if not result.is_done():
+		result.scene = ResourceLoader.load_threaded_get(path)
+		result.status = ResourceLoader.THREAD_LOAD_LOADED
+
+	_loading.erase(path)
+
+	if not _loading:
+		process_mode = Node.PROCESS_MODE_DISABLED
+
+	return result.scene
+
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
