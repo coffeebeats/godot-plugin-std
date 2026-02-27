@@ -132,8 +132,7 @@ func get_dependency_paths() -> PackedStringArray:
 
 
 func _resolve_dependency_paths(
-	pending: Dictionary,
-	visited: Dictionary,
+	pending: Dictionary, visited: Dictionary
 ) -> PackedStringArray:
 	if self in pending:
 		var get_resource_path := func(s: StdScreen) -> String: return s.resource_path
