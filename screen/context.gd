@@ -21,7 +21,8 @@ signal finished
 ## current_scene is the scene on top before this operation (null if stack is empty).
 var current_scene: Node = null
 
-## entering_scene is the entering scene instance. Null for pop operations.
+## entering_scene is the entering scene instance. Null for pop operations and null until
+## `mount()` completes for operations with async loading.
 var entering_scene: Node = null
 
 ## manager is the screen manager node that owns this transition context.
@@ -31,6 +32,7 @@ var _did_mount: bool = false
 var _did_unmount: bool = false
 var _did_finish: bool = false
 var _mount_fn: Callable = Callable()
+var _resolver: Callable = Callable()
 var _unmount_fn: Callable = Callable()
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -59,13 +61,18 @@ func done() -> void:
 
 
 ## mount adds the entering scene to the scene tree. This is a no-op if already mounted
-## or if no mount function is set.
+## or if no mount function is set. If a resolver is set, it is called first to resolve
+## the scene (sync-blocking on any in-progress background load).
 func mount() -> void:
 	if _did_mount or not _mount_fn.is_valid():
 		return
 
 	_did_mount = true
-	_mount_fn.call()
+
+	if _resolver.is_valid():
+		entering_scene = _resolver.call()
+
+	_mount_fn.call(entering_scene)
 
 
 ## swap performs an atomic unmount and then mount.

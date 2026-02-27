@@ -120,13 +120,13 @@ func get_scene() -> Node:
 	return _current_scene()
 
 
-## load_screen starts loading the screen's scene and its preload dependencies.
+## load_screen starts loading the screen's scene and its dependency scenes.
 func load_screen(screen: StdScreen, include_dependencies: bool = true) -> Dictionary:
 	var paths := PackedStringArray()
 	if screen.scene_path:
 		paths.append(screen.scene_path)
 	if include_dependencies:
-		paths.append_array(screen.preload_scenes)
+		paths.append_array(screen.dependency_scenes)
 	return _loader.load_all_scenes(paths)
 
 
@@ -274,6 +274,62 @@ func _create_blocker() -> Control:
 	return ctrl
 
 
+## _create_resolver builds a resolver callable and an optional sync scene for the given
+## screen. The resolver, when called, sync-blocks on any in-progress background loads and
+## returns the instantiated scene node. The second element is non-null when the scene is
+## immediately available (instance or cache) — operations pass it as `entering_scene` for
+## force-stop cleanup.
+func _create_resolver(screen: StdScreen, instance: Node) -> Array:
+	var sync_scene: Node = null
+	var scene_path := ""
+	var load_result: StdScreenLoader.Result = null
+
+	if instance:
+		sync_scene = instance
+	else:
+		var cached: Node = _cache.get(screen)
+		if cached and is_instance_valid(cached):
+			_cache.erase(screen)
+			sync_scene = cached
+		else:
+			_cache.erase(screen)
+			assert(
+				screen.scene_path != "",
+				"missing scene_path and no instance",
+			)
+			scene_path = screen.scene_path
+			load_result = _loader.load_scene(scene_path)
+
+	var dep_paths := screen.dependency_scenes
+	if not dep_paths.is_empty():
+		_preloads[screen] = _loader.load_all_scenes(dep_paths)
+
+	var loader := _loader
+	var resolver := func() -> Node:
+		var scene: Node = sync_scene
+		if scene == null:
+			if load_result.is_done():
+				assert(
+					load_result.get_error() == OK,
+					"failed to load scene",
+				)
+			else:
+				loader.load_scene_sync(scene_path)
+			assert(
+				load_result.scene != null,
+				"loaded scene was null",
+			)
+			scene = load_result.scene.instantiate()
+
+		for path in dep_paths:
+			if not ResourceLoader.has_cached(path):
+				loader.load_scene_sync(path)
+
+		return scene
+
+	return [resolver, sync_scene]
+
+
 ## _current_scene returns the scene node for the topmost screen.
 func _current_scene() -> Node:
 	var screen := _current_screen()
@@ -329,13 +385,14 @@ func _force_stop() -> void:
 
 	transition.stop()
 
-	# Free entering scenes that were never mounted to prevent orphaned nodes. The scene
-	# is not in the tree and would otherwise leak.
-	if ctx and not ctx._did_mount and is_instance_valid(ctx.entering_scene):
-		ctx.entering_scene.free()
-
 	if ctx:
 		ctx._did_finish = true
+
+	# Free entering scenes that were never mounted to prevent orphaned nodes. The scene
+	# is not in the tree and would otherwise leak. For async cases (resolver-based),
+	# entering_scene is null until mount() completes — nothing to free.
+	if ctx and not ctx._did_mount and is_instance_valid(ctx.entering_scene):
+		ctx.entering_scene.free()
 
 
 ## _free_cache frees all cached scene instances.
@@ -409,102 +466,6 @@ func _request_close_overlay(event: InputEvent) -> void:
 
 	_queue.enqueue_or_run(
 		func(): _do_pop_to_depth(target),
-	)
-
-
-## _resolve_preloads loads preload dependencies for a screen and invokes the callback
-## once all dependencies have finished loading.
-func _resolve_preloads(screen: StdScreen, callback: Callable) -> void:
-	if screen.preload_scenes.is_empty():
-		callback.call()
-		return
-
-	var dep_results := _loader.load_all_scenes(screen.preload_scenes)
-	if dep_results.is_empty():
-		callback.call()
-		return
-
-	_preloads[screen] = dep_results
-
-	var pending := [0]
-	for result in dep_results.values():
-		if result.is_done():
-			assert(
-				result.get_error() == OK,
-				"failed to load dependency",
-			)
-		else:
-			pending[0] += 1
-
-	if pending[0] == 0:
-		callback.call()
-		return
-
-	for result in dep_results.values():
-		if not result.is_done():
-			result.done.connect(
-				func() -> void:
-					assert(
-						result.get_error() == OK,
-						"failed to load dependency",
-					)
-					pending[0] -= 1
-					if pending[0] == 0:
-						callback.call(),
-				CONNECT_ONE_SHOT,
-			)
-
-
-## _resolve_scene resolves a scene for the given screen: checks instance, then cache,
-## then triggers async load. Invokes the callback with the resolved scene node.
-func _resolve_scene(
-	screen: StdScreen,
-	instance: Node,
-	callback: Callable,
-) -> void:
-	if instance:
-		callback.call(instance)
-		return
-
-	# Check cache.
-	var cached: Node = _cache.get(screen)
-	if cached and is_instance_valid(cached):
-		_cache.erase(screen)
-		callback.call(cached)
-		return
-
-	_cache.erase(screen)
-
-	assert(
-		screen.scene_path != "",
-		"missing scene_path and no instance",
-	)
-
-	var result := _loader.load_scene(screen.scene_path)
-	if result.is_done():
-		assert(
-			result.get_error() == OK,
-			"failed to load scene",
-		)
-		assert(
-			result.scene != null,
-			"loaded scene was null",
-		)
-		callback.call(result.scene.instantiate())
-		return
-
-	result.done.connect(
-		func() -> void:
-			assert(
-				result.get_error() == OK,
-				"failed to load scene",
-			)
-			assert(
-				result.scene != null,
-				"loaded scene was null",
-			)
-			callback.call(result.scene.instantiate()),
-		CONNECT_ONE_SHOT,
 	)
 
 
