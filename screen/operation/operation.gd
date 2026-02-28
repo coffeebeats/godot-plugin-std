@@ -72,6 +72,9 @@ func _run_transition(
 			if transition.block_input:
 				manager._unblock_input()
 
+			if manager._cursor and manager._cursor.get_is_visible():
+				manager._force_hover_recalculation.call_deferred()
+
 			on_done.call(),
 		CONNECT_ONE_SHOT,
 	)
