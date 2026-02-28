@@ -232,6 +232,119 @@ func test_pop_with_transition_blocks_input():
 	assert_false(blocker.is_inside_tree())
 
 
+func test_pop_with_result_emits_popped_signal():
+	# Given: A manager with two screens.
+	await _do_push()
+	var top := _create_screen()
+	await _do_push(top)
+
+	var received: Array = []
+	top.popped.connect(func(r): received.append(r))
+
+	# When: The top screen is popped with a result.
+	_manager.pop("confirmed")
+	await wait_idle_frames(1)
+
+	# Then: The popped signal fires with the result.
+	assert_eq(received.size(), 1)
+	assert_eq(received[0], "confirmed")
+
+
+func test_pop_without_result_emits_popped_null():
+	# Given: A manager with two screens.
+	await _do_push()
+	var top := _create_screen()
+	await _do_push(top)
+
+	var received: Array = []
+	top.popped.connect(func(r): received.append(r))
+
+	# When: The top screen is popped without a result.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The popped signal fires with null.
+	assert_eq(received.size(), 1)
+	assert_eq(received[0], null)
+
+
+func test_pop_to_emits_popped_null_for_each():
+	# Given: A manager with three screens.
+	var first := _create_screen()
+	await _do_push(first)
+	var second := _create_screen()
+	await _do_push(second)
+	var third := _create_screen()
+	await _do_push(third)
+
+	var popped_screens: Array[Screen] = []
+	second.popped.connect(func(_r): popped_screens.append(second))
+	third.popped.connect(func(_r): popped_screens.append(third))
+
+	var results: Array = []
+	second.popped.connect(func(r): results.append(r))
+	third.popped.connect(func(r): results.append(r))
+
+	# When: pop_to is called to the first screen.
+	_manager.pop_to(first)
+	await wait_idle_frames(1)
+
+	# Then: Both removed screens received popped(null).
+	assert_true(popped_screens.has(second))
+	assert_true(popped_screens.has(third))
+	assert_eq(results, [null, null])
+
+
+func test_pop_with_transition_emits_popped_after_exited():
+	# Given: Two screens; second has a transition set after push.
+	await _do_push()
+	var second := _create_screen()
+	await _do_push(second)
+	second.transition = MockTransition.new()
+
+	var order: Array[String] = []
+	second.exited.connect(func(_sc): order.append("exited"))
+	second.popped.connect(func(_r): order.append("popped"))
+
+	# When: The top screen is popped.
+	_manager.pop("value")
+	await wait_idle_frames(1)
+	var active := _get_active_transition()
+	assert_true(active.pop_started)
+
+	# Then: Neither signal has fired yet.
+	assert_eq(order.size(), 0)
+
+	# When: The transition unmounts and completes.
+	active.do_unmount()
+	active.complete()
+	await wait_idle_frames(1)
+
+	# Then: exited fires before popped.
+	assert_eq(order, ["exited", "popped"])
+
+
+func test_pop_cancelled_does_not_emit_popped():
+	# Given: Two screens; top has a handler that cancels.
+	await _do_push()
+	var top := _create_screen()
+	await _do_push(top)
+	top.close_requested.connect(
+		func(_event, cancel): cancel.call(),
+	)
+
+	var received: Array = []
+	top.popped.connect(func(r): received.append(r))
+
+	# When: pop() is called (default force=false).
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The popped signal was not emitted.
+	assert_eq(received.size(), 0)
+	assert_eq(_manager.get_depth(), 2)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

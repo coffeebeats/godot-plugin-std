@@ -113,7 +113,7 @@ func test_close_action_works_after_screen_uncovered():
 	await _do_push()
 
 	# When: The covering screen is popped and close is simulated.
-	_manager.pop(true)
+	_manager.pop(null, true)
 	await wait_idle_frames(1)
 	_simulate_action(pusher, &"test_close")
 	await wait_idle_frames(1)

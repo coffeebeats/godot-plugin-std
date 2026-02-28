@@ -131,8 +131,13 @@ func load_screen(screen: StdScreen, include_dependencies: bool = true) -> Dictio
 
 
 ## pop removes the topmost screen from the stack. When force is false (default), emits
-## close_requested first; any handler can cancel.
-func pop(force: bool = false, transition: StdScreenTransition = null) -> void:
+## close_requested first; any handler can cancel. The result value is delivered via the
+## screen's `popped` signal after removal.
+func pop(
+	result: Variant = null,
+	force: bool = false,
+	transition: StdScreenTransition = null,
+) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
 	if not force:
@@ -152,7 +157,7 @@ func pop(force: bool = false, transition: StdScreenTransition = null) -> void:
 				return
 
 	var depth := _stack.size() - 1
-	var op := Pop.create(depth, transition)
+	var op := Pop.create(depth, transition, result)
 	_queue.enqueue_or_run(func(): _execute_op(op))
 
 
@@ -534,6 +539,14 @@ func _teardown() -> void:
 	_force_stop()
 	_queue.clear()
 	_unblock_input()
+
+	# Emit popped(null) for every screen still on the stack to prevent coroutine leaks.
+	# The stack is cleared after emission to guard against double-call (_exit_tree and
+	# NOTIFICATION_WM_CLOSE_REQUEST both invoke _teardown).
+	var stack := _stack.duplicate()
+	_stack.clear()
+	for i in range(stack.size() - 1, -1, -1):
+		stack[i].popped.emit(null)
 
 	# Free the input blocker node.
 	if _input_blocker and is_instance_valid(_input_blocker):
