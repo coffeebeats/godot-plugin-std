@@ -63,6 +63,9 @@ func done() -> void:
 ## mount adds the entering scene to the scene tree. This is a no-op if already mounted
 ## or if no mount function is set. If a resolver is set, it is called first to resolve
 ## the scene (sync-blocking on any in-progress background load).
+##
+## NOTE: If the resolver returns `null` (failed load), the mount is skipped and `done()`
+## is called to abort the operation gracefully.
 func mount() -> void:
 	if _did_mount or not _mount_fn.is_valid():
 		return
@@ -71,6 +74,9 @@ func mount() -> void:
 
 	if _resolver.is_valid():
 		entering_scene = _resolver.call()
+		if entering_scene == null:
+			done()
+			return
 
 	_mount_fn.call(entering_scene)
 

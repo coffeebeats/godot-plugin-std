@@ -49,7 +49,13 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		return
 
 	var screen_prev: StdScreen = manager._stack[-1]
-	var scene_prev: Node = manager._scenes[screen_prev]
+	var scene_prev: Node = manager._scenes.get(screen_prev)
+
+	if scene_prev == null:
+		manager._discard_screen(screen_prev)
+		manager._update_stack_state()
+		done.call()
+		return
 
 	# Capture the overlay for transfer when both screens own theirs. If
 	# the old screen was sharing an overlay, teardown handles cleanup
@@ -92,6 +98,11 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 			manager._teardown_scene(screen_prev, scene_prev)
 			screen_prev.popped.emit(null),
 		func() -> void:
+			if _screen not in manager._stack:
+				manager._overlays.free_if_unused(overlay_prev)
+				manager._update_stack_state()
+				done.call()
+				return
 			var scene: Node = manager._scenes.get(_screen)
 			manager._overlays.free_if_unused(overlay_prev)
 			_emit_entered(manager, _screen, scene)

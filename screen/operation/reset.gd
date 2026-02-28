@@ -68,6 +68,9 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		func(scene: Node) -> void: manager._mount_scene(_screen, scene),
 		Callable(),
 		func() -> void:
+			if _screen not in manager._stack:
+				done.call()
+				return
 			var scene: Node = manager._scenes.get(_screen)
 			_emit_entered(manager, _screen, scene)
 			done.call(),
