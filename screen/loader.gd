@@ -124,9 +124,13 @@ func load_scene(path: String) -> Result:
 		_logger.info("Returning cached scene file.", {&"path": path})
 
 		var result := Result.new_with_path(path)
-		result.status = ResourceLoader.THREAD_LOAD_LOADED
 		result.scene = ResourceLoader.load(path, "PackedScene")
-		assert(result.scene != null, "cached scene was unexpectedly null")
+
+		if result.scene == null:
+			_logger.error("Cached scene was null.", {&"path": path})
+			result.status = ResourceLoader.THREAD_LOAD_FAILED
+		else:
+			result.status = ResourceLoader.THREAD_LOAD_LOADED
 
 		result.done.emit.call_deferred()
 
@@ -141,16 +145,39 @@ func load_scene(path: String) -> Result:
 	var err := ResourceLoader.load_threaded_request(
 		path, _TYPE_HINT_PACKED_SCENE, use_sub_threads
 	)
-	assert(err == OK, "failed to load scene")
+
+	if err != OK:
+		(
+			_logger
+			. error(
+				"Failed to request threaded load.",
+				{&"path": path, &"error": err},
+			)
+		)
+
+		var result := Result.new_with_path(path)
+		result.status = ResourceLoader.THREAD_LOAD_FAILED
+		result.done.emit.call_deferred()
+		return result
 
 	var status := ResourceLoader.load_threaded_get_status(path)
-	assert(
+
+	if (
+		status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE
+		or status == ResourceLoader.THREAD_LOAD_FAILED
+	):
 		(
-			status != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE
-			and status != ResourceLoader.THREAD_LOAD_FAILED
-		),
-		"failed to load resource",
-	)
+			_logger
+			. error(
+				"Threaded load failed immediately.",
+				{&"path": path, &"status": status},
+			)
+		)
+
+		var result := Result.new_with_path(path)
+		result.status = status
+		result.done.emit.call_deferred()
+		return result
 
 	if not _loading:
 		process_mode = Node.PROCESS_MODE_ALWAYS
@@ -171,7 +198,12 @@ func load_scene_sync(path: String) -> PackedScene:
 
 	if not result.is_done():
 		result.scene = ResourceLoader.load_threaded_get(path)
-		result.status = ResourceLoader.THREAD_LOAD_LOADED
+
+		if result.scene == null:
+			_logger.error("Synchronous load returned null.", {&"path": path})
+			result.status = ResourceLoader.THREAD_LOAD_FAILED
+		else:
+			result.status = ResourceLoader.THREAD_LOAD_LOADED
 
 	_loading.erase(path)
 
@@ -217,15 +249,17 @@ func _update(_delta: float) -> void:
 	for result in done:
 		if result.status == ResourceLoader.THREAD_LOAD_LOADED:
 			var scene: PackedScene = ResourceLoader.load_threaded_get(result.path)
-			assert(scene != null, "loaded scene was unexpectedly null")
 
-			result.scene = scene
-
-			_logger.info("Loaded scene.", {&"path": result.path})
+			if scene == null:
+				_logger.error("Loaded scene was null.", {&"path": result.path})
+				result.status = ResourceLoader.THREAD_LOAD_FAILED
+			else:
+				result.scene = scene
+				_logger.info("Loaded scene.", {&"path": result.path})
 		else:
 			(
 				_logger
-				. warn(
+				. error(
 					"Failed to load scene.",
 					{
 						&"path": result.path,
