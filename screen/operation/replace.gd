@@ -89,7 +89,8 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 			manager._scenes.erase(screen_prev)
 			if is_instance_valid(overlay_prev):
 				manager._overlays.erase(screen_prev)
-			manager._teardown_scene(screen_prev, scene_prev),
+			manager._teardown_scene(screen_prev, scene_prev)
+			screen_prev.popped.emit(null),
 		func() -> void:
 			var scene: Node = manager._scenes.get(_screen)
 			manager._overlays.free_if_unused(overlay_prev)

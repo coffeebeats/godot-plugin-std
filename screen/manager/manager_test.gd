@@ -185,8 +185,8 @@ func test_pop_force_skips_close_requested():
 		func(_event, cancel): cancel.call(),
 	)
 
-	# When: pop(true) is called with force.
-	_manager.pop(true)
+	# When: pop(null, true) is called with force.
+	_manager.pop(null, true)
 	await wait_idle_frames(1)
 
 	# Then: The screen was popped.

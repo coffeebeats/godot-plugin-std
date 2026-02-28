@@ -45,6 +45,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 			s.exiting.emit(sc)
 			manager.screen_exiting.emit(s, sc)
 			manager._teardown_scene(s, sc)
+		s.popped.emit(null)
 
 	manager._stack.clear()
 	manager._scenes.clear()

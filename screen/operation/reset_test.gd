@@ -182,6 +182,37 @@ func test_reset_with_transition_blocks_input():
 	assert_false(blocker.is_inside_tree())
 
 
+func test_reset_emits_popped_null_for_all_screens():
+	# Given: A manager with three screens.
+	var screens: Array[Screen] = [
+		_create_screen(),
+		_create_screen(),
+		_create_screen(),
+	]
+	for s in screens:
+		await _do_push(s)
+
+	var popped_screens: Array[Screen] = []
+	for s in screens:
+		s.popped.connect(
+			func(_r, screen = s): popped_screens.append(screen),
+		)
+
+	var results: Array = []
+	for s in screens:
+		s.popped.connect(func(r): results.append(r))
+
+	# When: The stack is reset.
+	_manager.reset(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+
+	# Then: All three screens received popped(null).
+	assert_eq(popped_screens.size(), 3)
+	for s in screens:
+		assert_true(popped_screens.has(s))
+	assert_eq(results, [null, null, null])
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

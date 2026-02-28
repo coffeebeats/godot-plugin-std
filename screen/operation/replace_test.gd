@@ -220,6 +220,23 @@ func test_replace_with_transition_blocks_input():
 	assert_false(blocker.is_inside_tree())
 
 
+func test_replace_emits_popped_null_on_old_screen():
+	# Given: A manager with one screen.
+	var old_screen := _create_screen()
+	await _do_push(old_screen)
+
+	var received: Array = []
+	old_screen.popped.connect(func(r): received.append(r))
+
+	# When: The top is replaced.
+	_manager.replace(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The old screen received popped(null).
+	assert_eq(received.size(), 1)
+	assert_eq(received[0], null)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

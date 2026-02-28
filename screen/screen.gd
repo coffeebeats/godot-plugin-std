@@ -38,6 +38,13 @@ signal exited(scene: Node)
 @warning_ignore("unused_signal")
 signal exiting(scene: Node)
 
+## popped is emitted after the screen is removed from the stack, regardless of the
+## removal path (pop, pop_to, replace, reset, teardown). The result is the value passed
+## to `pop(result)`, or `null` for all other removal paths. This signal is guaranteed to
+## fire exactly once per push, preventing coroutine leaks when using `await`.
+@warning_ignore("unused_signal")
+signal popped(result: Variant)
+
 ## uncovered is emitted when the covering screen is popped.
 ##
 ## NOTE: This is only emitted when this scene *was* just uncovered.
