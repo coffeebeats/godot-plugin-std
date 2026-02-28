@@ -74,6 +74,8 @@ static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=cla
 ## screen is popped.
 static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
+static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
+
 var _active_context: StdScreenTransitionContext = null
 var _active_op: Operation = null
 var _active_transition: StdScreenTransition = null
@@ -314,16 +316,16 @@ func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 		var scene: Node = sync_scene
 		if scene == null:
 			if load_result.is_done():
-				assert(
-					load_result.get_error() == OK,
-					"failed to load scene",
-				)
+				if load_result.get_error() != OK:
+					_logger.error("Scene load failed.", {&"path": scene_path})
+					return null
 			else:
 				loader.load_scene_sync(scene_path)
-			assert(
-				load_result.scene != null,
-				"loaded scene was null",
-			)
+
+			if load_result.scene == null:
+				_logger.error("Loaded scene was null.", {&"path": scene_path})
+				return null
+
 			scene = load_result.scene.instantiate()
 
 		for path in dep_paths:
@@ -344,6 +346,24 @@ func _current_scene() -> Node:
 ## _current_screen returns the topmost screen, or null if empty.
 func _current_screen() -> StdScreen:
 	return null if _stack.is_empty() else _stack[-1]
+
+
+## _discard_screen removes a broken screen (missing scene) from the top of the stack and
+## cleans up all associated state. The overlay is freed only when no other screen shares
+## it (`free_if_unused` checks `is_in_use`). Callers should invoke `_update_stack_state()`
+## after the final removal in a batch.
+func _discard_screen(screen: StdScreen) -> void:
+	_logger.error("Discarding screen with missing scene.")
+
+	_stack.pop_back()
+	_scenes.erase(screen)
+	_preloads.erase(screen)
+
+	var overlay := _overlays.get_overlay(screen)
+	_overlays.erase(screen)
+	_overlays.free_if_unused(overlay)
+
+	screen.popped.emit(null)
 
 
 ## _do_pop_to_depth is called by the close overlay handler. Wraps a pop operation for
