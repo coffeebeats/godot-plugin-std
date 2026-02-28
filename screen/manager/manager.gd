@@ -368,8 +368,11 @@ func _execute_op(op: Operation) -> void:
 
 
 ## _force_hover_recalculation dispatches a synthetic mouse motion event to force Godot
-## to re-evaluate hover state after a screen pop.
+## to re-evaluate hover state after a screen operation changes the scene tree.
 func _force_hover_recalculation() -> void:
+	if not is_inside_tree():
+		return
+
 	var viewport := get_viewport()
 	var event := InputEventMouseMotion.new()
 	event.position = viewport.get_mouse_position()
@@ -597,7 +600,7 @@ func _unblock_input() -> void:
 
 
 ## _unmount_scene removes a scene from the stack, emits uncovered on the newly exposed
-## scene, restores focus, and tears down the old scene.
+## scene, tears down the old scene, and restores focus.
 func _unmount_scene(screen: StdScreen, scene: Node) -> void:
 	_stack.pop_back()
 	_scenes.erase(screen)
@@ -622,11 +625,8 @@ func _unmount_scene(screen: StdScreen, scene: Node) -> void:
 			)
 		)
 
-	_restore_focus(new_top_scene)
-
 	_teardown_scene(screen, scene)
-	if _cursor and _cursor.get_is_visible():
-		_force_hover_recalculation()
+	_restore_focus(new_top_scene)
 
 
 ## _update_process_modes sets process modes for all scenes in the stack.

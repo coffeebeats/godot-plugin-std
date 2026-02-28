@@ -309,6 +309,50 @@ func test_pop_recalculates_hover_when_cursor_visible():
 	)
 
 
+func test_push_recalculates_hover_when_cursor_visible():
+	# NOTE: SubViewport required; root viewport doesn't
+	# dispatch GUI input in headless mode.
+	var sv := SubViewport.new()
+	sv.size = Vector2i(400, 300)
+	add_child_autofree(sv)
+	(
+		sv
+		. notification(
+			Viewport.NOTIFICATION_VP_MOUSE_ENTER,
+		)
+	)
+
+	# Given: A manager inside the SubViewport.
+	var sv_manager := Manager.new()
+	sv.add_child(sv_manager)
+	await wait_idle_frames(1)
+	_get_cursor().show_cursor()
+
+	# Given: A base screen and the mouse at a known position.
+	sv_manager.push(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+	var motion := InputEventMouseMotion.new()
+	motion.position = Vector2(50, 20)
+	motion.relative = Vector2(50, 20)
+	sv.push_input(motion)
+	await get_tree().process_frame
+
+	# When: A screen with a hoverable button at the cursor position is pushed.
+	var scene := Control.new()
+	var button := Button.new()
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.size = Vector2(100, 40)
+	scene.add_child(button)
+	sv_manager.push(_create_screen(), scene)
+	await wait_idle_frames(1)
+
+	# Then: The button is hovered after deferred recalculation.
+	assert_true(
+		button.is_hovered(),
+		"button should be hovered after push",
+	)
+
+
 func test_overlay_config_aggregates_across_screens():
 	# Given: A base screen with click_to_close.
 	var base := _create_screen()
