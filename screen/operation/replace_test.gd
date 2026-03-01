@@ -250,7 +250,7 @@ func test_replace_discards_previous_screen_with_missing_scene():
 
 	# When: The top screen's scene is erased and a replace is attempted.
 	_manager._scenes.erase(second)
-	_manager.replace(_create_screen(), Control.new())
+	_manager.replace(_create_screen())
 	await wait_idle_frames(1)
 
 	# Then: The expected error was logged.
@@ -279,7 +279,7 @@ func test_replace_discards_previous_screen_frees_owned_overlay():
 
 	# When: The top screen's scene is erased and a replace is attempted.
 	_manager._scenes.erase(second)
-	_manager.replace(_create_screen(), Control.new())
+	_manager.replace(_create_screen())
 	await wait_idle_frames(1)
 
 	# Then: The expected error was logged.
