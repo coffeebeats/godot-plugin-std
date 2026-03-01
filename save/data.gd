@@ -12,3 +12,14 @@ extends StdConfigSchema
 
 ## summary is a save summary resource which defines the metadata about this save.
 @export var summary: StdSaveSummary = null
+
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## store populates the provided `Config` instance with this save data's items, auto-
+## setting the last saved timestamp.
+func store(config: Config) -> void:
+	if summary:
+		summary.time_last_saved = Time.get_unix_time_from_system()
+
+	super.store(config)
