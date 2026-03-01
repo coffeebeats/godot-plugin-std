@@ -1,53 +1,36 @@
 ##
 ## std/fsm/state.gd
 ##
-## State is a base class for state nodes within a Hierarchical State Machine.
+## A base class for states within a hierarchical state machine (HSM). Create new states
+## by extending this script and implementing the virtual methods. States are registered
+## with a `StdStateMachine` via `add_state()` during `_setup()`.
 ##
-## Create new states by inheriting from this script and implementing the interface. Each
-## state should be used as a child of a 'StateMachine' node or a parent 'State'. The
-## 'StateMachine' node will be responsible for tracking states and delegating behavior.
-##
-## Example scene tree:
-##
-## PlayerMovement (StateMachine)
-## 	'-> Ground (State - parent)
-## 		'-> Idle (State - leaf)
-## 		'-> Run (State - leaf)
-## 		'-> Jump (State - leaf)
-## 	'-> Air (State - parent)
-## 		'-> Jump (State - leaf)
-## 	'-> Roll (State - leaf)
 
-@icon("../editor/icons/state.svg")
-extends Object
+class_name StdState
+extends RefCounted
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
+# -- SIGNALS ------------------------------------------------------------------------- #
 
-const StateMachine := preload("state_machine.gd")
-const State := preload("state.gd")
+## Emitted when this state requests a transition to a different state. The owning
+## `StdStateMachine` dispatches the request.
+signal transition_requested(path: NodePath)
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## A pointer to the 'State' node which directly parents this 'State'; will be 'null'
-## if this 'State' is directly parented by the 'StateMachine'.
-var _parent: State
+## A pointer to the `StdState` which directly parents this state; will be `null` if this
+## state is a top-level state within the machine.
+var _parent: StdState
 
-## The path to this 'State' from the root 'StateMachine'.
+## The path to this state from the root 'StdStateMachine'.
 @warning_ignore("unused_private_class_variable")
 var _path: NodePath
-
-## A pointer to the 'StateMachine' node this 'State' is attached to.
-var _root: StateMachine
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## Returns whether or not this 'State' is a descendant of the specified 'State'.
-##
-## @args:
-## 	state - the state to check for ancestry with.
-func is_substate_of(other: State) -> bool:
-	var next: State = self
+## Returns whether this state is a descendant of the specified state.
+func is_substate_of(other: StdState) -> bool:
+	var next: StdState = self
 	while next:
 		if next == other:
 			return true
@@ -60,76 +43,42 @@ func is_substate_of(other: State) -> bool:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-## A virtual method called when this state is entered (after exiting previous state).
-##
-## NOTE: This method *can* be overridden to customize behavior for the 'State' node.
-##
-## NOTE: If this 'State' is a derived 'State' node, then this 'enter' method is
-## called *after* to the parent 'State' node's 'enter' method.
-##
-## @args:
-## 	previous - the 'State' node being transitioned *from*
-func _on_enter(_previous) -> void:
+## A virtual method called when this state is entered (after exiting the previous
+## state). If this state is a derived state, then this method is called *after* the
+## parent state's `_on_enter` method.
+func _on_enter(_previous: StdState) -> void:
 	pass
 
 
-## A virtual method called when leaving this state (prior to entering next state).
-##
-## NOTE: This method *can* be overridden to customize behavior for the 'State' node.
-##
-## NOTE: If this 'State' is a derived 'State' node, then this 'exit' method is called
-## *prior* to the parent 'State' node's 'exit' method.
-##
-## @args:
-## 	next - the 'State' node being transitioned *to*
-func _on_exit(_next) -> void:
+## A virtual method called when leaving this state (prior to entering the next state).
+## If this state is a derived state, then this method is called *prior* to the parent
+## state's `_on_exit` method.
+func _on_exit(_next: StdState) -> void:
 	pass
 
 
-## A virtual method called to process 'StateMachine' input for the current frame.
+## A virtual method called to process input for the current frame.
 ##
-## NOTE: This method *can* be overridden to customize behavior for the 'State' node.
-##
-## NOTE: This method should either return 'null', meaning the input has been
-## handled, or a reference to a parent 'State'. Returning a reference delegates
-## handling of the input from the current 'State' to the parent 'State'. If
-## there is no parent 'State' (i.e. this is a "top" 'State' node) then the
-## input is effectively dropped.
-##
-## @args:
-## 	input - the 'StateMachine' input to process
-func _on_input(_event) -> State:
+## Returns `null` if the input has been handled, or `_parent` to delegate handling to
+## the parent state. The `event` parameter is intentionally untyped to support arbitrary
+## input types.
+func _on_input(_event) -> StdState:
 	return _parent
 
 
-## A virtual method called to process a frame/tick, given the frame time 'delta'.
-##
-## NOTE: This method *can* be overridden to customize behavior for the 'State' node.
-##
-## NOTE: This method should either return 'null', meaning the frame/tick has been
-## handled, or a reference to a parent 'State'. Returning a reference delegates
-## handling of the frame/tick from the current 'State' to the parent 'State'. If
-## there is no parent 'State' (i.e. this is a "top" 'State' node) then processing
-## stops.
-##
-## @args:
-##  delta - the elapsed time since the last update
-func _on_update(_delta: float) -> State:
+## A virtual method called to process a frame/tick given the elapsed time `delta`.
+## Returns `null` if the frame has been handled, or `_parent` to delegate processing to
+## the parent state.
+func _on_update(_delta: float) -> StdState:
 	return _parent
 
 
-# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-###
-# Used to communicate to the StateMachine that a transition should occur.
-#
-# NOTE: This method should always return 'null' so that child 'State' nodes can
-# simply `return _transition_to(next)` within lifecycle methods.
-#
-# @args:
-# 	next [NodePath] - the 'NodePath' (from root) of the next 'State' node.
-##
-func _transition_to(next: NodePath):
-	_root._transition_to(next)  # gdlint:ignore=private-method-call
+## Emits `transition_requested` to tell the owning `StdStateMachine` to transition to
+## the target state. Returns `null` so that callers can write
+## `return _transition_to(path)` in lifecycle methods.
+func _transition_to(next: NodePath) -> StdState:
+	transition_requested.emit(next)
 	return null
