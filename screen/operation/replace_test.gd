@@ -237,6 +237,58 @@ func test_replace_emits_popped_null_on_old_screen():
 	assert_eq(received[0], null)
 
 
+func test_replace_discards_previous_screen_with_missing_scene():
+	# Given: Two screens; the top screen's scene is missing.
+	var first := _create_screen()
+	await _do_push(first)
+	var second := _create_screen()
+	await _do_push(second)
+
+	var received: Array = []
+	second.popped.connect(func(r): received.append(r))
+	watch_signals(_manager)
+
+	# When: The top screen's scene is erased and a replace is attempted.
+	_manager._scenes.erase(second)
+	_manager.replace(_create_screen())
+	await wait_idle_frames(1)
+
+	# Then: The expected error was logged.
+	assert_push_error("Discarding screen with missing scene.")
+
+	# Then: The broken screen was removed.
+	assert_eq(_manager.get_depth(), 1)
+	assert_eq(_manager.get_current_screen(), first)
+
+	# Then: The popped signal was emitted with null.
+	assert_eq(received, [null])
+
+	# Then: The replacement was not pushed.
+	assert_signal_not_emitted(_manager, "screen_entered")
+
+
+func test_replace_discards_previous_screen_frees_owned_overlay():
+	# Given: Two blocking screens with separate overlays.
+	var first := _create_screen()
+	var first_scene := Control.new()
+	await _do_push(first, first_scene)
+	var second := _create_screen()
+	var second_scene := Control.new()
+	await _do_push(second, second_scene)
+	var overlay := second_scene.get_parent() as Overlay
+
+	# When: The top screen's scene is erased and a replace is attempted.
+	_manager._scenes.erase(second)
+	_manager.replace(_create_screen())
+	await wait_idle_frames(1)
+
+	# Then: The expected error was logged.
+	assert_push_error("Discarding screen with missing scene.")
+
+	# Then: The owned overlay was freed.
+	assert_freed(overlay, "overlay for discarded screen")
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

@@ -41,7 +41,11 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		@warning_ignore("confusable_local_declaration")
 		var screen: StdScreen = manager._stack[-1]
 		@warning_ignore("confusable_local_declaration")
-		var scene: Node = manager._scenes[screen]
+		var scene: Node = manager._scenes.get(screen)
+
+		if scene == null:
+			manager._discard_screen(screen)
+			continue
 
 		screen.exiting.emit(scene)
 		manager.screen_exiting.emit(screen, scene)
@@ -54,7 +58,13 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 
 	# Pop the last screen with optional transition.
 	var screen: StdScreen = manager._stack[-1]
-	var scene: Node = manager._scenes[screen]
+	var scene: Node = manager._scenes.get(screen)
+
+	if scene == null:
+		manager._discard_screen(screen)
+		manager._update_stack_state()
+		done.call()
+		return
 
 	screen.exiting.emit(scene)
 	manager.screen_exiting.emit(screen, scene)

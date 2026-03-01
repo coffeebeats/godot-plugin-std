@@ -324,6 +324,65 @@ func test_pop_with_transition_emits_popped_after_exited():
 	assert_eq(order, ["exited", "popped"])
 
 
+func test_pop_discards_screen_with_missing_scene():
+	# Given: A manager with two screens.
+	var first := _create_screen()
+	await _do_push(first)
+	var second := _create_screen()
+	await _do_push(second)
+
+	var received: Array = []
+	second.popped.connect(func(r): received.append(r))
+
+	# When: The top screen's scene is erased and the screen is popped.
+	_manager._scenes.erase(second)
+	_manager.pop(null, true)
+	await wait_idle_frames(1)
+
+	# Then: The expected error was logged.
+	assert_push_error("Discarding screen with missing scene.")
+
+	# Then: The broken screen was removed.
+	assert_eq(_manager.get_depth(), 1)
+	assert_eq(_manager.get_current_screen(), first)
+
+	# Then: The popped signal was emitted with null.
+	assert_eq(received, [null])
+
+
+func test_pop_to_discards_intermediate_with_missing_scene():
+	# Given: Three screens; the top screen's scene is missing.
+	var first := _create_screen()
+	await _do_push(first)
+	var second := _create_screen()
+	await _do_push(second)
+	var third := _create_screen()
+	await _do_push(third)
+
+	var popped: Array[Screen] = []
+	second.popped.connect(func(_r): popped.append(second))
+	third.popped.connect(func(_r): popped.append(third))
+
+	# When: The top screen's scene is erased and pop_to targets
+	# the first.
+	_manager._scenes.erase(third)
+	_manager.pop_to(first)
+	await wait_idle_frames(1)
+
+	# Then: The expected error was logged.
+	assert_push_error(
+		"Discarding screen with missing scene.",
+	)
+
+	# Then: Only the first screen remains.
+	assert_eq(_manager.get_depth(), 1)
+	assert_eq(_manager.get_current_screen(), first)
+
+	# Then: Both removed screens received popped(null).
+	assert_true(popped.has(second))
+	assert_true(popped.has(third))
+
+
 func test_pop_cancelled_does_not_emit_popped():
 	# Given: Two screens; top has a handler that cancels.
 	await _do_push()
