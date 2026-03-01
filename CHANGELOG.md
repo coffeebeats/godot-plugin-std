@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.6.0 (2026-03-01)
+
+## What's Changed
+* feat(screen): add ability to specify screens as a dependency by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/385
+* feat(screen): add `popped` signal to screen which carries a result by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/387
+* fix(screen): recalculate hover on every screen operation by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/388
+* chore(deps): bump tj-actions/changed-files from 47.0.1 to 47.0.4 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/390
+* fix(screen): improve error handling when scenes don't load by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/389
+* chore: upgrade Godot to `v4.6.1-stable` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/391
+* chore(ci): add a cooldown for new dependency upgrades by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/392
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.5.4...v4.6.0
+
 ## 4.5.4 (2026-02-27)
 
 ## What's Changed
