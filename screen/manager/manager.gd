@@ -74,6 +74,8 @@ static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=cla
 ## screen is popped.
 static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
+static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
+
 var _active_context: StdScreenTransitionContext = null
 var _active_op: Operation = null
 var _active_transition: StdScreenTransition = null
@@ -126,13 +128,18 @@ func load_screen(screen: StdScreen, include_dependencies: bool = true) -> Dictio
 	if screen.scene_path:
 		paths.append(screen.scene_path)
 	if include_dependencies:
-		paths.append_array(screen.dependency_scenes)
+		paths.append_array(screen.get_dependency_paths())
 	return _loader.load_all_scenes(paths)
 
 
 ## pop removes the topmost screen from the stack. When force is false (default), emits
-## close_requested first; any handler can cancel.
-func pop(force: bool = false, transition: StdScreenTransition = null) -> void:
+## close_requested first; any handler can cancel. The result value is delivered via the
+## screen's `popped` signal after removal.
+func pop(
+	result: Variant = null,
+	force: bool = false,
+	transition: StdScreenTransition = null,
+) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
 	if not force:
@@ -152,7 +159,7 @@ func pop(force: bool = false, transition: StdScreenTransition = null) -> void:
 				return
 
 	var depth := _stack.size() - 1
-	var op := Pop.create(depth, transition)
+	var op := Pop.create(depth, transition, result)
 	_queue.enqueue_or_run(func(): _execute_op(op))
 
 
@@ -293,36 +300,47 @@ func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 			sync_scene = cached
 		else:
 			_cache.erase(screen)
-			assert(
-				screen.scene_path != "",
-				"missing scene_path and no instance",
-			)
+			if screen.scene_path == "":
+				(
+					_logger
+					. error(
+						"Missing scene_path and no instance.",
+						{&"screen": str(screen)},
+					)
+				)
+				return [func() -> Node: return null, null]
+
 			scene_path = screen.scene_path
 			load_result = _loader.load_scene(scene_path)
 
-	var dep_paths := screen.dependency_scenes
+	var dep_paths := screen.get_dependency_paths()
+	var dep_results: Dictionary[String, StdScreenLoader.Result] = {}
 	if not dep_paths.is_empty():
-		_preloads[screen] = _loader.load_all_scenes(dep_paths)
+		dep_results = _loader.load_all_scenes(dep_paths)
+		_preloads[screen] = dep_results
 
 	var loader := _loader
 	var resolver := func() -> Node:
 		var scene: Node = sync_scene
 		if scene == null:
-			if load_result.is_done():
-				assert(
-					load_result.get_error() == OK,
-					"failed to load scene",
-				)
-			else:
+			if not load_result.is_done():
 				loader.load_scene_sync(scene_path)
-			assert(
-				load_result.scene != null,
-				"loaded scene was null",
-			)
+			if load_result.scene == null:
+				(
+					_logger
+					. error(
+						"Scene load failed.",
+						{&"path": scene_path},
+					)
+				)
+				return null
 			scene = load_result.scene.instantiate()
 
 		for path in dep_paths:
-			if not ResourceLoader.has_cached(path):
+			if ResourceLoader.has_cached(path):
+				continue
+			var dep: StdScreenLoader.Result = dep_results.get(path)
+			if dep and not dep.is_done():
 				loader.load_scene_sync(path)
 
 		return scene
@@ -339,6 +357,24 @@ func _current_scene() -> Node:
 ## _current_screen returns the topmost screen, or null if empty.
 func _current_screen() -> StdScreen:
 	return null if _stack.is_empty() else _stack[-1]
+
+
+## _discard_screen removes a broken screen (missing scene) from the top of the stack and
+## cleans up all associated state. The overlay is freed only when no other screen shares
+## it (`free_if_unused` checks `is_in_use`). Callers should invoke `_update_stack_state()`
+## after the final removal in a batch.
+func _discard_screen(screen: StdScreen) -> void:
+	_logger.error("Discarding screen with missing scene.")
+
+	_stack.pop_back()
+	_scenes.erase(screen)
+	_preloads.erase(screen)
+
+	var overlay := _overlays.get_overlay(screen)
+	_overlays.erase(screen)
+	_overlays.free_if_unused(overlay)
+
+	screen.popped.emit(null)
 
 
 ## _do_pop_to_depth is called by the close overlay handler. Wraps a pop operation for
@@ -363,8 +399,11 @@ func _execute_op(op: Operation) -> void:
 
 
 ## _force_hover_recalculation dispatches a synthetic mouse motion event to force Godot
-## to re-evaluate hover state after a screen pop.
+## to re-evaluate hover state after a screen operation changes the scene tree.
 func _force_hover_recalculation() -> void:
+	if not is_inside_tree():
+		return
+
 	var viewport := get_viewport()
 	var event := InputEventMouseMotion.new()
 	event.position = viewport.get_mouse_position()
@@ -535,6 +574,14 @@ func _teardown() -> void:
 	_queue.clear()
 	_unblock_input()
 
+	# Emit popped(null) for every screen still on the stack to prevent coroutine leaks.
+	# The stack is cleared after emission to guard against double-call (_exit_tree and
+	# NOTIFICATION_WM_CLOSE_REQUEST both invoke _teardown).
+	var stack := _stack.duplicate()
+	_stack.clear()
+	for i in range(stack.size() - 1, -1, -1):
+		stack[i].popped.emit(null)
+
 	# Free the input blocker node.
 	if _input_blocker and is_instance_valid(_input_blocker):
 		_input_blocker.free()
@@ -583,37 +630,27 @@ func _unblock_input() -> void:
 		_input_blocker.get_parent().remove_child(_input_blocker)
 
 
-## _unmount_scene removes a scene from the stack, emits uncovered on the newly exposed
-## scene, restores focus, and tears down the old scene.
+## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen
+## and restores input focus. Called after a screen above is removed from the stack.
+func _notify_top_uncovered() -> void:
+	var scene := _current_scene()
+	if scene:
+		var screen := _current_screen()
+		screen.uncovered.emit(scene)
+		screen_uncovered.emit(screen, scene)
+		scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
+	_restore_focus(scene)
+
+
+## _unmount_scene removes a scene from the stack, tears down the old scene, and notifies
+## the newly exposed screen.
 func _unmount_scene(screen: StdScreen, scene: Node) -> void:
 	_stack.pop_back()
 	_scenes.erase(screen)
 
 	_update_stack_state()
-
-	var new_top_scene := _current_scene()
-	if new_top_scene:
-		var new_top_screen := _current_screen()
-		new_top_screen.uncovered.emit(new_top_scene)
-		(
-			screen_uncovered
-			. emit(
-				new_top_screen,
-				new_top_scene,
-			)
-		)
-		(
-			new_top_scene
-			. propagate_notification(
-				NOTIFICATION_SCREEN_UNCOVERED,
-			)
-		)
-
-	_restore_focus(new_top_scene)
-
+	_notify_top_uncovered()
 	_teardown_scene(screen, scene)
-	if _cursor and _cursor.get_is_visible():
-		_force_hover_recalculation()
 
 
 ## _update_process_modes sets process modes for all scenes in the stack.

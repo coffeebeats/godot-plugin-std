@@ -38,6 +38,13 @@ signal exited(scene: Node)
 @warning_ignore("unused_signal")
 signal exiting(scene: Node)
 
+## popped is emitted after the screen is removed from the stack, regardless of the
+## removal path (pop, pop_to, replace, reset, teardown). The result is the value passed
+## to `pop(result)`, or `null` for all other removal paths. This signal is guaranteed to
+## fire exactly once per push, preventing coroutine leaks when using `await`.
+@warning_ignore("unused_signal")
+signal popped(result: Variant)
+
 ## uncovered is emitted when the covering screen is popped.
 ##
 ## NOTE: This is only emitted when this scene *was* just uncovered.
@@ -74,6 +81,11 @@ signal uncovered(scene: Node)
 
 @export_group("Dependencies")
 
+## dependency_screens is a list of `StdScreen`s whose scene paths and extra
+## dependencies are loaded alongside this screen's target scene. Each referenced
+## screen's own dependencies are resolved recursively.
+@export var dependency_screens: Array[StdScreen] = []
+
 ## dependency_scenes is a list of scene paths that are loaded alongside this screen's
 ## target scene. Loading begins immediately when the operation starts, overlapping with
 ## any exit transition; resolution blocks at mount time only if still in progress.
@@ -90,6 +102,10 @@ signal uncovered(scene: Node)
 ## overlay_click_to_close is a bitmask of mouse buttons that trigger a close request
 ## when the overlay background (scrim) is clicked.
 @export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
+
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+static var _logger := StdLogger.create(&"std/screen")  # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -110,3 +126,55 @@ func disconnect_signal_handlers(scene: Node) -> void:
 			var callable: Callable = connection["callable"]
 			if callable.get_object() == scene:
 				s.disconnect(callable)
+
+
+## get_dependency_paths returns every scene path that should be pre-loaded as a
+## dependency of this screen, combining 'dependency_scenes' and the resolved paths of
+## 'dependency_screens'.
+func get_dependency_paths() -> PackedStringArray:
+	return _resolve_dependency_paths({}, {})
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _resolve_dependency_paths(
+	pending: Dictionary, visited: Dictionary
+) -> PackedStringArray:
+	if self in pending:
+		var get_resource_path := func(s: StdScreen) -> String: return s.resource_path
+
+		var chain := pending.keys().map(get_resource_path)
+		chain.append(resource_path)
+
+		_logger.error("Dependency cycle detected.", {&"chain": ",".join(chain)})
+
+		return PackedStringArray()
+
+	if self in visited:
+		return PackedStringArray()
+
+	pending[self] = true
+
+	var paths: PackedStringArray = []
+
+	for path in dependency_scenes:
+		if path not in visited:
+			visited[path] = true
+			paths.append(path)
+
+	for screen in dependency_screens:
+		if screen == null:
+			assert(false, "null entry in dependency_screens")
+			continue
+
+		if screen.scene_path and screen.scene_path not in visited:
+			visited[screen.scene_path] = true
+			paths.append(screen.scene_path)
+
+		paths.append_array(screen._resolve_dependency_paths(pending, visited))
+
+	pending.erase(self)
+	visited[self] = true
+
+	return paths
