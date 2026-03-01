@@ -300,36 +300,47 @@ func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 			sync_scene = cached
 		else:
 			_cache.erase(screen)
-			assert(
-				screen.scene_path != "",
-				"missing scene_path and no instance",
-			)
+			if screen.scene_path == "":
+				(
+					_logger
+					. error(
+						"Missing scene_path and no instance.",
+						{&"screen": str(screen)},
+					)
+				)
+				return [func() -> Node: return null, null]
+
 			scene_path = screen.scene_path
 			load_result = _loader.load_scene(scene_path)
 
 	var dep_paths := screen.get_dependency_paths()
+	var dep_results: Dictionary[String, StdScreenLoader.Result] = {}
 	if not dep_paths.is_empty():
-		_preloads[screen] = _loader.load_all_scenes(dep_paths)
+		dep_results = _loader.load_all_scenes(dep_paths)
+		_preloads[screen] = dep_results
 
 	var loader := _loader
 	var resolver := func() -> Node:
 		var scene: Node = sync_scene
 		if scene == null:
-			if load_result.is_done():
-				if load_result.get_error() != OK:
-					_logger.error("Scene load failed.", {&"path": scene_path})
-					return null
-			else:
+			if not load_result.is_done():
 				loader.load_scene_sync(scene_path)
-
 			if load_result.scene == null:
-				_logger.error("Loaded scene was null.", {&"path": scene_path})
+				(
+					_logger
+					. error(
+						"Scene load failed.",
+						{&"path": scene_path},
+					)
+				)
 				return null
-
 			scene = load_result.scene.instantiate()
 
 		for path in dep_paths:
-			if not ResourceLoader.has_cached(path):
+			if ResourceLoader.has_cached(path):
+				continue
+			var dep: StdScreenLoader.Result = dep_results.get(path)
+			if dep and not dep.is_done():
 				loader.load_scene_sync(path)
 
 		return scene
@@ -619,34 +630,27 @@ func _unblock_input() -> void:
 		_input_blocker.get_parent().remove_child(_input_blocker)
 
 
-## _unmount_scene removes a scene from the stack, emits uncovered on the newly exposed
-## scene, tears down the old scene, and restores focus.
+## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen
+## and restores input focus. Called after a screen above is removed from the stack.
+func _notify_top_uncovered() -> void:
+	var scene := _current_scene()
+	if scene:
+		var screen := _current_screen()
+		screen.uncovered.emit(scene)
+		screen_uncovered.emit(screen, scene)
+		scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
+	_restore_focus(scene)
+
+
+## _unmount_scene removes a scene from the stack, tears down the old scene, and notifies
+## the newly exposed screen.
 func _unmount_scene(screen: StdScreen, scene: Node) -> void:
 	_stack.pop_back()
 	_scenes.erase(screen)
 
 	_update_stack_state()
-
-	var new_top_scene := _current_scene()
-	if new_top_scene:
-		var new_top_screen := _current_screen()
-		new_top_screen.uncovered.emit(new_top_scene)
-		(
-			screen_uncovered
-			. emit(
-				new_top_screen,
-				new_top_scene,
-			)
-		)
-		(
-			new_top_scene
-			. propagate_notification(
-				NOTIFICATION_SCREEN_UNCOVERED,
-			)
-		)
-
+	_notify_top_uncovered()
 	_teardown_scene(screen, scene)
-	_restore_focus(new_top_scene)
 
 
 ## _update_process_modes sets process modes for all scenes in the stack.

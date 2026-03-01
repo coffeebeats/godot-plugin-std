@@ -74,6 +74,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		Callable(),
 		func() -> void:
 			if _screen not in manager._stack:
+				manager._preloads.erase(_screen)
 				done.call()
 				return
 			var scene: Node = manager._scenes.get(_screen)

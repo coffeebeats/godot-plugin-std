@@ -251,8 +251,8 @@ func _update(_delta: float) -> void:
 			var scene: PackedScene = ResourceLoader.load_threaded_get(result.path)
 
 			if scene == null:
-				_logger.error("Loaded scene was null.", {&"path": result.path})
 				result.status = ResourceLoader.THREAD_LOAD_FAILED
+				_logger.error("Loaded scene was null.", {&"path": result.path})
 			else:
 				result.scene = scene
 				_logger.info("Loaded scene.", {&"path": result.path})

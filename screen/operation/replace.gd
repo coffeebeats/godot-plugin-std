@@ -100,7 +100,10 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		func() -> void:
 			manager._overlays.free_if_unused(overlay_prev)
 			if _screen not in manager._stack:
+				manager._preloads.erase(_screen)
 				manager._update_stack_state()
+				if screen_prev not in manager._stack:
+					manager._notify_top_uncovered()
 				done.call()
 				return
 			var scene: Node = manager._scenes.get(_screen)
