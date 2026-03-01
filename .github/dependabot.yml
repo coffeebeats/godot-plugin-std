@@ -12,3 +12,5 @@ updates:
       - coffeebeats
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 30
