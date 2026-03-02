@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## Tests pertaining to the `StdConfigSchema` class.
 ##
@@ -338,6 +339,139 @@ func test_check_migrations_rejects_version_from_gte_schema_version():
 
 	# Then: An error was logged about the invalid version.
 	assert_push_error("version_from >= schema version")
+
+
+func test_schema_is_not_dirty_after_load():
+	# Given: A schema with data stored in a Config.
+	var source := ConfigSchemaTest.new()
+	source.item = ConfigItemTest.new()
+	source.item.category = &"category"
+	source.item.key = 5
+	var config := Config.new()
+	source.store(config)
+
+	# When: A fresh schema loads from that config.
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.load(config)
+
+	# Then: The loaded schema is not dirty.
+	assert_false(schema.is_dirty())
+
+
+func test_schema_is_dirty_when_item_mutated():
+	# Given: A freshly reset schema.
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.reset()
+
+	# When: An item property is mutated.
+	schema.item.key = 42
+
+	# Then: The schema reports dirty.
+	assert_true(schema.is_dirty())
+
+
+func test_schema_clear_dirty_propagates_to_items():
+	# Given: A schema with a mutated item.
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.reset()
+	schema.item.key = 42
+	assert_true(schema.is_dirty())
+
+	# When: clear_dirty is called on the schema.
+	schema.clear_dirty()
+
+	# Then: The schema and its item are no longer dirty.
+	assert_false(schema.is_dirty())
+	assert_false(schema.item.is_dirty())
+
+
+func test_schema_mark_critical_makes_dirty():
+	# Given: A freshly reset schema.
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.reset()
+	assert_false(schema.is_dirty())
+
+	# When: The schema is marked critical.
+	schema.mark_critical()
+
+	# Then: The schema reports dirty and critical.
+	assert_true(schema.is_dirty())
+	assert_true(schema.is_critical())
+
+
+func test_schema_clear_dirty_clears_critical():
+	# Given: A schema marked critical.
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.reset()
+	schema.mark_critical()
+	assert_true(schema.is_critical())
+
+	# When: clear_dirty is called.
+	schema.clear_dirty()
+
+	# Then: The critical flag is cleared.
+	assert_false(schema.is_critical())
+	assert_false(schema.is_dirty())
+
+
+func test_schema_is_not_dirty_after_reset():
+	# Given: A schema that has been mutated and marked critical.
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.item.key = 99
+	schema.mark_critical()
+
+	# When: The schema is reset.
+	schema.reset()
+
+	# Then: The schema is not dirty and not critical.
+	assert_false(schema.is_dirty())
+	assert_false(schema.is_critical())
+
+
+func test_schema_is_not_dirty_after_copy():
+	# Given: A source schema with non-default data.
+	var source := ConfigSchemaTest.new()
+	source.item = ConfigItemTest.new()
+	source.item.category = &"category"
+	source.item.key = 7
+
+	# Given: A target schema marked critical.
+	var target := ConfigSchemaTest.new()
+	target.item = ConfigItemTest.new()
+	target.item.category = &"category"
+	target.mark_critical()
+
+	# When: The target copies from the source.
+	target.copy(source)
+
+	# Then: The target is not dirty and not critical.
+	assert_false(target.is_dirty())
+	assert_false(target.is_critical())
+
+
+func test_schema_critical_persists_when_items_clean():
+	# Given: A schema with clean items but marked critical.
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.reset()
+	schema.mark_critical()
+
+	# Then: The schema is dirty despite items being clean.
+	assert_false(schema.item.is_dirty())
+	assert_true(schema.is_dirty())
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #

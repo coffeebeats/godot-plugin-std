@@ -34,9 +34,25 @@ const PROPERTY_USAGE_SERDE := PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_ST
 
 static var _logger := StdLogger.create(&"std/config/schema")  # gdlint:ignore=class-definitions-order,max-line-length
 
+var _is_critical: bool = false
 var _meta := Metadata.new()
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## clear_dirty clears the critical flag and resets dirty state on all items.
+func clear_dirty() -> void:
+	_is_critical = false
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		var value: Variant = get(name)
+
+		if value is StdConfigItem:
+			value.clear_dirty()
 
 
 ## check_migrations validates the specified schema migrations. Returns `OK` if valid, or
@@ -93,11 +109,44 @@ func copy(other: StdConfigSchema) -> void:
 
 		value.copy(value_other)
 
+	_is_critical = false
+
 
 ## get_saved_version returns the schema version stored in the config, or `0` if none.
 func get_saved_version(config: Config) -> int:
 	_meta.load(config)
 	return _meta.version
+
+
+## is_critical returns whether this schema has been marked as
+## requiring a save.
+func is_critical() -> bool:
+	return _is_critical
+
+
+## is_dirty returns whether any item in this schema has unsaved
+## changes or the schema has been marked critical.
+func is_dirty() -> bool:
+	if _is_critical:
+		return true
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		var value: Variant = get(name)
+
+		if value is StdConfigItem and value.is_dirty():
+			return true
+
+	return false
+
+
+## mark_critical flags this schema as requiring a save,
+## regardless of item-level dirty state.
+func mark_critical() -> void:
+	_is_critical = true
 
 
 ## load populates this schema object from the provided `Config` instance. Returns false
@@ -139,6 +188,8 @@ func load(config: Config) -> bool:
 
 		value.load(config)
 
+	_is_critical = false
+
 	return true
 
 
@@ -155,6 +206,8 @@ func reset() -> void:
 			continue
 
 		value.reset()
+
+	_is_critical = false
 
 
 ## store populates the provided `Config` instance with this schema's items.

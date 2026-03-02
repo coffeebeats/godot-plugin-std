@@ -351,6 +351,162 @@ func test_config_item_reset_restores_properties():
 	assert_eq(item.test_vector2_list, PackedVector2Array())
 
 
+func test_item_is_not_dirty_after_load():
+	# Given: A config item with data stored in a Config.
+	var source := ExampleConfigItem.new()
+	source.test_int = 42
+	source.test_string = "hello"
+	var config := Config.new()
+	source.store(config)
+
+	# When: A fresh item loads from that config.
+	var item := ExampleConfigItem.new()
+	item.load(config)
+
+	# Then: The loaded item is not dirty.
+	assert_false(item.is_dirty())
+
+
+func test_item_is_not_dirty_after_reset():
+	# Given: A config item that has been mutated.
+	var item := ExampleConfigItem.new()
+	item.test_int = 99
+	item.test_string = "changed"
+
+	# When: The item is reset.
+	item.reset()
+
+	# Then: The item is not dirty.
+	assert_false(item.is_dirty())
+
+
+func test_item_is_not_dirty_after_copy():
+	# Given: A source item with non-default data.
+	var source := ExampleConfigItem.new()
+	source.test_int = 7
+	source.test_float = 3.14
+
+	# When: A target copies from the source.
+	var target := ExampleConfigItem.new()
+	target.copy(source)
+
+	# Then: The target is not dirty.
+	assert_false(target.is_dirty())
+
+
+func test_item_is_dirty_after_single_mutation():
+	# Given: A freshly reset config item.
+	var item := ExampleConfigItem.new()
+	item.reset()
+
+	# When: A single property is mutated.
+	item.test_int = 42
+
+	# Then: The item is dirty.
+	assert_true(item.is_dirty())
+
+
+func test_item_clear_dirty_resets_after_mutation():
+	# Given: A config item that has been mutated.
+	var item := ExampleConfigItem.new()
+	item.reset()
+	item.test_int = 42
+	item.test_string = "changed"
+	assert_true(item.is_dirty())
+
+	# When: clear_dirty is called.
+	item.clear_dirty()
+
+	# Then: The item is no longer dirty.
+	assert_false(item.is_dirty())
+
+
+func test_item_same_value_reassignment_is_not_dirty():
+	# Given: A config item with known values.
+	var item := ExampleConfigItem.new()
+	item.reset()
+	var original_int := item.test_int
+	var original_string := item.test_string
+
+	# When: The same values are re-assigned.
+	item.test_int = original_int
+	item.test_string = original_string
+
+	# Then: The item is not dirty.
+	assert_false(item.is_dirty())
+
+
+func test_item_revert_to_snapshot_value_is_not_dirty():
+	# Given: A freshly reset config item.
+	var item := ExampleConfigItem.new()
+	item.reset()
+	var original_int := item.test_int
+
+	# Given: The property is mutated.
+	item.test_int = 999
+	assert_true(item.is_dirty())
+
+	# When: The property is reverted to the snapshot value.
+	item.test_int = original_int
+
+	# Then: The item is no longer dirty.
+	assert_false(item.is_dirty())
+
+
+func test_item_store_load_round_trip_is_not_dirty():
+	# Given: An item with non-default values, stored to config.
+	var item := ExampleConfigItem.new()
+	item.reset()
+	item.test_int = 42
+	item.test_bool = true
+	item.test_string = "saved"
+	item.test_float = 2.5
+	item.test_int_list = PackedInt64Array([1, 2])
+	var config := Config.new()
+	item.store(config)
+
+	# When: A fresh item loads from the same config.
+	var loaded := ExampleConfigItem.new()
+	loaded.load(config)
+
+	# Then: The loaded item is not dirty.
+	assert_false(loaded.is_dirty())
+
+
+func test_item_is_dirty_with_packed_array_reassignment():
+	# Given: A freshly reset config item.
+	var item := ExampleConfigItem.new()
+	item.reset()
+
+	# When: A packed array property is reassigned.
+	item.test_int_list = PackedInt64Array([10, 20])
+
+	# Then: The item is dirty.
+	assert_true(item.is_dirty())
+
+
+func test_item_is_dirty_across_multiple_types():
+	# Given: A freshly reset config item.
+	var item := ExampleConfigItem.new()
+	item.reset()
+
+	# When: Multiple property types are mutated.
+	item.test_bool = true
+	item.test_float = 3.14
+	item.test_string = "changed"
+	item.test_vector2 = Vector2(1.0, 2.0)
+
+	# Then: The item is dirty.
+	assert_true(item.is_dirty())
+
+	# When: Dirty state is cleared and only one field differs.
+	item.clear_dirty()
+	item.test_float = 0.0
+
+	# Then: The item is still dirty (partial mutation).
+	assert_true(item.is_dirty())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
