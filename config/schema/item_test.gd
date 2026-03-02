@@ -23,7 +23,7 @@ class ExampleConfigItem:
 	@export var test_vector2: Vector2
 	@export var test_vector2_list: PackedVector2Array
 
-	var ignored_field: bool # Should not be serialized/deserialized.
+	var ignored_field: bool  # Should not be serialized/deserialized.
 
 	func _get_category() -> StringName:
 		return &"test-category"
@@ -38,7 +38,7 @@ func test_config_item_copy_sets_properties_correctly():
 
 	# Given: A populated source item.
 	var item := ExampleConfigItem.new()
-	item.ignored_field = true # Shouldn't be serialized!
+	item.ignored_field = true  # Shouldn't be serialized!
 	item.test_bool = true
 	item.test_float = 1.0
 	item.test_int = 1
@@ -69,7 +69,7 @@ func test_config_item_store_serializes_properties_to_config_correctly():
 
 	# Given: A populated config item.
 	var item := ExampleConfigItem.new()
-	item.ignored_field = true # Shouldn't be serialized!
+	item.ignored_field = true  # Shouldn't be serialized!
 	item.test_bool = true
 	item.test_float = 1.0
 	item.test_int = 1
@@ -113,7 +113,7 @@ func test_config_item_store_serializes_properties_to_config_correctly():
 func test_config_item_store_overwrites_existing_values():
 	# Given: A config item populated with non-default values.
 	var item := ExampleConfigItem.new()
-	item.ignored_field = true # Shouldn't be serialized!
+	item.ignored_field = true  # Shouldn't be serialized!
 	item.test_bool = true
 	item.test_float = 1.0
 	item.test_int = 1
@@ -205,7 +205,7 @@ func test_config_item_store_erases_when_serializing_default_value():
 	item.store(config)
 
 	# Then: The default values were erased from the config object.
-	assert_true(config.has_bool(item.get_category(), &"ignored_field")) # Ignored!
+	assert_true(config.has_bool(item.get_category(), &"ignored_field"))  # Ignored!
 	assert_false(config.has_bool(item.get_category(), &"test_bool"))
 	assert_false(config.has_float(item.get_category(), &"test_float"))
 	assert_false(config.has_int(item.get_category(), &"test_int"))
@@ -222,7 +222,7 @@ func test_config_item_deserializes_properties_from_config_correctly():
 
 	# Given: A populated 'Config' instance.
 	var config := Config.new()
-	config.set_bool(item.get_category(), &"ignored_field", true) # Should ignore!
+	config.set_bool(item.get_category(), &"ignored_field", true)  # Should ignore!
 	config.set_bool(item.get_category(), &"test_bool", true)
 	config.set_float(item.get_category(), &"test_float", 1.0)
 	config.set_int(item.get_category(), &"test_int", 1)
@@ -326,7 +326,7 @@ func test_config_item_load_erases_values_when_missing_from_config():
 func test_config_item_reset_restores_properties():
 	# Given: A populated config item.
 	var item := ExampleConfigItem.new()
-	item.ignored_field = true # Shouldn't be serialized!
+	item.ignored_field = true  # Shouldn't be serialized!
 	item.test_bool = true
 	item.test_float = 1.0
 	item.test_int = 1
@@ -340,7 +340,7 @@ func test_config_item_reset_restores_properties():
 	item.reset()
 
 	# Then: All relevant properties are restored to their defaults.
-	assert_eq(item.ignored_field, true) # Ignored!
+	assert_eq(item.ignored_field, true)  # Ignored!
 	assert_eq(item.test_bool, false)
 	assert_eq(item.test_float, 0.0)
 	assert_eq(item.test_int, 0)
