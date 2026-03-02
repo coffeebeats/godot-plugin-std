@@ -474,6 +474,23 @@ func test_schema_critical_persists_when_items_clean():
 	assert_true(schema.is_dirty())
 
 
+func test_schema_load_clears_critical():
+	# Given: A schema marked critical.
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.mark_critical()
+	assert_true(schema.is_critical())
+
+	# When: The schema loads from a config.
+	var config := Config.new()
+	schema.load(config)
+
+	# Then: The critical flag is cleared.
+	assert_false(schema.is_critical())
+	assert_false(schema.is_dirty())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
