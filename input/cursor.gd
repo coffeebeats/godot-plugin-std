@@ -44,16 +44,23 @@ var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = false
 var _focus_root: Control = null
+var _focus_version: int = 0
 var _hide_actions := PackedStringArray()
 var _hide_actions_if_hovered := PackedStringArray()
 var _hide_delay: float = 0.0
 var _hovered: Control = null
+var _pending_focus: Control = null
 var _pressed: Array[String] = []
 var _reveal_distance_minimum: Vector2 = Vector2.ZERO
 var _reveal_mouse_buttons: Array[MouseButton] = []
 var _time_since_mouse_motion: float = 0.0
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## get_hovered returns the control currently tracked as hovered, or null.
+func get_hovered() -> Control:
+	return _hovered
 
 
 ## get_is_visible returns whether the cursor is currently visible.
@@ -106,7 +113,7 @@ func set_focus_root(root: Control = null) -> void:
 	if changed:
 		focus_root_changed.emit(root)
 
-	if changed and not _cursor_visible:
+	if _pending_focus or (changed and not _cursor_visible):
 		_update_focus()
 
 
@@ -123,6 +130,14 @@ func set_hovered(control: Control) -> bool:
 	_hovered = control
 
 	return true
+
+
+## set_pending_focus registers a preferred focus target, consumed the next time focus is
+## resolved. Each call overwrites the previous target, allowing consumers to override
+## the screen manager's default. Returns whether a non-null target was set.
+func set_pending_focus(target: Control) -> bool:
+	_pending_focus = target
+	return target != null
 
 
 ## show_cursor reveals the cursor and transitions to mouse-based navigation. If the
@@ -296,55 +311,76 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+func _deferred_update_focus(version: int) -> void:
+	if version != _focus_version:
+		return
+
+	_update_focus()
+
+
+func _grab_focus(target: Control, trigger: StringName) -> void:
+	about_to_grab_focus.emit(target, trigger)
+	target.focus_mode = Control.FOCUS_ALL
+	target.grab_focus()
+
+
 func _update_focus(trigger: StringName = &"") -> void:
+	_focus_version += 1
+
+	# Ensure the cached focus root is still valid.
+	if _focus_root and not is_instance_valid(_focus_root):
+		set_focus_root(null)
+
+	# Keep current focus if it's valid and under the focus root.
+	var current_focus := get_viewport().gui_get_focus_owner()
+	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
+		_pending_focus = null
+		return
+
+	# Consume the pending focus target.
+	var pending := _pending_focus
+	_pending_focus = null
+	if (
+		pending
+		and not _cursor_visible
+		and is_instance_valid(pending)
+		and pending.is_visible_in_tree()
+		and not (pending is BaseButton and pending.disabled)
+	):
+		_grab_focus(pending, trigger)
+		return
+
+	# In mouse mode, release focus.
 	if _cursor_visible:
 		get_viewport().gui_release_focus()
 		return
 
-	# When switching scenes, nodes will be rebuilt. Ensure the cached focus root is
-	# still valid before trying to use it.
-	if _focus_root and not is_instance_valid(_focus_root):
-		set_focus_root(null)
+	# NOTE: If the focus root is queued for deletion, treat it as null to avoid
+	# restricting the fallback search to a dying subtree. This is intentionally
+	# separate from the validity check above — `set_focus_root(null)` would
+	# prematurely re-enable controls still under the dying root.
+	var root := _focus_root if not _focus_root.is_queued_for_deletion() else null
 
-	var current_focus := get_viewport().gui_get_focus_owner()
-	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
+	# NOTE: Only use _hovered if it's under the focus root (or there is no
+	# root). This handles the case where a modal opens over a hovered element —
+	# the element remains hovered but shouldn't receive focus (Godot bug).
+	if _hovered and (not root or root.is_ancestor_of(_hovered)):
+		_grab_focus(_hovered, trigger)
+		unset_hovered(_hovered)
 		return
 
-	# NOTE: If the focus root is null or being deleted, search for any anchor;
-	# otherwise, restrict the search to anchors under the focus root.
-	var root := (
-		_focus_root
-		if is_instance_valid(_focus_root) and not _focus_root.is_queued_for_deletion()
-		else null
-	)
-
-	# NOTE: Only use _hovered if it's under the focus root (or there's no focus root).
-	# This handles the case where a modal opens over a hovered element - the element
-	# remains hovered but shouldn't receive focus (this is a Godot bug).
-	var hovered_under_root := _hovered and (not root or root.is_ancestor_of(_hovered))
-
-	if hovered_under_root:
-		about_to_grab_focus.emit(_hovered, trigger)
-
-		# NOTE: Don't use a deferred call so that the current input event applies
-		# as if the previously-hovered node was already focused.
-		_hovered.focus_mode = Control.FOCUS_ALL
-		_hovered.grab_focus()
+	if _hovered:
 		unset_hovered(_hovered)
-	else:
-		if _hovered:
-			unset_hovered(_hovered)
 
-		var focus_target := StdInputCursorFocusHandler.get_focus_target(root)
-
-		if focus_target:
-			about_to_grab_focus.emit.call_deferred(focus_target, trigger)
-
-			# NOTE: Use a deferred call here so that the cursor visibility signal
-			# is processed first, allowing focus handlers to restore focus_mode.
-			focus_target.call_deferred(&"grab_focus")
-		elif current_focus:
-			current_focus.release_focus()
+	# Fall back to the highest-priority anchor. Use deferred calls so that the
+	# cursor visibility signal is processed first, allowing focus handlers to
+	# restore focus_mode before grab_focus runs.
+	var anchor := StdInputCursorFocusHandler.get_focus_target(root)
+	if anchor:
+		about_to_grab_focus.emit.call_deferred(anchor, trigger)
+		anchor.grab_focus.call_deferred()
+	elif current_focus:
+		current_focus.release_focus()
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
@@ -354,7 +390,8 @@ func _on_gui_focus_changed(control: Control) -> void:
 	_logger.debug("GUI focus changed.", {&"path": control.get_path()})
 
 	control.focus_exited.connect(
-		func(): call_deferred(&"_update_focus"), CONNECT_ONE_SHOT
+		func(): _deferred_update_focus.call_deferred(_focus_version),
+		CONNECT_ONE_SHOT,
 	)
 
 

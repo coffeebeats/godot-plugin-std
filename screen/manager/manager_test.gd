@@ -16,7 +16,7 @@ const Manager := preload("manager.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const MockTransition := TransitionTests.MockTransition # gdlint:ignore=constant-name
+const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant-name
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -428,7 +428,7 @@ func test_push_recalculates_hover_when_cursor_visible():
 	add_child_autofree(sv)
 	(
 		sv
-		.notification(
+		. notification(
 			Viewport.NOTIFICATION_VP_MOUSE_ENTER,
 		)
 	)
@@ -657,7 +657,7 @@ func _get_active_transition() -> MockTransition:
 func _get_cursor() -> StdInputCursor:
 	return (
 		StdGroup
-		.get_sole_member(
+		. get_sole_member(
 			StdInputCursor.GROUP_INPUT_CURSOR,
 		)
 	)
