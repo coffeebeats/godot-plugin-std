@@ -220,7 +220,11 @@ func test_focus_saved_and_restored_on_pop():
 	)
 
 
-func test_focus_restored_on_pop_even_when_focus_mode_cleared():
+func test_focus_restored_on_pop_even_when_focus_mode_cleared_synchronously():
+	# Given: Focus mode (cursor hidden).
+	var cursor := _get_cursor()
+	cursor.hide_cursor()
+
 	# Given: A first screen with a focused button.
 	var first_scene := Control.new()
 	var button := Button.new()
@@ -228,9 +232,6 @@ func test_focus_restored_on_pop_even_when_focus_mode_cleared():
 	first_scene.add_child(button)
 	await _do_push(null, first_scene)
 	button.grab_focus()
-
-	# Given: A handler that clears focus_mode when button leaves focus root.
-	var cursor := _get_cursor()
 	cursor.focus_root_changed.connect(
 		func(root: Control) -> void:
 			if root and not root.is_ancestor_of(button):
