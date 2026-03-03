@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ##
 ## screen/manager/manager_test.gd
 ##
@@ -15,7 +16,7 @@ const Manager := preload("manager.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant-name
+const MockTransition := TransitionTests.MockTransition # gdlint:ignore=constant-name
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -251,6 +252,38 @@ func test_focus_restored_on_pop_even_when_focus_mode_cleared():
 	)
 
 
+func test_focus_saved_from_hovered_when_cursor_visible():
+	# Given: Cursor visible (mouse mode).
+	_get_cursor().show_cursor()
+
+	# Given: A first screen with a hoverable button (no focus).
+	var first := _create_screen()
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(first, first_scene)
+
+	# Given: The button is hovered (simulated via cursor).
+	_get_cursor().set_hovered(button)
+
+	# When: A second screen is pushed (saves hovered as focus).
+	await _do_push()
+
+	# When: The cursor is hidden before popping (enter focus mode).
+	_get_cursor().hide_cursor()
+
+	# When: The second screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: Focus is restored to the button (saved from hovered).
+	assert_eq(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button,
+	)
+
+
 func test_pop_recalculates_hover_when_cursor_visible():
 	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
 	# mode.
@@ -317,7 +350,7 @@ func test_push_recalculates_hover_when_cursor_visible():
 	add_child_autofree(sv)
 	(
 		sv
-		. notification(
+		.notification(
 			Viewport.NOTIFICATION_VP_MOUSE_ENTER,
 		)
 	)
@@ -546,7 +579,7 @@ func _get_active_transition() -> MockTransition:
 func _get_cursor() -> StdInputCursor:
 	return (
 		StdGroup
-		. get_sole_member(
+		.get_sole_member(
 			StdInputCursor.GROUP_INPUT_CURSOR,
 		)
 	)

@@ -554,7 +554,9 @@ func _restore_focus(scene: Node) -> void:
 	_cursor.set_focus_root(root)
 
 
-## _save_focus records the currently focused control for a scene.
+## _save_focus records the currently focused control for a scene. When no control has
+## focus (mouse mode), the cursor's hovered control is used as a fallback — at push
+## time, the mouse is still over the clicked button.
 func _save_focus(scene: Node) -> void:
 	if not is_instance_valid(scene):
 		return
@@ -564,6 +566,8 @@ func _save_focus(scene: Node) -> void:
 		return
 
 	var focused := viewport.gui_get_focus_owner()
+	if not focused and _cursor:
+		focused = _cursor.get_hovered()
 	if focused and scene.is_ancestor_of(focused):
 		_focus[scene] = focused
 
