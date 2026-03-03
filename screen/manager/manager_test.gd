@@ -1,3 +1,4 @@
+# gdlint:disable=max-public-methods
 ##
 ## screen/manager/manager_test.gd
 ##
@@ -219,7 +220,11 @@ func test_focus_saved_and_restored_on_pop():
 	)
 
 
-func test_focus_restored_on_pop_even_when_focus_mode_cleared():
+func test_focus_restored_on_pop_even_when_focus_mode_cleared_synchronously():
+	# Given: Focus mode (cursor hidden).
+	var cursor := _get_cursor()
+	cursor.hide_cursor()
+
 	# Given: A first screen with a focused button.
 	var first_scene := Control.new()
 	var button := Button.new()
@@ -227,9 +232,6 @@ func test_focus_restored_on_pop_even_when_focus_mode_cleared():
 	first_scene.add_child(button)
 	await _do_push(null, first_scene)
 	button.grab_focus()
-
-	# Given: A handler that clears focus_mode when button leaves focus root.
-	var cursor := _get_cursor()
 	cursor.focus_root_changed.connect(
 		func(root: Control) -> void:
 			if root and not root.is_ancestor_of(button):
@@ -245,6 +247,116 @@ func test_focus_restored_on_pop_even_when_focus_mode_cleared():
 	await wait_idle_frames(1)
 
 	# Then: Focus is restored to the button.
+	assert_eq(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button,
+	)
+
+
+func test_focus_restoration_respects_consumer_override_after_pop():
+	# Given: Focus mode (cursor hidden).
+	var cursor := _get_cursor()
+	cursor.hide_cursor()
+
+	# Given: A first screen with focusable buttons A and B, focus on A.
+	var first := _create_screen()
+	var first_scene := Control.new()
+	var button_a := Button.new()
+	button_a.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button_a)
+	var button_b := Button.new()
+	button_b.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button_b)
+	await _do_push(first, first_scene)
+	button_a.grab_focus()
+	assert_eq(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button_a,
+	)
+
+	# Given: A second screen pushed on top.
+	var second := _create_screen()
+	await _do_push(second)
+
+	# Given: A handler that overrides focus to B when popped.
+	second.popped.connect(
+		func(_result) -> void: cursor.set_pending_focus(button_b),
+	)
+
+	# When: The second screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: Focus is on B (consumer override), not A (saved focus).
+	assert_eq(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button_b,
+	)
+
+
+func test_focus_restoration_skips_disabled_button_after_pop():
+	# Given: Focus mode (cursor hidden) — this is where the bug manifests.
+	_get_cursor().hide_cursor()
+
+	# Given: A first screen with a focusable button.
+	var first := _create_screen()
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(first, first_scene)
+	button.grab_focus()
+	assert_eq(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button,
+	)
+
+	# Given: A second screen pushed on top.
+	var second := _create_screen()
+	await _do_push(second)
+
+	# Given: A handler that disables the button when the screen is popped.
+	second.popped.connect(
+		func(_result) -> void: button.disabled = true,
+	)
+
+	# When: The second screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: Focus does NOT land on the disabled button.
+	assert_ne(
+		_manager.get_viewport().gui_get_focus_owner(),
+		button,
+	)
+
+
+func test_focus_saved_from_hovered_when_cursor_visible():
+	# Given: Cursor visible (mouse mode).
+	_get_cursor().show_cursor()
+
+	# Given: A first screen with a hoverable button (no focus).
+	var first := _create_screen()
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(first, first_scene)
+
+	# Given: The button is hovered (simulated via cursor).
+	_get_cursor().set_hovered(button)
+
+	# When: A second screen is pushed (saves hovered as focus).
+	await _do_push()
+
+	# When: The cursor is hidden before popping (enter focus mode).
+	_get_cursor().hide_cursor()
+
+	# When: The second screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: Focus is restored to the button (saved from hovered).
 	assert_eq(
 		_manager.get_viewport().gui_get_focus_owner(),
 		button,

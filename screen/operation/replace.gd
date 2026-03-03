@@ -104,6 +104,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 				manager._update_stack_state()
 				if screen_prev not in manager._stack:
 					manager._notify_top_uncovered()
+					manager._restore_focus(manager._current_scene())
 				done.call()
 				return
 			var scene: Node = manager._scenes.get(_screen)

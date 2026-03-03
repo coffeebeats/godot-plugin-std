@@ -41,16 +41,7 @@ var _is_in_stack: bool = false
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	assert(screen != null, "invalid config; missing 'screen'")
-
-	Signals.disconnect_safe(screen.entering, _on_entering)
-	Signals.disconnect_safe(screen.exited, _on_exited)
-	Signals.disconnect_safe(screen.covered, _on_covered)
-	Signals.disconnect_safe(screen.uncovered, _on_uncovered)
-
-
-func _ready() -> void:
+func _enter_tree() -> void:
 	assert(screen != null, "invalid config; missing 'screen'")
 
 	manager = _find_manager()
@@ -77,6 +68,15 @@ func _ready() -> void:
 			_is_in_stack = true
 			break
 	_is_current = manager.get_current_screen() == screen
+
+
+func _exit_tree() -> void:
+	assert(screen != null, "invalid config; missing 'screen'")
+
+	Signals.disconnect_safe(screen.entering, _on_entering)
+	Signals.disconnect_safe(screen.exited, _on_exited)
+	Signals.disconnect_safe(screen.covered, _on_covered)
+	Signals.disconnect_safe(screen.uncovered, _on_uncovered)
 
 
 func _unhandled_input(event: InputEvent) -> void:

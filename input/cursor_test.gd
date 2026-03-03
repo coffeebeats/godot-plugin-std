@@ -11,6 +11,28 @@ var cursor: StdInputCursor = null
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
+func test_get_hovered_returns_hovered_control() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Then: No control is hovered initially.
+	assert_null(cursor.get_hovered())
+
+	# Given: A control set as hovered.
+	var control := Button.new()
+	add_child_autofree(control)
+	cursor.set_hovered(control)
+
+	# Then: The hovered control is returned.
+	assert_eq(cursor.get_hovered(), control)
+
+	# When: The control is unset.
+	cursor.unset_hovered(control)
+
+	# Then: No control is hovered.
+	assert_null(cursor.get_hovered())
+
+
 func test_get_is_visible_returns_true_by_default() -> void:
 	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
@@ -107,6 +129,70 @@ func test_set_hovered_rejects_same_control() -> void:
 
 	# Then: The operation returns false (no change).
 	assert_false(got)
+
+
+func test_set_pending_focus_skipped_when_cursor_visible() -> void:
+	# Given: A cursor added to the scene (visible by default in headless).
+	add_child_autofree(cursor)
+	assert_true(cursor.get_is_visible())
+
+	# Given: A focusable button in the scene.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+
+	# When: A focus target is queued and focus root is triggered.
+	cursor.set_pending_focus(button)
+	cursor.set_focus_root(null)
+
+	# Then: The button does NOT have focus because cursor is visible.
+	assert_ne(
+		cursor.get_viewport().gui_get_focus_owner(),
+		button,
+	)
+
+
+func test_set_pending_focus_skips_disabled_button() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A disabled button in the scene.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.disabled = true
+	add_child_autofree(button)
+
+	# When: A disabled button is queued as focus target and focus root is updated.
+	cursor.set_pending_focus(button)
+	cursor.set_focus_root(null)
+
+	# Then: The disabled button does NOT have focus.
+	assert_ne(
+		cursor.get_viewport().gui_get_focus_owner(),
+		button,
+	)
+
+
+func test_set_pending_focus_used_by_update_focus() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button in the scene.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+
+	# When: A focus target is queued and focus root is updated.
+	cursor.set_pending_focus(button)
+	cursor.set_focus_root(null)
+
+	# Then: The button has focus.
+	assert_eq(
+		cursor.get_viewport().gui_get_focus_owner(),
+		button,
+	)
 
 
 func test_unset_hovered_clears_hovered_control() -> void:

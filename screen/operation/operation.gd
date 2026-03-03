@@ -36,6 +36,7 @@ func _emit_entered(
 	if scene == null:
 		return
 
+	manager._set_pending_focus(scene)
 	screen.entered.emit(scene)
 	manager.screen_entered.emit(screen, scene)
 	manager._restore_focus(scene)

@@ -81,6 +81,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		Callable(),
 		func() -> void:
 			manager._unmount_scene(screen, scene)
-			screen.popped.emit(result),
+			screen.popped.emit(result)
+			manager._restore_focus(manager._current_scene()),
 		done,
 	)

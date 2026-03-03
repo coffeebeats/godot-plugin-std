@@ -57,10 +57,8 @@ const Signals := preload("../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-# gdlint:ignore=class-definitions-order
-static var _anchors: Array[StdInputCursorFocusHandler] = []
+static var _anchors: Array[StdInputCursorFocusHandler] = []  # gdlint:ignore=class-definitions-order
 
-var _control_disabled: bool = false
 var _control_focus_mode: FocusMode = FOCUS_NONE
 var _control_mouse_filter: MouseFilter = MOUSE_FILTER_IGNORE
 var _cursor: StdInputCursor = null
@@ -102,11 +100,13 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 			assert(false, "invalid state; invalid target node")
 			continue
 
+		var target := anchor._control
+		var is_button := target is BaseButton
+
 		# Skip disabled buttons if configured.
-		if anchor.block_focus_and_hover_on_disable and anchor._control_disabled:
+		if anchor.block_focus_and_hover_on_disable and is_button and target.disabled:
 			continue
 
-		var target := anchor._control
 		if not target.is_visible_in_tree():
 			continue
 		if ancestor and not ancestor.is_ancestor_of(target):
@@ -121,13 +121,13 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	_anchors.erase(self)
-
-
 func _enter_tree() -> void:
 	if use_as_anchor and not self in _anchors:
 		_anchors.append(self)
+
+
+func _exit_tree() -> void:
+	_anchors.erase(self)
 
 
 func _notification(what) -> void:
@@ -151,7 +151,6 @@ func _ready() -> void:
 	# Monitor disabled state changes for BaseButtons via the draw signal; see
 	# https://github.com/godotengine/godot-proposals/issues/8889.
 	if _control is BaseButton:
-		_control_disabled = _control is BaseButton and _control.disabled
 		Signals.connect_safe(_control.draw, _on_control_draw)
 
 	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
@@ -185,15 +184,31 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _clear_stale_button_visuals sends synthetic focus-exit and mouse-exit notifications
+## to a `BaseButton` to clear stale pressed and hovered visual state. The focus-exit
+## notification is skipped for toggle buttons because `is_pressed()` reflects checked
+## state, and the notification would spuriously affect checked checkboxes.
+func _clear_stale_button_visuals() -> void:
+	if not _control is BaseButton:
+		return
+	if _control.is_pressed() and not _control.toggle_mode:
+		_control.notification(Control.NOTIFICATION_FOCUS_EXIT)
+	if _control.is_hovered():
+		_control.notification(Control.NOTIFICATION_MOUSE_EXIT)
+
+
 func _update_input_state(is_cursor_visible: bool) -> void:
 	# Disabled buttons should not receive any input if blocking is enabled.
 	if (
 		block_focus_and_hover_on_disable
 		and _control is BaseButton
-		and _control_disabled
+		and _control.disabled
 	):
 		_control.focus_mode = FOCUS_NONE
 		_control.mouse_filter = MOUSE_FILTER_IGNORE
+		_clear_stale_button_visuals()
+		if _control.has_focus():
+			_control.release_focus()
 		return
 
 	# If there's a focus root and this control isn't under it, disable focus and mouse
@@ -219,10 +234,6 @@ func _update_input_state(is_cursor_visible: bool) -> void:
 
 
 func _on_control_draw() -> void:
-	var button: BaseButton = _control
-	assert(button, "invalid state; unexpected control target type.")
-
-	_control_disabled = button.disabled
 	_update_input_state(_cursor.get_is_visible())
 
 
@@ -261,19 +272,7 @@ func _on_focus_root_changed(root: Control) -> void:
 	_is_outside_focus_root = root != null and not root.is_ancestor_of(_control)
 	_update_input_state(_cursor.get_is_visible())
 
-	# NOTE: When a non-toggle 'BaseButton' transitions from inside to outside the focus
-	# root (e.g. an overlay is pushed), clear stale pressed and hovered visual state.
-	#
-	# Toggle buttons are excluded because 'is_pressed()' returns the toggle state, and
-	# sending 'NOTIFICATION_FOCUS_EXIT' would spuriously affect checked checkboxes.
-	if (
-		clear_press_on_focus_root_exit
-		and _is_outside_focus_root
-		and not was_outside
-		and _control is BaseButton
-		and not _control.toggle_mode
-	):
-		if _control.is_pressed():
-			_control.notification(Control.NOTIFICATION_FOCUS_EXIT)
-		if _control.is_hovered():
-			_control.notification(Control.NOTIFICATION_MOUSE_EXIT)
+	# NOTE: When a control transitions from inside to outside the focus root (e.g. an
+	# overlay is pushed), clear stale pressed and hovered visual state.
+	if clear_press_on_focus_root_exit and _is_outside_focus_root and not was_outside:
+		_clear_stale_button_visuals()
