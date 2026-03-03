@@ -359,7 +359,11 @@ func _update_focus(trigger: StringName = &"") -> void:
 	# restricting the fallback search to a dying subtree. This is intentionally
 	# separate from the validity check above — `set_focus_root(null)` would
 	# prematurely re-enable controls still under the dying root.
-	var root := _focus_root if not _focus_root.is_queued_for_deletion() else null
+	var root := (
+		_focus_root
+		if _focus_root and not _focus_root.is_queued_for_deletion()
+		else null
+	)
 
 	# NOTE: Only use _hovered if it's under the focus root (or there is no
 	# root). This handles the case where a modal opens over a hovered element —
