@@ -1,4 +1,4 @@
-# gdlint:ignore=max-public-methods
+# gdlint:disable=max-public-methods
 
 ##
 ## Tests pertaining to the `StdInputCursorFocusHandler` class.
@@ -557,6 +557,75 @@ func test_clear_press_on_focus_root_exit_noop_already_outside() -> void:
 
 	# Then: Hover is NOT cleared (was already outside; not a transition).
 	assert_true(button.is_hovered())
+
+
+func test_disabled_button_clears_pressed_visual() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
+	# mode (see https://github.com/godotengine/godot/issues/73557).
+	var sv := SubViewport.new()
+	sv.size = Vector2i(400, 300)
+	add_child_autofree(sv)
+
+	# Given: A button inside the SubViewport with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	button.size = Vector2(100, 40)
+	sv.add_child(button)
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The button is pressed via SubViewport input dispatch.
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = Vector2(50, 20)
+	sv.push_input(ev)
+	await get_tree().process_frame
+	assert_true(button.is_pressed(), "precondition: button should be pressed")
+
+	# When: The button becomes disabled.
+	button.disabled = true
+	button.queue_redraw()
+	await get_tree().process_frame
+
+	# Then: The button is no longer pressed.
+	assert_false(button.is_pressed())
+
+	button.remove_child(handler)
+	handler.free()
+
+
+func test_disabled_button_releases_focus() -> void:
+	# Given: A cursor in the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focused button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The button has focus.
+	button.grab_focus()
+	assert_true(button.has_focus(), "precondition: button should have focus")
+
+	# When: The button becomes disabled (triggers _on_control_draw → _update_input_state).
+	button.disabled = true
+	button.queue_redraw()
+	await get_tree().process_frame
+
+	# Then: The button no longer has focus.
+	assert_false(button.has_focus())
+
+	button.remove_child(handler)
+	handler.free()
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
