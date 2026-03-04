@@ -88,6 +88,7 @@ var _overlays: Overlays = null
 var _preloads: Dictionary[StdScreen, Dictionary] = {}
 var _queue: OperationQueue = null
 var _scenes: Dictionary[StdScreen, Node] = {}
+var _sound_player: StdSoundEventPlayer = null
 var _stack: Array[StdScreen] = []
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -253,6 +254,9 @@ func _ready() -> void:
 	add_child(_loader, Engine.is_editor_hint(), INTERNAL_MODE_FRONT)
 
 	_overlays = Overlays.new(self)
+
+	if not StdGroup.is_empty(StdSoundEventPlayer.GROUP_SOUND_PLAYER):
+		_sound_player = StdGroup.get_sole_member(StdSoundEventPlayer.GROUP_SOUND_PLAYER)
 
 	if initial:
 		push(initial)
@@ -466,6 +470,8 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 	screen.entering.emit(scene)
 	screen_entering.emit(screen, scene)
 
+	_play_screen_sound(screen.sound_enter)
+
 
 ## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen
 ## and sets pending focus for resolution. Called after a screen above is removed from
@@ -478,6 +484,12 @@ func _notify_top_uncovered() -> void:
 		screen_uncovered.emit(screen, scene)
 		scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
 	_set_pending_focus(scene)
+
+
+## _play_screen_sound plays a fire-and-forget sound event via the global sound player.
+func _play_screen_sound(event: StdSoundEvent) -> void:
+	if event and _sound_player:
+		_sound_player.play(event)
 
 
 ## _request_close_overlay propagates close_requested to all screens in the topmost

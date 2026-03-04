@@ -19,6 +19,7 @@ const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _manager: Manager = null
+var _sound_player = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -213,6 +214,37 @@ func test_reset_emits_popped_null_for_all_screens():
 	assert_eq(results, [null, null, null])
 
 
+func test_reset_does_not_play_exit_sound():
+	# Given: A screen with an exit sound.
+	var screen := _create_screen()
+	screen.sound_exit = StdSoundEvent.new()
+	await _do_push(screen)
+
+	# When: The stack is reset.
+	_manager.reset(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The exit sound was not played for the torn-down screen.
+	assert_not_called(_sound_player, "play")
+
+
+func test_reset_plays_enter_sound_for_new_base():
+	# Given: A manager with one screen.
+	await _do_push()
+
+	# When: The stack is reset with a screen that has an enter sound.
+	var new_base := _create_screen()
+	var sound := StdSoundEvent.new()
+	new_base.sound_enter = sound
+	_manager.reset(new_base, Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The new base's enter sound was played.
+	assert_called(_sound_player, "play")
+	var params = get_call_parameters(_sound_player, "play")
+	assert_eq(params[0], sound)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -223,6 +255,10 @@ func before_each():
 	_manager = Manager.new()
 	add_child_autofree(_manager)
 	await wait_idle_frames(1)
+
+	_sound_player = autofree(double(StdSoundEventPlayer).new())
+	stub(_sound_player, "play").to_return(null)
+	_manager._sound_player = _sound_player
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #

@@ -20,6 +20,7 @@ const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _manager: Manager = null
+var _sound_player = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -267,6 +268,40 @@ func test_replace_discards_previous_screen_with_missing_scene():
 	assert_signal_not_emitted(_manager, "screen_entered")
 
 
+func test_replace_plays_exit_sound_for_outgoing():
+	# Given: A screen with an exit sound.
+	var old := _create_screen()
+	var sound := StdSoundEvent.new()
+	old.sound_exit = sound
+	await _do_push(old)
+
+	# When: The screen is replaced.
+	_manager.replace(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The outgoing screen's exit sound was played.
+	assert_called(_sound_player, "play")
+	var params = get_call_parameters(_sound_player, "play")
+	assert_eq(params[0], sound)
+
+
+func test_replace_plays_enter_sound_for_incoming():
+	# Given: A screen on the stack.
+	await _do_push()
+
+	# When: It is replaced with a screen that has an enter sound.
+	var new_screen := _create_screen()
+	var sound := StdSoundEvent.new()
+	new_screen.sound_enter = sound
+	_manager.replace(new_screen, Control.new())
+	await wait_idle_frames(1)
+
+	# Then: The incoming screen's enter sound was played.
+	assert_called(_sound_player, "play")
+	var params = get_call_parameters(_sound_player, "play")
+	assert_eq(params[0], sound)
+
+
 func test_replace_discards_previous_screen_frees_owned_overlay():
 	# Given: Two blocking screens with separate overlays.
 	var first := _create_screen()
@@ -299,6 +334,10 @@ func before_each():
 	_manager = Manager.new()
 	add_child_autofree(_manager)
 	await wait_idle_frames(1)
+
+	_sound_player = autofree(double(StdSoundEventPlayer).new())
+	stub(_sound_player, "play").to_return(null)
+	_manager._sound_player = _sound_player
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #

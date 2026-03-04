@@ -122,6 +122,27 @@ func test_close_action_works_after_screen_uncovered():
 	assert_eq(_manager.get_depth(), 1)
 
 
+func test_push_action_works_after_tree_reentry():
+	# Given: A base screen and a pusher with a push action.
+	await _do_push()
+	var target := _create_screen()
+	var pusher := _create_pusher(target, [&"test_push"], [])
+
+	# Given: The pusher is removed from and re-added to the tree, simulating
+	# a cached scene instance being reused after a pop and subsequent push.
+	var parent := pusher.get_parent()
+	parent.remove_child(pusher)
+	parent.add_child(pusher)
+
+	# When: The push action is simulated.
+	_simulate_action(pusher, &"test_push")
+	await wait_idle_frames(1)
+
+	# Then: The target screen was pushed (signals reconnected on re-entry).
+	assert_eq(_manager.get_depth(), 2)
+	assert_eq(_manager.get_current_screen(), target)
+
+
 func test_finds_manager_via_ancestor_walk():
 	# Given: A pusher added as a child of the manager.
 	await _do_push()

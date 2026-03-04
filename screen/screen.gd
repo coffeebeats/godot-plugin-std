@@ -103,6 +103,20 @@ signal uncovered(scene: Node)
 ## when the overlay background (scrim) is clicked.
 @export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
 
+@export_group("Sound")
+
+## sound_enter is played when this screen's scene mounts (alongside the `entering`
+## signal, before the enter transition).
+##
+## NOTE: This is intended for short, fire-and-forget UI sounds; the returned instance is
+## not retained. For long-running audio with fade support, use `StdSoundEmitter`.
+@export var sound_enter: StdSoundEvent
+
+## sound_exit is played when this screen begins a visual exit (alongside the `exiting`
+## signal, before the exit transition). Only fires for transitioning exits (pop,
+## replace); instant teardowns during pop_to or reset do not trigger it.
+@export var sound_exit: StdSoundEvent
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 static var _logger := StdLogger.create(&"std/screen")  # gdlint:ignore=class-definitions-order,max-line-length
