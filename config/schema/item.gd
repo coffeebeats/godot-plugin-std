@@ -20,7 +20,23 @@ const PROPERTY_KEY_USAGE := &"usage"
 
 const PROPERTY_USAGE_SERDE := PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _snapshot: Dictionary = {}
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## clear_dirty snapshots current property values as the clean baseline.
+func clear_dirty() -> void:
+	_snapshot.clear()
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		_snapshot[name] = get(name)
 
 
 ## copy hydrates this config item with the data from the provided instance. All values
@@ -46,11 +62,26 @@ func copy(other: StdConfigItem) -> void:
 
 		self.set(name, value)
 
+	clear_dirty()
+
 
 ## get_category returns the name of the `Config` category which contains the definition
 ## for this item.
 func get_category() -> StringName:
 	return _get_category()
+
+
+## is_dirty returns whether any exported property differs from its last snapshot.
+func is_dirty() -> bool:
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		if get(name) != _snapshot.get(name):
+			return true
+
+	return false
 
 
 ## load reads configuration data from the provided `Config` instance and updates this
@@ -85,6 +116,8 @@ func load(config: Config) -> void:
 			)
 		)
 
+	clear_dirty()
+
 
 ## reset sets all serialization-enabled properties back to their default values.
 func reset() -> void:
@@ -97,6 +130,8 @@ func reset() -> void:
 		var name: StringName = property[PROPERTY_KEY_NAME]
 
 		self.set(name, defaults.get(name))
+
+	clear_dirty()
 
 
 ## store populates the provided `Config` instance with this config item's properties.

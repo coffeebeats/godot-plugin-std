@@ -68,6 +68,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 
 	screen.exiting.emit(scene)
 	manager.screen_exiting.emit(screen, scene)
+	manager._play_screen_sound(screen.sound_exit)
 
 	var transition := manager._resolve_transition(screen, _transition, &"pop")
 	var result: Variant = _result
@@ -81,6 +82,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		Callable(),
 		func() -> void:
 			manager._unmount_scene(screen, scene)
-			screen.popped.emit(result),
+			screen.popped.emit(result)
+			manager._restore_focus(manager._current_scene()),
 		done,
 	)

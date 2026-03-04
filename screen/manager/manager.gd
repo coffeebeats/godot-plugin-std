@@ -88,6 +88,7 @@ var _overlays: Overlays = null
 var _preloads: Dictionary[StdScreen, Dictionary] = {}
 var _queue: OperationQueue = null
 var _scenes: Dictionary[StdScreen, Node] = {}
+var _sound_player: StdSoundEventPlayer = null
 var _stack: Array[StdScreen] = []
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -254,6 +255,9 @@ func _ready() -> void:
 
 	_overlays = Overlays.new(self)
 
+	if not StdGroup.is_empty(StdSoundEventPlayer.GROUP_SOUND_PLAYER):
+		_sound_player = StdGroup.get_sole_member(StdSoundEventPlayer.GROUP_SOUND_PLAYER)
+
 	if initial:
 		push(initial)
 
@@ -408,7 +412,11 @@ func _force_hover_recalculation() -> void:
 	var event := InputEventMouseMotion.new()
 	event.position = viewport.get_mouse_position()
 	event.relative = Vector2.ZERO
-	viewport.push_input(event)
+	# NOTE: Pass `true` for local coordinates — `get_mouse_position()` returns viewport-
+	# local coordinates, but `push_input` defaults to OS coordinates. With a stretch
+	# transform (e.g. `canvas_items` mode), omitting this flag double-transforms the
+	# position, causing the hit test to miss controls.
+	viewport.push_input(event, true)
 
 
 ## _force_stop stops the active transition and force-finishes the context.
@@ -465,6 +473,27 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 
 	screen.entering.emit(scene)
 	screen_entering.emit(screen, scene)
+
+	_play_screen_sound(screen.sound_enter)
+
+
+## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen
+## and sets pending focus for resolution. Called after a screen above is removed from
+## the stack.
+func _notify_top_uncovered() -> void:
+	var scene := _current_scene()
+	if scene:
+		var screen := _current_screen()
+		screen.uncovered.emit(scene)
+		screen_uncovered.emit(screen, scene)
+		scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
+	_set_pending_focus(scene)
+
+
+## _play_screen_sound plays a fire-and-forget sound event via the global sound player.
+func _play_screen_sound(event: StdSoundEvent) -> void:
+	if event and _sound_player:
+		_sound_player.play(event)
 
 
 ## _request_close_overlay propagates close_requested to all screens in the topmost
@@ -523,8 +552,9 @@ func _resolve_transition(
 	return screen.transition
 
 
-## _restore_focus restores saved focus for a scene, falling back to the `StdInputCursor`
-## to select an appropriate control.
+## _restore_focus sets the focus root for the given scene, triggering focus resolution.
+## The pending focus target (set by _set_pending_focus or consumer calls to
+## set_pending_focus) is consumed during resolution.
 func _restore_focus(scene: Node) -> void:
 	if not is_instance_valid(scene) or not scene is Control:
 		return
@@ -537,24 +567,12 @@ func _restore_focus(scene: Node) -> void:
 	if not root or not root.is_visible_in_tree():
 		return
 
-	var saved: Control = _focus.get(scene)
-	if saved and is_instance_valid(saved) and saved.is_visible_in_tree():
-		Signals.connect_safe(
-			_cursor.focus_root_changed,
-			func(_root: Control) -> void:
-				if (
-					is_instance_valid(saved)
-					and saved.is_visible_in_tree()
-					and saved.focus_mode != Control.FOCUS_NONE
-				):
-					saved.grab_focus(),
-			CONNECT_ONE_SHOT,
-		)
-
 	_cursor.set_focus_root(root)
 
 
-## _save_focus records the currently focused control for a scene.
+## _save_focus records the currently focused control for a scene. When no control has
+## focus (mouse mode), the cursor's hovered control is used as a fallback — at push
+## time, the mouse is still over the clicked button.
 func _save_focus(scene: Node) -> void:
 	if not is_instance_valid(scene):
 		return
@@ -564,8 +582,25 @@ func _save_focus(scene: Node) -> void:
 		return
 
 	var focused := viewport.gui_get_focus_owner()
+	if not focused and _cursor:
+		focused = _cursor.get_hovered()
 	if focused and scene.is_ancestor_of(focused):
 		_focus[scene] = focused
+
+
+## _set_pending_focus loads the previously-saved focus target for the given scene. The
+## target is validated and consumed during the next focus resolution triggered by
+## _restore_focus.
+func _set_pending_focus(scene: Node) -> void:
+	if not is_instance_valid(scene):
+		return
+
+	if not is_instance_valid(_cursor):
+		return
+
+	var saved: Control = _focus.get(scene)
+	if saved and is_instance_valid(saved) and saved.is_visible_in_tree():
+		_cursor.set_pending_focus(saved)
 
 
 ## _teardown force-stops any active transition and frees all resources.
@@ -628,18 +663,6 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 func _unblock_input() -> void:
 	if _input_blocker and _input_blocker.is_inside_tree():
 		_input_blocker.get_parent().remove_child(_input_blocker)
-
-
-## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen
-## and restores input focus. Called after a screen above is removed from the stack.
-func _notify_top_uncovered() -> void:
-	var scene := _current_scene()
-	if scene:
-		var screen := _current_screen()
-		screen.uncovered.emit(scene)
-		screen_uncovered.emit(screen, scene)
-		scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
-	_restore_focus(scene)
 
 
 ## _unmount_scene removes a scene from the stack, tears down the old scene, and notifies

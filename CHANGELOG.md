@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.7.0 (2026-03-04)
+
+## What's Changed
+* fix(fsm): simplify state machine into single-`Node`, script-focused approach by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/393
+* feat(config): add dirty state tracking to `StdConfigItem` and `StdConfigSchema` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/395
+* fix(config): add test case for schema critical clearing by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/396
+* fix(input,screen): better handle focus restoration by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/397
+* fix(screen): push synthetic rehover event in local coordinates by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/398
+* feat(screen): add support for playing sounds by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/399
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.6.0...v4.7.0
+
 ## 4.6.0 (2026-03-01)
 
 ## What's Changed
