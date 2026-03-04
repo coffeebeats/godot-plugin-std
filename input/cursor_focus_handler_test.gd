@@ -522,6 +522,28 @@ func test_clear_press_on_focus_root_exit_skips_toggle_buttons() -> void:
 	assert_true(checkbox.button_pressed)
 
 
+func test_clear_press_on_focus_root_exit_clears_hovered_toggle_button() -> void:
+	# Given: A hovered, checked toggle checkbox with a focus handler outside a modal.
+	add_child_autofree(cursor)
+	var modal := Control.new()
+	add_child_autofree(modal)
+	var checkbox := CheckBox.new()
+	checkbox.focus_mode = Control.FOCUS_ALL
+	checkbox.mouse_filter = Control.MOUSE_FILTER_STOP
+	checkbox.button_pressed = true
+	add_child_autofree(checkbox)
+	_add_handler(checkbox)
+	checkbox.notification(Control.NOTIFICATION_MOUSE_ENTER)
+	assert_true(checkbox.is_hovered())
+
+	# When: Focus root is set to the modal.
+	cursor.focus_root_changed.emit(modal)
+
+	# Then: The checkbox toggle state is preserved but hover is cleared.
+	assert_true(checkbox.button_pressed)
+	assert_false(checkbox.is_hovered())
+
+
 func test_clear_press_on_focus_root_exit_disabled_preserves_state() -> void:
 	# Given: A hovered button with clear_press_on_focus_root_exit disabled.
 	var parts := _setup_outside_focus_root()

@@ -19,6 +19,7 @@ const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _manager: Manager = null
+var _sound_player = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -383,6 +384,46 @@ func test_pop_to_discards_intermediate_with_missing_scene():
 	assert_true(popped.has(third))
 
 
+func test_pop_plays_exit_sound():
+	# Given: Two screens; the top has an exit sound.
+	await _do_push()
+	var top := _create_screen()
+	var sound := StdSoundEvent.new()
+	top.sound_exit = sound
+	await _do_push(top)
+
+	# When: The top screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The exit sound was played.
+	assert_called(_sound_player, "play")
+	var params = get_call_parameters(_sound_player, "play")
+	assert_eq(params[0], sound)
+
+
+func test_pop_to_skips_exit_sound_for_intermediates():
+	# Given: Three screens; second and third have exit sounds.
+	var first := _create_screen()
+	await _do_push(first)
+	var second := _create_screen()
+	var second_sound := StdSoundEvent.new()
+	second.sound_exit = second_sound
+	await _do_push(second)
+	var third := _create_screen()
+	third.sound_exit = StdSoundEvent.new()
+	await _do_push(third)
+
+	# When: pop_to targets the first screen.
+	_manager.pop_to(first)
+	await wait_idle_frames(1)
+
+	# Then: Only the final pop's exit sound was played.
+	assert_call_count(_sound_player, "play", 1)
+	var params = get_call_parameters(_sound_player, "play")
+	assert_eq(params[0], second_sound)
+
+
 func test_pop_cancelled_does_not_emit_popped():
 	# Given: Two screens; top has a handler that cancels.
 	await _do_push()
@@ -414,6 +455,10 @@ func before_each():
 	_manager = Manager.new()
 	add_child_autofree(_manager)
 	await wait_idle_frames(1)
+
+	_sound_player = autofree(double(StdSoundEventPlayer).new())
+	stub(_sound_player, "play").to_return(null)
+	_manager._sound_player = _sound_player
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #

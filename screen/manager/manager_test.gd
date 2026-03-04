@@ -21,6 +21,7 @@ const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _manager: Manager = null
+var _sound_player = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -597,6 +598,21 @@ func test_replace_uses_transition_push_override():
 	)
 
 
+func test_push_plays_enter_sound():
+	# Given: A screen with an enter sound.
+	var screen := _create_screen()
+	var sound := StdSoundEvent.new()
+	screen.sound_enter = sound
+
+	# When: The screen is pushed.
+	await _do_push(screen)
+
+	# Then: The enter sound was played.
+	assert_called(_sound_player, "play")
+	var params = get_call_parameters(_sound_player, "play")
+	assert_eq(params[0], sound)
+
+
 func test_exit_tree_stops_transitions_and_clears_queue():
 	# Given: A screen with a transition.
 	var screen := _create_screen(MockTransition.new())
@@ -624,6 +640,10 @@ func before_each():
 	_manager = Manager.new()
 	add_child_autofree(_manager)
 	await wait_idle_frames(1)
+
+	_sound_player = autofree(double(StdSoundEventPlayer).new())
+	stub(_sound_player, "play").to_return(null)
+	_manager._sound_player = _sound_player
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #

@@ -70,6 +70,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 
 	screen_prev.exiting.emit(scene_prev)
 	manager.screen_exiting.emit(screen_prev, scene_prev)
+	manager._play_screen_sound(screen_prev.sound_exit)
 
 	var transition := (
 		manager
