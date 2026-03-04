@@ -233,7 +233,7 @@ func _input(event: InputEvent) -> void:
 		if (
 			(
 				event is InputEventMouseMotion
-				and event.relative > _reveal_distance_minimum
+				and event.relative.abs() > _reveal_distance_minimum
 			)
 			or (
 				event is InputEventMouseButton
