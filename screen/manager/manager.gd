@@ -442,11 +442,13 @@ func _force_stop() -> void:
 		ctx.entering_scene.free()
 
 
-## _free_cache frees all cached scene instances.
+## _free_cache immediately frees all cached scene instances. Cached scenes are not in
+## the tree, so direct `free` is safe even in blocked contexts.
 func _free_cache() -> void:
 	for node in _cache.values():
 		if is_instance_valid(node):
-			node.free.call_deferred()
+			node.free()
+
 	_cache.clear()
 
 
@@ -609,17 +611,36 @@ func _teardown() -> void:
 	_queue.clear()
 	_unblock_input()
 
-	# Emit popped(null) for every screen still on the stack to prevent coroutine leaks.
-	# The stack is cleared after emission to guard against double-call (_exit_tree and
-	# NOTIFICATION_WM_CLOSE_REQUEST both invoke _teardown).
-	var stack := _stack.duplicate()
-	_stack.clear()
-	for i in range(stack.size() - 1, -1, -1):
-		stack[i].popped.emit(null)
+	# Emit lifecycle signals and queue-free active scenes. The stack is moved to a local
+	# before iteration to guard against re-entrant calls.
+	var stack := _stack
+	_stack = []
 
-	# Free the input blocker node.
+	for i in range(stack.size() - 1, -1, -1):
+		var s: StdScreen = stack[i]
+		var sc: Node = _scenes.get(s)
+		if sc and is_instance_valid(sc):
+			s.exiting.emit(sc)
+			screen_exiting.emit(s, sc)
+			s.disconnect_signal_handlers(sc)
+			s.exited.emit(sc)
+			screen_exited.emit(s, sc)
+			sc.queue_free()
+		s.popped.emit(null)
+
+	_scenes.clear()
+	_focus.clear()
+	_overlays.clear()
+	_preloads.clear()
+
+	# Free the input blocker node. If it is not in the tree (removed by `_unblock_input`
+	# during normal operation), free it immediately; otherwise `queue_free` is safe
+	# since the engine will handle it during tree destruction.
 	if _input_blocker and is_instance_valid(_input_blocker):
-		_input_blocker.free()
+		if _input_blocker.is_inside_tree():
+			_input_blocker.queue_free()
+		else:
+			_input_blocker.free()
 		_input_blocker = null
 
 	_free_cache()
