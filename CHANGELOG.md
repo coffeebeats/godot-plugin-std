@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.7.2 (2026-03-05)
+
+## What's Changed
+* fix(screen): more reliably detect whether input blocker can be freed by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/403
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.7.1...v4.7.2
+
 ## 4.7.1 (2026-03-05)
 
 ## What's Changed
