@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.7.1 (2026-03-05)
+
+## What's Changed
+* fix(input): ensure down and leftward mouse motion contributes to reveal calculations by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/400
+* fix: ensure nodes aren't orphaned in `StdConditionParent` and `StdScreenManager` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/402
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.7.0...v4.7.1
+
 ## 4.7.0 (2026-03-04)
 
 ## What's Changed
