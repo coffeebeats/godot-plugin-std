@@ -448,7 +448,6 @@ func _free_cache() -> void:
 	for node in _cache.values():
 		if is_instance_valid(node):
 			node.free()
-
 	_cache.clear()
 
 
@@ -633,11 +632,10 @@ func _teardown() -> void:
 	_overlays.clear()
 	_preloads.clear()
 
-	# Free the input blocker node. If it is not in the tree (removed by `_unblock_input`
-	# during normal operation), free it immediately; otherwise `queue_free` is safe
-	# since the engine will handle it during tree destruction.
+	# Free the input blocker node. If it still has a parent, use `queue_free` (the
+	# parent may be blocked); otherwise free it immediately to prevent orphans.
 	if _input_blocker and is_instance_valid(_input_blocker):
-		if _input_blocker.is_inside_tree():
+		if _input_blocker.get_parent():
 			_input_blocker.queue_free()
 		else:
 			_input_blocker.free()

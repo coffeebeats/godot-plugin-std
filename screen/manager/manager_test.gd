@@ -627,7 +627,70 @@ func test_exit_tree_stops_transitions_and_clears_queue():
 	assert_true(active.stopped)
 	assert_eq(_manager._queue._queue.size(), 0)
 
-	add_child(_manager)
+
+func test_exit_tree_emits_lifecycle_signals_for_active_scenes():
+	# Given: Two screens on the stack.
+	var first := _create_screen()
+	var second := _create_screen()
+	await _do_push(first)
+	await _do_push(second)
+
+	# Given: Signal watchers.
+	watch_signals(first)
+	watch_signals(second)
+	watch_signals(_manager)
+
+	# When: The manager is removed from the tree.
+	_manager.get_parent().remove_child(_manager)
+
+	# Then: Both screens emitted exiting, exited, and popped.
+	assert_signal_emitted(second, "exiting")
+	assert_signal_emitted(second, "exited")
+	assert_signal_emitted(second, "popped")
+	assert_signal_emitted(first, "exiting")
+	assert_signal_emitted(first, "exited")
+	assert_signal_emitted(first, "popped")
+	assert_signal_emitted(_manager, "screen_exiting")
+	assert_signal_emitted(_manager, "screen_exited")
+
+
+func test_exit_tree_frees_cached_scenes():
+	# Given: A base screen on the stack.
+	await _do_push()
+
+	# Given: A screen with cache_instance enabled, pushed on top.
+	var screen := _create_screen()
+	screen.cache_instance = true
+	var scene := Control.new()
+	await _do_push(screen, scene)
+
+	# When: The cached screen is popped (scene is cached, not freed).
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The scene is cached, not freed.
+	assert_not_freed(scene, "cached scene")
+
+	# When: The manager is removed from the tree.
+	_manager.get_parent().remove_child(_manager)
+
+	# Then: The cached scene is freed immediately.
+	assert_freed(scene, "cached scene after teardown")
+
+
+func test_exit_tree_marks_active_scenes_for_deletion():
+	# Given: A screen on the stack.
+	var scene := Control.new()
+	await _do_push(null, scene)
+
+	# When: The manager is removed from the tree.
+	_manager.get_parent().remove_child(_manager)
+
+	# Then: The active scene is queued for deletion.
+	assert_true(
+		scene.is_queued_for_deletion(),
+		"active scene should be queued for deletion",
+	)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
