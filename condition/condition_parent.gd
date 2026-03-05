@@ -29,11 +29,12 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	for child in _children:
-		if child and not child.is_queued_for_deletion():
-			child.queue_free()
+	_free_removed_children()
 
-	_children.clear()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_free_removed_children()
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
@@ -75,3 +76,15 @@ func _should_trigger_allow_action_on_enter() -> bool:
 
 func _should_trigger_block_action_on_enter() -> bool:
 	return true
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _free_removed_children frees children that were removed from the tree by `_on_block`.
+func _free_removed_children() -> void:
+	for child in _children:
+		if child and not is_ancestor_of(child) and not child.is_queued_for_deletion():
+			child.free()
+
+	_children.clear()
