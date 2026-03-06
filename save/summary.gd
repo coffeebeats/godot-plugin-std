@@ -10,6 +10,9 @@ extends StdConfigItem
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## play_time_seconds is the total accumulated play time for this save slot in seconds.
+@export var play_time_seconds: float = 0.0
+
 ## time_last_saved is the last time (unix epoch timestamp) this save slot was saved.
 @export var time_last_saved: float = 0.0
 

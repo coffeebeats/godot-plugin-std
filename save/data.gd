@@ -22,6 +22,7 @@ func store(config: Config) -> void:
 	_compute_summary()
 	super.store(config)
 
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
