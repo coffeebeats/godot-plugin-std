@@ -19,7 +19,17 @@ extends StdConfigSchema
 ## store populates the provided `Config` instance with this save data's items, auto-
 ## setting the last saved timestamp.
 func store(config: Config) -> void:
-	if summary:
-		summary.time_last_saved = Time.get_unix_time_from_system()
-
+	_compute_summary()
 	super.store(config)
+
+
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
+
+
+## _compute_summary is a virtual method called to derive summary state before saving.
+func _compute_summary() -> void:
+	if not summary is StdSaveSummary:
+		assert(false, "invalid state; missing save data summary")
+		return
+
+	summary.time_last_saved = Time.get_unix_time_from_system()

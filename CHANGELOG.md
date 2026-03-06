@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.7.3 (2026-03-06)
+
+## What's Changed
+* fix(save): add method to allow deriving save summaries by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/405
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.7.2...v4.7.3
+
 ## 4.7.2 (2026-03-05)
 
 ## What's Changed
