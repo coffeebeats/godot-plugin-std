@@ -21,8 +21,16 @@ func _init(owner: Node) -> void:
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## clear removes all screen-overlay mappings.
+## clear frees all overlay nodes and removes all screen-overlay mappings.
 func clear() -> void:
+	var seen: Dictionary = {}
+	for overlay: StdScreenOverlay in _overlays.values():
+		if not is_instance_valid(overlay) or overlay in seen:
+			continue
+
+		seen[overlay] = true
+		overlay.free()
+
 	_overlays.clear()
 
 
