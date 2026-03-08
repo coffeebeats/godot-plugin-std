@@ -83,6 +83,21 @@ func set_blend(t: float) -> void:
 		_resource.set(p.property, lerpf(p.value_off, p.value_on, t))
 
 
+# -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _init(
+	owner: Node,
+	effect: StdSoundBusEffect,
+	resource: AudioEffect,
+	bus_index: int,
+) -> void:
+	_bus_index = bus_index
+	_effect = effect
+	_owner = owner
+	_resource = resource
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
