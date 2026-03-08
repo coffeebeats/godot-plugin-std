@@ -33,6 +33,10 @@ extends Resource
 ## controls (e.g. mute).
 @export var group: StdSoundGroup = null
 
+## priority determines voice-stealing order. Higher priority sounds can steal audio
+## players from lower priority ones when the pool is exhausted.
+@export var priority: int = 0
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
