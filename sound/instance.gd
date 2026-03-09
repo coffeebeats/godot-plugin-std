@@ -116,6 +116,10 @@ func stop(
 	if _is_done:
 		return
 
+	if not is_instance_valid(player):
+		done.emit()
+		return
+
 	if _tween:
 		_tween.kill()
 		_tween = null
