@@ -21,6 +21,10 @@ signal done
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+## FADE_VOLUME_DB is the volume offset used as the start/end point for fade transitions.
+## Chosen to be low enough to sound smooth but high enough to avoid pop on short fades.
+const FADE_VOLUME_DB := -24.0
+
 ## MUTE_VOLUME_DB describes the relative loudness value that will be used to mute audio.
 const MUTE_VOLUME_DB := 120.0
 
@@ -77,7 +81,7 @@ func mute() -> void:
 ## configured to auto-play.
 func start(
 	fade_curve: StdTweenCurve = null,
-	start_db: float = -24.0,
+	start_db: float = FADE_VOLUME_DB,
 ) -> void:
 	assert(player is Node, "invalid state; missing player")
 	assert(not _is_done and not player.playing, "invalid state; already started")
@@ -107,7 +111,7 @@ func start(
 ## call multiple times, even after audio playback has completed.
 func stop(
 	fade_curve: StdTweenCurve = null,
-	end_db: float = -24.0,
+	end_db: float = FADE_VOLUME_DB,
 ) -> void:
 	if _is_done:
 		return
