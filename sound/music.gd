@@ -102,6 +102,7 @@ func _ready() -> void:
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
+
 func _stop(out_curve: StdTweenCurve) -> void:
 	if not is_playing():
 		return
@@ -109,9 +110,9 @@ func _stop(out_curve: StdTweenCurve) -> void:
 	Signals.disconnect_safe(_active_instance.done, _on_instance_done)
 
 	var curve := out_curve if out_curve else fade_out
+	_active_instance.stop(curve)
 	_active_event = null
 	_active_instance = null
-	_active_instance.stop(curve)
 
 	stopped.emit()
 
