@@ -117,7 +117,7 @@ func after_each() -> void:
 
 
 func _apply(snapshot: StdMixSnapshot) -> StdMixSnapshotInstance:
-	var instance := snapshot.apply(self )
+	var instance := snapshot.apply(self)
 	_instances.append(instance)
 
 	return instance
