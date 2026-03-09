@@ -18,7 +18,7 @@ func test_can_play_respects_max():
 	assert_true(group.can_play())
 
 	# When: An instance is added.
-	var instance := _create_instance(group, true)
+	var instance := _create_instance(true)
 	group.add(instance)
 
 	# Then: It can no longer play.
@@ -30,11 +30,11 @@ func test_rejects_finite_at_max():
 	var group := StdSoundGroup.new()
 	group.max_audible = 1
 
-	var first := _create_instance(group, true)
+	var first := _create_instance(true)
 	group.add(first)
 
 	# When: A finite (non-looping) instance is added.
-	var finite := _create_instance(group, false)
+	var finite := _create_instance(false)
 	var result := group.add(finite)
 
 	# Then: The addition is rejected.
@@ -49,11 +49,11 @@ func test_overflows_looping():
 	var group := StdSoundGroup.new()
 	group.max_audible = 1
 
-	var first := _create_instance(group, true)
+	var first := _create_instance(true)
 	group.add(first)
 
 	# When: A looping instance is added.
-	var looping := _create_instance(group, true)
+	var looping := _create_instance(true)
 	var result := group.add(looping)
 
 	# Then: It is accepted into overflow.
@@ -66,10 +66,10 @@ func test_promotes_on_done():
 	var group := StdSoundGroup.new()
 	group.max_audible = 1
 
-	var first := _create_instance(group, true)
+	var first := _create_instance(true)
 	group.add(first)
 
-	var second := _create_instance(group, true)
+	var second := _create_instance(true)
 	group.add(second)
 
 	# When: The first instance completes.
@@ -84,7 +84,7 @@ func test_mute_unmute_stacking():
 	# Given: A group.
 	var group := StdSoundGroup.new()
 
-	var instance := _create_instance(group, true)
+	var instance := _create_instance(true)
 	group.add(instance)
 
 	# When: Muted twice.
@@ -107,24 +107,17 @@ func test_mute_unmute_stacking():
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _create_instance(_group: StdSoundGroup, looping: bool) -> StdSoundInstance:
+func _create_instance(looping: bool) -> StdSoundInstance:
 	var instance := StdSoundInstance.new()
 
-	var stream: AudioStream
+	var wav := AudioStreamWAV.new()
 	if looping:
-		var wav := AudioStreamWAV.new()
 		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		stream = wav
-	else:
-		var wav := AudioStreamWAV.new()
-		wav.loop_mode = AudioStreamWAV.LOOP_DISABLED
-		stream = wav
-
-	instance.stream = stream
+	instance.stream = wav
 
 	var player := AudioStreamPlayer.new()
-	player.stream = stream
-	add_child(player)
+	player.stream = wav
+	add_child_autofree(player)
 	instance.player = player
 
 	return instance
