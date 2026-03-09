@@ -84,7 +84,7 @@ func test_multiple_snapshots_stack():
 
 	# When: Both are applied.
 	var ia := _apply(a)
-	var _ib := _apply(b)
+	_apply(b)
 
 	# Then: Two effects are on the bus.
 	assert_eq(
