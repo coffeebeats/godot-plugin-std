@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.8.0 (2026-03-09)
+
+## What's Changed
+* feat(sound): add more features to `sound`, including voice stealing and mix snapshots by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/407
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.7.3...v4.8.0
+
 ## 4.7.3 (2026-03-06)
 
 ## What's Changed
