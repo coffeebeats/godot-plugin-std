@@ -29,13 +29,17 @@ signal removed(instance: StdSoundInstance)
 ## circumstances where the mute functions more as a "prevent new sounds" behavior.
 @export var resume_playing_on_unmute: bool = true
 
+## promotion_fade is an optional tween curve applied when a muted overflow instance is
+## promoted to audible playback.
+@export var promotion_fade: StdTweenCurve = null
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 static var _logger := StdLogger.create(&"std/sound/group")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _mute: int = 0
+var _overflow: Array[StdSoundInstance] = []
 var _playing: Array[StdSoundInstance] = []
-var _virtual: Array[StdSoundInstance] = []
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -46,17 +50,20 @@ func add(instance: StdSoundInstance) -> bool:
 	assert(instance is StdSoundInstance, "invalid argument; missing instance")
 	assert(not instance.is_done(), "invalid input; instance is already done")
 
-	instance.done.connect(_on_instance_done.bind(instance), CONNECT_ONE_SHOT)
-
 	if _mute > 0:
 		instance.mute()
 
 	if not can_play():
+		if not _is_looping(instance):
+			instance.stop()
+			return false
+
 		instance.mute()
-		_virtual.append(instance)
+		_overflow.append(instance)
 	else:
 		_playing.append(instance)
 
+	instance.done.connect(_on_instance_done.bind(instance), CONNECT_ONE_SHOT)
 	added.emit(instance)
 
 	return true
@@ -87,7 +94,7 @@ func mute() -> void:
 	for instance in _playing:
 		instance.mute()
 
-	for instance in _virtual:
+	for instance in _overflow:
 		instance.mute()
 
 
@@ -108,7 +115,7 @@ func unmute() -> void:
 	for instance in _playing:
 		instance.unmute()
 
-	for instance in _virtual:
+	for instance in _overflow:
 		instance.unmute()
 
 
@@ -117,26 +124,50 @@ func unmute() -> void:
 
 func _on_instance_done(instance: StdSoundInstance) -> void:
 	assert(instance is StdSoundInstance, "invalid argument; missing instance")
-	assert(
-		instance in _playing or instance in _virtual,
-		"invalid argument; instance not reserved",
-	)
 
-	var index := _playing.find(instance)
-	if index > -1:
-		_playing.erase(instance)
-		removed.emit(instance)
+	var erased := _erase_from(_playing, instance)
+	assert(erased, "invalid state; instance not found")
 
-	index = _virtual.find(instance)
-	if index > -1:
-		_virtual.erase(instance)
-		removed.emit(instance)
+	# NOTE: Only playing instances free up a slot for promotion.
+	if erased:
+		_promote_overflow()
 
-	# FIXME: This behavior sounds bad - either improve it via fade-in or remove it.
-	while _virtual and can_play():
-		var next: StdSoundInstance = _virtual.pop_front()
-		if not next:
-			break
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+static func _is_looping(instance: StdSoundInstance) -> bool:
+	var stream := instance.stream
+	if stream is AudioStreamWAV:
+		return stream.loop_mode != AudioStreamWAV.LOOP_DISABLED
+
+	if &"loop" in stream:
+		return stream.get(&"loop") as bool
+
+	return false
+
+
+func _erase_from(list: Array[StdSoundInstance], instance: StdSoundInstance) -> bool:
+	var index := list.find(instance)
+	if index < 0:
+		return false
+
+	list.remove_at(index)
+	removed.emit(instance)
+
+	return true
+
+
+func _promote_overflow() -> void:
+	while _overflow and can_play():
+		var next: StdSoundInstance = _overflow.pop_front()
 
 		next.unmute()
 		_playing.append(next)
+
+		if promotion_fade and next.player.is_inside_tree():
+			var target: float = next.player.volume_db
+			next.player.volume_db = target + StdSoundInstance.FADE_VOLUME_DB
+
+			var tween := next.player.get_tree().create_tween()
+			promotion_fade.tween_property(tween, next.player, ^"volume_db", target)

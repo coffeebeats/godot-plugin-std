@@ -21,8 +21,23 @@ func _init(owner: Node) -> void:
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## clear removes all screen-overlay mappings.
+## clear frees all overlay nodes and removes all screen-overlay mappings.
 func clear() -> void:
+	var seen: Dictionary = {}
+	for overlay: StdScreenOverlay in _overlays.values():
+		if not is_instance_valid(overlay) or overlay in seen:
+			continue
+
+		seen[overlay] = true
+
+		# NOTE: If the overlay still has a parent, the parent may be blocked
+		# (e.g. during teardown). Use `queue_free` to let the parent cascade the
+		# removal; otherwise free immediately to prevent orphans.
+		if overlay.get_parent():
+			overlay.queue_free()
+		else:
+			overlay.free()
+
 	_overlays.clear()
 
 
@@ -41,7 +56,7 @@ func free_if_unused(overlay: StdScreenOverlay) -> void:
 	if overlay.is_inside_tree():
 		overlay.get_parent().remove_child(overlay)
 
-	overlay.queue_free()
+	overlay.free()
 
 
 ## get_current returns the overlay for the topmost screen.
