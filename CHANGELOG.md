@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.8.1 (2026-03-14)
+
+## What's Changed
+* chore(addons): update `GUT` to `v9.6.0` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/409
+* fix(input): clear focus on transition to cursor mode by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/411
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.8.0...v4.8.1
+
 ## 4.8.0 (2026-03-09)
 
 ## What's Changed
