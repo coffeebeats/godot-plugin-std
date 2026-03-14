@@ -54,6 +54,7 @@ var _pressed: Array[String] = []
 var _reveal_distance_minimum: Vector2 = Vector2.ZERO
 var _reveal_mouse_buttons: Array[MouseButton] = []
 var _time_since_mouse_motion: float = 0.0
+var _was_cursor_visible: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -422,6 +423,11 @@ func _on_properties_changed(
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_HIDDEN)
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
+
+	# Release stale focus on hidden-to-visible transitions.
+	if _cursor_visible and not _was_cursor_visible:
+		get_viewport().gui_release_focus()
+	_was_cursor_visible = _cursor_visible
 
 	_update_focus(trigger)
 

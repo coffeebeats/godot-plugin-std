@@ -245,6 +245,25 @@ func test_show_cursor_noop_when_already_visible() -> void:
 	assert_signal_not_emitted(cursor, "cursor_visibility_changed")
 
 
+func test_show_cursor_releases_stale_focus() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	button.grab_focus()
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+	# When: The cursor becomes visible (mouse mode).
+	cursor.show_cursor()
+
+	# Then: The stale focus is released.
+	assert_null(cursor.get_viewport().gui_get_focus_owner())
+
+
 func test_hide_cursor_makes_cursor_hidden() -> void:
 	# Given: A cursor added to the scene (starts visible).
 	add_child_autofree(cursor)
@@ -255,6 +274,27 @@ func test_hide_cursor_makes_cursor_hidden() -> void:
 
 	# Then: The cursor is hidden.
 	assert_false(cursor.get_is_visible())
+
+
+func test_set_focus_root_preserves_focus_when_cursor_hidden() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button under a root that has focus.
+	var root := Control.new()
+	add_child_autofree(root)
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	root.add_child(button)
+	button.grab_focus()
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+	# When: The focus root is set to the button's ancestor.
+	cursor.set_focus_root(root)
+
+	# Then: The button retains focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
 
 
 func test_unset_hovered_rejects_wrong_control() -> void:
