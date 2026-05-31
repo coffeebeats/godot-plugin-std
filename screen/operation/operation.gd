@@ -62,6 +62,11 @@ func _run_transition(
 
 	var tx := transition.duplicate()
 
+	# NOTE: Capture the bool, not the transition resource. The lambda below
+	# fires after this function returns, and the temp transition created
+	# above is gone by then.
+	var block_input: bool = transition.block_input
+
 	var ctx := StdScreenTransitionContext.new(manager)
 	ctx.current_scene = current_scene
 	ctx.entering_scene = entering_scene
@@ -74,7 +79,7 @@ func _run_transition(
 			manager._active_transition = null
 			manager._active_context = null
 
-			if transition.block_input:
+			if block_input:
 				manager._unblock_input()
 
 			if manager._cursor and manager._cursor.get_is_visible():
@@ -84,7 +89,7 @@ func _run_transition(
 		CONNECT_ONE_SHOT,
 	)
 
-	if transition.block_input:
+	if block_input:
 		manager._block_input()
 
 	manager._active_transition = tx
