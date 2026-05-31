@@ -31,7 +31,7 @@ const Signals := preload("../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create(&"std/screen/pusher") # gdlint:ignore=class-definitions-order,max-line-length
+static var _logger := StdLogger.create(&"std/screen/pusher")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var manager: StdScreenManager = null
 
