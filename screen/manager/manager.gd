@@ -161,7 +161,7 @@ func pop(
 
 	var depth := _stack.size() - 1
 	var op := Pop.create(depth, transition, result)
-	_queue.enqueue_or_run(func(): _execute_op(op))
+	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 ## pop_to pops screens until the given screen is on top.
@@ -171,7 +171,7 @@ func pop_to(screen: StdScreen) -> void:
 
 	var depth := idx + 1
 	var op := Pop.create(depth)
-	_queue.enqueue_or_run(func(): _execute_op(op))
+	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 ## push adds a screen on top of the stack.
@@ -186,7 +186,7 @@ func push(
 	)
 
 	var op := Push.create(screen, instance, transition)
-	_queue.enqueue_or_run(func(): _execute_op(op))
+	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 ## replace swaps the topmost screen for a new one.
@@ -205,7 +205,7 @@ func replace(
 	)
 
 	var op := Replace.create(screen, instance, transition)
-	_queue.enqueue_or_run(func(): _execute_op(op))
+	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 ## reset clears the entire stack and pushes a new base screen.
@@ -220,7 +220,7 @@ func reset(
 	)
 
 	var op := Reset.create(screen, instance, transition)
-	_queue.enqueue_or_run(func(): _execute_op(op))
+	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -392,6 +392,10 @@ func _do_pop_to_depth(depth: int) -> void:
 ## execution. Without this, the operation (a `RefCounted` subclass) can be freed during
 ## async scene loading because GDScript lambdas and bound-method `Callable`s capture
 ## `RefCounted` targets weakly.
+##
+## NOTE: Callers should enqueue this via `_execute_op.bind(op)` rather than a closure
+## for the same reason — `Callable.bind` holds bound args strongly, so the operation
+# survives the gap between enqueue and the deferred call.
 func _execute_op(op: Operation) -> void:
 	_active_op = op
 	op._execute(
