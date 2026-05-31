@@ -31,7 +31,7 @@ const Signals := preload("../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _logger := StdLogger.create(&"std/screen/pusher")  # gdlint:ignore=class-definitions-order,max-line-length
+static var _logger := StdLogger.create(&"std/screen/pusher") # gdlint:ignore=class-definitions-order,max-line-length
 
 var manager: StdScreenManager = null
 
@@ -41,8 +41,8 @@ var _is_in_stack: bool = false
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-# NOTE: Always-process so push/pop input still works when the parent scene
-# is paused via `pause_when_covered`.
+# NOTE: Always-process so push/pop input still works when the parent scene is paused via
+# `pause_when_covered`.
 func _init() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
