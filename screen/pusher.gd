@@ -41,6 +41,12 @@ var _is_in_stack: bool = false
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+# NOTE: Always-process so push/pop input still works when the parent scene is paused via
+# `pause_when_covered`.
+func _init() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+
 func _enter_tree() -> void:
 	assert(screen != null, "invalid config; missing 'screen'")
 
