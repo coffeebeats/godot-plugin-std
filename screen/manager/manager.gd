@@ -68,13 +68,13 @@ class _InputBlocker:
 
 ## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree when the screen is
 ## covered by another.
-static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 ## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
 ## screen is popped.
-static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2 # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
+static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
-static var _logger := StdLogger.create(&"std/screen/manager") # gdlint:ignore=class-definitions-order,max-line-length
+static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _active_context: StdScreenTransitionContext = null
 var _active_op: Operation = null
@@ -236,11 +236,11 @@ func _notification(what: int) -> void:
 
 
 func _ready() -> void:
-	_queue = OperationQueue.new(self )
+	_queue = OperationQueue.new(self)
 
 	_cursor = (
 		StdGroup
-		.get_sole_member(
+		. get_sole_member(
 			StdInputCursor.GROUP_INPUT_CURSOR,
 		)
 	)
@@ -253,7 +253,7 @@ func _ready() -> void:
 	_loader.name = &"StdScreenLoader"
 	add_child(_loader, Engine.is_editor_hint(), INTERNAL_MODE_FRONT)
 
-	_overlays = Overlays.new(self )
+	_overlays = Overlays.new(self)
 
 	if not StdGroup.is_empty(StdSoundEventPlayer.GROUP_SOUND_PLAYER):
 		_sound_player = StdGroup.get_sole_member(StdSoundEventPlayer.GROUP_SOUND_PLAYER)
@@ -307,12 +307,12 @@ func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 			if screen.scene_path == "":
 				(
 					_logger
-					.error(
+					. error(
 						"Missing scene_path and no instance.",
 						{&"screen": str(screen)},
 					)
 				)
-				return [ func() -> Node: return null, null]
+				return [func() -> Node: return null, null]
 
 			scene_path = screen.scene_path
 			load_result = _loader.load_scene(scene_path)
@@ -332,7 +332,7 @@ func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 			if load_result.scene == null:
 				(
 					_logger
-					.error(
+					. error(
 						"Scene load failed.",
 						{&"path": scene_path},
 					)
@@ -399,7 +399,7 @@ func _do_pop_to_depth(depth: int) -> void:
 func _execute_op(op: Operation) -> void:
 	_active_op = op
 	op._execute(
-		self ,
+		self,
 		func() -> void:
 			_active_op = null
 			_queue.complete(),
@@ -462,7 +462,7 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 	if not is_instance_valid(overlay):
 		overlay = (
 			_overlays
-			.get_or_create(
+			. get_or_create(
 				_stack,
 				screen.block_input_below,
 				_request_close_overlay,
@@ -711,7 +711,7 @@ func _update_process_modes() -> void:
 			if scene.has_meta(_META_PROCESS_MODE):
 				scene.process_mode = (
 					scene
-					.get_meta(
+					. get_meta(
 						_META_PROCESS_MODE,
 					)
 				)
@@ -720,7 +720,7 @@ func _update_process_modes() -> void:
 			if not scene.has_meta(_META_PROCESS_MODE):
 				(
 					scene
-					.set_meta(
+					. set_meta(
 						_META_PROCESS_MODE,
 						scene.process_mode,
 					)
