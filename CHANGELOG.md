@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.8.2 (2026-05-31)
+
+## What's Changed
+* chore(deps): bump googleapis/release-please-action from 4.4.0 to 4.4.1 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/413
+* chore(deps): bump tj-actions/changed-files from 47.0.4 to 47.0.5 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/412
+* fix(screen): keep `RefCounted` captures alive across deferred callbacks by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/415
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.8.1...v4.8.2
+
 ## 4.8.1 (2026-03-14)
 
 ## What's Changed
