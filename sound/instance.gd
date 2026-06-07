@@ -98,7 +98,9 @@ func start(
 		player.volume_db = start_db
 
 		assert(not _tween, "invalid state; found dangling tween")
-		_tween = player.get_tree().create_tween()
+
+		# Bind to the player node so the tween auto-kills if the player is freed.
+		_tween = player.create_tween()
 
 		fade_curve.tween_property(_tween, player, ^"volume_db", target)
 
@@ -148,11 +150,17 @@ func stop(
 			"invalid config; fade exceeds stream",
 		)
 
-		_tween = player.get_tree().create_tween()
+		# Bind to the player node so the tween auto-kills if the player is freed.
+		_tween = player.create_tween()
 
 		fade_curve.tween_property(_tween, player, ^"volume_db", end_db)
 
-		_tween.tween_callback(player.stop)
+		# Guard against the player being freed mid-fade.
+		_tween.tween_callback(
+			func() -> void:
+				if is_instance_valid(player):
+					player.stop()
+		)
 		_tween.tween_callback(done.emit)
 		_tween.tween_callback(func(): _tween = null)
 
