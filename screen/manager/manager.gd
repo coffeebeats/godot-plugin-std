@@ -612,7 +612,6 @@ func _set_pending_focus(scene: Node) -> void:
 func _teardown() -> void:
 	_force_stop()
 	_queue.clear()
-	_unblock_input()
 
 	# Emit lifecycle signals and queue-free active scenes. The stack is moved to a local
 	# before iteration to guard against re-entrant calls.
@@ -636,14 +635,13 @@ func _teardown() -> void:
 	_overlays.clear()
 	_preloads.clear()
 
-	# Free the input blocker node. If it still has a parent, use `queue_free` (the
-	# parent may be blocked); otherwise free it immediately to prevent orphans.
+	# Defer remove + free so they run after notification propagation unwinds
+	# (parent blocked) but before `print_orphan_nodes` (queue_free is too late).
 	if _input_blocker and is_instance_valid(_input_blocker):
 		if _input_blocker.get_parent():
-			_input_blocker.queue_free()
-		else:
-			_input_blocker.free()
-		_input_blocker = null
+			_input_blocker.get_parent().remove_child.call_deferred(_input_blocker)
+		_input_blocker.free.call_deferred()
+	_input_blocker = null
 
 	_free_cache()
 
