@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.8.3 (2026-06-07)
+
+## What's Changed
+* fix(screen): default `StdScreenPusher` to always process by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/416
+* fix(screen): cancel prior transition on op switch, defer teardown mutations by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/421
+* chore(deps): bump googleapis/release-please-action from 4.4.1 to 5.0.0 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/420
+* chore(deps): bump tj-actions/changed-files from 47.0.5 to 47.0.6 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/419
+* chore(deps): bump coffeebeats/godot-infra from 4 to 4.1.2 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/418
+* fix(sound): bind fade tweens to player node and guard stop against freed player by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/422
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.8.2...v4.8.3
+
 ## 4.8.2 (2026-05-31)
 
 ## What's Changed
