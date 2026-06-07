@@ -392,11 +392,11 @@ func _do_pop_to_depth(depth: int) -> void:
 ## execution. Without this, the operation (a `RefCounted` subclass) can be freed during
 ## async scene loading because GDScript lambdas and bound-method `Callable`s capture
 ## `RefCounted` targets weakly.
-##
-## NOTE: Callers should enqueue this via `_execute_op.bind(op)` rather than a closure
-## for the same reason — `Callable.bind` holds bound args strongly, so the operation
-# survives the gap between enqueue and the deferred call.
 func _execute_op(op: Operation) -> void:
+	# Cancel the prior op's transition before `_active_op = op` drops it; its
+	# pending `ctx.finished` lambda would otherwise fire with a freed capture.
+	_force_stop()
+
 	_active_op = op
 	op._execute(
 		self,
