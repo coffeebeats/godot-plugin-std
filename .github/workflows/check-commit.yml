@@ -25,7 +25,7 @@ jobs:
       has_source_change: "${{ steps.check-source.outputs.any_modified == 'true' }}"
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 0
 
@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           # Checkout the "head_ref" (i.e. PR branch HEAD) in case a commit is
           # later needed. See https://github.com/stefanzweifel/git-auto-commit-action
@@ -73,7 +73,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           submodules: true
 
