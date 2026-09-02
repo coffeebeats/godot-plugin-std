@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.0.1 (2026-09-02)
+
+## What's Changed
+* fix(tests): replace deprecated `assert_call_count` with `assert_called_count` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/428
+* docs(readme): exclude vendored addons from the format and lint commands by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/430
+* chore(ci): pin `godot-infra` actions to the floating `v5` major by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/431
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.0.0...v5.0.1
+
 ## 5.0.0 (2026-09-02)
 
 ## What's Changed
