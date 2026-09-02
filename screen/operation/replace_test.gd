@@ -336,7 +336,7 @@ func before_each():
 	await wait_idle_frames(1)
 
 	_sound_player = autofree(double(StdSoundEventPlayer).new())
-	stub(_sound_player, "play").to_return(null)
+	stub(_sound_player, "play").to_return(StdSoundInstance.new())
 	_manager._sound_player = _sound_player
 
 
