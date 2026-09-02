@@ -63,7 +63,7 @@ jobs:
           # NOTE: Use repository secret to have new commit run workflows.
           token: ${{ secrets.GHA_TOKEN || github.token }}
 
-      - uses: coffeebeats/godot-infra/check-godot-project@v5.0.0
+      - uses: coffeebeats/godot-infra/check-godot-project@v5
 
   test:
     needs: ["changes"]
@@ -77,12 +77,12 @@ jobs:
         with:
           submodules: true
 
-      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v5.0.0
+      - uses: coffeebeats/godot-infra/.github/actions/parse-godot-version@v5
         id: version
         with:
           gdenv-pin-path: .godot-version
 
-      - uses: coffeebeats/godot-infra/.github/actions/setup-godot@v5.0.0
+      - uses: coffeebeats/godot-infra/.github/actions/setup-godot@v5
         with:
           version: ${{ steps.version.outputs.semantic }}
 
