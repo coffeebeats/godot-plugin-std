@@ -419,7 +419,7 @@ func test_pop_to_skips_exit_sound_for_intermediates():
 	await wait_idle_frames(1)
 
 	# Then: Only the final pop's exit sound was played.
-	assert_call_count(_sound_player, "play", 1)
+	assert_called_count(_sound_player.play, 1)
 	var params = get_call_parameters(_sound_player, "play")
 	assert_eq(params[0], second_sound)
 
