@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.0.0 (2026-09-02)
+
+## What's Changed
+* chore!: update to Godot `v4.7` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/426
+* chore(deps): bump actions/checkout from 6.0.2 to 7.0.1 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/425
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v4.8.3...v5.0.0
+
 ## 4.8.3 (2026-06-07)
 
 ## What's Changed
