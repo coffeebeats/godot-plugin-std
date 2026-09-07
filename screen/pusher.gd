@@ -4,15 +4,16 @@
 ## StdScreenPusher is a node that pushes and pops a `StdScreen` in response to input
 ## actions.
 ##
-## A pusher tracks where its target screen sits in the stack, not which screen the
-## player is looking at, so it stays armed even while its host screen is buried.
-## Scoping is the action set's job. Loading one clears and rebinds the whole
-## `InputMap`, so an action the current screen omits is unbound and no pusher sees it.
+## A pusher tracks where its target screen sits in the stack, but only receives input
+## while its host overlay is topmost: a screen pushed above it with `block_input_below`
+## consumes unhandled input first. Which actions are bound is still the action set's
+## job; loading one rebinds the whole `InputMap`, so an action the current screen omits
+## reaches no pusher.
 ##
 ## A pusher must be able to find a `StdScreenManager` among its ancestors (or via
-## 'manager_path'). Prefer declaring it as an attachment of the screen during which it
-## should be active - see `StdScreen.attachment_scenes` - or placing it within the
-## manager's own subtree.
+## 'manager_path'). Declare it as an attachment of the screen it should be active during
+## (`StdScreen.attachment_scenes`). Placed directly in the manager's subtree it precedes
+## every overlay, so it is starved of input whenever two or more overlays exist.
 ##
 ## When no manager is found the pusher disables itself, logging a warning; it wires
 ## itself up again on any later tree entry which does find one. This keeps a scene
@@ -41,6 +42,10 @@ const Signals := preload("../event/signal.gd")
 @export var push_actions: Array[StringName] = []
 
 ## pop_actions are input actions that pop the screen when it is the topmost screen.
+##
+## NOTE: Prefer `StdScreen.close_actions`, which needs no pusher scene and no placement.
+## This remains for compatibility, and for screens that must close while the scene tree
+## is paused, where the overlay does not process input but this node does.
 @export var pop_actions: Array[StringName] = []
 
 # -- INITIALIZATION ------------------------------------------------------------------ #

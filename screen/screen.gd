@@ -105,14 +105,26 @@ signal uncovered(scene: Node)
 @export_group("Input")
 
 ## block_input_below controls whether this screen creates a new input isolation layer.
-## When true (default), a new overlay is created that blocks both mouse and keyboard
-## input from reaching screens lower in the stack. When false, this screen's scene joins
-## the overlay of the screen below.
+## When true (default), a new overlay stops mouse events and, while topmost, consumes
+## unhandled input (where `StdScreenPusher` listens) once its scene and attachments have
+## declined it. When false, this screen's scene joins the overlay of the screen below.
+##
+## NOTE: Only the `_unhandled_input` stage is isolated. Shortcuts and
+## `_unhandled_key_input` run tree-wide before it, so covered screens still see those.
 @export var block_input_below: bool = true
 
 ## overlay_click_to_close is a bitmask of mouse buttons that trigger a close request
 ## when the overlay background (scrim) is clicked.
 @export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
+
+## close_actions are input actions that request a close of this screen while it is
+## topmost. Only this screen pops, and `close_requested` handlers may cancel. The overlay
+## checks them after the scene and its attachments, so a scene that handles the action
+## keeps it. Prefer this to a `StdScreenPusher` with `pop_actions`.
+##
+## NOTE: Detection runs in the overlay, which `get_tree().paused` stops; a pusher keeps
+## running. `pause_when_covered` disables only the covered scene, so it is unaffected.
+@export var close_actions: Array[StringName] = []
 
 @export_group("Sound")
 

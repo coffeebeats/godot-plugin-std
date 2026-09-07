@@ -46,10 +46,10 @@ func erase(screen: StdScreen) -> void:
 	_overlays.erase(screen)
 
 
-## free_if_unused frees an overlay if no screen still references it.
+## free_if_unused detaches and queue-frees an overlay if no screen still references it.
 ##
-## NOTE: This frees the overlay right away. That is only safe because the caller has
-## already detached the overlay's scene and attachments.
+## NOTE: The overlay is often mid-emission of the signal that led here, and Godot refuses
+## to free an emitting node. Anything still parented goes down with it.
 func free_if_unused(overlay: StdScreenOverlay) -> void:
 	if not is_instance_valid(overlay):
 		return
@@ -59,7 +59,7 @@ func free_if_unused(overlay: StdScreenOverlay) -> void:
 	if overlay.is_inside_tree():
 		overlay.get_parent().remove_child(overlay)
 
-	overlay.free()
+	overlay.queue_free()
 
 
 ## get_current returns the overlay for the topmost screen.
@@ -74,6 +74,7 @@ func get_or_create(
 	stack: Array[StdScreen],
 	block_input_below: bool,
 	on_background_clicked: Callable,
+	on_close_action_pressed: Callable,
 ) -> StdScreenOverlay:
 	if not block_input_below and not stack.is_empty():
 		var shared: StdScreenOverlay = _overlays.get(stack[-1])
@@ -87,6 +88,7 @@ func get_or_create(
 
 	var overlay := StdScreenOverlay.new()
 	overlay.background_clicked.connect(on_background_clicked)
+	overlay.close_action_pressed.connect(on_close_action_pressed)
 	_owner.add_child(overlay)
 	return overlay
 
@@ -121,13 +123,38 @@ func register(
 	_overlays[screen] = overlay
 
 
-## update_config recalculates the click-to-close mask for the top-most overlay.
+## update_config recalculates overlay state after a stack operation: which overlay
+## consumes unhandled input, and the click-to-close mask and close actions for the
+## top-most overlay.
 func update_config(stack: Array[StdScreen]) -> void:
-	var overlay := get_current(stack)
-	if not is_instance_valid(overlay):
+	var current := get_current(stack)
+
+	# NOTE: Only overlays still backing a stacked screen count; a popped screen's overlay
+	# stays mapped until teardown. A lone overlay does not consume, so input passes
+	# through to the rest of the application.
+	var distinct: Dictionary[StdScreenOverlay, bool] = {}
+	for screen in stack:
+		var overlay: StdScreenOverlay = _overlays.get(screen)
+		if is_instance_valid(overlay):
+			distinct[overlay] = true
+
+	# NOTE: Every overlay is written so one that was on top stops consuming, and stops
+	# listening for close actions, once covered.
+	for overlay: StdScreenOverlay in _overlays.values():
+		if is_instance_valid(overlay):
+			overlay.consumes_unhandled_input = (
+				overlay == current and distinct.size() > 1
+			)
+			overlay.close_actions = []
+
+	if not is_instance_valid(current):
 		return
 
 	var mask := 0
-	for screen in get_screens(overlay, stack):
+	for screen in get_screens(current, stack):
 		mask |= screen.overlay_click_to_close
-	overlay.click_to_close = mask
+	current.click_to_close = mask
+
+	# NOTE: Only the topmost screen's actions apply; a pop can only remove the top of the
+	# stack, so a buried screen sharing this overlay has nothing to close.
+	current.close_actions = stack[-1].close_actions

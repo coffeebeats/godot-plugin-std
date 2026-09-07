@@ -104,3 +104,5 @@ func _emit_covered(manager: StdScreenManager, previous: Node) -> void:
 	manager.screen_covered.emit(screen_prev, previous)
 
 	previous.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
+	for node: Node in manager._attachments.get(screen_prev, []):
+		node.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
