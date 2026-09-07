@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.2.0 (2026-09-07)
+
+## What's Changed
+* fix(screen): stop unhandled input at the topmost overlay by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/444
+* feat(screen): let a screen declare its close actions by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/446
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.1.1...v5.2.0
+
 ## 5.1.1 (2026-09-07)
 
 ## What's Changed
