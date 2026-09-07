@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.1.1 (2026-09-07)
+
+## What's Changed
+* fix(screen): detach scenes and attachments before freeing them by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/441
+* docs(screen): explain how action sets scope a pusher's input by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/443
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.1.0...v5.1.1
+
 ## 5.1.0 (2026-09-07)
 
 **Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.0.1...v5.1.0
