@@ -129,6 +129,42 @@ func test_get_dependency_paths_diamond():
 	)
 
 
+func test_get_dependency_paths_includes_attachments():
+	# Given: A screen with both dependency and attachment scenes.
+	var screen := StdScreen.new()
+	screen.dependency_scenes = PackedStringArray(["res://a.tscn"])
+	screen.attachment_scenes = PackedStringArray(["res://pusher.tscn"])
+
+	# When: Dependency paths are resolved.
+	var paths := screen.get_dependency_paths()
+
+	# Then: The attachment path is preloaded alongside the dependency.
+	assert_eq(
+		paths,
+		PackedStringArray(["res://a.tscn", "res://pusher.tscn"]),
+	)
+
+
+func test_get_dependency_paths_deduplicates_attachments():
+	# Given: A screen whose attachment is also a dependency of a referenced screen.
+	var dep := StdScreen.new()
+	dep.scene_path = "res://dep.tscn"
+	dep.attachment_scenes = PackedStringArray(["res://pusher.tscn"])
+
+	var screen := StdScreen.new()
+	screen.attachment_scenes = PackedStringArray(["res://pusher.tscn"])
+	screen.dependency_screens = [dep]
+
+	# When: Dependency paths are resolved.
+	var paths := screen.get_dependency_paths()
+
+	# Then: The shared attachment path appears once.
+	assert_eq(
+		paths,
+		PackedStringArray(["res://pusher.tscn", "res://dep.tscn"]),
+	)
+
+
 func test_get_dependency_paths_cycle_logs_error():
 	# Given: A cycle: A -> B -> A.
 	var a := StdScreen.new()
