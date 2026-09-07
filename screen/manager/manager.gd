@@ -71,12 +71,12 @@ class _InputBlocker:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree when the screen is
-## covered by another.
+## NOTIFICATION_SCREEN_COVERED is propagated to a scene's subtree, and to its
+## attachments, when the screen is covered by another.
 static var NOTIFICATION_SCREEN_COVERED: int = (1 << 24) + 1  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
-## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree when a covering
-## screen is popped.
+## NOTIFICATION_SCREEN_UNCOVERED is propagated to a scene's subtree, and to its
+## attachments, when a covering screen is popped.
 static var NOTIFICATION_SCREEN_UNCOVERED: int = (1 << 24) + 2  # gdlint:ignore=class-definitions-order,class-variable-name,max-line-length
 
 static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=class-definitions-order,max-line-length
@@ -559,6 +559,8 @@ func _notify_top_uncovered() -> void:
 		screen.uncovered.emit(scene)
 		screen_uncovered.emit(screen, scene)
 		scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
+		for node: Node in _attachments.get(screen, []):
+			node.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
 	_set_pending_focus(scene)
 
 

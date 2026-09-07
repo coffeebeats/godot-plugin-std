@@ -105,9 +105,12 @@ signal uncovered(scene: Node)
 @export_group("Input")
 
 ## block_input_below controls whether this screen creates a new input isolation layer.
-## When true (default), a new overlay is created that blocks both mouse and keyboard
-## input from reaching screens lower in the stack. When false, this screen's scene joins
-## the overlay of the screen below.
+## When true (default), a new overlay stops mouse events and, while topmost, consumes
+## unhandled input (where `StdScreenPusher` listens) once its scene and attachments have
+## declined it. When false, this screen's scene joins the overlay of the screen below.
+##
+## NOTE: Only the `_unhandled_input` stage is isolated. Shortcuts and
+## `_unhandled_key_input` run tree-wide before it, so covered screens still see those.
 @export var block_input_below: bool = true
 
 ## overlay_click_to_close is a bitmask of mouse buttons that trigger a close request
