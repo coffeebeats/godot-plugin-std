@@ -735,6 +735,56 @@ func test_pop_frees_attachments():
 	assert_false(screen in _manager._attachments)
 
 
+func test_pop_defers_attachment_free_until_idle():
+	# Given: A base screen and a pushed screen with an attachment.
+	await _do_push()
+	var screen := _create_screen()
+	screen.attachment_scenes = PackedStringArray([_TEST_ATTACHMENT_PATH])
+	await _do_push(screen)
+
+	var attachment: Node = _get_attachments(screen)[0]
+
+	# When: The screen is popped, which happens immediately without a transition.
+	_manager.pop(null, true)
+
+	# Then: The attachment is queued for deletion, not already deleted.
+	assert_true(
+		is_instance_valid(attachment),
+		"attachment was deleted synchronously during the pop",
+	)
+	assert_true(attachment.is_queued_for_deletion())
+
+	# When: A frame elapses.
+	await wait_idle_frames(2)
+
+	# Then: The attachment is gone.
+	assert_false(is_instance_valid(attachment))
+
+
+func test_pop_defers_scene_free_until_idle():
+	# Given: A base screen and a pushed screen which does not cache its scene.
+	await _do_push()
+	var screen := _create_screen()
+	var scene := Control.new()
+	await _do_push(screen, scene)
+
+	# When: The screen is popped.
+	_manager.pop(null, true)
+
+	# Then: The scene is queued for deletion, not already deleted.
+	assert_true(
+		is_instance_valid(scene),
+		"scene was deleted synchronously during the pop",
+	)
+	assert_true(scene.is_queued_for_deletion())
+
+	# When: A frame elapses.
+	await wait_idle_frames(2)
+
+	# Then: The scene is gone.
+	assert_false(is_instance_valid(scene))
+
+
 func test_pop_frees_attachments_when_scene_is_cached():
 	# Given: A pushed screen which caches its scene instance.
 	await _do_push()
