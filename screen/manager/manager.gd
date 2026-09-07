@@ -5,6 +5,11 @@
 ## each backed by an instantiated scene node. This is a thin orchestrator that delegates
 ## to operation objects for navigation logic.
 ##
+## Freeing a node deletes its children immediately. Stack operations often run from
+## inside an input handler, so deleting a node while its handler is still running will
+## crash the engine. To avoid that, every node here is detached from its parent before
+## being queue-freed, and nothing is freed outright while it still has children.
+##
 
 class_name StdScreenManager
 extends Node
@@ -449,15 +454,22 @@ func _force_stop() -> void:
 		ctx.entering_scene.free()
 
 
-## _free_attachments frees the attachment nodes mounted for the given screen. Nodes are
-## queue-freed, matching how `_teardown_scene` frees the mounted scene prior to the
-## overlay being freed.
+## _free_attachments detaches and queue-frees the given screen's attachment nodes.
+##
+## NOTE: The nodes must be detached first. Left parented, `_overlays.free_if_unused`
+## deletes them right away, often while an attachment is still handling input.
+##
+## TODO: Attachments are rebuilt on every push, even when `cache_instance` retains the
+## scene. Left alone for now since they are small.
 func _free_attachments(screen: StdScreen) -> void:
 	if screen not in _attachments:
 		return
 
 	for node: Node in _attachments[screen]:
 		if is_instance_valid(node):
+			if node.get_parent():
+				node.get_parent().remove_child(node)
+
 			node.queue_free()
 
 	_attachments.erase(screen)
@@ -728,6 +740,11 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 
 		_cache[screen] = scene
 	elif is_instance_valid(scene):
+		# NOTE: The scene must be detached first. Otherwise `free_if_unused` below takes
+		# it down with the overlay, even while the scene is popping its own screen.
+		if scene.get_parent():
+			scene.get_parent().remove_child(scene)
+
 		scene.queue_free()
 
 	_overlays.free_if_unused(overlay)
@@ -737,7 +754,7 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 		var stale: Node = _cache[screen]
 		_cache.erase(screen)
 		if is_instance_valid(stale):
-			stale.queue_free()
+			stale.free()
 
 
 ## _unblock_input removes the input blocker from the tree.

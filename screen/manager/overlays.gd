@@ -47,6 +47,9 @@ func erase(screen: StdScreen) -> void:
 
 
 ## free_if_unused frees an overlay if no screen still references it.
+##
+## NOTE: This frees the overlay right away. That is only safe because the caller has
+## already detached the overlay's scene and attachments.
 func free_if_unused(overlay: StdScreenOverlay) -> void:
 	if not is_instance_valid(overlay):
 		return
