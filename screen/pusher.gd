@@ -42,6 +42,10 @@ const Signals := preload("../event/signal.gd")
 @export var push_actions: Array[StringName] = []
 
 ## pop_actions are input actions that pop the screen when it is the topmost screen.
+##
+## NOTE: Prefer `StdScreen.close_actions`, which needs no pusher scene and no placement.
+## This remains for compatibility, and for screens that must close while the scene tree
+## is paused, where the overlay does not process input but this node does.
 @export var pop_actions: Array[StringName] = []
 
 # -- INITIALIZATION ------------------------------------------------------------------ #

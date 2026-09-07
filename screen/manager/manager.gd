@@ -457,7 +457,7 @@ func _force_stop() -> void:
 ## _free_attachments detaches and queue-frees the given screen's attachment nodes.
 ##
 ## NOTE: The nodes must be detached first. Left parented, `_overlays.free_if_unused`
-## deletes them right away, often while an attachment is still handling input.
+## takes them down with the overlay, ahead of any lifecycle handling of their own.
 ##
 ## TODO: Attachments are rebuilt on every push, even when `cache_instance` retains the
 ## scene. Left alone for now since they are small.
@@ -495,9 +495,17 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 				_stack,
 				screen.block_input_below,
 				_request_close_overlay,
+				_request_close_top,
 			)
 		)
 	overlay.add_child(scene)
+
+	for action in screen.close_actions:
+		if not InputMap.has_action(action):
+			_logger.warn("Close action not in InputMap.", {&"action": action})
+	assert(
+		screen.close_actions.all(InputMap.has_action), "invalid config; missing actions"
+	)
 
 	_stack.append(screen)
 	_scenes[screen] = scene
@@ -570,22 +578,11 @@ func _play_screen_sound(event: StdSoundEvent) -> void:
 		_sound_player.play(event)
 
 
-## _request_close_overlay propagates close_requested to all screens in the topmost
-## overlay. If no handler cancels, pops those screens.
-func _request_close_overlay(event: InputEvent) -> void:
+## _request_close propagates close_requested to the topmost 'count' screens, top first.
+## If no handler cancels, pops those screens. The bottom screen is never popped.
+func _request_close(event: InputEvent, count: int) -> void:
 	if _queue.is_operating():
 		return
-
-	var overlay := _overlays.get_current(_stack)
-	if not is_instance_valid(overlay):
-		return
-
-	# Walk backward from the top to find the overlay boundary.
-	var count := 0
-	for i in range(_stack.size() - 1, -1, -1):
-		if _overlays.get_overlay(_stack[i]) != overlay:
-			break
-		count += 1
 
 	var target := maxi(1, _stack.size() - count)
 	if _stack.size() <= target:
@@ -609,6 +606,29 @@ func _request_close_overlay(event: InputEvent) -> void:
 	_queue.enqueue_or_run(
 		func(): _do_pop_to_depth(target),
 	)
+
+
+## _request_close_overlay requests a close of every screen in the topmost overlay, in
+## response to a background click.
+func _request_close_overlay(event: InputEvent) -> void:
+	var overlay := _overlays.get_current(_stack)
+	if not is_instance_valid(overlay):
+		return
+
+	# Walk backward from the top to find the overlay boundary.
+	var count := 0
+	for i in range(_stack.size() - 1, -1, -1):
+		if _overlays.get_overlay(_stack[i]) != overlay:
+			break
+		count += 1
+
+	_request_close(event, count)
+
+
+## _request_close_top requests a close of the topmost screen only, in response to one of
+## its `StdScreen.close_actions`.
+func _request_close_top(event: InputEvent) -> void:
+	_request_close(event, 1)
 
 
 ## _resolve_transition returns the transition to use for an operation.
@@ -743,7 +763,7 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 		_cache[screen] = scene
 	elif is_instance_valid(scene):
 		# NOTE: The scene must be detached first. Otherwise `free_if_unused` below takes
-		# it down with the overlay, even while the scene is popping its own screen.
+		# it down with the overlay instead of on its own schedule.
 		if scene.get_parent():
 			scene.get_parent().remove_child(scene)
 

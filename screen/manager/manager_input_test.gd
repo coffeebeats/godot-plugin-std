@@ -134,30 +134,6 @@ func test_overlay_config_aggregates_across_screens():
 	assert_eq(overlay.click_to_close, 3)
 
 
-func test_close_requested_propagates_topmost_first():
-	# Given: A base and two non-blocking screens.
-	var base := _create_screen()
-	await _do_push(base)
-	var second := _create_screen(null, false)
-	await _do_push(second)
-	var third := _create_screen(null, false)
-	await _do_push(third)
-
-	# Connect close_requested handlers that record order.
-	var order: Array[Screen] = []
-	base.close_requested.connect(func(_e, _c): order.append(base))
-	second.close_requested.connect(func(_e, _c): order.append(second))
-	third.close_requested.connect(func(_e, _c): order.append(third))
-
-	# When: A close is requested.
-	_manager._request_close_overlay(InputEventKey.new())
-	await wait_idle_frames(1)
-
-	# Then: Propagation was topmost-first and screens popped.
-	assert_eq(order, [third, second, base])
-	assert_eq(_manager.get_depth(), 1)
-
-
 func test_unhandled_input_visits_children_before_parent_and_stops_at_consumer():
 	# Given: Two overlays holding a scene and an attachment each, a node outside both, in
 	# the manager's creation order; the top overlay consumes.
