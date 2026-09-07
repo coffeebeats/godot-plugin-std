@@ -117,6 +117,15 @@ signal uncovered(scene: Node)
 ## when the overlay background (scrim) is clicked.
 @export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
 
+## close_actions are input actions that request a close of this screen while it is
+## topmost. Only this screen pops, and `close_requested` handlers may cancel. The overlay
+## checks them after the scene and its attachments, so a scene that handles the action
+## keeps it. Prefer this to a `StdScreenPusher` with `pop_actions`.
+##
+## NOTE: Detection runs in the overlay, which `get_tree().paused` stops; a pusher keeps
+## running. `pause_when_covered` disables only the covered scene, so it is unaffected.
+@export var close_actions: Array[StringName] = []
+
 @export_group("Sound")
 
 ## sound_enter is played when this screen's scene mounts (alongside the `entering`
