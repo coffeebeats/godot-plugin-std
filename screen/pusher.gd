@@ -4,6 +4,11 @@
 ## StdScreenPusher is a node that pushes and pops a `StdScreen` in response to input
 ## actions.
 ##
+## A pusher tracks where its target screen sits in the stack, not which screen the
+## player is looking at, so it stays armed even while its host screen is buried.
+## Scoping is the action set's job. Loading one clears and rebinds the whole
+## `InputMap`, so an action the current screen omits is unbound and no pusher sees it.
+##
 ## A pusher must be able to find a `StdScreenManager` among its ancestors (or via
 ## 'manager_path'). Prefer declaring it as an attachment of the screen during which it
 ## should be active - see `StdScreen.attachment_scenes` - or placing it within the
