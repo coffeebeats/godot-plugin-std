@@ -313,6 +313,31 @@ func test_attached_pusher_pops_its_own_screen_and_outlives_the_pop():
 	assert_false(is_instance_valid(pusher))
 
 
+func test_attached_opener_on_covered_screen_does_not_push():
+	# Given: A host screen with an attached opener for a target screen, covered by
+	# another screen.
+	await _do_push()
+
+	var target := _create_screen()
+	var host := _create_screen()
+	host.attachment_scenes = PackedStringArray(
+		[_create_pusher_scene(target, [&"test_push"], [])],
+	)
+	await _do_push(host)
+	await _do_push()
+
+	var pusher: Pusher = _manager._attachments[host][0]
+	assert_false(pusher._is_in_stack)
+
+	# When: The push action is sent through the engine's own input handling.
+	_dispatch_action(&"test_push")
+	await wait_idle_frames(2)
+
+	# Then: The covered opener never saw it, so the target was not pushed.
+	assert_eq(_manager.get_depth(), 3)
+	assert_ne(_manager.get_current_screen(), target)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

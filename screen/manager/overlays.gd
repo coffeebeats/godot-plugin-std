@@ -121,13 +121,31 @@ func register(
 	_overlays[screen] = overlay
 
 
-## update_config recalculates the click-to-close mask for the top-most overlay.
+## update_config recalculates overlay state after a stack operation: which overlay
+## consumes unhandled input, and the click-to-close mask for the top-most overlay.
 func update_config(stack: Array[StdScreen]) -> void:
-	var overlay := get_current(stack)
-	if not is_instance_valid(overlay):
+	var current := get_current(stack)
+
+	# NOTE: Only overlays still backing a stacked screen count; a popped screen's overlay
+	# stays mapped until teardown. A lone overlay does not consume, so input passes
+	# through to the rest of the application.
+	var distinct: Dictionary[StdScreenOverlay, bool] = {}
+	for screen in stack:
+		var overlay: StdScreenOverlay = _overlays.get(screen)
+		if is_instance_valid(overlay):
+			distinct[overlay] = true
+
+	# NOTE: Every overlay is written so one that was on top stops consuming once covered.
+	for overlay: StdScreenOverlay in _overlays.values():
+		if is_instance_valid(overlay):
+			overlay.consumes_unhandled_input = (
+				overlay == current and distinct.size() > 1
+			)
+
+	if not is_instance_valid(current):
 		return
 
 	var mask := 0
-	for screen in get_screens(overlay, stack):
+	for screen in get_screens(current, stack):
 		mask |= screen.overlay_click_to_close
-	overlay.click_to_close = mask
+	current.click_to_close = mask
