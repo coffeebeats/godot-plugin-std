@@ -10,6 +10,21 @@ extends GutTest
 
 const Pusher := preload("pusher.gd")
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+
+## _InputRecorder is a scene stand-in recording the unhandled actions it receives.
+class _InputRecorder:
+	extends Control
+
+	var action: StringName = &""
+	var seen: Array[StringName] = []
+
+	func _unhandled_input(event: InputEvent) -> void:
+		if action and event.is_action_pressed(action):
+			seen.append(action)
+
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 const _TEST_ACTIONS := [&"test_push", &"test_close", &"test_toggle"]
@@ -263,6 +278,41 @@ func test_uses_manager_path_when_set():
 	assert_same(pusher.manager, _manager)
 
 
+func test_attached_pusher_pops_its_own_screen_and_outlives_the_pop():
+	# Given: A screen with a recording scene and an attached pusher which closes it.
+	await _do_push()
+
+	var host := _create_screen()
+	host.attachment_scenes = PackedStringArray(
+		[_create_pusher_scene(host, [], [&"test_close"])],
+	)
+
+	var scene := _InputRecorder.new()
+	scene.action = &"test_close"
+	await _do_push(host, scene)
+
+	var pusher: Pusher = _manager._attachments[host][0]
+
+	# When: The close action is sent through the engine's own input handling.
+	_dispatch_action(&"test_close")
+
+	# Then: The pusher still exists after popping the screen it was attached to.
+	assert_true(
+		is_instance_valid(pusher),
+		"pusher was deleted while its own input handler was still running",
+	)
+
+	# Then: The attachment handled the action first, so the scene never saw it.
+	assert_eq(scene.seen, [] as Array[StringName])
+
+	# When: A frame elapses.
+	await wait_idle_frames(2)
+
+	# Then: The screen was popped and the pusher is gone.
+	assert_eq(_manager.get_depth(), 1)
+	assert_false(is_instance_valid(pusher))
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -308,7 +358,11 @@ func before_each():
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _create_pusher_scene(screen: StdScreen) -> String:
+func _create_pusher_scene(
+	screen: StdScreen,
+	p_push_actions: Array[StringName] = [&"test_toggle"],
+	p_pop_actions: Array[StringName] = [&"test_toggle"],
+) -> String:
 	# NOTE: Register the screen under a resource path so that packing the pusher stores
 	# a reference to it, rather than a copy of the resource.
 	screen.take_over_path(_TEST_SCREEN_PATH)
@@ -316,8 +370,8 @@ func _create_pusher_scene(screen: StdScreen) -> String:
 
 	var pusher := Pusher.new()
 	pusher.screen = screen
-	pusher.push_actions = [&"test_toggle"]
-	pusher.pop_actions = [&"test_toggle"]
+	pusher.push_actions = p_push_actions
+	pusher.pop_actions = p_pop_actions
 
 	_test_pusher_scene = PackedScene.new()
 	_test_pusher_scene.pack(pusher)
@@ -364,7 +418,7 @@ func _create_pusher(
 
 func _do_push(
 	screen: StdScreen = null,
-	scene: Control = null,
+	scene: Node = null,
 ) -> void:
 	if not screen:
 		screen = _create_screen()
@@ -372,6 +426,17 @@ func _do_push(
 		scene = Control.new()
 	_manager.push(screen, scene)
 	await wait_idle_frames(1)
+
+
+## _dispatch_action sends an action through the engine's own input handling, so that
+## handlers run the way they do at runtime. Use this rather than `_simulate_action`,
+## which calls the handler directly, when a test cares whether the node survives.
+func _dispatch_action(action: StringName) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+
+	get_tree().root.push_input(event)
 
 
 func _simulate_action(
