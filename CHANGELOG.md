@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.0 (2026-09-07)
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.0.1...v5.1.0
+
 ## 5.0.1 (2026-09-02)
 
 ## What's Changed
