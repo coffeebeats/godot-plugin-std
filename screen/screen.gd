@@ -91,6 +91,17 @@ signal uncovered(scene: Node)
 ## any exit transition; resolution blocks at mount time only if still in progress.
 @export_file("*.tscn", "*.scn") var dependency_scenes: PackedStringArray = []
 
+@export_group("Attachments")
+
+## attachment_scenes is a list of scene paths instantiated alongside this screen's scene
+## while it is mounted. Attachments are added to the screen's overlay rather than the
+## mounted scene, so they are unaffected by 'pause_when_covered' and can carry screen
+## stack wiring (e.g. a `StdScreenPusher`) which the scene itself should not own.
+##
+## NOTE: These paths are included in `get_dependency_paths`, so they are preloaded
+## alongside this screen's target scene.
+@export_file("*.tscn", "*.scn") var attachment_scenes: PackedStringArray = []
+
 @export_group("Input")
 
 ## block_input_below controls whether this screen creates a new input isolation layer.
@@ -143,8 +154,8 @@ func disconnect_signal_handlers(scene: Node) -> void:
 
 
 ## get_dependency_paths returns every scene path that should be pre-loaded as a
-## dependency of this screen, combining 'dependency_scenes' and the resolved paths of
-## 'dependency_screens'.
+## dependency of this screen, combining 'dependency_scenes', 'attachment_scenes', and
+## the resolved paths of 'dependency_screens'.
 func get_dependency_paths() -> PackedStringArray:
 	return _resolve_dependency_paths({}, {})
 
@@ -173,6 +184,11 @@ func _resolve_dependency_paths(
 	var paths: PackedStringArray = []
 
 	for path in dependency_scenes:
+		if path not in visited:
+			visited[path] = true
+			paths.append(path)
+
+	for path in attachment_scenes:
 		if path not in visited:
 			visited[path] = true
 			paths.append(path)

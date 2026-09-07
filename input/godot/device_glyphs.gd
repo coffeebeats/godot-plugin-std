@@ -97,11 +97,7 @@ func _get_action_origin_label(
 
 	var keycode := (
 		DisplayServer.keyboard_get_label_from_physical(physical_keycode)
-		if (
-			OS.has_feature(&"windows")
-			or OS.has_feature(&"macos")
-			or OS.has_feature(&"linuxbsd")
-		)
+		if _has_keyboard_label_support()
 		else physical_keycode
 	)
 
@@ -113,3 +109,23 @@ func _get_action_origin_label(
 		return OS.get_keycode_string(keycode)
 
 	return label
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _has_keyboard_label_support returns whether the display server can map a physical
+## keycode to a localized key label.
+##
+## NOTE: The platform check covers web and mobile. The display server name additionally
+## covers a headless server on a supported platform, where the call logs an error
+## instead of returning a default.
+static func _has_keyboard_label_support() -> bool:
+	if DisplayServer.get_name() == &"headless":
+		return false
+
+	return (
+		OS.has_feature(&"windows")
+		or OS.has_feature(&"macos")
+		or OS.has_feature(&"linuxbsd")
+	)

@@ -4,6 +4,15 @@
 ## StdScreenPusher is a node that pushes and pops a `StdScreen` in response to input
 ## actions.
 ##
+## A pusher must be able to find a `StdScreenManager` among its ancestors (or via
+## 'manager_path'). Prefer declaring it as an attachment of the screen during which it
+## should be active - see `StdScreen.attachment_scenes` - or placing it within the
+## manager's own subtree.
+##
+## When no manager is found the pusher disables itself, logging a warning; it wires
+## itself up again on any later tree entry which does find one. This keeps a scene
+## containing a pusher runnable on its own, without push/pop behavior.
+##
 
 class_name StdScreenPusher
 extends Node
@@ -41,8 +50,7 @@ var _is_in_stack: bool = false
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-# NOTE: Always-process so push/pop input still works when the parent scene is paused via
-# `pause_when_covered`.
+# NOTE: Always-process so push/pop input still works while the scene tree is paused.
 func _init() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
@@ -51,7 +59,13 @@ func _enter_tree() -> void:
 	assert(screen != null, "invalid config; missing 'screen'")
 
 	manager = _find_manager()
-	assert(manager is StdScreenManager, "invalid config; missing manager")
+	if manager == null:
+		_logger.warn("No screen manager found; pusher disabled.", {&"path": get_path()})
+
+		_is_in_stack = false
+		_is_current = false
+
+		return
 
 	Signals.connect_safe(screen.entering, _on_entering)
 	Signals.connect_safe(screen.exited, _on_exited)
@@ -86,6 +100,12 @@ func _exit_tree() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# NOTE: Guard here rather than disabling input processing in `_enter_tree`;
+	# `NOTIFICATION_READY` re-enables unhandled input for any script defining
+	# `_unhandled_input`, which would undo `set_process_unhandled_input(false)`.
+	if manager == null:
+		return
+
 	if not _is_in_stack:
 		for action in push_actions:
 			if event.is_action_pressed(action):
@@ -106,7 +126,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _find_manager() -> StdScreenManager:
 	if not manager_path.is_empty():
-		return get_node_or_null(manager_path)
+		return get_node_or_null(manager_path) as StdScreenManager
 
 	var node := get_parent()
 	while node:

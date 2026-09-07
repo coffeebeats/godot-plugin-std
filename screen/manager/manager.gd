@@ -79,6 +79,7 @@ static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=c
 var _active_context: StdScreenTransitionContext = null
 var _active_op: Operation = null
 var _active_transition: StdScreenTransition = null
+var _attachments: Dictionary[StdScreen, Array] = {}
 var _cache: Dictionary[StdScreen, Node] = {}
 var _cursor: StdInputCursor = null
 var _focus: Dictionary[Node, Control] = {}
@@ -374,6 +375,8 @@ func _discard_screen(screen: StdScreen) -> void:
 	_scenes.erase(screen)
 	_preloads.erase(screen)
 
+	_free_attachments(screen)
+
 	var overlay := _overlays.get_overlay(screen)
 	_overlays.erase(screen)
 	_overlays.free_if_unused(overlay)
@@ -446,6 +449,20 @@ func _force_stop() -> void:
 		ctx.entering_scene.free()
 
 
+## _free_attachments frees the attachment nodes mounted for the given screen. Nodes are
+## queue-freed, matching how `_teardown_scene` frees the mounted scene prior to the
+## overlay being freed.
+func _free_attachments(screen: StdScreen) -> void:
+	if screen not in _attachments:
+		return
+
+	for node: Node in _attachments[screen]:
+		if is_instance_valid(node):
+			node.queue_free()
+
+	_attachments.erase(screen)
+
+
 ## _free_cache immediately frees all cached scene instances. Cached scenes are not in
 ## the tree, so direct `free` is safe even in blocked contexts.
 func _free_cache() -> void:
@@ -476,10 +493,48 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 
 	_update_stack_state()
 
+	_mount_attachments(screen, overlay)
+
 	screen.entering.emit(scene)
 	screen_entering.emit(screen, scene)
 
 	_play_screen_sound(screen.sound_enter)
+
+
+## _mount_attachments instantiates the screen's attachment scenes into its overlay.
+##
+## NOTE: Attachments are added after the mounted scene so that they receive unhandled
+## input first; input is dispatched to sibling nodes in reverse tree order.
+func _mount_attachments(screen: StdScreen, overlay: StdScreenOverlay) -> void:
+	if screen.attachment_scenes.is_empty():
+		return
+
+	var nodes: Array = []
+	var preloaded: Dictionary = _preloads.get(screen, {})
+
+	for path in screen.attachment_scenes:
+		var packed: PackedScene = null
+
+		var result: StdScreenLoader.Result = preloaded.get(path)
+		if result:
+			packed = result.scene
+
+		# NOTE: The resolver skips synchronous loads for paths already in the resource
+		# cache, so a preloaded result may not have its scene populated yet. Only cached
+		# paths are loaded directly here; mounting must not block on a new load.
+		if packed == null and ResourceLoader.has_cached(path):
+			packed = ResourceLoader.load(path, "PackedScene")
+
+		if packed == null:
+			_logger.error("Failed to load attachment scene.", {&"path": path})
+			continue
+
+		var node := packed.instantiate()
+		overlay.add_child(node)
+		nodes.append(node)
+
+	if nodes:
+		_attachments[screen] = nodes
 
 
 ## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen
@@ -630,7 +685,11 @@ func _teardown() -> void:
 			sc.queue_free()
 		s.popped.emit(null)
 
+	for s in stack:
+		_free_attachments(s)
+
 	_scenes.clear()
+	_attachments.clear()
 	_focus.clear()
 	_overlays.clear()
 	_preloads.clear()
@@ -656,6 +715,7 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 	_focus.erase(scene)
 
 	_preloads.erase(screen)
+	_free_attachments(screen)
 
 	var overlay := _overlays.get_overlay(screen)
 	_overlays.erase(screen)
