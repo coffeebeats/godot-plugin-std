@@ -456,8 +456,8 @@ func _force_stop() -> void:
 
 ## _free_attachments detaches and queue-frees the given screen's attachment nodes.
 ##
-## NOTE: The nodes must be detached first. Left parented, `_overlays.free_if_unused`
-## takes them down with the overlay, ahead of any lifecycle handling of their own.
+## NOTE: Detach first. The overlay may be shared and survive this screen, and a queued
+## free would leave the node in it, still receiving input, until the end of the frame.
 ##
 ## TODO: Attachments are rebuilt on every push, even when `cache_instance` retains the
 ## scene. Left alone for now since they are small.
@@ -487,6 +487,13 @@ func _free_cache() -> void:
 ## _mount_scene adds a scene to the tree, registers it in the stack, and
 ## emits the entering signal.
 func _mount_scene(screen: StdScreen, scene: Node) -> void:
+	for action in screen.close_actions:
+		if not InputMap.has_action(action):
+			_logger.warn("Close action not in InputMap.", {&"action": action})
+	assert(
+		screen.close_actions.all(InputMap.has_action), "invalid config; missing actions"
+	)
+
 	var overlay := _overlays.get_overlay(screen)
 	if not is_instance_valid(overlay):
 		overlay = (
@@ -499,13 +506,6 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 			)
 		)
 	overlay.add_child(scene)
-
-	for action in screen.close_actions:
-		if not InputMap.has_action(action):
-			_logger.warn("Close action not in InputMap.", {&"action": action})
-	assert(
-		screen.close_actions.all(InputMap.has_action), "invalid config; missing actions"
-	)
 
 	_stack.append(screen)
 	_scenes[screen] = scene
@@ -579,7 +579,8 @@ func _play_screen_sound(event: StdSoundEvent) -> void:
 
 
 ## _request_close propagates close_requested to the topmost 'count' screens, top first.
-## If no handler cancels, pops those screens. The bottom screen is never popped.
+## If no handler cancels, pops those screens. The bottom screen is never popped. The
+## caller has already marked the event handled, so a cancelled close still consumes it.
 func _request_close(event: InputEvent, count: int) -> void:
 	if _queue.is_operating():
 		return
@@ -599,9 +600,6 @@ func _request_close(event: InputEvent, count: int) -> void:
 		_stack[i].close_requested.emit(event, cancel)
 		if state[0]:
 			return
-
-	if not get_viewport().is_input_handled():
-		get_viewport().set_input_as_handled()
 
 	_queue.enqueue_or_run(
 		func(): _do_pop_to_depth(target),
@@ -762,8 +760,9 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 
 		_cache[screen] = scene
 	elif is_instance_valid(scene):
-		# NOTE: The scene must be detached first. Otherwise `free_if_unused` below takes
-		# it down with the overlay instead of on its own schedule.
+		# NOTE: Detach first. The overlay may be shared and survive this screen, and a
+		# queued free would leave the scene in it, still receiving input, until the end
+		# of the frame.
 		if scene.get_parent():
 			scene.get_parent().remove_child(scene)
 

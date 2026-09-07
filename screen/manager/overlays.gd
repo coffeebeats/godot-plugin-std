@@ -48,10 +48,8 @@ func erase(screen: StdScreen) -> void:
 
 ## free_if_unused detaches and queue-frees an overlay if no screen still references it.
 ##
-## NOTE: The overlay is often the emitter of the signal that led here (a background click
-## or a close action), and a node cannot be freed while it is emitting. The caller must
-## already have detached the overlay's scene and attachments; anything still parented
-## goes down with it.
+## NOTE: The overlay is often mid-emission of the signal that led here, and Godot refuses
+## to free an emitting node. Anything still parented goes down with it.
 func free_if_unused(overlay: StdScreenOverlay) -> void:
 	if not is_instance_valid(overlay):
 		return
