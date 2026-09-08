@@ -7,6 +7,7 @@
 ##
 ## Implementation is heavily adapted from interpretation of [Introduction to
 ## Hierarchical State Machines](
+# gdlint:ignore=max-line-length
 ## https://barrgroup.com/embedded-systems/how-to/introduction-hierarchical-state-machines).
 ##
 

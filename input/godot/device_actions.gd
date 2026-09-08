@@ -53,7 +53,7 @@ const DEVICE_ID_ALL := StdInputDevice.DEVICE_ID_ALL
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set is the currently active action set.
-static var _action_set: StdInputActionSet = null  # gdlint: ignore=class-definitions-order
+static var _action_set: StdInputActionSet = null  # gdlint: ignore=class-definitions-order,max-line-length
 
 ## _action_set_layers is the stack of currently active action set layers.
 static var _action_set_layers: Array[StdInputActionSetLayer] = []  # gdlint: ignore=class-definitions-order,max-line-length

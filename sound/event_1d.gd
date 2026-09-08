@@ -13,7 +13,7 @@ extends StdSoundEvent
 @export_subgroup("Player")
 
 ## mix_target sets the `mix_target` property on the associated `AudioStreamPlayer`.
-@export var mix_target: AudioStreamPlayer.MixTarget = AudioStreamPlayer.MIX_TARGET_STEREO
+@export var mix_target: AudioStreamPlayer.MixTarget = AudioStreamPlayer.MIX_TARGET_STEREO  # gdlint:ignore=max-line-length
 
 ## pitch_scale sets the `pitch_scale` property on the associated `AudioStreamPlayer`.
 @export var pitch_scale: float = 1.0

@@ -57,7 +57,7 @@ const Signals := preload("../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-static var _anchors: Array[StdInputCursorFocusHandler] = []  # gdlint:ignore=class-definitions-order
+static var _anchors: Array[StdInputCursorFocusHandler] = []  # gdlint:ignore=class-definitions-order,max-line-length
 
 var _control_focus_mode: FocusMode = FOCUS_NONE
 var _control_mouse_filter: MouseFilter = MOUSE_FILTER_IGNORE
