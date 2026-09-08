@@ -431,7 +431,8 @@ func _force_hover_recalculation() -> void:
 	viewport.push_input(event, true)
 
 
-## _force_stop stops the active transition and force-finishes the context.
+## _force_stop stops the active transition, force-finishes the context, and releases
+## its input blocker.
 func _force_stop() -> void:
 	if _active_transition == null:
 		return
@@ -446,6 +447,10 @@ func _force_stop() -> void:
 
 	if ctx:
 		ctx._did_finish = true
+
+	# NOTE: The blocker belongs to the transition discarded here. The next operation
+	# re-arms one in the same call stack if its transition blocks input.
+	_unblock_input()
 
 	# Free entering scenes that were never mounted to prevent orphaned nodes. The scene
 	# is not in the tree and would otherwise leak. For async cases (resolver-based),
