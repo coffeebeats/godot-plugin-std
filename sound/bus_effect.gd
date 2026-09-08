@@ -2,8 +2,8 @@
 ## std/sound/bus_effect.gd
 ##
 ## StdSoundBusEffect describes an audio effect that can be applied to an audio bus with
-## optional animated properties. Call `apply()` to add the effect and receive an instance
-## handle for later removal.
+## optional animated properties. Call `apply()` to add the effect and receive an
+## instance handle for later removal.
 ##
 
 class_name StdSoundBusEffect
