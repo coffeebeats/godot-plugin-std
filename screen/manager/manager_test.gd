@@ -249,6 +249,54 @@ func test_exit_tree_stops_transitions_and_clears_queue():
 	assert_eq(_manager._queue._queue.size(), 0)
 
 
+func test_interrupted_blocking_transition_releases_input_blocker():
+	# Given: A base screen on the stack.
+	await _do_push()
+
+	# Given: A screen with a blocking transition, mounted but still transitioning.
+	var screen := _create_screen(MockTransition.new())
+	await _do_push(screen)
+	var active := _get_active_transition()
+	active.do_mount()
+	assert_true(_manager._input_blocker.is_inside_tree(), "blocker armed")
+
+	# When: A non-blocking operation interrupts the transition.
+	var next := _create_screen()
+	_manager.replace(next, Control.new())
+	await wait_idle_frames(2)
+
+	# Then: The interrupted transition was stopped and its blocker released.
+	assert_true(active.stopped)
+	assert_true(_manager.is_current(next))
+	assert_false(_manager._input_blocker.is_inside_tree(), "blocker released")
+
+
+func test_interrupting_blocking_transition_rearms_input_blocker():
+	# Given: A base screen and a screen mid-transition with input blocked.
+	await _do_push()
+	var screen := _create_screen(MockTransition.new())
+	await _do_push(screen)
+	_get_active_transition().do_mount()
+
+	# When: Another blocking operation interrupts it.
+	var next := _create_screen(MockTransition.new())
+	_manager.replace(next, Control.new())
+	await wait_idle_frames(2)
+
+	# Then: The blocker is armed for the new transition.
+	var active := _get_active_transition()
+	assert_true(active.replace_started)
+	assert_true(_manager._input_blocker.is_inside_tree(), "blocker re-armed")
+
+	# When: The new transition completes.
+	active.do_swap()
+	active.complete()
+	await wait_idle_frames(1)
+
+	# Then: The blocker is released.
+	assert_false(_manager._input_blocker.is_inside_tree(), "blocker released")
+
+
 func test_exit_tree_emits_lifecycle_signals_for_active_scenes():
 	# Given: Two screens on the stack.
 	var first := _create_screen()
