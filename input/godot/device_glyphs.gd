@@ -1,8 +1,8 @@
 ##
 ## std/input/godot/device_glyphs.gd
 ##
-## An implemention of `StdInputDeviceGlyphs` which maps joypad names and origins to custom
-## glyphs using Godot's built-in `Input` class/SDL controller database.
+## An implemention of `StdInputDeviceGlyphs` which maps joypad names and origins to
+## custom glyphs using Godot's built-in `Input` class/SDL controller database.
 ##
 
 extends StdInputDeviceGlyphs

@@ -165,8 +165,8 @@ static func all() -> Array[StdInputSlot]:
 	return members
 
 
-## for_player finds the `StdInputSlot` in the scene tree that's assigned to the specified
-## player. Note that there can be only one `StdInputSlot` per player.
+## for_player finds the `StdInputSlot` in the scene tree that's assigned to the
+## specified player. Note that there can be only one `StdInputSlot` per player.
 static func for_player(player: int) -> StdInputSlot:
 	for member in StdGroup.with_id(GROUP_INPUT_SLOT).list_members():
 		assert(member is StdInputSlot, "invalid state; wrong member type")
@@ -466,7 +466,8 @@ func _input(event: InputEvent) -> void:
 	elif (
 		claim_kbm_input
 		and (_active == null or _active.device_type != DEVICE_TYPE_KEYBOARD)
-		# NOTE: Do not swap based on mouse motion as that might be emulated from a gyro sensor.
+		# NOTE: Do not swap based on mouse motion as that might be emulated from a gyro
+		# sensor.
 		and (event is InputEventKey or event is InputEventMouseButton)
 		and (_actions.any(func(a): return Input.is_action_just_pressed(a)))
 	):

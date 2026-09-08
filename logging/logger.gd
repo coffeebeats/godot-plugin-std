@@ -48,7 +48,7 @@ const Level := LogLevels.Level  # gdlint:ignore=constant-name
 static var _formatter: StdLogFormatter = StdLogFormatterCompact.new()  # gdlint:ignore=class-definitions-order,max-line-length
 static var _level_overrides: Dictionary = {}  # gdlint:ignore=class-definitions-order
 static var _level: Level = LogLevels.LEVEL_WARN  # gdlint:ignore=class-definitions-order
-static var _sink: StdLogSink = StdLogSinkGodot.new()  # gdlint:ignore=class-definitions-order
+static var _sink: StdLogSink = StdLogSinkGodot.new()  # gdlint:ignore=class-definitions-order,max-line-length
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 

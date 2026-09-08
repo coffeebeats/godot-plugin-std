@@ -3,8 +3,8 @@
 ##
 ## A shared library for safely managing `Signal` connections.
 ##
-## NOTE: This 'Object' should *not* be instanced and/or added to the 'SceneTree'. It is a
-## "static" library that can be imported at compile-time using 'preload'.
+## NOTE: This 'Object' should *not* be instanced and/or added to the 'SceneTree'. It is
+## a "static" library that can be imported at compile-time using 'preload'.
 ##
 
 extends Object
