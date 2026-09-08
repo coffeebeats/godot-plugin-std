@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.2.2 (2026-09-08)
+
+## What's Changed
+* chore: drive gdformat and gdlint from checked-in config files by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/449
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.2.1...v5.2.2
+
 ## 5.2.1 (2026-09-08)
 
 ## What's Changed
