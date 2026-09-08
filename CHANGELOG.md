@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.2.1 (2026-09-08)
+
+## What's Changed
+* fix(screen): release the input blocker when a transition is force-stopped by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/447
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.2.0...v5.2.1
+
 ## 5.2.0 (2026-09-07)
 
 ## What's Changed
