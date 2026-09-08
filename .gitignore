@@ -8,7 +8,7 @@
 .DS_Store
 
 # Godot source/editor files
-godot/
+/godot
 Godot.app
 godot.app
 Godot.exe
