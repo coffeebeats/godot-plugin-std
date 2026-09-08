@@ -292,10 +292,10 @@ func _create_blocker() -> Control:
 
 
 ## _create_resolver builds a resolver callable and an optional sync scene for the given
-## screen. The resolver, when called, sync-blocks on any in-progress background loads and
-## returns the instantiated scene node. The second element is non-null when the scene is
-## immediately available (instance or cache) — operations pass it as `entering_scene` for
-## force-stop cleanup.
+## screen. The resolver, when called, sync-blocks on any in-progress background loads
+## and returns the instantiated scene node. The second element is non-null when the
+## scene is immediately available (instance or cache) — operations pass it as
+## `entering_scene` for force-stop cleanup.
 func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 	var sync_scene: Node = null
 	var scene_path := ""
@@ -371,8 +371,8 @@ func _current_screen() -> StdScreen:
 
 ## _discard_screen removes a broken screen (missing scene) from the top of the stack and
 ## cleans up all associated state. The overlay is freed only when no other screen shares
-## it (`free_if_unused` checks `is_in_use`). Callers should invoke `_update_stack_state()`
-## after the final removal in a batch.
+## it (`free_if_unused` checks `is_in_use`). Callers should invoke
+## `_update_stack_state()` after the final removal in a batch.
 func _discard_screen(screen: StdScreen) -> void:
 	_logger.error("Discarding screen with missing scene.")
 

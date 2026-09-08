@@ -5,11 +5,11 @@ Godot 4+ plugin providing a standard library of reusable GDScript utilities for 
 ## Commands
 
 ```bash
-# Format check (line length 88)
-gdformat -l 88 --check $(find . -path ./addons -prune -o -name '*.gd' -print)
+# Format check (settings in `.gdformatrc`)
+gdformat --check .
 
-# Lint
-gdlint $(find . -path ./addons -prune -o -name '*.gd' -print)
+# Lint (settings in `.gdlintrc`)
+gdlint .
 
 # Run all tests
 godot --headless -s addons/gut/gut_cmdln.gd -gdir="res://" -ginclude_subdirs -gprefix="" -gsuffix="_test.gd" -gexit

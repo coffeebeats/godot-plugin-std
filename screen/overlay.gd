@@ -26,8 +26,8 @@ signal close_action_pressed(event: InputEvent)
 ## overlay). Set by the manager after each stack operation.
 var click_to_close: int = 0
 
-## close_actions are the input actions that request a close of the topmost screen. Set by
-## the manager after each stack operation; only the current overlay carries any.
+## close_actions are the input actions that request a close of the topmost screen. Set
+## by the manager after each stack operation; only the current overlay carries any.
 var close_actions: Array[StringName] = []
 
 ## consumes_unhandled_input marks unhandled input as handled once this overlay's scene

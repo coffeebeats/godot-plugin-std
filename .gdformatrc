@@ -1,0 +1,4 @@
+line_length: 88
+excluded_directories:
+- .git
+- addons

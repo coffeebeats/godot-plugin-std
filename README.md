@@ -63,13 +63,13 @@ When submitting code for review, ensure the following requirements are met:
 2. The project is correctly formatted using [gdformat](https://github.com/Scony/godot-gdscript-toolkit/wiki/4.-Formatter):
 
     ```sh
-    gdformat -l 88 --check $(find . -path ./addons -prune -o -name '*.gd' -print)
+    gdformat --check .
     ```
 
 3. All [gdlint](https://github.com/Scony/godot-gdscript-toolkit/wiki/3.-Linter) linter warnings are addressed:
 
     ```sh
-    gdlint $(find . -path ./addons -prune -o -name '*.gd' -print)
+    gdlint .
     ```
 
 4. All [Gut](https://github.com/bitwes/Gut) unit tests pass:

@@ -59,7 +59,8 @@ signal uncovered(scene: Node)
 
 ## cache_instance prevents the manager from freeing the scene on pop. The scene is
 ## removed from the tree and stored internally. On the next push of this screen, the
-## cached instance is reused (re-added to tree) instead of instantiating from scene_path.
+## cached instance is reused (re-added to tree) instead of instantiating from
+## scene_path.
 @export var cache_instance: bool = false
 
 ## pause_when_covered controls whether this screen's scene has its process mode set to
@@ -118,9 +119,9 @@ signal uncovered(scene: Node)
 @export_flags("Left:1", "Right:2", "Middle:4") var overlay_click_to_close: int = 0
 
 ## close_actions are input actions that request a close of this screen while it is
-## topmost. Only this screen pops, and `close_requested` handlers may cancel. The overlay
-## checks them after the scene and its attachments, so a scene that handles the action
-## keeps it. Prefer this to a `StdScreenPusher` with `pop_actions`.
+## topmost. Only this screen pops, and `close_requested` handlers may cancel. The
+## overlay checks them after the scene and its attachments, so a scene that handles the
+## action keeps it. Prefer this to a `StdScreenPusher` with `pop_actions`.
 ##
 ## NOTE: Detection runs in the overlay, which `get_tree().paused` stops; a pusher keeps
 ## running. `pause_when_covered` disables only the covered scene, so it is unaffected.

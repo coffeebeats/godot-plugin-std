@@ -28,8 +28,8 @@ extends Resource
 		action_sets = value
 		_write_file()
 
-## action_set_layers is the complete set of available `StdInputActionSetLayers`s within the
-## game. This must not include base `StdInputActionSet` types.
+## action_set_layers is the complete set of available `StdInputActionSetLayers`s within
+## the game. This must not include base `StdInputActionSet` types.
 @export var action_set_layers: Array[StdInputActionSetLayer] = []:
 	set(value):
 		action_set_layers = value

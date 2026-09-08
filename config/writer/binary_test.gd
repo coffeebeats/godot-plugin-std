@@ -323,7 +323,8 @@ func test_from_bytes_rejects_truncated_input():
 		"from_bytes should return null for empty input",
 	)
 
-	# Given: A 10-byte array (minimum valid is 29: 1 mode + 8 size + 16 checksum + 4 variant).
+	# Given: A 10-byte array (minimum valid is 29: 1 mode + 8 size + 16 checksum + 4
+	# variant).
 	var short := PackedByteArray()
 	short.resize(10)
 
