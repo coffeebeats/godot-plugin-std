@@ -16,9 +16,6 @@ config/icon="res://icon.svg"
 
 [debug]
 
-gdscript/warnings/directory_rules={
-"res://addons": 0
-}
 gdscript/warnings/unassigned_variable=2
 gdscript/warnings/unassigned_variable_op_assign=2
 gdscript/warnings/unused_private_class_variable=2
