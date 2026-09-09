@@ -363,9 +363,9 @@ func before_each():
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _create_recorder(name: StringName, sink: Array = []) -> _InputRecorder:
+func _create_recorder(recorder_name: StringName, sink: Array = []) -> _InputRecorder:
 	var recorder := _InputRecorder.new()
-	recorder.name = name
+	recorder.name = recorder_name
 	recorder.sink = sink
 	return recorder
 
