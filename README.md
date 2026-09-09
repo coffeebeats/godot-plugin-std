@@ -52,26 +52,7 @@ The following instructions outline how to get the project set up for local devel
 
 1. Clone this repository using the `--recurse-submodules` flag, ensuring all submodules are initialized. Alternatively, run `git submodule sync` to update all submodules to latest.
 2. [Follow the instructions](https://github.com/coffeebeats/gdenv/blob/main/docs/installation.md) to install `gdenv`. Then, install the [pinned version of Godot](./.godot-version) with `gdenv i`.
-3. [Install `uv`](https://docs.astral.sh/uv/getting-started/installation/), then run `uv sync`. That installs the Python tooling below at the version in `uv.lock`, and downloads the interpreter named by [`.python-version`](./.python-version) if the machine has none.
-
-#### Dependencies managed by `uv`
-
-Installed by `uv sync` and invoked with `uv run <tool>`. Don't reach for `pip`; `uv.lock` is what keeps a contributor and a CI runner on the same versions.
-
-| Tool | Used by |
-| --- | --- |
-| `gdtoolkit` (`gdformat`, `gdlint`) | CI, and the format and lint checks below |
-
-`gdtoolkit` is pinned to an exact version, because a minor release reformats the whole codebase without a line changing here. Bumping it is a deliberate commit.
-
-#### System dependencies
-
-What `uv` will never supply. Each has to be visible from the shell the commands run in:
-
-| Tool | Needed for |
-| --- | --- |
-| Godot | everything; the [pinned version](./.godot-version), via `gdenv` |
-| `git` | submodules |
+3. [Install `uv`](https://docs.astral.sh/uv/getting-started/installation/), then run `uv sync`. That installs the Python tooling from [`uv.lock`](./uv.lock), and downloads the interpreter named by [`.python-version`](./.python-version) if the machine has none. Invoke each tool as `uv run <tool>`.
 
 ### Code submission
 
