@@ -1,6 +1,10 @@
 # Godot-specific ignores
 .godot/
 
+# Python tooling
+.venv/
+.ruff_cache/
+
 # Imported translations (automatically generated from CSV files)
 *.translation
 
@@ -20,3 +24,4 @@ godot.exe
 # IDE-related files
 .claude/settings.local.json
 .vscode/*
+!.vscode/extensions.json
