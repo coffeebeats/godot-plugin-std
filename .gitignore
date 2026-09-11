@@ -1,12 +1,10 @@
 # Godot-specific ignores
 .godot/
 
-# Python generated files
-__pycache__/
-
 # Python tooling
 .venv/
 .ruff_cache/
+__pycache__/
 
 # Imported translations (automatically generated from CSV files)
 *.translation

@@ -46,7 +46,7 @@ jobs:
   format-and-lint:
     needs: ["changes"]
     if: |
-      needs.changes.outputs.has_source_change == 'true' &&
+      needs.changes.outputs.has_change == 'true' &&
       github.actor != 'dependabot[bot]'
 
     runs-on: ubuntu-latest

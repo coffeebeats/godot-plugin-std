@@ -1,0 +1,17 @@
+# pyproject.toml
+#
+# Python tooling for this repository's CI. This is a Godot project, not a Python
+# distribution, so nothing here is packaged or published.
+
+[project]
+name = "tooling"
+version = "0.0.0"
+requires-python = ">=3.13"
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+# NOTE: Pin `gdtoolkit` exactly. A minor release reformats the whole codebase, so a
+# bump has to be its own commit.
+dev = ["gdtoolkit==4.5.0"]

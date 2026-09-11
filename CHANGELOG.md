@@ -1,5 +1,23 @@
 # Changelog
 
+## 5.2.4 (2026-09-09)
+
+## What's Changed
+* chore(tools): pin gdtoolkit with uv by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/454
+* chore(ci): run format-and-lint on any change, not only GDScript by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/456
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.2.3...v5.2.4
+
+## 5.2.3 (2026-09-09)
+
+## What's Changed
+* chore: anchor the godot ignore pattern to the repository root by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/451
+* chore: promote default-on GDScript warnings to compile errors by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/453
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.2.2...v5.2.3
+
 ## 5.2.2 (2026-09-08)
 
 ## What's Changed
