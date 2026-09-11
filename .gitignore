@@ -1,14 +1,13 @@
 # Godot-specific ignores
 .godot/
 
-<<<<<<< Updated upstream
-=======
+# Python generated files
+__pycache__/
+
 # Python tooling
 .venv/
 .ruff_cache/
-__pycache__/
 
->>>>>>> Stashed changes
 # Imported translations (automatically generated from CSV files)
 *.translation
 
@@ -28,3 +27,4 @@ godot.exe
 # IDE-related files
 .claude/settings.local.json
 .vscode/*
+!.vscode/extensions.json
