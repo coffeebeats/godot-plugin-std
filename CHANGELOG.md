@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.2.5 (2026-09-11)
+
+## What's Changed
+* chore(repo): ignore Python bytecode caches by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/457
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.2.4...v5.2.5
+
 ## 5.2.4 (2026-09-09)
 
 ## What's Changed
