@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.2.6 (2026-09-13)
+
+## What's Changed
+* refactor(ci): call godot-infra reusable workflows by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/460
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.2.5...v5.2.6
+
 ## 5.2.5 (2026-09-11)
 
 ## What's Changed
