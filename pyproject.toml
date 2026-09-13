@@ -14,4 +14,4 @@ package = false
 [dependency-groups]
 # NOTE: Pin `gdtoolkit` exactly. A minor release reformats the whole codebase, so a
 # bump has to be its own commit.
-dev = ["gdtoolkit==4.5.0"]
+dev = ["gdtoolkit==4.5.0", "ruff"]
