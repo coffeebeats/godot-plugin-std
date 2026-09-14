@@ -1,0 +1,240 @@
+##
+## std/file/writer.gd
+##
+## StdFileWriter is a base class for a node which manages reading from and writing to
+## the file system. Only one file may be open for reading/writing at a time.
+##
+## NOTE: This class extends `StdThreadWorker`; it's expected that the provided methods
+## will be invoked from a separate thread.
+##
+
+class_name StdFileWriter
+extends StdThreadWorker
+
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const FilePath := preload("path.gd")
+
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _file: FileAccess = null
+var _flush_needed: bool = false
+var _logger := StdLogger.create(&"std/file/writer")
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _file_close() -> Error:
+	if not _file is FileAccess:
+		assert(false, "invalid state; no file is open")
+		return ERR_DOES_NOT_EXIST
+
+	var path := _file.get_path()
+
+	if _flush_needed:
+		_file.flush()
+		_flush_needed = false
+
+	var write_err := _file.get_error()
+
+	_file.close()
+	_file = null
+
+	_logger.debug("Closed file.", {&"path": path})
+
+	if write_err != OK:
+		(
+			_logger
+			. error(
+				"Failed to flush file before close.",
+				{&"path": path, &"error": write_err},
+			)
+		)
+		return write_err
+
+	return OK
+
+
+func _file_copy(from: String, to: String) -> Error:
+	if not from.is_absolute_path() or not to.is_absolute_path():
+		assert(false, "invalid argument; expected absolute paths")
+		return ERR_INVALID_PARAMETER
+
+	if _file is FileAccess:
+		assert(false, "invalid state; cannot copy while file is open")
+		return ERR_BUSY
+
+	if not FileAccess.file_exists(from):
+		return ERR_FILE_NOT_FOUND
+
+	var to_dir := to.get_base_dir()
+	var mkdir_err := DirAccess.make_dir_recursive_absolute(to_dir)
+	if mkdir_err != OK:
+		(
+			_logger
+			. error(
+				"Failed to create directory for copy.",
+				{&"directory": to_dir, &"error": mkdir_err},
+			)
+		)
+		return mkdir_err
+
+	var copy_err := DirAccess.copy_absolute(from, to)
+	if copy_err != OK:
+		(
+			_logger
+			. error(
+				"Failed to copy file.",
+				{&"path_from": from, &"path_to": to, &"error": copy_err},
+			)
+		)
+		return copy_err
+
+	_logger.debug("Copied file.", {&"path_from": from, &"path_to": to})
+
+	return OK
+
+
+func _file_delete(path: String) -> Error:
+	if not path.is_absolute_path():
+		assert(false, "invalid argument; expected absolute path")
+		return ERR_INVALID_PARAMETER
+
+	if _file is FileAccess:
+		assert(false, "invalid state; cannot delete file while another is open")
+		return ERR_BUSY
+
+	if not FileAccess.file_exists(path):
+		return OK
+
+	var err := DirAccess.remove_absolute(path)
+	if err != OK:
+		(
+			_logger
+			. error(
+				"Failed to delete file.",
+				{&"path": path, &"error": err},
+			)
+		)
+
+	_logger.debug("Deleted file.", {&"path": path})
+
+	return err
+
+
+func _file_move(from: String, to: String) -> Error:
+	if _file is FileAccess:
+		assert(false, "invalid state; cannot move file while another is open")
+		return ERR_BUSY
+
+	var err := DirAccess.rename_absolute(from, to)
+	if err != OK:
+		(
+			_logger
+			. error(
+				"Failed to move file.",
+				{&"path_from": from, &"path_to": to, &"error": err},
+			)
+		)
+
+	_logger.debug("Moved file.", {&"path_from": from, &"path_to": to})
+
+	return err
+
+
+func _file_open(
+	path: String,
+	mode: FileAccess.ModeFlags,
+	create_if_missing: bool = true,
+) -> Error:
+	if not path.is_absolute_path():
+		assert(false, "invalid argument; expected absolute path")
+		return ERR_INVALID_PARAMETER
+
+	if _file is FileAccess:
+		assert(false, "invalid state; cannot open file while another is open")
+		return ERR_BUSY
+
+	var logger := _logger.with({&"path": path})
+
+	if not create_if_missing and not FileAccess.file_exists(path):
+		return ERR_FILE_NOT_FOUND
+
+	var path_base_dir := path.get_base_dir()
+	var mkdir_err := DirAccess.make_dir_recursive_absolute(path_base_dir)
+	if mkdir_err != OK:
+		(
+			logger
+			. error(
+				"Failed to make containing directory.",
+				{&"directory": path_base_dir, &"error": mkdir_err},
+			)
+		)
+		return mkdir_err
+
+	logger = logger.with({&"mode": mode})
+
+	if not FileAccess.file_exists(path):
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		if file == null:
+			var err := FileAccess.get_open_error()
+			if err != OK:
+				(
+					logger
+					. error(
+						"Failed to create file.",
+						{&"error": err},
+					)
+				)
+				return err
+
+		logger.debug("Created file.")
+
+		file.close()
+
+	_file = FileAccess.open(path, mode)
+	if _file == null:
+		var err := FileAccess.get_open_error()
+		if err != OK:
+			logger.error("Failed to open file.", {&"error": err})
+			return err
+
+	logger.debug("Opened file.")
+
+	return OK  # gdlint:ignore=max-returns
+
+
+func _file_read(position: int = 0, count: int = -1) -> PackedByteArray:
+	if not _file is FileAccess:
+		assert(false, "invalid state; no file found")
+		return PackedByteArray()
+
+	_file.seek(position)
+
+	var length := (_file.get_length() - position) if count < 0 else count
+
+	return _file.get_buffer(length)
+
+
+func _file_write(
+	bytes: PackedByteArray, position: int = -1, flush: bool = false
+) -> Error:
+	if not _file is FileAccess:
+		assert(false, "invalid state; no file is open")
+		return ERR_DOES_NOT_EXIST
+
+	if position > -1:
+		_file.seek(position)
+
+	_file.store_buffer(bytes)
+	_flush_needed = true
+
+	if flush:
+		_file.flush()
+		_flush_needed = false
+
+		var write_err := _file.get_error()
+		if write_err != OK:
+			return write_err
+
+	return OK
