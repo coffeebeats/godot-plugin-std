@@ -13,8 +13,11 @@ permissions:
 
 jobs:
   check:
-    uses: coffeebeats/godot-infra/.github/workflows/check-project.yaml@v6
+    uses: coffeebeats/godot-infra/.github/workflows/check-project.yaml@feat/check-project-godot-versions
     secrets: inherit
+    with:
+      test-godot-versions: |
+        4.6.3-stable
 
   # NOTE: This job name is required by the branch ruleset.
   branch_protection:
