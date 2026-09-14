@@ -1,21 +1,18 @@
 # godot-plugin-std
 
-A Godot 4.0+ plugin providing standard GDScript functions and components.
+A Godot 4.7+ plugin providing standard GDScript functions and components.
 
 ## Usage
 
 ### Add as a dependency
 
-To use this plugin, add this repository as a submodule of a Godot project (typically under the `addons` directory). The following section lists which version should be used depending on the project's supported Godot version.
+Add this repository's `dist` branch as a submodule of a Godot project, typically under the `addons` directory:
 
-#### Branch name (Release version): Godot version
+```sh
+git submodule add -b dist https://github.com/coffeebeats/godot-plugin-std addons/std
+```
 
-- `main` / `godot-v4.7` (`v5`): `v4.7`
-- `godot-v4.6` (`v4`): `v4.6`
-- `godot-v4.5` (`v3`): `v4.5`
-- `godot-v4.4` (`v2`): `v4.4`
-- `godot-v4.3` (`v1`): `v4.3`
-- `godot-v4.2` (`v0`): `v4.2`
+Each release is a commit on `dist`, tagged `dist/vX.Y.Z`. Versions follow semantic versioning independently of Godot; raising the minimum Godot version is a major release.
 
 ### Plugin API
 
@@ -32,7 +29,7 @@ Additionally, the [`StateMachine`](./fsm/state_machine.gd) implementation provid
 #### **`input`**
 
 > [!NOTE]  
-> [GodotSteam](https://github.com/GodotSteam/GodotSteam) is a peer-dependency for Steam-backed implementations of certain classes (e.g. `JoypadMonitor` and multiple `StdInputDevice` components). The `GodotSteam` addon must be installed alongside this one; use a version targeting the same version of Godot as this addon.
+> [GodotSteam](https://github.com/GodotSteam/GodotSteam) is a peer-dependency for Steam-backed implementations of certain classes (e.g. `JoypadMonitor` and multiple `StdInputDevice` components). The `GodotSteam` addon must be installed alongside this one, from the `dist` branch of [coffeebeats/GodotSteam](https://github.com/coffeebeats/GodotSteam).
 
 The [input](./input) directory contains types for setting up an action set-based input system, along with abstractions for device and player slot APIs. When used, both Steam and Godot-backed implementations can be easily switched between.
 
@@ -91,8 +88,8 @@ When submitting code for review, ensure the following requirements are met:
 
 ## **Version history**
 
-See [CHANGELOG.md](https://github.com/coffeebeats/godot-plugin-template/blob/main/CHANGELOG.md).
+See [CHANGELOG.md](https://github.com/coffeebeats/godot-plugin-std/blob/main/CHANGELOG.md).
 
 ## **License**
 
-[MIT License](https://github.com/coffeebeats/godot-plugin-template/blob/main/LICENSE)
+[MIT License](https://github.com/coffeebeats/godot-plugin-std/blob/main/LICENSE)
