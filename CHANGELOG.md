@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.0.0 (2026-09-14)
+
+## What's Changed
+* feat!: publish to 'dist' on independent versions by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/463
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v5.2.6...v6.0.0
+
 ## 5.2.6 (2026-09-13)
 
 ## What's Changed
