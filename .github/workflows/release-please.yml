@@ -12,22 +12,59 @@ permissions:
   pull-requests: write
 
 jobs:
-  release:
-    uses: coffeebeats/godot-infra/.github/workflows/release-addon.yaml@v6
-    secrets: inherit
-    with:
-      subfolder: std
-      file-excludes: |
-        **/AGENTS.md
-        **/CLAUDE.md
+  release-please:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
 
-        **/example
-        **/examples
-        **/*_test.gd
-        **/*_test.gd.uid
+    outputs:
+      release-created: ${{ steps.release.outputs.releases_created }}
+      release-tag: ${{ steps.release.outputs.tag_name }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
+        id: release
+        with:
+          config-file: .release-please/config.json
+          manifest-file: .release-please/manifest.json
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+
+  # NOTE: A 'workflow_dispatch' run republishes the dispatched ref without a tag.
+  publish:
+    needs: ["release-please"]
+    if: |
+      !failure() && !cancelled() && (
+        needs.release-please.outputs.release-created == 'true' ||
+        github.event_name == 'workflow_dispatch'
+      )
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          submodules: true
+
+      - uses: coffeebeats/godot-infra/actions/package-addon@v6
+        with:
+          subfolder: std
+          tag: ${{ needs.release-please.outputs.release-tag && format('dist/{0}', needs.release-please.outputs.release-tag) || '' }}
+          file-excludes: |
+            **/AGENTS.md
+            **/CLAUDE.md
+            **/pyproject.toml
+            **/uv.lock
+
+            **/example
+            **/examples
+            **/*_test.gd
+            **/*_test.gd.uid
 
   branch_protection:
-    needs: [release]
+    needs: ["release-please", "publish"]
     if: always()
     runs-on: ubuntu-latest
     steps:
