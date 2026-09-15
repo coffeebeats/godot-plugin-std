@@ -1,0 +1,8 @@
+; Configures the project checker in godot-infra's 'godot' agent plugin, in ConfigFile
+; syntax; see 'plugins/godot/checker/README.md' there.
+
+[all]
+
+; GodotSteam has no Linux build, so scripts using its 'Steam' singleton skip the rules
+; that load files wherever it does not load.
+extensions={"res://addons/godotsteam/godotsteam.gdextension": ["Steam"]}
