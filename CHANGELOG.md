@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.0.2 (2026-09-15)
+
+## What's Changed
+* chore(ci): declare GodotSteam's names for the project checker by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/467
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.0.1...v6.0.2
+
 ## 6.0.1 (2026-09-15)
 
 ## What's Changed
