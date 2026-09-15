@@ -1,0 +1,15 @@
+{
+  "extraKnownMarketplaces": {
+    "godot-infra": {
+      "source": {
+        "source": "github",
+        "repo": "coffeebeats/godot-infra",
+        "ref": "v6"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "godot@godot-infra": true
+  }
+}

@@ -13,6 +13,10 @@ gdlint .
 
 # Run all tests
 godot --headless -s addons/gut/gut_cmdln.gd -gdir="res://" -ginclude_subdirs -gprefix="" -gsuffix="_test.gd" -gexit
+
+# Check project files for problems a normal load does not surface. From the `godot`
+# agent plugin, so on Claude's PATH only.
+godot-check
 ```
 
 ## Code Style
