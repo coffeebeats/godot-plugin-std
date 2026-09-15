@@ -1,5 +1,5 @@
-; Configures the project checker in godot-infra's 'godot' agent plugin, in ConfigFile
-; syntax; see 'plugins/godot/checker/README.md' there.
+; Configures godot-infra's project checker, which CI and the 'godot' agent plugin run.
+; See https://github.com/coffeebeats/godot-infra/blob/v6/plugins/godot/checker/README.md.
 
 [all]
 
