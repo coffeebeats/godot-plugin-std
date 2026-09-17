@@ -52,9 +52,6 @@ jobs:
         with:
           subfolder: std
           tag: ${{ needs.release-please.outputs.release-tag && format('dist/{0}', needs.release-please.outputs.release-tag) || '' }}
-          # NOTE: The root icon belongs to the development project. Every plugin created
-          # from 'godot-plugin-template' inherits its uid, so shipping it makes a
-          # consumer log a duplicate uid for each pair of plugins.
           file-excludes: |
             **/AGENTS.md
             **/CLAUDE.md
