@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.0.3 (2026-09-17)
+
+## What's Changed
+* fix(ci): stop publishing the project icon to 'dist' by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/469
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.0.2...v6.0.3
+
 ## 6.0.2 (2026-09-15)
 
 ## What's Changed
