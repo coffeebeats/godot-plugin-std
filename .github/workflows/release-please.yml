@@ -63,6 +63,9 @@ jobs:
             **/*_test.gd
             **/*_test.gd.uid
 
+            icon.svg
+            icon.svg.import
+
   branch_protection:
     needs: ["release-please", "publish"]
     if: always()
