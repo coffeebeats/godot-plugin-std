@@ -186,6 +186,62 @@ func test_parse_script_class_reads_header(
 	assert_eq(got, params.expected)
 
 
+func test_match_steam_language_prefers_the_closest_locale(
+	params = use_parameters(
+		(
+			ParameterFactory
+			. named_parameters(
+				["locale", "expected"],
+				[
+					["en_US", "english"],
+					["pt_BR", "brazilian"],
+					["pt", "portuguese"],
+					["es_ES", "spanish"],
+					["es", "spanish"],
+					["zh_TW", "tchinese"],
+					["uk", "ukrainian"],
+					["xx", ""],
+				]
+			)
+		)
+	)
+) -> void:
+	# Given: A Godot locale.
+
+	# When: It is matched against Steam's languages.
+	var got := StdInputSteamInGameActions._match_steam_language(params.locale)
+
+	# Then: The closest language, or nothing, is returned.
+	assert_eq(got, params.expected)
+
+
+func test_resolve_locales_derives_sorted_languages_with_overrides() -> void:
+	# Given: Loaded locales, one of them unmapped.
+	var loaded := PackedStringArray(["uk", "en_US", "pt_BR", "xx"])
+
+	# Given: An override for a language no catalogue covers.
+	var overrides := {"french": "fr"}
+
+	# When: The languages are resolved.
+	var got := StdInputSteamInGameActions._resolve_locales(loaded, overrides)
+
+	# Then: English is seeded, matches carry their loaded locale, and names are sorted.
+	assert_eq(got.keys(), ["brazilian", "english", "french", "ukrainian"])
+	assert_eq(got["english"], "en_US")
+	assert_eq(got["brazilian"], "pt_BR")
+	assert_eq(got["french"], "fr")
+
+
+func test_resolve_locales_seeds_english_when_nothing_is_loaded() -> void:
+	# Given: No loaded locales and no overrides.
+
+	# When: The languages are resolved.
+	var got := StdInputSteamInGameActions._resolve_locales(PackedStringArray(), {})
+
+	# Then: English alone is written.
+	assert_eq(got, {"english": "en"})
+
+
 func test_descendants_follows_the_class_tree() -> void:
 	# Given: A class list with a chain under the base and an unrelated class.
 	var classes: Array[Dictionary] = [

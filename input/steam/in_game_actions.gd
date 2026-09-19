@@ -3,7 +3,8 @@
 ##
 ## StdInputSteamInGameActions generates the Steam Input in-game actions (IGA) manifest.
 ## Every `StdInputActionSet` resource under `res://` is registered, layers told apart
-## from sets by type, so a set cannot be left out. `write` writes the manifest beside
+## from sets by type, and every loaded translation gets a localization section, so
+## neither a set nor a language can be left out. `write` writes the manifest beside
 ## `project.godot`; nothing else writes it, so it is generated for a build rather than
 ## committed. A subclass resolves display names by overriding the two `_get_*` hooks.
 ##
@@ -15,6 +16,45 @@
 class_name StdInputSteamInGameActions
 extends Resource
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## STEAM_LANGUAGES maps each Steam API language name to the locale it denotes. A
+## language precedes its regional variants so that a locale without a region, such as
+## `es`, matches the language rather than a variant on a tie.
+const STEAM_LANGUAGES := {
+	"english": "en",
+	"arabic": "ar",
+	"bulgarian": "bg",
+	"czech": "cs",
+	"danish": "da",
+	"dutch": "nl",
+	"finnish": "fi",
+	"french": "fr",
+	"german": "de",
+	"greek": "el",
+	"hungarian": "hu",
+	"indonesian": "id",
+	"italian": "it",
+	"japanese": "ja",
+	"koreana": "ko",
+	"malay": "ms",
+	"norwegian": "no",
+	"polish": "pl",
+	"portuguese": "pt",
+	"brazilian": "pt_BR",
+	"romanian": "ro",
+	"russian": "ru",
+	"spanish": "es",
+	"latam": "es_419",
+	"swedish": "sv",
+	"schinese": "zh_CN",
+	"tchinese": "zh_TW",
+	"thai": "th",
+	"turkish": "tr",
+	"ukrainian": "uk",
+	"vietnamese": "vi",
+}
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## app_id is the ID of the Steam application, which names the manifest file.
@@ -22,11 +62,9 @@ extends Resource
 
 @export_group("Localization")
 
-## locales maps Steam language names to Godot locales and is written as the manifest's
-## localization sections.
-@export var locales: Dictionary = {
-	"english": "en",
-}
+## locales overrides the languages derived from the loaded translations, mapping a
+## Steam language name to the Godot locale its section is written for.
+@export var locales: Dictionary = {}
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -58,13 +96,15 @@ static func find_resources(
 
 
 ## generate returns the manifest for the project: every action set under `res://` and
-## the configured `locales`.
+## every loaded translation's language, with `locales` applied over them.
 func generate() -> String:
 	var action_sets: Array[StdInputActionSet] = []
 	for resource in find_resources(&"StdInputActionSet"):
 		action_sets.append(resource as StdInputActionSet)
 
-	return render(action_sets, locales)
+	var languages := _resolve_locales(TranslationServer.get_loaded_locales(), locales)
+
+	return render(action_sets, languages)
 
 
 ## get_filename returns the path of the manifest file.
@@ -255,6 +295,46 @@ static func _descendants(
 	found.remove_at(0)
 
 	return found
+
+
+## _match_steam_language returns the Steam language name whose locale is closest to
+## `locale`, or an empty string when no language shares its language code.
+static func _match_steam_language(locale: String) -> String:
+	var best := ""
+	var best_score := 0
+
+	for language in STEAM_LANGUAGES:
+		var score := TranslationServer.compare_locales(
+			locale, STEAM_LANGUAGES[language]
+		)
+		if score > best_score:
+			best = language
+			best_score = score
+
+	return best
+
+
+## _resolve_locales returns the languages to write, sorted by Steam name: English, then
+## one per loaded locale that matches a Steam language, then `overrides` on top.
+static func _resolve_locales(
+	loaded: PackedStringArray, overrides: Dictionary
+) -> Dictionary:
+	var languages := {"english": "en"}
+
+	for locale in loaded:
+		var language := _match_steam_language(locale)
+		if language:
+			languages[language] = locale
+
+	languages.merge(overrides, true)
+
+	var sorted := {}
+	var names := languages.keys()
+	names.sort()
+	for name in names:
+		sorted[name] = languages[name]
+
+	return sorted
 
 
 ## _parse_script_class returns the `script_class` a text resource header declares, or an
