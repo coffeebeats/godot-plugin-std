@@ -1,18 +1,13 @@
 ##
 ## std/input/steam/in_game_actions.gd
 ##
-## StdInputSteamInGameActions generates the Steam Input in-game actions (IGA) manifest.
-## Every `StdInputActionSet` resource under `res://` is registered, layers told apart
-## from sets by type, and every loaded translation gets a localization section, so
-## neither a set nor a language can be left out. `write` writes the manifest beside
-## `project.godot`; nothing else writes it, so it is generated for a build rather than
-## committed: `write_in_game_actions.gd` runs it headless, a release bundles the file
-## beside the executable, and local testing copies it into Steam's `controller_config`
-## directory. A subclass resolves display names by overriding the two `_get_*` hooks.
+## StdInputSteamInGameActions generates the Steam Input in-game actions manifest from
+## every `StdInputActionSet` under `res://` and every loaded translation. `write` writes
+## it beside `project.godot`, and `write_in_game_actions.gd` runs that headless. A
+## subclass names sets and actions by overriding the two `_get_*` hooks.
 ##
-## NOTE: Discovery reads text resource headers, so it works in a project checkout and
-## not in an exported game, and a subclass of `StdInputActionSet` is found only if it
-## declares a `class_name`.
+## NOTE: Discovery reads text resource headers, so it needs a project checkout, and a
+## subclass of `StdInputActionSet` is found only if it declares a `class_name`.
 ##
 
 class_name StdInputSteamInGameActions
@@ -20,9 +15,8 @@ extends Resource
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## STEAM_LANGUAGES maps each Steam API language name to the locale it denotes. A
-## language precedes its regional variants so that a locale without a region, such as
-## `es`, matches the language rather than a variant on a tie.
+## STEAM_LANGUAGES maps Steam's API language names to locales. A language precedes its
+## regional variants so that a region-less locale ties to the language.
 const STEAM_LANGUAGES := {
 	"english": "en",
 	"arabic": "ar",
@@ -275,8 +269,8 @@ static func _collect_resources(
 	access.list_dir_end()
 
 
-## _descendants returns the names of every global class in `classes`, as reported by
-## `ProjectSettings.get_global_class_list`, that descends from `base`.
+## _descendants returns the names of the global classes in `classes` descending from
+## `base`.
 static func _descendants(
 	base: StringName, classes: Array[Dictionary]
 ) -> PackedStringArray:
@@ -316,8 +310,8 @@ static func _match_steam_language(locale: String) -> String:
 	return best
 
 
-## _resolve_locales returns the languages to write, sorted by Steam name: English, then
-## one per loaded locale that matches a Steam language, then `overrides` on top.
+## _resolve_locales returns English plus a language per matching loaded locale, with
+## `overrides` applied over them, sorted by Steam name.
 static func _resolve_locales(
 	loaded: PackedStringArray, overrides: Dictionary
 ) -> Dictionary:
