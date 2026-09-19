@@ -33,7 +33,7 @@ func _initialize() -> void:
 		quit(1)
 		return
 
-	_logger.info("Wrote the manifest.", {&"path": manifest.get_filename()})
+	print("wrote ", ProjectSettings.globalize_path(manifest.get_filename()))
 	quit(0)
 
 
@@ -49,11 +49,10 @@ func _find_manifest(args: PackedStringArray) -> StdInputSteamInGameActions:
 		return null
 
 	if args.size() == 1:
-		var manifest := ResourceLoader.load(args[0]) as StdInputSteamInGameActions
+		var path := ProjectSettings.localize_path(args[0])
+		var manifest := ResourceLoader.load(path) as StdInputSteamInGameActions
 		if not manifest:
-			_logger.error(
-				"Not a StdInputSteamInGameActions resource.", {&"path": args[0]}
-			)
+			_logger.error("Not a StdInputSteamInGameActions resource.", {&"path": path})
 
 		return manifest
 
