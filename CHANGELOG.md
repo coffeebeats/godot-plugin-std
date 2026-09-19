@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.1.0 (2026-09-19)
+
+## What's Changed
+* feat(input): derive the Steam Input manifest and stop reading it at runtime by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/471
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.0.3...v6.1.0
+
 ## 6.0.3 (2026-09-17)
 
 ## What's Changed
