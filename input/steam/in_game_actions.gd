@@ -6,7 +6,9 @@
 ## from sets by type, and every loaded translation gets a localization section, so
 ## neither a set nor a language can be left out. `write` writes the manifest beside
 ## `project.godot`; nothing else writes it, so it is generated for a build rather than
-## committed. A subclass resolves display names by overriding the two `_get_*` hooks.
+## committed: `write_in_game_actions.gd` runs it headless, a release bundles the file
+## beside the executable, and local testing copies it into Steam's `controller_config`
+## directory. A subclass resolves display names by overriding the two `_get_*` hooks.
 ##
 ## NOTE: Discovery reads text resource headers, so it works in a project checkout and
 ## not in an exported game, and a subclass of `StdInputActionSet` is found only if it
