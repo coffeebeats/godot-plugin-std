@@ -20,10 +20,6 @@ const DEVICE_ID_ALL := Steam.INPUT_HANDLE_ALL_CONTROLLERS
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## in_game_actions is a Steam In-game actions resource which lists all Steam-registered
-## action sets.
-@export var in_game_actions: StdInputSteamInGameActions = null
-
 ## joypad_monitor is a Steam-specific joypad monitor, used to look up slot-to-device ID
 ## translations.
 @export var joypad_monitor: StdInputSlot.JoypadMonitor = null
@@ -60,6 +56,8 @@ static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ig
 ## _is_initialized tracks whether this component has been initialized. This needs to
 ## occur once *after the first joypad has been connected*.
 static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-order
+
+var _logger := StdLogger.create("std/input/steam/device-actions")
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -140,7 +138,6 @@ func is_action_set_enabled(slot: int, action_set_name: String) -> bool:
 
 
 func _ready() -> void:
-	assert(in_game_actions, "invalid state; missing in game actions")
 	assert(joypad_monitor is SteamJoypadMonitor, "invalid state; missing node")
 	assert(
 		steam_input_enabled_property is StdSettingsPropertyBool,
@@ -191,6 +188,7 @@ func _load_action_set(slot: int, action_set: StdInputActionSet) -> bool:
 
 	var handle := get_action_set_handle(action_set.name)
 	if not handle:
+		_logger.warn("Steam Input has no such action set.", {&"name": action_set.name})
 		return false
 
 	_action_sets[handle] = action_set
@@ -228,6 +226,7 @@ func _enable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
 
 	var handle := get_action_set_handle(layer.name)
 	if not handle:
+		_logger.warn("Steam Input has no such action set layer.", {&"name": layer.name})
 		return false
 
 	# FIXME: This lookup is required because of the need to return whether the action
@@ -237,6 +236,7 @@ func _enable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
 
 	_action_sets[handle] = layer
 	Steam.activateActionSetLayer(DEVICE_ID_ALL, handle)
+	_store_action_handles(layer)
 
 	# NOTE: This won't organically return `true` until the next player action input is
 	# received by the game. This is an unfortunate discrepancy between the Godot
@@ -293,13 +293,6 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-func _initialize_action_handles() -> void:
-	# Fetch all action and action set handles prior to connecting to event handler.
-	for action_set in in_game_actions.action_sets + in_game_actions.action_set_layers:
-		get_action_set_handle(action_set.name)
-		_store_action_handles(action_set)
 
 
 func _publish_input_event(event: InputEvent) -> void:
@@ -452,5 +445,4 @@ func _on_steam_input_state_changed(enabled: bool) -> void:
 
 	_is_initialized = true
 
-	_initialize_action_handles()
 	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
