@@ -198,6 +198,8 @@ func test_match_steam_language_prefers_the_closest_locale(
 					["pt", "portuguese"],
 					["es_ES", "spanish"],
 					["es", "spanish"],
+					["es_MX", "latam"],
+					["es_AR", "spanish"],
 					["zh_TW", "tchinese"],
 					["uk", "ukrainian"],
 					["xx", ""],

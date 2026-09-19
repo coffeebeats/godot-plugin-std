@@ -17,6 +17,8 @@ extends Resource
 
 ## STEAM_LANGUAGES maps Steam's API language names to locales. A language precedes its
 ## regional variants so that a region-less locale ties to the language.
+##
+## NOTE: Godot drops the `419` region Steam names for `latam`, so it is `es_MX` here.
 const STEAM_LANGUAGES := {
 	"english": "en",
 	"arabic": "ar",
@@ -41,7 +43,7 @@ const STEAM_LANGUAGES := {
 	"romanian": "ro",
 	"russian": "ru",
 	"spanish": "es",
-	"latam": "es_419",
+	"latam": "es_MX",
 	"swedish": "sv",
 	"schinese": "zh_CN",
 	"tchinese": "zh_TW",
