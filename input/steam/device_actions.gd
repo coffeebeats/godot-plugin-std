@@ -57,6 +57,8 @@ static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ig
 ## occur once *after the first joypad has been connected*.
 static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-order
 
+var _logger := StdLogger.create("std/input/steam/device-actions")
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -186,7 +188,7 @@ func _load_action_set(slot: int, action_set: StdInputActionSet) -> bool:
 
 	var handle := get_action_set_handle(action_set.name)
 	if not handle:
-		push_warning(_missing_action_set_message(action_set.name))
+		_logger.warn("Steam Input has no such action set.", {&"name": action_set.name})
 		return false
 
 	_action_sets[handle] = action_set
@@ -224,7 +226,7 @@ func _enable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
 
 	var handle := get_action_set_handle(layer.name)
 	if not handle:
-		push_warning(_missing_action_set_message(layer.name))
+		_logger.warn("Steam Input has no such action set layer.", {&"name": layer.name})
 		return false
 
 	# FIXME: This lookup is required because of the need to return whether the action
@@ -234,9 +236,6 @@ func _enable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
 
 	_action_sets[handle] = layer
 	Steam.activateActionSetLayer(DEVICE_ID_ALL, handle)
-
-	# NOTE: Incoming action events only contain the action's handle. In order to look
-	# up the corresponding action name, populate the action handles now.
 	_store_action_handles(layer)
 
 	# NOTE: This won't organically return `true` until the next player action input is
@@ -294,15 +293,6 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-## _missing_action_set_message names an action set Steam Input has no handle for, which
-## means the manifest Steam loaded predates the set.
-static func _missing_action_set_message(action_set_name: StringName) -> String:
-	return (
-		"Steam Input has no action set '%s'; the manifest Steam loaded is stale"
-		% action_set_name
-	)
 
 
 func _publish_input_event(event: InputEvent) -> void:
