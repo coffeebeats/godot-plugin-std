@@ -50,7 +50,7 @@ The following instructions outline how to get the project set up for local devel
 1. Clone this repository using the `--recurse-submodules` flag, ensuring all submodules are initialized. Alternatively, run `git submodule sync` to update all submodules to latest.
 2. [Follow the instructions](https://github.com/coffeebeats/gdenv/blob/main/docs/installation.md) to install `gdenv`. Then, install the [pinned version of Godot](./.godot-version) with `gdenv i`.
 3. [Install `uv`](https://docs.astral.sh/uv/getting-started/installation/), then run `uv sync`. That installs the Python tooling from [`uv.lock`](./uv.lock), and downloads the interpreter named by [`.python-version`](./.python-version) if the machine has none. Invoke each tool as `uv run <tool>`.
-4. Claude Code's checks come from the `godot` plugin declared in [`.claude/settings.json`](./.claude/settings.json). Install it once per machine with `claude plugin install godot@godot-infra --scope project`. If `godot-check` is missing from Claude's `PATH`, see the "Agent plugin" section of [godot-infra's README](https://github.com/coffeebeats/godot-infra#agent-plugin).
+4. Claude Code's checks come from the `godot` plugin declared in [`.claude/settings.json`](./.claude/settings.json). Install it once per machine with `claude plugin install godot@godot-infra --scope project`. If the edit hook or `godot-check` goes missing, see the "Agent plugin" section of [godot-infra's README](https://github.com/coffeebeats/godot-infra#agent-plugin).
 
 ### Code submission
 
