@@ -324,6 +324,12 @@ static func _resolve_locales(
 		if language:
 			languages[language] = locale
 
+	for language in overrides:
+		assert(
+			language in STEAM_LANGUAGES,
+			"invalid config; unknown Steam language '%s'" % language
+		)
+
 	languages.merge(overrides, true)
 
 	var sorted := {}
