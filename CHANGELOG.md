@@ -1,5 +1,14 @@
 # Changelog
 
+## 6.1.1 (2026-09-21)
+
+## What's Changed
+* docs(readme): add the agent plugin install step to setup by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/473
+* chore: turn on the checker's `logging` rule by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/475
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.1.0...v6.1.1
+
 ## 6.1.0 (2026-09-19)
 
 ## What's Changed
