@@ -271,7 +271,7 @@ func _transition_to(path: NodePath) -> void:
 	var from_path := state._path if state else NodePath()
 	var to_path := next._path
 
-	_logger.info(
+	_logger.debug(
 		"Transitioning to state.", {&"from": str(from_path), &"to": str(to_path)}
 	)
 

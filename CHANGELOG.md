@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.1.2 (2026-09-21)
+
+## What's Changed
+* fix(logging): demote per-event and path-carrying info logs to debug by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/476
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.1.1...v6.1.2
+
 ## 6.1.1 (2026-09-21)
 
 ## What's Changed
