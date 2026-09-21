@@ -6,3 +6,14 @@
 ; GodotSteam has no Linux build, so scripts using its 'Steam' singleton skip the rules
 ; that load files wherever it does not load.
 extensions={"res://addons/godotsteam/godotsteam.gdextension": ["Steam"]}
+
+[logging]
+
+disallow_engine_output=true
+
+; The Godot sink is the terminus StdLogger pushes through, and the manifest writer is a
+; build-time tool whose stdout a shell caller reads.
+excludes=[
+  "res://logging/sink_godot.gd",
+  "res://input/steam/write_in_game_actions.gd",
+]
