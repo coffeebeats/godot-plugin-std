@@ -66,6 +66,11 @@ Follows GDScript style guide. Key project-specific conventions:
 - Each comment line should use the full line length when possible, but not exceed it; the exception is a URL on the last line.
 - Avoid using words like "we", "you", and "I"; comments should use a passive voice that scientifically describes the code
 
+### Coroutines
+
+- Don't `await` outside GUT test methods. An `await` makes its function a coroutine, and every caller that wants the result must then await it too, so it spreads up the stack into the game.
+- Pair a status getter with a signal instead, as `is_node_ready()` pairs with `ready`, and let the game's top-level code await the signal.
+
 ### Linting
 
 When necessary, use inline directives to suppress expected warnings:
