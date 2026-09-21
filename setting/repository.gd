@@ -103,7 +103,7 @@ func _sync_config() -> void:
 
 	(
 		_logger
-		. info(
+		. debug(
 			"Syncing configuration to file.",
 			{&"path": writer.get_filepath()},
 		)

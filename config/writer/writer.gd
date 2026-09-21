@@ -49,7 +49,7 @@ func copy_file(
 ) -> StdThreadWorkerResult:
 	(
 		_logger
-		. info(
+		. debug(
 			"Copying file.",
 			{&"from": from, &"to": to},
 		)
@@ -78,7 +78,7 @@ func get_filepath() -> String:
 func load_config(config: Config) -> StdThreadWorkerResult:
 	assert(config is Config, "invalid argument: expected a 'Config' instance")
 
-	_logger.info("Reading configuration from file.", {&"path": _get_filepath()})
+	_logger.debug("Reading configuration from file.", {&"path": _get_filepath()})
 
 	_worker_mutex.lock()
 
@@ -96,7 +96,7 @@ func load_config(config: Config) -> StdThreadWorkerResult:
 ## store_config persists the provided 'Config' instance's contents to the file. Note
 ## that this method enforces that the target disk has sufficient space.
 func store_config(config: Config) -> StdThreadWorkerResult:
-	_logger.info("Storing configuration in file.", {&"path": _get_filepath()})
+	_logger.debug("Storing configuration in file.", {&"path": _get_filepath()})
 
 	_worker_mutex.lock()
 

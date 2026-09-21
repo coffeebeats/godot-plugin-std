@@ -173,7 +173,7 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 	if not action_sets:
 		return
 
-	_logger.info("Updating cursor configuration.")
+	_logger.debug("Updating cursor configuration.")
 
 	# First, determine cursor show/hide properties.
 
@@ -434,7 +434,7 @@ func _on_properties_changed(
 	if should_emit:
 		(
 			_logger
-			. info(
+			. debug(
 				"Cursor visibility changed.",
 				{&"trigger": trigger, &"visible": _cursor_visible},
 			)

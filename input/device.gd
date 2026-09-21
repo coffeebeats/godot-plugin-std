@@ -204,7 +204,7 @@ func load_action_set(action_set: StdInputActionSet) -> bool:
 	action_set_loaded.emit(action_set)
 	action_configuration_changed.emit()
 
-	_logger.info(
+	_logger.debug(
 		"Loaded action set.",
 		{&"device": device_id, &"type": device_type, &"set": action_set.name}
 	)
@@ -233,7 +233,7 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	action_set_layer_disabled.emit(layer)
 	action_configuration_changed.emit()
 
-	_logger.info(
+	_logger.debug(
 		"Disabled action set layer.",
 		{&"device": device_id, &"type": device_type, &"layer": layer.name}
 	)
@@ -261,7 +261,7 @@ func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	action_set_layer_enabled.emit(layer)
 	action_configuration_changed.emit()
 
-	_logger.info(
+	_logger.debug(
 		"Enabled action set layer.",
 		{&"device": device_id, &"type": device_type, &"layer": layer.name}
 	)

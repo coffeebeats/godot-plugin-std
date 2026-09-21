@@ -549,7 +549,7 @@ func _activate_device(device: StdInputDevice) -> bool:
 		_active = _kbm_device
 		device_activated.emit(_kbm_device)
 
-		_logger.info(
+		_logger.debug(
 			"Activated keyboard device.",
 			{&"device": _active.device_id, &"type": _active.device_type}
 		)
@@ -568,7 +568,7 @@ func _activate_device(device: StdInputDevice) -> bool:
 		_active = joypad
 		device_activated.emit(joypad)
 
-		_logger.info(
+		_logger.debug(
 			"Activated joypad device.",
 			{&"device": _active.device_id, &"type": _active.device_type}
 		)
