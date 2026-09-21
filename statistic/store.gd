@@ -225,7 +225,7 @@ func download_leaderboard_scores_for_users(
 
 	(
 		_logger
-		. info(
+		. debug(
 			"Downloading leaderboard scores for users.",
 			{&"name": id, &"users": users},
 		)

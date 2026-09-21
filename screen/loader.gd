@@ -121,7 +121,7 @@ func load_scene(path: String) -> Result:
 		return _loading[path]
 
 	if ResourceLoader.has_cached(path):
-		_logger.info("Returning cached scene file.", {&"path": path})
+		_logger.debug("Returning cached scene file.", {&"path": path})
 
 		var result := Result.new_with_path(path)
 		result.scene = ResourceLoader.load(path, "PackedScene")
