@@ -1,0 +1,7 @@
+[marketplaces.godot-infra]
+source_type = "git"
+source = "https://github.com/coffeebeats/godot-infra.git"
+ref = "v6"
+
+[plugins."godot@godot-infra"]
+enabled = true
