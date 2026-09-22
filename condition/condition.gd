@@ -135,32 +135,24 @@ func _evaluate(is_entering: bool = true) -> void:
 
 
 func _is_allowed() -> bool:
-	if expressions_block:
-		for expression in expressions_block:
-			var allowed := expression.is_allowed()
+	if expressions_block and _matches(expressions_block, expressions_block_require_all):
+		return false
 
-			if not allowed and not expressions_block_require_all:
-				return false
+	if not expressions_allow:
+		return false
 
-			if not allowed and expressions_block_require_all:
-				break
+	return _matches(expressions_allow, expressions_allow_require_all)
 
-	if expressions_allow:
-		var all_allowed := true
 
-		for expression in expressions_allow:
-			var allowed := expression.is_allowed()
-			all_allowed = all_allowed and allowed
+## _matches returns whether any of the expressions evaluate to true, or all of them do
+## when `require_all` is set.
+static func _matches(
+	expressions: Array[StdConditionExpression], require_all: bool
+) -> bool:
+	var is_allowed := func(expression: StdConditionExpression) -> bool:
+		return expression.is_allowed()
 
-			if allowed and not expressions_allow_require_all:
-				return true
-
-			if expressions_allow_require_all and not all_allowed:
-				return false
-
-		return all_allowed
-
-	return false
+	return expressions.all(is_allowed) if require_all else expressions.any(is_allowed)
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
