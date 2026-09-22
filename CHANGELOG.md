@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.1.4 (2026-09-22)
+
+## What's Changed
+* fix(condition): make block lists and settings expressions match their docs by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/480
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.1.3...v6.1.4
+
 ## 6.1.3 (2026-09-22)
 
 ## What's Changed
