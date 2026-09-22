@@ -201,35 +201,52 @@ func test_condition_block_expression_changing_toggles_target() -> void:
 	assert_true(target.visible)
 
 
-func test_settings_property_expression_with_only_allow_follows_allow() -> void:
+func test_settings_property_expression_with_only_allow_follows_allow(
+	value = use_parameters([true, false]),
+) -> void:
 	# Given: An expression with only an allow property.
 	var allow := _create_bool_property(&"allow")
 	var expression := StdConditionExpressionSettingsProperty.new()
 	expression.allow = allow
 
-	for value in [true, false]:
-		# When: The allow property is set.
-		allow.set_value(value)
+	# When: The allow property is set.
+	allow.set_value(value)
 
-		# Then: The expression evaluates to the allow property's value.
-		assert_eq(expression.is_allowed(), value, "allow=%s" % value)
+	# Then: The expression evaluates to the allow property's value.
+	assert_eq(expression.is_allowed(), value)
 
 
-func test_settings_property_expression_with_only_block_inverts_block() -> void:
+func test_settings_property_expression_with_only_block_inverts_block(
+	value = use_parameters([true, false]),
+) -> void:
 	# Given: An expression with only a block property.
 	var block := _create_bool_property(&"block")
 	var expression := StdConditionExpressionSettingsProperty.new()
 	expression.block = block
 
-	for value in [true, false]:
-		# When: The block property is set.
-		block.set_value(value)
+	# When: The block property is set.
+	block.set_value(value)
 
-		# Then: The expression evaluates to the inverse of the block property's value.
-		assert_eq(expression.is_allowed(), not value, "block=%s" % value)
+	# Then: The expression evaluates to the inverse of the block property's value.
+	assert_eq(expression.is_allowed(), not value)
 
 
-func test_settings_property_expression_with_allow_and_block_lets_block_win() -> void:
+func test_settings_property_expression_with_allow_and_block_lets_block_win(
+	params = use_parameters(
+		(
+			ParameterFactory
+			. named_parameters(
+				["allow", "block", "expected"],
+				[
+					[true, true, false],
+					[true, false, true],
+					[false, true, false],
+					[false, false, false],
+				]
+			)
+		)
+	),
+) -> void:
 	# Given: An expression with both an allow and a block property.
 	var allow := _create_bool_property(&"allow")
 	var block := _create_bool_property(&"block")
@@ -237,18 +254,12 @@ func test_settings_property_expression_with_allow_and_block_lets_block_win() -> 
 	expression.allow = allow
 	expression.block = block
 
-	for values in [[true, true], [true, false], [false, true], [false, false]]:
-		# When: Both properties are set.
-		allow.set_value(values[0])
-		block.set_value(values[1])
+	# When: Both properties are set.
+	allow.set_value(params.allow)
+	block.set_value(params.block)
 
-		# Then: The expression is allowed only when allow is set and block is not.
-		var want: bool = values[0] and not values[1]
-		assert_eq(
-			expression.is_allowed(),
-			want,
-			"allow=%s block=%s" % values,
-		)
+	# Then: The expression is allowed only when allow is set and block is not.
+	assert_eq(expression.is_allowed(), params.expected)
 
 
 func test_condition_shared_expression_updates_remaining_condition() -> void:
