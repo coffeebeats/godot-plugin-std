@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.2.0 (2026-09-22)
+
+## What's Changed
+* feat: enable the agent plugin under Codex by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/482
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.1.4...v6.2.0
+
 ## 6.1.4 (2026-09-22)
 
 ## What's Changed
