@@ -28,15 +28,9 @@ const Signals := preload("../event/signal.gd")
 func _setup() -> void:
 	assert(allow or block, "invalid state; missing at least one settings property")
 
-	if (
-		allow
-		and not allow.value_changed.is_connected(_on_settings_property_value_changed)
-	):
+	if allow:
 		Signals.connect_safe(allow.value_changed, _on_settings_property_value_changed)
-	if (
-		block
-		and not block.value_changed.is_connected(_on_settings_property_value_changed)
-	):
+	if block:
 		Signals.connect_safe(block.value_changed, _on_settings_property_value_changed)
 
 
@@ -52,15 +46,13 @@ func _teardown() -> void:
 
 
 func _is_allowed() -> bool:
-	var is_enabled := false
+	if block and block.get_value():
+		return false
 
-	if block and not block.get_value():
-		is_enabled = true
+	if allow:
+		return allow.get_value()
 
-	if not is_enabled and allow and allow.get_value():
-		is_enabled = true
-
-	return is_enabled
+	return block != null
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
