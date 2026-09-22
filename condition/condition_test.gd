@@ -201,6 +201,56 @@ func test_condition_block_expression_changing_toggles_target() -> void:
 	assert_true(target.visible)
 
 
+func test_settings_property_expression_with_only_allow_follows_allow() -> void:
+	# Given: An expression with only an allow property.
+	var allow := _create_bool_property(&"allow")
+	var expression := StdConditionExpressionSettingsProperty.new()
+	expression.allow = allow
+
+	for value in [true, false]:
+		# When: The allow property is set.
+		allow.set_value(value)
+
+		# Then: The expression evaluates to the allow property's value.
+		assert_eq(expression.is_allowed(), value, "allow=%s" % value)
+
+
+func test_settings_property_expression_with_only_block_inverts_block() -> void:
+	# Given: An expression with only a block property.
+	var block := _create_bool_property(&"block")
+	var expression := StdConditionExpressionSettingsProperty.new()
+	expression.block = block
+
+	for value in [true, false]:
+		# When: The block property is set.
+		block.set_value(value)
+
+		# Then: The expression evaluates to the inverse of the block property's value.
+		assert_eq(expression.is_allowed(), not value, "block=%s" % value)
+
+
+func test_settings_property_expression_with_allow_and_block_lets_block_win() -> void:
+	# Given: An expression with both an allow and a block property.
+	var allow := _create_bool_property(&"allow")
+	var block := _create_bool_property(&"block")
+	var expression := StdConditionExpressionSettingsProperty.new()
+	expression.allow = allow
+	expression.block = block
+
+	for values in [[true, true], [true, false], [false, true], [false, false]]:
+		# When: Both properties are set.
+		allow.set_value(values[0])
+		block.set_value(values[1])
+
+		# Then: The expression is allowed only when allow is set and block is not.
+		var want: bool = values[0] and not values[1]
+		assert_eq(
+			expression.is_allowed(),
+			want,
+			"allow=%s block=%s" % values,
+		)
+
+
 func test_feature_expression_with_present_feature_is_allowed() -> void:
 	# Given: An expression checking for the editor feature, which a test run has.
 	var expression := StdConditionExpressionFeature.new()
@@ -226,6 +276,14 @@ func test_feature_expression_with_absent_feature_is_blocked() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+func _create_bool_property(key: StringName) -> StdSettingsPropertyBool:
+	var property := StdSettingsPropertyBool.new()
+	property.scope = StdSettingsScope.new()
+	property.category = &"test"
+	property.name = key
+	return property
 
 
 func _expressions(values: Array[bool]) -> Array[StdConditionExpression]:

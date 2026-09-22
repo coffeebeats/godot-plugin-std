@@ -52,15 +52,13 @@ func _teardown() -> void:
 
 
 func _is_allowed() -> bool:
-	var is_enabled := false
+	if block and block.get_value():
+		return false
 
-	if block and not block.get_value():
-		is_enabled = true
+	if allow:
+		return allow.get_value()
 
-	if not is_enabled and allow and allow.get_value():
-		is_enabled = true
-
-	return is_enabled
+	return block != null
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
