@@ -3,7 +3,7 @@
 ##
 ## StdConditionExpression is an abstract base class for a resource which defines a
 ## boolean expression to evaluate. The result of evaluation will be used by an
-## `StdCondition`-dervice node to determine whether certain nodes may enter the scene.
+## `StdCondition`-derived node to determine whether certain nodes may enter the scene.
 ##
 
 class_name StdConditionExpression

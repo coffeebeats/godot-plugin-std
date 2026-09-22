@@ -1,5 +1,5 @@
 ##
-## std/feature/condition.gd
+## std/condition/condition.gd
 ##
 ## StdCondition is an abstract base class for nodes which conditionally place target
 ## nodes within the scene.
