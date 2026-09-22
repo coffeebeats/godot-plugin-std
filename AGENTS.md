@@ -76,6 +76,8 @@ std is never the top level of a game, since a game calls into all of it, so std 
 
 Report progress with a status getter paired with a signal, as `is_node_ready()` pairs with `ready` and the screen loader's `Result.is_done()` with `done`, and let the game check the getter before awaiting the signal, since a signal that already fired won't fire again. GDScript has no static signals, and a signal on an object held in a `static var` crashes the engine at exit while a lambda is connected to it, so a static API offers only getters.
 
+The `await`s already in `save/file.gd`, `screen/loader.gd` and `input/steam/device_actions.gd` predate this rule, so don't copy them.
+
 ### Linting
 
 When necessary, use inline directives to suppress expected warnings:
