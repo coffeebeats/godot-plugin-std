@@ -251,6 +251,34 @@ func test_settings_property_expression_with_allow_and_block_lets_block_win() -> 
 		)
 
 
+func test_condition_shared_expression_updates_remaining_condition() -> void:
+	# Given: An expression following a settings property which is set.
+	var property := _create_bool_property(&"enabled")
+	property.set_value(true)
+
+	var expression := StdConditionExpressionSettingsProperty.new()
+	expression.allow = property
+
+	# Given: Two conditions sharing that expression, both in the scene tree.
+	var first := StdConditionTarget2D.new()
+	first.expressions_allow = [expression]
+	_place(first)
+
+	var second := StdConditionTarget2D.new()
+	second.expressions_allow = [expression]
+	var target := _place(second)
+	assert_true(target.visible)
+
+	# Given: The first condition leaves the scene tree.
+	remove_child(first)
+
+	# When: The settings property is cleared.
+	property.set_value(false)
+
+	# Then: The remaining condition hides its target.
+	assert_false(target.visible)
+
+
 func test_feature_expression_with_present_feature_is_allowed() -> void:
 	# Given: An expression checking for the editor feature, which a test run has.
 	var expression := StdConditionExpressionFeature.new()

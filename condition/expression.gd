@@ -15,19 +15,33 @@ extends Resource
 @warning_ignore("UNUSED_SIGNAL")
 signal value_changed(is_allowed: bool)
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _host_count: int = 0
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## setup initializes the resource, allowing things like signals to be connected. This
-## must be called by the node hosting the expression.
+## must be called by each node hosting the expression, and paired with `teardown`. A
+## resource shared by several nodes initializes on the first call only.
 func setup() -> void:
-	_setup()
+	_host_count += 1
+	if _host_count == 1:
+		_setup()
 
 
 ## teardown cleans up the resource, allowing things like signals to be disconnected.
-## This must be called by the node hosting the expression.
+## This must be called by each node hosting the expression. A resource shared by several
+## nodes cleans up once the last of them calls it.
 func teardown() -> void:
-	_teardown()
+	assert(_host_count > 0, "invalid state; teardown without setup")
+	if _host_count == 0:
+		return
+
+	_host_count -= 1
+	if _host_count == 0:
+		_teardown()
 
 
 ## is_allowed returns whether the condition expression evaluates successfully,
