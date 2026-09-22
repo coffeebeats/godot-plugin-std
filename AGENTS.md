@@ -74,7 +74,7 @@ std is never the top level of a game, since a game calls into all of it, so std 
 - Code after an `await` runs in a changed world. Its node may have left the tree or been freed while it waited, so check it again before using it.
 - A coroutine called without `await` returns at once without waiting. The `missing_await` warning catches only a direct, typed call, never one through a `Callable`.
 
-Report progress with a status getter paired with a signal, as `is_node_ready()` pairs with `ready` and the screen loader's `Result.is_done()` with `done`, and let the game check the getter before awaiting the signal, since a signal that already fired won't fire again. GDScript has no static signals, and a signal on an object held in a `static var` crashes the engine at exit while a lambda is connected to it, so a static API offers only getters.
+Report progress with a status getter paired with a signal, as `is_node_ready()` pairs with `ready` and the screen loader's `Result.is_done()` with `done`, and let the game check the getter before awaiting the signal, since a signal that already fired won't fire again.
 
 ### Linting
 
