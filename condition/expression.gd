@@ -35,8 +35,8 @@ func setup() -> void:
 ## This must be called by each node hosting the expression. A resource shared by several
 ## nodes cleans up once the last of them calls it.
 func teardown() -> void:
-	assert(_host_count > 0, "invalid state; teardown without setup")
 	if _host_count == 0:
+		assert(false, "invalid state; teardown without setup")
 		return
 
 	_host_count -= 1
