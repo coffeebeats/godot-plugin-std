@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.1.3 (2026-09-22)
+
+## What's Changed
+* chore(claude): keep `await` out of std by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/478
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.1.2...v6.1.3
+
 ## 6.1.2 (2026-09-21)
 
 ## What's Changed
