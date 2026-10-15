@@ -126,6 +126,94 @@ func test_render_writes_analog_sections() -> void:
 	assert_eq(got, want)
 
 
+func test_render_writes_a_parentless_layer_under_every_set() -> void:
+	# Given: Two sets with a digital action each.
+	var menu := StdInputActionSet.new()
+	menu.name = &"Menu"
+	menu.actions_digital = [&"ui_accept"]
+
+	var gameplay := StdInputActionSet.new()
+	gameplay.name = &"Gameplay"
+	gameplay.actions_digital = [&"fire"]
+
+	# Given: A layer with no parent and its own digital action.
+	var nav := StdInputActionSetLayer.new()
+	nav.name = &"Nav"
+	nav.actions_digital = [&"ui_cancel"]
+
+	# When: The manifest is rendered for one language.
+	var got := manifest.render([menu, gameplay, nav], {"english": "en"})
+
+	# Then: The layer is written once under each set, named for both, and its strings
+	# are written once.
+	var want := _lines(
+		[
+			'"In Game Actions"',
+			"{",
+			'\t"actions"',
+			"\t{",
+			'\t\t"Menu"',
+			"\t\t{",
+			'\t\t\t"title"\t\t\t\t\t"#set_Menu"',
+			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
+			'\t\t\t"Button"',
+			"\t\t\t{",
+			'\t\t\t\t"ui_accept"\t\t\t\t"#action_ui_accept"',
+			"\t\t\t}",
+			"\t\t}",
+			'\t\t"Gameplay"',
+			"\t\t{",
+			'\t\t\t"title"\t\t\t\t\t"#set_Gameplay"',
+			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
+			'\t\t\t"Button"',
+			"\t\t\t{",
+			'\t\t\t\t"fire"\t\t\t\t"#action_fire"',
+			"\t\t\t}",
+			"\t\t}",
+			"\t}",
+			'\t"action_layers"',
+			"\t{",
+			'\t\t"Nav_Menu"',
+			"\t\t{",
+			'\t\t\t"title"\t\t\t\t\t"#layer_Nav"',
+			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
+			'\t\t\t"set_layer"\t\t\t\t\t"1"',
+			'\t\t\t"parent_set_name"\t\t\t\t\t"Menu"',
+			'\t\t\t"Button"',
+			"\t\t\t{",
+			'\t\t\t\t"ui_cancel"\t\t\t\t"#action_ui_cancel"',
+			"\t\t\t}",
+			"\t\t}",
+			'\t\t"Nav_Gameplay"',
+			"\t\t{",
+			'\t\t\t"title"\t\t\t\t\t"#layer_Nav"',
+			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
+			'\t\t\t"set_layer"\t\t\t\t\t"1"',
+			'\t\t\t"parent_set_name"\t\t\t\t\t"Gameplay"',
+			'\t\t\t"Button"',
+			"\t\t\t{",
+			'\t\t\t\t"ui_cancel"\t\t\t\t"#action_ui_cancel"',
+			"\t\t\t}",
+			"\t\t}",
+			"\t}",
+			'\t"localization"',
+			"\t{",
+			'\t\t"english"',
+			"\t\t{",
+			'\t\t\t"set_Menu"\t\t\t\t\t"Menu"',
+			'\t\t\t"action_ui_accept"\t\t\t\t\t"ui_accept"',
+			'\t\t\t"set_Gameplay"\t\t\t\t\t"Gameplay"',
+			'\t\t\t"action_fire"\t\t\t\t\t"fire"',
+			'\t\t\t"layer_Nav"\t\t\t\t\t"Nav"',
+			'\t\t\t"action_ui_cancel"\t\t\t\t\t"ui_cancel"',
+			"\t\t}",
+			"\t}",
+			"}",
+		]
+	)
+	assert_eq(got, want)
+
+
 func test_render_skips_null_action_sets() -> void:
 	# Given: A list holding only a null entry.
 	var action_sets: Array[StdInputActionSet] = [null]

@@ -154,31 +154,17 @@ func render(action_sets: Array[StdInputActionSet], languages: Dictionary) -> Str
 	_write_string("action_layers")
 	_write_open_bracket()
 
+	# NOTE: A Steam layer belongs to one set, so a layer with no parent is written once
+	# under each set, as `<Layer>_<Set>`; the copies share the layer's display string.
 	for layer in layers:
-		assert(layer.parent, "invalid config; layer '%s' has no parent" % layer.name)
+		if layer.parent:
+			_write_layer(layer, layer.name, layer.parent.name)
+			continue
 
-		_write_string(layer.name)
-		_write_open_bracket()
-
-		_write_string("title", true, false)
-		_write_space()
-		_write_string("#layer_%s" % layer.name, false)
-
-		_write_string("legacy_set", true, false)
-		_write_space()
-		_write_string("0", false)
-
-		_write_string("set_layer", true, false)
-		_write_space()
-		_write_string("1", false)
-
-		_write_string("parent_set_name", true, false)
-		_write_space()
-		_write_string(layer.parent.name, false)
-
-		_write_game_actions_in_action_set(layer)
-
-		_write_close_bracket()
+		for action_set in sets:
+			_write_layer(
+				layer, "%s_%s" % [layer.name, action_set.name], action_set.name
+			)
 
 	_write_close_bracket()
 
@@ -457,6 +443,34 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 func _write_indent() -> void:
 	for _i in range(_indent):
 		_contents += "\t"
+
+
+## _write_layer writes `layer`'s block as `name`, under the set called `parent_name`.
+func _write_layer(
+	layer: StdInputActionSetLayer, name: String, parent_name: String
+) -> void:
+	_write_string(name)
+	_write_open_bracket()
+
+	_write_string("title", true, false)
+	_write_space()
+	_write_string("#layer_%s" % layer.name, false)
+
+	_write_string("legacy_set", true, false)
+	_write_space()
+	_write_string("0", false)
+
+	_write_string("set_layer", true, false)
+	_write_space()
+	_write_string("1", false)
+
+	_write_string("parent_set_name", true, false)
+	_write_space()
+	_write_string(parent_name, false)
+
+	_write_game_actions_in_action_set(layer)
+
+	_write_close_bracket()
 
 
 func _write_locale_actions_in_action_set(

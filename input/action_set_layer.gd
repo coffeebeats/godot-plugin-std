@@ -11,7 +11,12 @@ extends StdInputActionSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## parent is an `StdInputActionSet` that must be activated for this action set layer to
-## be applied. When this layer is activated, all non-overridden bindings from the parent
-## action set (and any previously activated layers) will remain active.
+## parent is the `StdInputActionSet` this layer is written under in the Steam Input
+## manifest, and the only set it can be enabled over. A layer with no parent fits any
+## set: the manifest writes a copy of it under every set, and enabling it over whatever
+## set is active binds its actions on top. When this layer is enabled, all
+## non-overridden bindings from the set (and any previously enabled layers) remain.
+##
+## NOTE: Leave `parent` unset only for a layer any set may enable, such as a menu's
+## navigation actions; a layer meant for one set should name it.
 @export var parent: StdInputActionSet = null

@@ -115,6 +115,22 @@ static func get_digital_action_handle(action: StringName) -> int:
 	return handle
 
 
+## resolve_action_set_name returns the name the Steam Input manifest knows `action_set`
+## by on `device`: its own name, or, for a layer with no parent, the name of the copy
+## written under the device's current action set (see `StdInputSteamInGameActions`).
+static func resolve_action_set_name(
+	action_set: StdInputActionSet, device: int
+) -> StringName:
+	if not action_set is StdInputActionSetLayer or action_set.parent:
+		return action_set.name
+
+	var current: StdInputActionSet = _action_sets.get(Steam.getCurrentActionSet(device))
+	if not current:
+		return action_set.name
+
+	return StringName("%s_%s" % [action_set.name, current.name])
+
+
 ## is_action_set_enabled returns whether the provided name refers to an active action
 ## set or action set layer.
 func is_action_set_enabled(slot: int, action_set_name: String) -> bool:
@@ -220,13 +236,14 @@ func _enable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
 		"invalid state: missing action set",
 	)
 	assert(
-		layer.parent == _get_action_set(slot),
+		layer.parent == null or layer.parent == _get_action_set(slot),
 		"invalid argument: wrong parent action set",
 	)
 
-	var handle := get_action_set_handle(layer.name)
+	var layer_name := resolve_action_set_name(layer, device)
+	var handle := get_action_set_handle(layer_name)
 	if not handle:
-		_logger.warn("Steam Input has no such action set layer.", {&"name": layer.name})
+		_logger.warn("Steam Input has no such action set layer.", {&"name": layer_name})
 		return false
 
 	# FIXME: This lookup is required because of the need to return whether the action
@@ -255,7 +272,7 @@ func _disable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool
 
 	assert(layer is StdInputActionSetLayer, "missing argument: layer")
 
-	var handle := get_action_set_handle(layer.name)
+	var handle := get_action_set_handle(resolve_action_set_name(layer, device))
 	if not handle:
 		return false
 

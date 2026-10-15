@@ -44,7 +44,7 @@ func _get_action_glyph(
 	for origin in _list_action_origins(
 		slot,
 		device_type,
-		action_set.name,
+		action_set,
 		action,
 		index,
 	):
@@ -76,7 +76,7 @@ func _get_action_origin_label(
 	for origin in _list_action_origins(
 		slot,
 		device_type,
-		action_set.name,
+		action_set,
 		action,
 		index,
 	):
@@ -93,7 +93,7 @@ func _get_action_origin_label(
 func _list_action_origins(
 	slot: int,
 	device_type: StdInputDevice.DeviceType,
-	action_set: StringName,
+	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,
 ) -> PackedInt64Array:
@@ -104,13 +104,15 @@ func _list_action_origins(
 
 	var origins := PackedInt64Array()
 
-	var action_set_handle := SteamDeviceActions.get_action_set_handle(action_set)
-	if not action_set_handle:
-		return origins
-
 	var device: int = joypad_monitor.get_device_id_for_slot(slot)
 	if device == -1:
 		assert(false, "invalid argument; failed to find device for slot")
+		return origins
+
+	var action_set_handle := SteamDeviceActions.get_action_set_handle(
+		SteamDeviceActions.resolve_action_set_name(action_set, device)
+	)
+	if not action_set_handle:
 		return origins
 
 	# TODO: Find some means of specifying ahead of time which action type this is.
