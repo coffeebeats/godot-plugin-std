@@ -140,10 +140,8 @@ func disable_action_set_layers() -> void:
 	var slot := StdInputSlot.for_player(player_id)
 	assert(slot is StdInputSlot, "invalid state; missing input slot")
 
-	var enabled := slot.list_action_set_layers()
 	for layer in action_set_layers:
-		if layer in enabled:
-			slot.disable_action_set_layer(layer)
+		slot.disable_action_set_layer(layer, self)
 
 
 ## enable_action_set_layers enables the configured action set layers for the player.
@@ -156,10 +154,8 @@ func enable_action_set_layers() -> void:
 	var slot := StdInputSlot.for_player(player_id)
 	assert(slot is StdInputSlot, "invalid state; missing input slot")
 
-	var enabled := slot.list_action_set_layers()
 	for layer in action_set_layers:
-		if layer not in enabled:
-			slot.enable_action_set_layer(layer)
+		slot.enable_action_set_layer(layer, self)
 
 
 ## load_action_set loads the configured action set for the the player.
