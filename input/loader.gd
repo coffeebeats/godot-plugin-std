@@ -1,12 +1,29 @@
 ##
 ## std/input/loader.gd
 ##
-## StdInputActionSetLoader is a node which facilitates loading and unloading action sets
-## and action set layers based on scene tree state.
+## StdInputActionSetLoader is a node which keeps an action set loaded and action set
+## layers enabled for as long as one rule holds, chosen by `active_while`: while this
+## `Control` is in the tree, or only while it is visible there. Either way the layers
+## go off while the screen holding this loader is covered by another and come back
+## when it is uncovered, and the action set is loaded again then, since the covering
+## screen loaded its own.
+##
+## NOTE: Every change re-syncs from that rule rather than toggling, and the input slot
+## holds a layer by owner, so two loaders may enable one layer and each may re-sync as
+## often as it likes.
 ##
 
 class_name StdInputActionSetLoader
 extends Control
+
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## ActiveWhile names the rule deciding when the action set and layers are active.
+enum ActiveWhile {
+	IN_TREE,  ## While this `Control` is in the scene tree.
+	VISIBLE,  ## While this `Control` is visible in the scene tree.
+	NEVER,  ## Not at all; the loader holds its sets and does nothing with them.
+}
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -15,117 +32,22 @@ extends Control
 ## node, which must be present in the scene tree.
 @export var player_id: int = 1
 
-@export_group("Action set")
+## active_while is the rule deciding when the action set is loaded and the layers are
+## enabled.
+@export var active_while: ActiveWhile = ActiveWhile.IN_TREE
 
-## action_set is an `StdInputActionSet` that will be loaded by the configured hooks.
+## action_set is an `StdInputActionSet` loaded while the rule holds. It is never
+## unloaded; a screen that takes over loads its own.
 @export var action_set: StdInputActionSet = null
 
-@export_subgroup("Scene tree")
-
-## load_on_enter controls whether the action set is loaded when this `Control` enters
-## the scene tree.
-@export var load_on_enter: bool = true
-
-## load_on_ready controls whether the action set is loaded when this `Control` is ready.
-@export var load_on_ready: bool = false
-
-@export_subgroup("Visibility")
-
-## load_on_visible controls whether the action set is loaded when this `Control` becomes
-## visible.
-##
-## NOTE: Only one of `load_on_visible` and `load_on_hidden` may be specified.
-@export var load_on_visible: bool = false:
-	set(value):
-		load_on_visible = value
-		if load_on_hidden == value:
-			load_on_hidden = not value
-
-## load_on_hidden controls whether the action set is loaded when this `Control` becomes
-## hidden. This can be used to swap action sets when a menu is hidden, for example.
-##
-## NOTE: Only one of `load_on_visible` and `load_on_hidden` may be specified.
-@export var load_on_hidden: bool = false:
-	set(value):
-		load_on_hidden = value
-		if load_on_visible == value:
-			load_on_visible = not value
-
-@export_subgroup("Screen manager")
-
-## load_on_uncovered reloads the action set when the screen containing this loader is
-## uncovered (i.e. when a screen pushed on top of it is popped).
-@export var load_on_uncovered: bool = true
-
-@export_group("Action set layers")
-
-## action_set_layers is an array of `StdInputActionSetLayer` resources that will be
-## enabled by the configured hooks.
+## action_set_layers are `StdInputActionSetLayer` resources enabled while the rule
+## holds and disabled otherwise.
 @export var action_set_layers: Array[StdInputActionSetLayer] = []
 
-@export_subgroup("Scene tree")
+# -- INITIALIZATION ------------------------------------------------------------------ #
 
-## enable_on_enter controls whether the layer is enabled when this `Control` enters the
-## scene tree.
-@export var enable_on_enter: bool = true
-
-## enable_on_ready controls whether the layer is enabled when this `Control` is ready.
-@export var enable_on_ready: bool = false
-
-## disable_on_exit controls whether the layer is disabled when this `Control` exits the
-## scene tree.
-@export var disable_on_exit: bool = true
-
-@export_subgroup("Visibility")
-
-## disable_on_hidden controls whether the layer is disabled when this `Control` becomes
-## hidden.
-##
-## NOTE: Only one of `disable_on_hidden` and `enable_on_hidden` may be specified.
-@export var disable_on_hidden: bool = false:
-	set(value):
-		disable_on_hidden = value
-		if enable_on_hidden == value:
-			enable_on_hidden = not value
-
-## disable_on_visible controls whether the layer is disabled when this `Control` becomes
-## visible.
-##
-## NOTE: Only one of `enable_on_visible` and `disable_on_visible` may be specified.
-@export var disable_on_visible: bool = false:
-	set(value):
-		disable_on_visible = value
-		if enable_on_visible == value:
-			enable_on_visible = not value
-
-## enable_on_hidden controls whether the layer is enabled when this `Control` is hidden
-## in the scene.
-##
-## NOTE: Only one of `disable_on_hidden` and `enable_on_hidden` may be specified.
-@export var enable_on_hidden: bool = false:
-	set(value):
-		enable_on_hidden = value
-		if disable_on_hidden == value:
-			disable_on_hidden = not value
-
-## enable_on_visible controls whether the layer is enabled when this `Control` becomes
-## visible in the scene.
-##
-## NOTE: Only one of `enable_on_visible` and `disable_on_visible` may be specified.
-@export var enable_on_visible: bool = false:
-	set(value):
-		enable_on_visible = value
-		if disable_on_visible == value:
-			disable_on_visible = not value
-
-@export_subgroup("Screen manager")
-
-## enable_on_uncovered enables the action set layer when the screen is uncovered.
-@export var enable_on_uncovered: bool = true
-
-## disable_on_covered disables the action set layer when another screen is pushed on top
-## of the screen containing this loader.
-@export var disable_on_covered: bool = true
+## _covered is whether another screen covers the one holding this loader.
+var _covered: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -176,52 +98,55 @@ func load_action_set() -> void:
 
 
 func _enter_tree() -> void:
-	if action_set and load_on_enter:
-		load_action_set.call_deferred()
-	if not action_set_layers.is_empty() and enable_on_enter:
-		enable_action_set_layers.call_deferred()
+	# NOTE: Deferred so that a parent handing this loader its sets as it enters, and a
+	# parent's `_ready` hiding it, both run first.
+	_sync.call_deferred()
 
 
 func _exit_tree() -> void:
-	if not action_set_layers.is_empty() and disable_on_exit:
-		disable_action_set_layers()
+	if active_while == ActiveWhile.NEVER or action_set_layers.is_empty():
+		return
+
+	# NOTE: At quit the slot may be gone already, and then nothing is left to disable.
+	if not StdInputSlot.for_player(player_id):
+		return
+
+	disable_action_set_layers()
 
 
 func _notification(what) -> void:
 	match what:
 		StdScreenManager.NOTIFICATION_SCREEN_COVERED:
-			if not action_set_layers.is_empty() and disable_on_covered:
-				disable_action_set_layers()
+			_covered = true
+			_sync()
 
 		StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED:
-			if action_set and load_on_uncovered:
-				load_action_set()
-			if not action_set_layers.is_empty() and enable_on_uncovered:
-				enable_action_set_layers()
+			_covered = false
+			_sync()
 
 		NOTIFICATION_VISIBILITY_CHANGED:
-			if is_visible_in_tree():
-				if action_set and load_on_visible:
-					load_action_set()
-
-				if not action_set_layers.is_empty():
-					if enable_on_visible:
-						enable_action_set_layers()
-					elif disable_on_visible:
-						disable_action_set_layers()
-			else:
-				if action_set and load_on_hidden:
-					load_action_set()
-
-				if not action_set_layers.is_empty():
-					if disable_on_hidden:
-						disable_action_set_layers()
-					elif enable_on_hidden:
-						enable_action_set_layers()
+			if active_while == ActiveWhile.VISIBLE:
+				_sync()
 
 
-func _ready() -> void:
-	if action_set and load_on_ready:
-		load_action_set.call_deferred()
-	if not action_set_layers.is_empty() and enable_on_ready:
-		enable_action_set_layers.call_deferred()
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _sync loads the action set and enables the layers if the rule holds, and disables
+## the layers if it does not. Loading an active set and enabling a held layer change
+## nothing, so this runs on every event that could change the rule's answer.
+func _sync() -> void:
+	if active_while == ActiveWhile.NEVER or not is_inside_tree():
+		return
+
+	var active := (
+		not _covered and (active_while != ActiveWhile.VISIBLE or is_visible_in_tree())
+	)
+
+	if active:
+		if action_set:
+			load_action_set()
+		if not action_set_layers.is_empty():
+			enable_action_set_layers()
+	elif not action_set_layers.is_empty():
+		disable_action_set_layers()
