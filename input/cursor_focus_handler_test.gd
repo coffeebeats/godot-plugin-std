@@ -381,17 +381,26 @@ func test_disabled_button_input_state(
 		(
 			ParameterFactory
 			. named_parameters(
-				["block", "expected_mouse_filter"],
 				[
-					[true, Control.MOUSE_FILTER_IGNORE],
-					[false, Control.MOUSE_FILTER_STOP],
+					"block",
+					"cursor_visible",
+					"expected_focus_mode",
+					"expected_mouse_filter"
+				],
+				[
+					[true, true, Control.FOCUS_NONE, Control.MOUSE_FILTER_STOP],
+					[true, false, Control.FOCUS_NONE, Control.MOUSE_FILTER_IGNORE],
+					[false, true, Control.FOCUS_NONE, Control.MOUSE_FILTER_STOP],
+					[false, false, Control.FOCUS_ALL, Control.MOUSE_FILTER_IGNORE],
 				]
 			)
 		)
 	)
 ) -> void:
-	# Given: A cursor in the scene (starts visible).
+	# Given: A cursor in the scene, shown or hidden.
 	add_child_autofree(cursor)
+	if not params.cursor_visible:
+		cursor.hide_cursor()
 
 	# Given: A disabled button with a focus handler.
 	var button := Button.new()
@@ -405,8 +414,9 @@ func test_disabled_button_input_state(
 	handler.block_focus_and_hover_on_disable = params.block
 	button.add_child(handler)
 
-	# Then: The button's input state reflects the blocking configuration.
-	assert_eq(button.focus_mode, Control.FOCUS_NONE)
+	# Then: The button's input state reflects the blocking configuration; without
+	# blocking, a hidden cursor leaves the disabled button in focus navigation.
+	assert_eq(button.focus_mode, params.expected_focus_mode)
 	assert_eq(button.mouse_filter, params.expected_mouse_filter)
 
 
@@ -648,6 +658,95 @@ func test_disabled_button_releases_focus() -> void:
 
 	button.remove_child(handler)
 	handler.free()
+
+
+func test_disabled_button_stops_click_from_reaching_control_behind() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
+	# mode (see https://github.com/godotengine/godot/issues/73557).
+	var sv := SubViewport.new()
+	sv.size = Vector2i(400, 300)
+	add_child_autofree(sv)
+
+	# Given: A control filling the SubViewport, recording the GUI input it receives.
+	var behind := Control.new()
+	behind.size = Vector2(400, 300)
+	behind.mouse_filter = Control.MOUSE_FILTER_STOP
+	sv.add_child(behind)
+	var received: Array[InputEvent] = []
+	behind.gui_input.connect(func(event: InputEvent) -> void: received.append(event))
+
+	# Given: A disabled button over it with a focus handler.
+	var button := Button.new()
+	button.disabled = true
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.size = Vector2(100, 40)
+	sv.add_child(button)
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# When: The button is clicked via SubViewport input dispatch.
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = Vector2(50, 20)
+	sv.push_input(ev)
+	await get_tree().process_frame
+
+	# Then: The click stopped at the button.
+	assert_eq(received.size(), 0)
+	assert_false(button.is_pressed())
+
+	button.remove_child(handler)
+	handler.free()
+
+
+func test_disabled_button_takes_no_hover() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A disabled button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.disabled = true
+	add_child_autofree(button)
+	var handler := _add_handler(button)
+	watch_signals(handler)
+
+	# When: The mouse enters the button.
+	button.mouse_entered.emit()
+
+	# Then: Nothing registers the hover.
+	assert_false(handler.is_hovered())
+	assert_signal_not_emitted(handler, "hovered")
+	assert_null(cursor.get_hovered())
+
+
+func test_button_disabled_while_hovered_is_unhovered() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A hovered button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+	button.mouse_entered.emit()
+	assert_true(handler.is_hovered(), "precondition: button should be hovered")
+	watch_signals(handler)
+
+	# When: The button becomes disabled.
+	button.disabled = true
+	button.queue_redraw()
+	await get_tree().process_frame
+
+	# Then: The hover is forgotten.
+	assert_false(handler.is_hovered())
+	assert_signal_emitted(handler, "unhovered")
+	assert_null(cursor.get_hovered())
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
