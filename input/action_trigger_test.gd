@@ -137,6 +137,62 @@ func test_action_trigger_pressed_with_action_declared_on_layer_raises_it() -> vo
 	assert_eq(_recorder.seen, [true, false] as Array[bool])
 
 
+func test_action_trigger_press_mode_button_holds_action_until_released() -> void:
+	# Given: A press-mode button held down by the mouse.
+	var parts := await _hold_button()
+	var viewport: SubViewport = parts[0]
+
+	# When: The mouse releases the button.
+	viewport.push_input(_mouse_left(false))
+	await wait_idle_frames(2)
+
+	# Then: The handler saw the release and the action is no longer pressed.
+	assert_eq(_recorder.seen, [true, false] as Array[bool])
+	assert_false(Input.is_action_pressed(_TEST_ACTION))
+
+
+func test_action_trigger_press_mode_button_hidden_while_held_releases() -> void:
+	# Given: A press-mode button held down by the mouse.
+	var parts := await _hold_button()
+	var button: Button = parts[1]
+
+	# When: The button is hidden while held.
+	button.hide()
+	await wait_idle_frames(2)
+
+	# Then: The handler saw the release and the action is no longer pressed.
+	assert_eq(_recorder.seen, [true, false] as Array[bool])
+	assert_false(Input.is_action_pressed(_TEST_ACTION))
+
+
+func test_action_trigger_press_mode_button_disabled_while_held_releases() -> void:
+	# Given: A press-mode button held down by the mouse.
+	var parts := await _hold_button()
+	var button: Button = parts[1]
+
+	# When: The button is disabled while held.
+	button.disabled = true
+	await wait_idle_frames(2)
+
+	# Then: The handler saw the release and the action is no longer pressed.
+	assert_eq(_recorder.seen, [true, false] as Array[bool])
+	assert_false(Input.is_action_pressed(_TEST_ACTION))
+
+
+func test_action_trigger_press_mode_button_freed_while_held_releases() -> void:
+	# Given: A press-mode button held down by the mouse.
+	var parts := await _hold_button()
+	var button: Button = parts[1]
+
+	# When: The button is freed while held.
+	button.free()
+	await wait_idle_frames(2)
+
+	# Then: The handler saw the release and the action is no longer pressed.
+	assert_eq(_recorder.seen, [true, false] as Array[bool])
+	assert_false(Input.is_action_pressed(_TEST_ACTION))
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -156,17 +212,59 @@ func before_each() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _add_button adds a button carrying a trigger for the test action to the tree.
-func _add_button() -> Button:
+## _add_button adds a button carrying a trigger for the test action under `parent`,
+## which defaults to the test.
+func _add_button(
+	parent: Node = null,
+	action_mode: BaseButton.ActionMode = BaseButton.ACTION_MODE_BUTTON_RELEASE,
+) -> Button:
 	var button := Button.new()
+	button.action_mode = action_mode
+	button.size = Vector2(100, 40)
 
 	var trigger := StdInputActionTrigger.new()
 	trigger.action = _TEST_ACTION
 	button.add_child(trigger)
 
-	add_child_autofree(button)
+	if parent:
+		parent.add_child(button)
+		autofree(button)
+	else:
+		add_child_autofree(button)
 
 	return button
+
+
+## _hold_button adds a press-mode button inside a SubViewport and presses it with the
+## mouse, checking that the trigger holds the action. Returns the viewport and button.
+##
+## NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
+## mode (see https://github.com/godotengine/godot/issues/73557).
+func _hold_button() -> Array:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(400, 300)
+	add_child_autofree(viewport)
+
+	var button := _add_button(viewport, BaseButton.ACTION_MODE_BUTTON_PRESS)
+	await wait_idle_frames(1)
+
+	viewport.push_input(_mouse_left(true))
+	await wait_idle_frames(2)
+
+	assert_true(button.is_pressed(), "precondition: button should be held")
+	assert_eq(_recorder.seen, [true] as Array[bool], "precondition: press only")
+	assert_true(Input.is_action_pressed(_TEST_ACTION), "precondition: action held")
+
+	return [viewport, button]
+
+
+## _mouse_left returns a left mouse button event over the held button.
+func _mouse_left(pressed: bool) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	event.position = Vector2(50, 20)
+	return event
 
 
 ## _add_slot adds an input slot for player 1 to the tree, with device components that

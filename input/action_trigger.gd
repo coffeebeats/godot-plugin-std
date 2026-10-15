@@ -7,9 +7,9 @@
 ## button raises `ui_cancel`, so that keys, clicks, and synthetic input share one
 ## handler. A button that stands in for no action connects `pressed` instead.
 ##
-## NOTE: The action is raised as a press followed by a release, so a handler that
-## reads events sees both, `Input.is_action_just_pressed` is true on the frame they
-## arrive, and `Input.is_action_pressed` is never left true by a button.
+## NOTE: The action is pressed for exactly as long as the button is, in the button's
+## own action mode: a release-mode button sends the press and release together, and a
+## press-mode button holds the action until `button_up`, so a poller reads it as held.
 ##
 
 class_name StdInputActionTrigger
@@ -33,16 +33,29 @@ const Signals := preload("../event/signal.gd")
 ## `InputEventAction` matches by name whether or not any set binds the action.
 @export var player_id: int = 1
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+var _button: BaseButton = null
+
+## _held is whether a press was sent whose release waits on the button's `button_up`.
+var _held: bool = false
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
+
+
+func _exit_tree() -> void:
+	# NOTE: A button freed while held sends no `button_up`, so release here.
+	_release()
 
 
 func _ready() -> void:
 	assert(action != &"", "invalid config; missing action")
 
-	var button: BaseButton = get_node_or_null(target)
-	assert(button, "invalid config; target must be a BaseButton")
+	_button = get_node_or_null(target)
+	assert(_button, "invalid config; target must be a BaseButton")
 
-	Signals.connect_safe(button.pressed, _on_pressed)
+	Signals.connect_safe(_button.pressed, _on_pressed)
+	Signals.connect_safe(_button.button_up, _on_button_up)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -69,7 +82,20 @@ func _is_action_declared() -> bool:
 	return false
 
 
+## _release sends the release of a held press, if any.
+func _release() -> void:
+	if not _held:
+		return
+
+	_held = false
+	StdInputEvent.trigger_action(action, StdInputEvent.DEVICE_ID_SYNTHETIC, false)
+
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_button_up() -> void:
+	_release()
 
 
 func _on_pressed() -> void:
@@ -79,4 +105,11 @@ func _on_pressed() -> void:
 	assert(_is_action_declared(), "invalid config; action is not in an active set")
 
 	StdInputEvent.trigger_action(action, StdInputEvent.DEVICE_ID_SYNTHETIC, true)
-	StdInputEvent.trigger_action(action, StdInputEvent.DEVICE_ID_SYNTHETIC, false)
+
+	# NOTE: Only a press-mode button is still down when `pressed` fires; a release-mode
+	# button, or a `pressed` emitted by code, gets its release at once. Godot sends
+	# `button_up` when a held button is released, hidden, or disabled.
+	if _button.is_pressed():
+		_held = true
+	else:
+		StdInputEvent.trigger_action(action, StdInputEvent.DEVICE_ID_SYNTHETIC, false)
