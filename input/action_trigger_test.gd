@@ -146,8 +146,10 @@ func test_action_trigger_press_mode_button_holds_action_until_released() -> void
 	viewport.push_input(_mouse_left(false))
 	await wait_idle_frames(2)
 
-	# Then: The handler saw the release and the action is no longer pressed.
+	# Then: The handler saw the release.
 	assert_eq(_recorder.seen, [true, false] as Array[bool])
+
+	# Then: The action is no longer pressed.
 	assert_false(Input.is_action_pressed(_TEST_ACTION))
 
 
@@ -160,8 +162,10 @@ func test_action_trigger_press_mode_button_hidden_while_held_releases() -> void:
 	button.hide()
 	await wait_idle_frames(2)
 
-	# Then: The handler saw the release and the action is no longer pressed.
+	# Then: The handler saw the release.
 	assert_eq(_recorder.seen, [true, false] as Array[bool])
+
+	# Then: The action is no longer pressed.
 	assert_false(Input.is_action_pressed(_TEST_ACTION))
 
 
@@ -174,8 +178,10 @@ func test_action_trigger_press_mode_button_disabled_while_held_releases() -> voi
 	button.disabled = true
 	await wait_idle_frames(2)
 
-	# Then: The handler saw the release and the action is no longer pressed.
+	# Then: The handler saw the release.
 	assert_eq(_recorder.seen, [true, false] as Array[bool])
+
+	# Then: The action is no longer pressed.
 	assert_false(Input.is_action_pressed(_TEST_ACTION))
 
 
@@ -188,8 +194,10 @@ func test_action_trigger_press_mode_button_freed_while_held_releases() -> void:
 	button.free()
 	await wait_idle_frames(2)
 
-	# Then: The handler saw the release and the action is no longer pressed.
+	# Then: The handler saw the release.
 	assert_eq(_recorder.seen, [true, false] as Array[bool])
+
+	# Then: The action is no longer pressed.
 	assert_false(Input.is_action_pressed(_TEST_ACTION))
 
 
@@ -238,8 +246,8 @@ func _add_button(
 ## _hold_button adds a press-mode button inside a SubViewport and presses it with the
 ## mouse, checking that the trigger holds the action. Returns the viewport and button.
 ##
-## NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
-## mode (see https://github.com/godotengine/godot/issues/73557).
+## NOTE: The root viewport dispatches no GUI input in headless mode; see
+## https://github.com/godotengine/godot/issues/73557.
 func _hold_button() -> Array:
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i(400, 300)

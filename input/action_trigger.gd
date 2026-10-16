@@ -1,15 +1,12 @@
 ##
 ## std/input/action_trigger.gd
 ##
-## StdInputActionTrigger is a node that raises an input action when a target
-## `BaseButton` is pressed. Drop it as a child of a button or point it at one via the
-## `target` export to give a bindable action a second way to be raised, as a close
-## button raises `ui_cancel`, so that keys, clicks, and synthetic input share one
-## handler. A button that stands in for no action connects `pressed` instead.
+## StdInputActionTrigger raises an input action when a target `BaseButton` is pressed,
+## so keys, clicks, and synthetic input share one handler, as a close button raises
+## `ui_cancel`. A button that stands in for no action connects `pressed` instead.
 ##
-## NOTE: The action is pressed for exactly as long as the button is, in the button's
-## own action mode: a release-mode button sends the press and release together, and a
-## press-mode button holds the action until `button_up`, so a poller reads it as held.
+## NOTE: The action is held as long as the button is. A release-mode button sends the
+## press and release together, and a press-mode button holds it until `button_up`.
 ##
 
 class_name StdInputActionTrigger
@@ -62,8 +59,7 @@ func _ready() -> void:
 
 
 ## _is_action_declared returns whether `action` is in the loaded action set or an
-## enabled layer of the player's input slot. A tree without a slot declares nothing,
-## so the check passes there.
+## enabled layer of the player's input slot, or true in a tree with no slot.
 func _is_action_declared() -> bool:
 	var slot := StdInputSlot.for_player(player_id)
 	if not slot:
@@ -106,9 +102,8 @@ func _on_pressed() -> void:
 
 	StdInputEvent.trigger_action(action, StdInputEvent.DEVICE_ID_SYNTHETIC, true)
 
-	# NOTE: Only a press-mode button is still down when `pressed` fires; a release-mode
-	# button, or a `pressed` emitted by code, gets its release at once. Godot sends
-	# `button_up` when a held button is released, hidden, or disabled.
+	# NOTE: Only a press-mode button is still down when `pressed` fires. Godot sends its
+	# `button_up` when the button is released, hidden, or disabled.
 	if _button.is_pressed():
 		_held = true
 	else:
