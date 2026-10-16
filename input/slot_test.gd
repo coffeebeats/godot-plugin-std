@@ -61,7 +61,6 @@ class DeviceActions:
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var slot: StdInputSlot = null
-var _actions_kbm: DeviceActions = null
 var _actions_joy: DeviceActions = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -331,46 +330,16 @@ func test_input_slot_swap_reconnects_joypads() -> void:
 	assert_eq(len(slot.get_connected_devices()), 1)
 
 
-func test_input_slot_layer_held_by_two_owners_stays_until_both_let_go() -> void:
+func test_input_slot_load_of_another_action_set_clears_layers() -> void:
 	# Given: An input slot with a loaded action set.
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
 	var action_set := _make_action_set(&"Test")
 	assert_true(slot.load_action_set(action_set))
 
-	# Given: Two owners enable the same layer.
+	# Given: An enabled layer.
 	var layer := _make_layer(&"TestLayer", action_set)
-	var first := RefCounted.new()
-	var second := RefCounted.new()
-	assert_true(slot.enable_action_set_layer(layer, first))
-	assert_false(slot.enable_action_set_layer(layer, second))
-
-	# When: One owner lets go.
-	assert_false(slot.disable_action_set_layer(layer, first))
-
-	# Then: The layer stays enabled on the slot and its device.
-	assert_eq(slot.list_action_set_layers(), [layer] as Array[StdInputActionSetLayer])
-	assert_eq(_actions_kbm.layers, [layer] as Array[StdInputActionSetLayer])
-
-	# When: The other owner lets go.
-	assert_true(slot.disable_action_set_layer(layer, second))
-
-	# Then: The layer is disabled on the slot and its device.
-	assert_eq(slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
-	assert_eq(_actions_kbm.layers, [] as Array[StdInputActionSetLayer])
-
-
-func test_input_slot_load_of_another_action_set_forgets_layer_owners() -> void:
-	# Given: An input slot with a loaded action set.
-	add_child_autofree(slot)
-	autofree(slot.get_active_device())
-	var action_set := _make_action_set(&"Test")
-	assert_true(slot.load_action_set(action_set))
-
-	# Given: A layer held by an owner.
-	var layer := _make_layer(&"TestLayer", action_set)
-	var holder := RefCounted.new()
-	assert_true(slot.enable_action_set_layer(layer, holder))
+	assert_true(slot.enable_action_set_layer(layer))
 
 	# When: Another action set is loaded.
 	assert_true(slot.load_action_set(_make_action_set(&"Other")))
@@ -378,55 +347,23 @@ func test_input_slot_load_of_another_action_set_forgets_layer_owners() -> void:
 	# Then: No layer is enabled.
 	assert_eq(slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
 
-	# Then: The owner no longer holds the layer.
-	assert_false(slot.disable_action_set_layer(layer, holder))
 
-
-func test_input_slot_load_of_the_active_action_set_keeps_layer_owners() -> void:
+func test_input_slot_load_of_the_active_action_set_keeps_layers() -> void:
 	# Given: An input slot with a loaded action set.
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
 	var action_set := _make_action_set(&"Test")
 	assert_true(slot.load_action_set(action_set))
 
-	# Given: A layer held by an owner.
+	# Given: An enabled layer.
 	var layer := _make_layer(&"TestLayer", action_set)
-	var holder := RefCounted.new()
-	assert_true(slot.enable_action_set_layer(layer, holder))
+	assert_true(slot.enable_action_set_layer(layer))
 
 	# When: The same action set is loaded again.
 	assert_false(slot.load_action_set(action_set))
 
 	# Then: The layer is still enabled.
 	assert_eq(slot.list_action_set_layers(), [layer] as Array[StdInputActionSetLayer])
-
-	# Then: Its owner still holds it.
-	assert_true(slot.disable_action_set_layer(layer, holder))
-
-
-func test_input_slot_freed_owner_does_not_hold_a_layer() -> void:
-	# Given: An input slot with a loaded action set.
-	add_child_autofree(slot)
-	autofree(slot.get_active_device())
-	var action_set := _make_action_set(&"Test")
-	assert_true(slot.load_action_set(action_set))
-
-	# Given: A layer held by an owner that is then freed.
-	var layer := _make_layer(&"TestLayer", action_set)
-	var freed := Node.new()
-	assert_true(slot.enable_action_set_layer(layer, freed))
-	freed.free()
-
-	# Given: A second owner holds the layer.
-	var second := RefCounted.new()
-	assert_false(slot.enable_action_set_layer(layer, second))
-
-	# When: The second owner lets go.
-	var became_inactive := slot.disable_action_set_layer(layer, second)
-
-	# Then: The layer is disabled, since the freed owner held nothing.
-	assert_true(became_inactive)
-	assert_eq(slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
 
 
 func test_input_slot_layer_enabled_before_any_device_reaches_a_later_joypad() -> void:
@@ -452,35 +389,6 @@ func test_input_slot_layer_enabled_before_any_device_reaches_a_later_joypad() ->
 	assert_eq(_actions_joy.layers, [layer] as Array[StdInputActionSetLayer])
 
 
-func test_input_slot_shared_layer_survives_a_covering_screen_being_popped() -> void:
-	# Given: A map's loader holds a layer any set may enable, over the game's set.
-	add_child_autofree(slot)
-	autofree(slot.get_active_device())
-	var gameplay := _make_action_set(&"Gameplay")
-	var menu := _make_action_set(&"Menu")
-	var layer := _make_layer(&"Options", null)
-	var map := RefCounted.new()
-	var pause := RefCounted.new()
-	assert_true(slot.load_action_set(gameplay))
-	assert_true(slot.enable_action_set_layer(layer, map))
-
-	# Given: A pause menu covers it, loading its own set and the same layer.
-	assert_true(slot.load_action_set(menu))
-	assert_true(slot.enable_action_set_layer(layer, pause))
-
-	# When: The pop uncovers the map, which reloads its set and layer.
-	assert_true(slot.load_action_set(gameplay))
-	assert_true(slot.enable_action_set_layer(layer, map))
-
-	# When: The pop then tears down the pause menu, which lets go of the layer.
-	var became_inactive := slot.disable_action_set_layer(layer, pause)
-
-	# Then: The map's layer is still enabled.
-	assert_false(became_inactive)
-	assert_eq(slot.list_action_set_layers(), [layer] as Array[StdInputActionSetLayer])
-	assert_eq(_actions_kbm.layers, [layer] as Array[StdInputActionSetLayer])
-
-
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -496,7 +404,6 @@ func before_all() -> void:
 
 func before_each() -> void:
 	slot = make_slot()
-	_actions_kbm = slot.actions_kbm as DeviceActions
 	_actions_joy = slot.actions_joy as DeviceActions
 
 

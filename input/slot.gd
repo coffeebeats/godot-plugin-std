@@ -262,37 +262,6 @@ func swap_joypad_components(
 
 # -- PUBLIC METHODS (OVERRIDES) ------------------------------------------------------ #
 
-# Action set layers
-
-
-## disable_action_set_layer releases `holder`'s hold on the layer, or the slot's own if
-## `holder` is null, and unbinds its actions once no owner holds it. Returns whether the
-## layer became inactive.
-func disable_action_set_layer(
-	layer: StdInputActionSetLayer, holder: Object = null
-) -> bool:
-	var slot_actions := actions as StdInputSlotDeviceActions
-	if (
-		slot_actions
-		and not slot_actions.remove_owner(layer, holder if holder else self)
-	):
-		return false
-
-	return super.disable_action_set_layer(layer)
-
-
-## enable_action_set_layer binds the layer's actions, held by `holder` or, if null, the
-## slot, until every owner has disabled it. Returns whether the layer became active.
-func enable_action_set_layer(
-	layer: StdInputActionSetLayer, holder: Object = null
-) -> bool:
-	var slot_actions := actions as StdInputSlotDeviceActions
-	if slot_actions and not slot_actions.add_owner(layer, holder if holder else self):
-		return false
-
-	return super.enable_action_set_layer(layer)
-
-
 # Glyphs
 
 
