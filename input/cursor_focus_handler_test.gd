@@ -414,8 +414,7 @@ func test_disabled_button_input_state(
 	handler.block_focus_and_hover_on_disable = params.block
 	button.add_child(handler)
 
-	# Then: The button's input state reflects the blocking configuration; without
-	# blocking, a hidden cursor leaves the disabled button in focus navigation.
+	# Then: The button's focus mode and mouse filter follow the blocking and the cursor.
 	assert_eq(button.focus_mode, params.expected_focus_mode)
 	assert_eq(button.mouse_filter, params.expected_mouse_filter)
 
@@ -687,7 +686,7 @@ func test_disabled_button_stops_click_from_reaching_control_behind() -> void:
 	var handler := _add_handler(button)
 	await get_tree().process_frame
 
-	# When: The button is clicked via SubViewport input dispatch.
+	# When: The mouse clicks the button.
 	var ev := InputEventMouseButton.new()
 	ev.button_index = MOUSE_BUTTON_LEFT
 	ev.pressed = true

@@ -47,9 +47,9 @@ const Signals := preload("../event/signal.gd")
 @export_category("Button")
 
 ## block_focus_and_hover_on_disable configures this focus handler to prevent its target
-## `Control` node from receiving hover and focus effects if it's disabled. The button
-## keeps its own mouse filter while the cursor shows, so a click still stops at it
-## rather than reaching whatever lies behind, and its tooltip still shows.
+## `Control` node from receiving hover and focus effects if it's disabled. While the
+## cursor shows, the button keeps its mouse filter, so clicks stop at it and its tooltip
+## shows.
 @export var block_focus_and_hover_on_disable: bool = true
 
 ## clear_press_on_focus_root_exit controls whether a non-toggle `BaseButton`'s pressed
@@ -200,9 +200,8 @@ func _clear_stale_button_visuals() -> void:
 
 
 func _update_input_state(is_cursor_visible: bool) -> void:
-	# Disabled buttons take no focus or hover if blocking is enabled, but still block
-	# clicks while the cursor shows. A hidden cursor would still hover them, so they
-	# ignore the mouse then; see https://github.com/godotengine/godot/issues/56783.
+	# Blocked disabled buttons take no focus or hover, but stop clicks while the cursor
+	# shows. With the cursor hidden they ignore the mouse, as every control does below.
 	if (
 		block_focus_and_hover_on_disable
 		and _control is BaseButton
