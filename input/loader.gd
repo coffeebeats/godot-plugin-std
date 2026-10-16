@@ -4,7 +4,8 @@
 ## StdInputActionSetLoader is a node which keeps an action set loaded and action set
 ## layers enabled while the rule in `active_while` holds and its screen is uncovered.
 ##
-## NOTE: The input slot holds a layer by owner, so two loaders may enable one layer.
+## NOTE: Loaders may share a layer. One disables it only when no other active loader
+## for the same player lists it.
 ##
 
 class_name StdInputActionSetLoader
@@ -18,6 +19,8 @@ enum ActiveWhile {
 	VISIBLE,  ## While this `Control` is visible in the scene tree.
 	NEVER,  ## Not at all; the loader holds its sets and does nothing with them.
 }
+
+const _GROUP_INPUT_LOADER := &"std/input:loader"
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -46,7 +49,8 @@ var _covered: bool = false
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## disable_action_set_layers disables the configured action set layers for the player.
+## disable_action_set_layers disables the configured action set layers for the player,
+## leaving on any that another active loader for the player lists.
 func disable_action_set_layers() -> void:
 	assert(
 		not action_set_layers.is_empty(),
@@ -58,7 +62,7 @@ func disable_action_set_layers() -> void:
 
 	var enabled := slot.list_action_set_layers()
 	for layer in action_set_layers:
-		if layer in enabled:
+		if layer in enabled and not _is_layer_wanted_elsewhere(layer):
 			slot.disable_action_set_layer(layer)
 
 
@@ -92,12 +96,16 @@ func load_action_set() -> void:
 
 
 func _enter_tree() -> void:
+	StdGroup.with_id(_GROUP_INPUT_LOADER).add_member(self)
+
 	# NOTE: Deferred so that a parent handing this loader its sets as it enters, and a
 	# parent's `_ready` hiding it, both run first.
 	_sync.call_deferred()
 
 
 func _exit_tree() -> void:
+	StdGroup.with_id(_GROUP_INPUT_LOADER).remove_member(self)
+
 	if active_while == ActiveWhile.NEVER or action_set_layers.is_empty():
 		return
 
@@ -126,18 +134,41 @@ func _notification(what) -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _is_active returns whether the rule holds, so this loader wants its action set
+## loaded and its layers enabled.
+func _is_active() -> bool:
+	return (
+		active_while != ActiveWhile.NEVER
+		and is_inside_tree()
+		and not _covered
+		and (active_while != ActiveWhile.VISIBLE or is_visible_in_tree())
+	)
+
+
+## _is_layer_wanted_elsewhere returns whether another active loader for the player
+## lists `layer`.
+func _is_layer_wanted_elsewhere(layer: StdInputActionSetLayer) -> bool:
+	for member in StdGroup.with_id(_GROUP_INPUT_LOADER).list_members():
+		var other := member as StdInputActionSetLoader
+		if (
+			other != self
+			and other.player_id == player_id
+			and layer in other.action_set_layers
+			and other._is_active()
+		):
+			return true
+
+	return false
+
+
 ## _sync loads the action set and enables the layers if the rule holds, and disables
-## the layers if it does not. Loading an active set and enabling a held layer change
+## the layers if it does not. Loading an active set and enabling an enabled layer change
 ## nothing, so this runs on every event that could change the rule's answer.
 func _sync() -> void:
 	if active_while == ActiveWhile.NEVER or not is_inside_tree():
 		return
 
-	var active := (
-		not _covered and (active_while != ActiveWhile.VISIBLE or is_visible_in_tree())
-	)
-
-	if active:
+	if _is_active():
 		if action_set:
 			load_action_set()
 		if not action_set_layers.is_empty():

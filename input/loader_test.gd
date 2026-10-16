@@ -158,6 +158,48 @@ func test_loader_shares_a_layer_with_another_loader() -> void:
 	assert_eq(_slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
 
 
+func test_loader_keeps_a_shared_layer_through_a_pop() -> void:
+	# Given: A map's loader enables the layer over its own set.
+	var map := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	add_child_autofree(map)
+	await wait_idle_frames(1)
+
+	# Given: A pause menu covers the map, loading its own set and the same layer.
+	map.notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
+	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	pause.action_set = _make_action_set(&"Menu")
+	add_child_autofree(pause)
+	await wait_idle_frames(1)
+
+	# When: The pop uncovers the map before the pause menu leaves the tree.
+	map.notification(StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED)
+	remove_child(pause)
+
+	# Then: The map's set is loaded and the layer is still enabled.
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
+func test_loader_keeps_a_shared_layer_under_a_screen_with_the_same_sets() -> void:
+	# Given: A pause menu's loader enables the layer over its set.
+	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	add_child_autofree(pause)
+	await wait_idle_frames(1)
+
+	# Given: A settings menu with the same set and layer covers it.
+	var settings := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	add_child_autofree(settings)
+	pause.notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
+	await wait_idle_frames(1)
+
+	# When: The pop uncovers the pause menu before the settings menu leaves the tree.
+	pause.notification(StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED)
+	remove_child(settings)
+
+	# Then: The layer is still enabled.
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
