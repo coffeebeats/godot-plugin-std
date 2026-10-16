@@ -479,11 +479,7 @@ func test_clear_press_on_focus_root_exit_sends_focus_exit_to_pressed_button() ->
 	await get_tree().process_frame
 
 	# Given: The button is pressed via SubViewport input dispatch.
-	var ev := InputEventMouseButton.new()
-	ev.button_index = MOUSE_BUTTON_LEFT
-	ev.pressed = true
-	ev.position = Vector2(50, 20)
-	sv.push_input(ev)
+	_press_mouse(sv)
 	await get_tree().process_frame
 	assert_true(button.is_pressed(), "precondition: button should be pressed")
 
@@ -611,11 +607,7 @@ func test_disabled_button_clears_pressed_visual() -> void:
 	await get_tree().process_frame
 
 	# Given: The button is pressed via SubViewport input dispatch.
-	var ev := InputEventMouseButton.new()
-	ev.button_index = MOUSE_BUTTON_LEFT
-	ev.pressed = true
-	ev.position = Vector2(50, 20)
-	sv.push_input(ev)
+	_press_mouse(sv)
 	await get_tree().process_frame
 	assert_true(button.is_pressed(), "precondition: button should be pressed")
 
@@ -687,11 +679,7 @@ func test_disabled_button_stops_click_from_reaching_control_behind() -> void:
 	await get_tree().process_frame
 
 	# When: The mouse clicks the button.
-	var ev := InputEventMouseButton.new()
-	ev.button_index = MOUSE_BUTTON_LEFT
-	ev.pressed = true
-	ev.position = Vector2(50, 20)
-	sv.push_input(ev)
+	_press_mouse(sv)
 	await get_tree().process_frame
 
 	# Then: The click stopped at the button.
@@ -776,6 +764,15 @@ func _add_handler(control: Control) -> StdInputCursorFocusHandler:
 	handler.control = NodePath("..")
 	control.add_child(handler)
 	return handler
+
+
+## _press_mouse pushes a left mouse press at the test button's position into `viewport`.
+func _press_mouse(viewport: SubViewport) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	event.position = Vector2(50, 20)
+	viewport.push_input(event)
 
 
 func _setup_outside_focus_root() -> Array:
