@@ -61,6 +61,8 @@ static var _action_set_layers: Array[StdInputActionSetLayer] = []  # gdlint: ign
 ## _bindings maps origins (integers) to the actions they are bound to.
 static var _bindings: Dictionary = {}  # gdlint: ignore=class-definitions-order
 
+var _logger := StdLogger.create("std/input/godot/device-actions")
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -151,7 +153,7 @@ func _disable_action_set_layer(
 		return false
 
 	assert(
-		action_set_layer.parent == _action_set,
+		action_set_layer.parent == null or action_set_layer.parent == _action_set,
 		"invalid argument: wrong parent action set",
 	)
 
@@ -182,7 +184,7 @@ func _enable_action_set_layer(
 		return false
 
 	assert(
-		action_set_layer.parent == _action_set,
+		action_set_layer.parent == null or action_set_layer.parent == _action_set,
 		"invalid argument: wrong parent action set",
 	)
 
@@ -238,7 +240,18 @@ func _bind_action_to_origin(
 		return
 
 	if origin in _bindings:
-		InputMap.action_erase_event(_bindings[origin], event)
+		var previous: StringName = _bindings[origin]
+		if previous != action:
+			# NOTE: A later set or layer takes the origin; this only reports it.
+			(
+				_logger
+				. debug(
+					"Rebound origin from another action.",
+					{&"origin": origin, &"from": previous, &"to": action},
+				)
+			)
+
+		InputMap.action_erase_event(previous, event)
 		assert(not InputMap.action_has_event(action, event), "failed to erase binding")
 
 	InputMap.action_add_event(action, event)

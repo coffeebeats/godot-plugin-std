@@ -2,7 +2,8 @@
 ## std/input/slot_actions.gd
 ##
 ## StdInputSlotDeviceActions is an implementation of `StdInputDeviceActions` which
-## delegates to the device type-specific component of a `StdInputSlot`.
+## delegates to the device type-specific component of a `StdInputSlot`. A device that
+## connects later still gets the set and layers enabled before it.
 ##
 
 extends StdInputDeviceActions
@@ -29,17 +30,14 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 		assert(false, "invalid state; missing input slot")
 		return false
 
-	if (
-		slot
-		. get_connected_devices()
-		. map(func(d): return d.load_action_set(action_set))
-		. all(func(r): return not r)
-	):
+	for device in slot.get_connected_devices():
+		device.load_action_set(action_set)
+
+	if _action_set == action_set:
 		return false
 
-	if _action_set != action_set:
-		_action_set = action_set
-		_action_set_layers = []
+	_action_set = action_set
+	_action_set_layers = []
 
 	return true
 
@@ -49,12 +47,10 @@ func _disable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> b
 		assert(false, "invalid state; missing input slot")
 		return false
 
-	if (
-		slot
-		. get_connected_devices()
-		. map(func(d): return d.disable_action_set_layer(layer))
-		. all(func(r): return not r)
-	):
+	for device in slot.get_connected_devices():
+		device.disable_action_set_layer(layer)
+
+	if layer not in _action_set_layers:
 		return false
 
 	_action_set_layers.erase(layer)
@@ -67,16 +63,13 @@ func _enable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bo
 		assert(false, "invalid state; missing input slot")
 		return false
 
-	if (
-		slot
-		. get_connected_devices()
-		. map(func(d): return d.enable_action_set_layer(layer))
-		. all(func(r): return not r)
-	):
+	for device in slot.get_connected_devices():
+		device.enable_action_set_layer(layer)
+
+	if layer in _action_set_layers:
 		return false
 
-	if not layer in _action_set_layers:
-		_action_set_layers.append(layer)
+	_action_set_layers.append(layer)
 
 	return true
 
