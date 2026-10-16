@@ -134,14 +134,17 @@ func test_action_trigger_pressed_with_action_declared_on_layer_raises_it() -> vo
 
 
 func test_action_trigger_pressed_with_action_on_another_slot_raises_it() -> void:
+	# Given: One cursor for both slots, freed after them.
+	var cursor: StdInputCursor = add_child_autoqfree(StdInputCursor.new())
+
 	# Given: Player 1's slot loads an action set that lacks the action.
-	var first := _add_slot(1)
+	var first := _add_slot(1, cursor)
 	var menu := StdInputActionSet.new()
 	menu.name = &"Menu"
 	assert_true(first.load_action_set(menu))
 
 	# Given: Player 2's slot loads an action set that declares the action.
-	var second := _add_slot(2, first.cursor)
+	var second := _add_slot(2, cursor)
 	var action_set := StdInputActionSet.new()
 	action_set.name = &"Test"
 	action_set.actions_digital = [_TEST_ACTION] as Array[StringName]
@@ -297,8 +300,8 @@ func _mouse_left(pressed: bool) -> InputEventMouseButton:
 
 
 ## _add_slot adds an input slot for `player_id` to the tree, with device components
-## that hold whatever they are handed. A second slot passes the first's `cursor`, since
-## only one cursor may exist.
+## that hold whatever they are handed. Slots sharing a tree pass one `cursor` that
+## outlives them, since only one cursor may exist.
 func _add_slot(player_id: int = 1, cursor: StdInputCursor = null) -> StdInputSlot:
 	var slot := StdInputSlot.new()
 	slot.player_id = player_id
