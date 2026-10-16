@@ -1,5 +1,8 @@
 ##
-## Tests pertaining to the `StdInputSlot` library.
+## std/input/slot_test.gd
+##
+## Tests pertaining to the `StdInputSlot` library. Other input tests build their slot
+## with `make_slot`.
 ##
 
 extends GutTest
@@ -7,10 +10,6 @@ extends GutTest
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const _TEST_ACTIONS: Array[StringName] = [&"test_action"]
-
-# -- INITIALIZATION ------------------------------------------------------------------ #
-
-var slot: StdInputSlot = null
 
 
 ## JoypadMonitor is a fake implementation of `StdInputSlot.JoypadMonitor`.
@@ -61,8 +60,52 @@ class DeviceActions:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var slot: StdInputSlot = null
 var _actions_kbm: DeviceActions = null
 var _actions_joy: DeviceActions = null
+
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## make_slot returns an input slot for `player_id`, not yet in the tree, whose fake
+## components are its children. Slots sharing a tree pass one `cursor` that outlives
+## them, since only one cursor may exist.
+static func make_slot(
+	player_id: int = 1, cursor: StdInputCursor = null
+) -> StdInputSlot:
+	var input_slot := StdInputSlot.new()
+	input_slot.player_id = player_id
+	input_slot.haptics_disabled_property = StdSettingsPropertyBool.new()
+	input_slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
+
+	input_slot.joypad_monitor = JoypadMonitor.new()
+	input_slot.add_child(input_slot.joypad_monitor)
+
+	if cursor:
+		input_slot.cursor = cursor
+	else:
+		input_slot.cursor = StdInputCursor.new()
+		input_slot.add_child(input_slot.cursor)
+
+	input_slot.actions_kbm = DeviceActions.new()
+	input_slot.glyphs_kbm = StdInputDeviceGlyphs.new()
+	input_slot.haptics_kbm = StdInputDeviceHaptics.new()
+	input_slot.actions_joy = DeviceActions.new()
+	input_slot.glyphs_joy = StdInputDeviceGlyphs.new()
+	input_slot.haptics_joy = StdInputDeviceHaptics.new()
+
+	for component in [
+		input_slot.actions_kbm,
+		input_slot.glyphs_kbm,
+		input_slot.haptics_kbm,
+		input_slot.actions_joy,
+		input_slot.glyphs_joy,
+		input_slot.haptics_joy,
+	]:
+		input_slot.add_child(component)
+
+	return input_slot
+
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -452,26 +495,9 @@ func before_all() -> void:
 
 
 func before_each() -> void:
-	# Construct input slot scene.
-	slot = StdInputSlot.new()
-	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
-	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
-
-	slot.joypad_monitor = JoypadMonitor.new()
-	slot.add_child(slot.joypad_monitor)
-
-	slot.cursor = StdInputCursor.new()
-	slot.add_child(slot.cursor)
-
-	_actions_kbm = add_child_autofree(DeviceActions.new())
-	slot.actions_kbm = _actions_kbm
-	slot.glyphs_kbm = add_child_autofree(StdInputDeviceGlyphs.new())
-	slot.haptics_kbm = add_child_autofree(StdInputDeviceHaptics.new())
-
-	_actions_joy = add_child_autofree(DeviceActions.new())
-	slot.actions_joy = _actions_joy
-	slot.glyphs_joy = add_child_autofree(StdInputDeviceGlyphs.new())
-	slot.haptics_joy = add_child_autofree(StdInputDeviceHaptics.new())
+	slot = make_slot()
+	_actions_kbm = slot.actions_kbm as DeviceActions
+	_actions_joy = slot.actions_joy as DeviceActions
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #

@@ -31,39 +31,6 @@ class _InputRecorder:
 		just_pressed.append(Input.is_action_just_pressed(_TEST_ACTION))
 
 
-## _Actions is a device actions component that holds whatever it is handed.
-class _Actions:
-	extends StdInputDeviceActions
-
-	var action_set: StdInputActionSet = null
-	var layers: Array[StdInputActionSetLayer] = []
-
-	func _get_action_set(_device: int) -> StdInputActionSet:
-		return action_set
-
-	func _load_action_set(_device: int, next: StdInputActionSet) -> bool:
-		if next == action_set:
-			return false
-		action_set = next
-		layers = []
-		return true
-
-	func _disable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
-		if layer not in layers:
-			return false
-		layers.erase(layer)
-		return true
-
-	func _enable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
-		if layer in layers:
-			return false
-		layers.append(layer)
-		return true
-
-	func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
-		return layers.duplicate()
-
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _recorder: _InputRecorder = null
@@ -299,32 +266,9 @@ func _mouse_left(pressed: bool) -> InputEventMouseButton:
 	return event
 
 
-## _add_slot adds an input slot for `player_id` to the tree, with device components
-## that hold whatever they are handed. Slots sharing a tree pass one `cursor` that
-## outlives them, since only one cursor may exist.
+## _add_slot adds an input slot for `player_id` to the tree, sharing `cursor` if given.
 func _add_slot(player_id: int = 1, cursor: StdInputCursor = null) -> StdInputSlot:
-	var slot := StdInputSlot.new()
-	slot.player_id = player_id
-	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
-	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
-
-	slot.joypad_monitor = SlotTest.JoypadMonitor.new()
-	slot.add_child(slot.joypad_monitor)
-
-	if cursor:
-		slot.cursor = cursor
-	else:
-		slot.cursor = StdInputCursor.new()
-		slot.add_child(slot.cursor)
-
-	slot.actions_kbm = add_child_autofree(_Actions.new())
-	slot.glyphs_kbm = add_child_autofree(StdInputDeviceGlyphs.new())
-	slot.haptics_kbm = add_child_autofree(StdInputDeviceHaptics.new())
-
-	slot.actions_joy = add_child_autofree(_Actions.new())
-	slot.glyphs_joy = add_child_autofree(StdInputDeviceGlyphs.new())
-	slot.haptics_joy = add_child_autofree(StdInputDeviceHaptics.new())
-
+	var slot := SlotTest.make_slot(player_id, cursor)
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
 
