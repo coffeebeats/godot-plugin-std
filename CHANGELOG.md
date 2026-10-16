@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.3.0 (2026-10-16)
+
+## What's Changed
+* feat(input): raise a trigger's action for as long as its button is pressed by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/484
+* fix(input): keep a disabled button's mouse filter so clicks stop at it by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/485
+* feat(input): let a parentless layer fit any set by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/486
+* feat(input): sync a loader's action sets to one rule by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/487
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.2.0...v6.3.0
+
 ## 6.2.0 (2026-09-22)
 
 ## What's Changed
