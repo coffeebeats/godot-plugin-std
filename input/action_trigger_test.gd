@@ -137,6 +137,31 @@ func test_action_trigger_pressed_with_action_declared_on_layer_raises_it() -> vo
 	assert_eq(_recorder.seen, [true, false] as Array[bool])
 
 
+func test_action_trigger_pressed_with_action_on_another_slot_raises_it() -> void:
+	# Given: Player 1's slot loads an action set that lacks the action.
+	var first := _add_slot(1)
+	var menu := StdInputActionSet.new()
+	menu.name = &"Menu"
+	assert_true(first.load_action_set(menu))
+
+	# Given: Player 2's slot loads an action set that declares the action.
+	var second := _add_slot(2, first.cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.name = &"Test"
+	action_set.actions_digital = [_TEST_ACTION] as Array[StringName]
+	assert_true(second.load_action_set(action_set))
+
+	# Given: A button with a trigger for the test action.
+	var button := _add_button()
+
+	# When: The button is pressed.
+	button.pressed.emit()
+	await wait_idle_frames(2)
+
+	# Then: The handler saw a press and then a release.
+	assert_eq(_recorder.seen, [true, false] as Array[bool])
+
+
 func test_action_trigger_press_mode_button_holds_action_until_released() -> void:
 	# Given: A press-mode button held down by the mouse.
 	var parts := await _hold_button()
@@ -275,19 +300,23 @@ func _mouse_left(pressed: bool) -> InputEventMouseButton:
 	return event
 
 
-## _add_slot adds an input slot for player 1 to the tree, with device components that
-## hold whatever they are handed.
-func _add_slot() -> StdInputSlot:
+## _add_slot adds an input slot for `player_id` to the tree, with device components
+## that hold whatever they are handed. A second slot passes the first's `cursor`, since
+## only one cursor may exist.
+func _add_slot(player_id: int = 1, cursor: StdInputCursor = null) -> StdInputSlot:
 	var slot := StdInputSlot.new()
-	slot.player_id = 1
+	slot.player_id = player_id
 	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
 	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
 
 	slot.joypad_monitor = _JoypadMonitor.new()
 	slot.add_child(slot.joypad_monitor)
 
-	slot.cursor = StdInputCursor.new()
-	slot.add_child(slot.cursor)
+	if cursor:
+		slot.cursor = cursor
+	else:
+		slot.cursor = StdInputCursor.new()
+		slot.add_child(slot.cursor)
 
 	slot.actions_kbm = add_child_autofree(_Actions.new())
 	slot.glyphs_kbm = add_child_autofree(StdInputDeviceGlyphs.new())

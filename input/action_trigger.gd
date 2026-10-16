@@ -25,11 +25,6 @@ const Signals := preload("../event/signal.gd")
 ## defaults to the parent node.
 @export var target: NodePath = NodePath("..")
 
-## player_id is the player whose `StdInputSlot` must declare the action, in its loaded
-## action set or an enabled layer. Debug builds check this on each press, since an
-## `InputEventAction` matches by name whether or not any set binds the action.
-@export var player_id: int = 1
-
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _button: BaseButton = null
@@ -58,22 +53,23 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _is_action_declared returns whether `action` is in the loaded action set or an
-## enabled layer of the player's input slot, or true in a tree with no slot.
+## _is_action_declared returns whether any input slot has `action` in its loaded
+## action set or an enabled layer, or true in a tree with no slot.
+##
+## NOTE: Call this only inside `assert`, which release builds compile out.
 func _is_action_declared() -> bool:
-	var slot := StdInputSlot.for_player(player_id)
-	if not slot:
+	var slots := StdInputSlot.all()
+	if slots.is_empty():
 		return true
 
-	var action_sets: Array[StdInputActionSet] = []
-	var action_set := slot.actions.get_action_set(slot.device_id)
-	if action_set:
-		action_sets.append(action_set)
-	action_sets.append_array(slot.list_action_set_layers())
-
-	for candidate in action_sets:
-		if action in candidate.list_action_names():
+	for slot in slots:
+		var action_set := slot.actions.get_action_set(slot.device_id)
+		if action_set and action in action_set.list_action_names():
 			return true
+
+		for layer in slot.list_action_set_layers():
+			if action in layer.list_action_names():
+				return true
 
 	return false
 
@@ -98,6 +94,8 @@ func _on_pressed() -> void:
 	if not action:
 		return
 
+	# NOTE: An `InputEventAction` matches by name whether or not any set binds the
+	# action, so this catches a button whose key would do nothing.
 	assert(_is_action_declared(), "invalid config; action is not in an active set")
 
 	StdInputEvent.trigger_action(action, StdInputEvent.DEVICE_ID_SYNTHETIC, true)
