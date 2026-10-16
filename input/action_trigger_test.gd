@@ -6,6 +6,10 @@
 
 extends GutTest
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const SlotTest := preload("slot_test.gd")
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const _TEST_ACTION := &"test_trigger"
@@ -58,14 +62,6 @@ class _Actions:
 
 	func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
 		return layers.duplicate()
-
-
-## _JoypadMonitor is a joypad monitor that reports no joypads.
-class _JoypadMonitor:
-	extends StdInputSlot.JoypadMonitor
-
-	func _broadcast_connected_joypads() -> void:
-		pass
 
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -309,7 +305,7 @@ func _add_slot(player_id: int = 1, cursor: StdInputCursor = null) -> StdInputSlo
 	slot.haptics_disabled_property = StdSettingsPropertyBool.new()
 	slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
 
-	slot.joypad_monitor = _JoypadMonitor.new()
+	slot.joypad_monitor = SlotTest.JoypadMonitor.new()
 	slot.add_child(slot.joypad_monitor)
 
 	if cursor:
