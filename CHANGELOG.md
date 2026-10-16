@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.3.1 (2026-10-16)
+
+## What's Changed
+* fix(input): sync a loader on notifications only after its first sync by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/490
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.3.0...v6.3.1
+
 ## 6.3.0 (2026-10-16)
 
 ## What's Changed
