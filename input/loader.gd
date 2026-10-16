@@ -2,15 +2,9 @@
 ## std/input/loader.gd
 ##
 ## StdInputActionSetLoader is a node which keeps an action set loaded and action set
-## layers enabled for as long as one rule holds, chosen by `active_while`: while this
-## `Control` is in the tree, or only while it is visible there. Either way the layers
-## go off while the screen holding this loader is covered by another and come back
-## when it is uncovered, and the action set is loaded again then, since the covering
-## screen loaded its own.
+## layers enabled while the rule in `active_while` holds and its screen is uncovered.
 ##
-## NOTE: Every change re-syncs from that rule rather than toggling, and the input slot
-## holds a layer by owner, so two loaders may enable one layer and each may re-sync as
-## often as it likes.
+## NOTE: The input slot holds a layer by owner, so two loaders may enable one layer.
 ##
 
 class_name StdInputActionSetLoader

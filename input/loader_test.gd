@@ -232,6 +232,7 @@ func before_each() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _make_action_set returns an empty action set called `id`.
 func _make_action_set(id: StringName) -> StdInputActionSet:
 	var action_set := StdInputActionSet.new()
 	action_set.name = id
