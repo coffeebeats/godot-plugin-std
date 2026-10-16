@@ -118,6 +118,52 @@ func test_loader_visible_hidden_by_a_parents_ready_stays_off() -> void:
 	assert_eq(_slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
 
 
+func test_loader_visible_entering_visible_waits_for_the_set() -> void:
+	# Given: A map's loader with the set, and a visible panel whose loader has only the
+	# layer.
+	var map := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	map.action_set_layers = [] as Array[StdInputActionSetLayer]
+	var panel := Control.new()
+	var loader := _make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE)
+	loader.action_set = null
+	panel.add_child(loader)
+
+	# When: Both enter the tree, the map's loader first.
+	add_child_autofree(map)
+	add_child_autofree(panel)
+
+	# Then: Nothing is enabled before the frame ends.
+	assert_eq(_slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
+
+	# When: The frame ends.
+	await wait_idle_frames(1)
+
+	# Then: The set is loaded and the layer enabled over it.
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
+func test_loader_visible_reentering_waits_for_the_end_of_the_frame() -> void:
+	# Given: A visible panel whose loader has synced.
+	var panel := Control.new()
+	panel.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE))
+	add_child_autofree(panel)
+	await wait_idle_frames(1)
+
+	# When: The panel leaves the tree and enters it again.
+	remove_child(panel)
+	add_child(panel)
+
+	# Then: Nothing is enabled before the frame ends.
+	assert_eq(_slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
+
+	# When: The frame ends.
+	await wait_idle_frames(1)
+
+	# Then: The layer is enabled.
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
 func test_loader_never_touches_nothing_and_needs_no_slot() -> void:
 	# Given: No input slot in the tree, and a loader that is never active.
 	_slot.queue_free()

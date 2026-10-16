@@ -3,6 +3,8 @@
 ##
 ## StdInputActionSetLoader is a node which keeps an action set loaded and action set
 ## layers enabled while the rule in `active_while` holds and its screen is uncovered.
+## It first acts at the end of the frame it enters the tree in, once its parents have
+## set it up.
 ##
 ## NOTE: Loaders may share a layer. One disables it only when no other active loader
 ## for the same player lists it.
@@ -45,6 +47,10 @@ const _GROUP_INPUT_LOADER := &"std/input:loader"
 
 ## _covered is whether another screen covers the one holding this loader.
 var _covered: bool = false
+
+## _synced is whether the first sync since entering the tree has run. Notifications
+## before it record what they report and leave the syncing to it.
+var _synced: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -99,12 +105,16 @@ func _enter_tree() -> void:
 	StdGroup.with_id(_GROUP_INPUT_LOADER).add_member(self)
 
 	# NOTE: Deferred so that a parent handing this loader its sets as it enters, and a
-	# parent's `_ready` hiding it, both run first.
-	_sync.call_deferred()
+	# parent's `_ready` hiding it, both run first. Notifications wait for this call.
+	_sync_first.call_deferred()
 
 
 func _exit_tree() -> void:
 	StdGroup.with_id(_GROUP_INPUT_LOADER).remove_member(self)
+
+	# NOTE: Reset here rather than in `_enter_tree`, since a visible `CanvasItem` is
+	# notified of its visibility as it enters, before its `_enter_tree` runs.
+	_synced = false
 
 	if active_while == ActiveWhile.NEVER or action_set_layers.is_empty():
 		return
@@ -161,11 +171,22 @@ func _is_layer_wanted_elsewhere(layer: StdInputActionSetLayer) -> bool:
 	return false
 
 
+## _sync_first runs the first sync since this loader entered the tree, after which
+## notifications sync it too.
+func _sync_first() -> void:
+	# NOTE: A call queued before this loader left the tree in the same frame.
+	if not is_inside_tree():
+		return
+
+	_synced = true
+	_sync()
+
+
 ## _sync loads the action set and enables the layers if the rule holds, and disables
 ## the layers if it does not. Loading an active set and enabling an enabled layer change
 ## nothing, so this runs on every event that could change the rule's answer.
 func _sync() -> void:
-	if active_while == ActiveWhile.NEVER or not is_inside_tree():
+	if active_while == ActiveWhile.NEVER or not is_inside_tree() or not _synced:
 		return
 
 	if _is_active():
