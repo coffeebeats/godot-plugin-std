@@ -6,49 +6,9 @@
 
 extends GutTest
 
-# -- DEFINITIONS --------------------------------------------------------------------- #
+# -- DEPENDENCIES -------------------------------------------------------------------- #
 
-
-## _DeviceActions is a device actions component that holds whatever it is handed.
-class _DeviceActions:
-	extends StdInputDeviceActions
-
-	var action_set: StdInputActionSet = null
-	var layers: Array[StdInputActionSetLayer] = []
-
-	func _get_action_set(_device: int) -> StdInputActionSet:
-		return action_set
-
-	func _load_action_set(_device: int, next: StdInputActionSet) -> bool:
-		if next == action_set:
-			return false
-		action_set = next
-		layers = []
-		return true
-
-	func _disable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
-		if layer not in layers:
-			return false
-		layers.erase(layer)
-		return true
-
-	func _enable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bool:
-		if layer in layers:
-			return false
-		layers.append(layer)
-		return true
-
-	func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
-		return layers.duplicate()
-
-
-## _JoypadMonitor is a joypad monitor that reports no joypads.
-class _JoypadMonitor:
-	extends StdInputSlot.JoypadMonitor
-
-	func _broadcast_connected_joypads() -> void:
-		pass
-
+const SlotTest := preload("slot_test.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -206,25 +166,7 @@ func before_each() -> void:
 	_layer = StdInputActionSetLayer.new()
 	_layer.name = &"Options"
 
-	_slot = StdInputSlot.new()
-	_slot.player_id = 1
-	_slot.haptics_disabled_property = StdSettingsPropertyBool.new()
-	_slot.haptics_strength_property = StdSettingsPropertyFloatRange.new()
-
-	_slot.joypad_monitor = _JoypadMonitor.new()
-	_slot.add_child(_slot.joypad_monitor)
-
-	_slot.cursor = StdInputCursor.new()
-	_slot.add_child(_slot.cursor)
-
-	_slot.actions_kbm = add_child_autofree(_DeviceActions.new())
-	_slot.glyphs_kbm = add_child_autofree(StdInputDeviceGlyphs.new())
-	_slot.haptics_kbm = add_child_autofree(StdInputDeviceHaptics.new())
-
-	_slot.actions_joy = add_child_autofree(_DeviceActions.new())
-	_slot.glyphs_joy = add_child_autofree(StdInputDeviceGlyphs.new())
-	_slot.haptics_joy = add_child_autofree(StdInputDeviceHaptics.new())
-
+	_slot = SlotTest.make_slot()
 	add_child_autofree(_slot)
 	autofree(_slot.get_active_device())
 
