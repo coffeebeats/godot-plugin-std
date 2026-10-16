@@ -119,10 +119,11 @@ func test_loader_visible_hidden_by_a_parents_ready_stays_off() -> void:
 
 
 func test_loader_visible_entering_visible_waits_for_the_set() -> void:
-	# Given: A map's loader with the set, and a visible panel whose loader has only the
-	# layer.
+	# Given: A map's loader with the set and no layers.
 	var map := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	map.action_set_layers = [] as Array[StdInputActionSetLayer]
+
+	# Given: A visible panel whose loader has only the layer.
 	var panel := Control.new()
 	var loader := _make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE)
 	loader.action_set = null

@@ -105,8 +105,8 @@ func _enter_tree() -> void:
 	StdGroup.with_id(_GROUP_INPUT_LOADER).add_member(self)
 
 	# NOTE: Deferred so that a parent handing this loader its sets as it enters, and a
-	# parent's `_ready` hiding it, both run first. Notifications wait for this call.
-	_sync_first.call_deferred()
+	# parent's `_ready` hiding it, both run first.
+	_sync_on_enter.call_deferred()
 
 
 func _exit_tree() -> void:
@@ -171,10 +171,11 @@ func _is_layer_wanted_elsewhere(layer: StdInputActionSetLayer) -> bool:
 	return false
 
 
-## _sync_first runs the first sync since this loader entered the tree, after which
+## _sync_on_enter runs the first sync since this loader entered the tree, after which
 ## notifications sync it too.
-func _sync_first() -> void:
-	# NOTE: A call queued before this loader left the tree in the same frame.
+func _sync_on_enter() -> void:
+	# NOTE: A call queued before this loader left the tree in the same frame must not
+	# mark it synced, or its next entry would sync early.
 	if not is_inside_tree():
 		return
 
