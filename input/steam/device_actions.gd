@@ -116,8 +116,8 @@ static func get_digital_action_handle(action: StringName) -> int:
 
 
 ## resolve_action_set_name returns the name the Steam Input manifest knows `action_set`
-## by on `device`: its own name, or, for a layer with no parent, the name of the copy
-## written under the device's current action set (see `StdInputSteamInGameActions`).
+## by on `device`. A layer with no parent resolves to its `<Layer>_<Set>` copy under the
+## device's current set; anything else keeps its own name.
 static func resolve_action_set_name(
 	action_set: StdInputActionSet, device: int
 ) -> StringName:

@@ -35,8 +35,10 @@ func test_device_actions_parentless_layer_enables_over_either_set() -> void:
 	var set_b := _make_action_set(&"B", [&"test_set_b"])
 	var layer := _make_layer(&"L", null, [&"test_layer"])
 
-	# When: The first set is loaded and the layer enabled over it.
+	# Given: The first set is loaded.
 	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+
+	# When: The layer is enabled over it.
 	assert_true(_actions.enable_action_set_layer(DEVICE_ID_ALL, layer))
 
 	# Then: Both the set's and the layer's actions are bound.
@@ -49,6 +51,8 @@ func test_device_actions_parentless_layer_enables_over_either_set() -> void:
 	# Then: The first set's and the layer's bindings are gone.
 	assert_false(_is_bound(&"test_set_a", KEY_A))
 	assert_false(_is_bound(&"test_layer", KEY_L))
+
+	# Then: No layer is enabled.
 	assert_eq(_actions.list_action_set_layers(DEVICE_ID_ALL).size(), 0)
 
 	# When: The same layer is enabled over the second set.
@@ -64,8 +68,10 @@ func test_device_actions_layer_takes_an_origin_from_the_set() -> void:
 	var set_a := _make_action_set(&"A", [&"test_set_a"])
 	var layer := _make_layer(&"L", set_a, [&"test_layer_stomp"])
 
-	# When: The set is loaded and the layer enabled.
+	# Given: The set is loaded.
 	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+
+	# When: The layer is enabled.
 	assert_true(_actions.enable_action_set_layer(DEVICE_ID_ALL, layer))
 
 	# Then: The layer's action holds the key and the set's does not.
@@ -121,6 +127,7 @@ func _is_bound(action: StringName, key: Key) -> bool:
 	)
 
 
+## _make_action_set returns an action set called `id` declaring `actions`.
 func _make_action_set(id: StringName, actions: Array[StringName]) -> StdInputActionSet:
 	var action_set := StdInputActionSet.new()
 	action_set.name = id
@@ -128,6 +135,7 @@ func _make_action_set(id: StringName, actions: Array[StringName]) -> StdInputAct
 	return action_set
 
 
+## _make_layer returns a layer called `id` under `parent`, declaring `actions`.
 func _make_layer(
 	id: StringName, parent: StdInputActionSet, actions: Array[StringName]
 ) -> StdInputActionSetLayer:

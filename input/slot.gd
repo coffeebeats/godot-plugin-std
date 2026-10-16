@@ -265,9 +265,9 @@ func swap_joypad_components(
 # Action set layers
 
 
-## disable_action_set_layer lets go of `holder`'s hold on the layer, or the slot's own
-## if `holder` is null, and unbinds the layer's actions once no owner holds it. Returns
-## whether the layer became inactive.
+## disable_action_set_layer releases `holder`'s hold on the layer, or the slot's own if
+## `holder` is null, and unbinds its actions once no owner holds it. Returns whether the
+## layer became inactive.
 func disable_action_set_layer(
 	layer: StdInputActionSetLayer, holder: Object = null
 ) -> bool:
@@ -281,10 +281,8 @@ func disable_action_set_layer(
 	return super.disable_action_set_layer(layer)
 
 
-## enable_action_set_layer binds the layer's actions for every connected device, held
-## by `holder`, or by the slot itself if `holder` is null. A layer stays bound until
-## each owner that enabled it has disabled it, so two loaders may share one. Returns
-## whether the layer became active.
+## enable_action_set_layer binds the layer's actions, held by `holder` or, if null, the
+## slot, until every owner has disabled it. Returns whether the layer became active.
 func enable_action_set_layer(
 	layer: StdInputActionSetLayer, holder: Object = null
 ) -> bool:

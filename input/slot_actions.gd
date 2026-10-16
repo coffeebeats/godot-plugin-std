@@ -2,13 +2,8 @@
 ## std/input/slot_actions.gd
 ##
 ## StdInputSlotDeviceActions is an implementation of `StdInputDeviceActions` which
-## delegates to the device type-specific component of a `StdInputSlot`. It records the
-## slot's intent, the loaded set and the enabled layers, whatever its devices answer,
-## so a device that connects later is brought up to date.
-##
-## Each enabled layer is held by one or more owners, the objects that enabled it, and
-## it stays enabled until the last owner lets go. Two loaders may thus share a layer
-## without undoing each other.
+## delegates to the device type-specific component of a `StdInputSlot`. A device that
+## connects later still gets the set and layers enabled before it.
 ##
 
 extends StdInputDeviceActions

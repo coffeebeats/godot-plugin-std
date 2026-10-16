@@ -144,8 +144,7 @@ func test_render_writes_a_parentless_layer_under_every_set() -> void:
 	# When: The manifest is rendered for one language.
 	var got := manifest.render([menu, gameplay, nav], {"english": "en"})
 
-	# Then: The layer is written once under each set, named for both, and its strings
-	# are written once.
+	# Then: Each set gets a copy of the layer, and its strings are written once.
 	var want := _lines(
 		[
 			'"In Game Actions"',
