@@ -63,6 +63,10 @@ func _enable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bo
 		assert(false, "invalid state; missing input slot")
 		return false
 
+	if not _action_set:
+		assert(false, "invalid state; missing action set")
+		return false
+
 	for device in slot.get_connected_devices():
 		device.enable_action_set_layer(layer)
 
