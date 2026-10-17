@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.3.2 (2026-10-17)
+
+## What's Changed
+* fix(input): reveal the cursor on motion past the minimum along either axis by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/492
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.3.1...v6.3.2
+
 ## 6.3.1 (2026-10-16)
 
 ## What's Changed
