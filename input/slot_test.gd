@@ -11,6 +11,9 @@ extends GutTest
 
 const _TEST_ACTIONS: Array[StringName] = [&"test_action"]
 
+## _TEST_KEY is the key bound to the test action.
+const _TEST_KEY := KEY_T
+
 
 ## JoypadMonitor is a fake implementation of `StdInputSlot.JoypadMonitor`.
 class JoypadMonitor:
@@ -208,6 +211,89 @@ func test_input_slot_swaps_device_for_action_with_matching_id() -> void:
 	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
 
 
+func test_input_slot_mouse_motion_reveals_cursor_without_activating_kbm() -> void:
+	# Given: A joypad is active under a set which lets the cursor activate the keyboard.
+	var joypad := _activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_ON)
+
+	# When: The mouse moves.
+	var event := InputEventMouseMotion.new()
+	event.relative = Vector2(10, 10)
+	get_viewport().push_input(event)
+
+	# Then: The cursor is revealed and the joypad stays active.
+	assert_true(slot.cursor.get_is_visible())
+	assert_eq(slot.get_active_device(), joypad)
+
+
+func test_input_slot_reveal_button_press_activates_kbm() -> void:
+	# Given: A joypad is active under a set which lets the cursor activate the keyboard.
+	_activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_ON)
+
+	# When: A cursor reveal button is pressed.
+	slot._input(_mouse_button(MOUSE_BUTTON_LEFT))
+
+	# Then: The keyboard is active.
+	assert_eq(slot.get_active_device().device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_emulated_mouse_button_does_not_activate_kbm() -> void:
+	# Given: A joypad is active under a set which lets the cursor activate the keyboard.
+	var joypad := _activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_ON)
+
+	# When: A mouse button which Godot emulated from a touch is pressed.
+	var event := _mouse_button(MOUSE_BUTTON_LEFT)
+	event.device = InputEvent.DEVICE_ID_EMULATION
+	slot._input(event)
+
+	# Then: The joypad stays active.
+	assert_eq(slot.get_active_device(), joypad)
+
+
+func test_input_slot_unlisted_mouse_button_does_not_activate_kbm() -> void:
+	# Given: A joypad is active under a set which lets the cursor activate the keyboard.
+	var joypad := _activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_ON)
+
+	# When: A mouse button outside the cursor's reveal buttons is pressed.
+	slot._input(_mouse_button(MOUSE_BUTTON_MIDDLE))
+
+	# Then: The joypad stays active.
+	assert_eq(slot.get_active_device(), joypad)
+
+
+func test_input_slot_mouse_button_does_not_activate_kbm_when_property_off() -> void:
+	# Given: A joypad is active under a set which keeps the cursor from activating the
+	# keyboard.
+	var joypad := _activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_OFF)
+
+	# When: A cursor reveal button is pressed.
+	slot._input(_mouse_button(MOUSE_BUTTON_LEFT))
+
+	# Then: The joypad stays active.
+	assert_eq(slot.get_active_device(), joypad)
+
+
+func test_input_slot_key_press_activates_kbm_with_no_active_device() -> void:
+	# Given: An input slot claiming the keyboard, with no active device.
+	slot.claim_kbm_input = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._active = null
+
+	# Given: A test action is registered as an active action.
+	slot._actions = [&"test_action"]
+
+	# When: A key bound to the action is pressed.
+	var event := InputEventKey.new()
+	event.keycode = _TEST_KEY
+	event.pressed = true
+	slot._input(event)
+
+	# Then: The keyboard is active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_not_null(got)
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
 func test_input_slot_connects_and_disconnects_joypads() -> void:
 	# Given: A new `StdInputSlot` is instantiated.
 	assert_is(slot, StdInputSlot)
@@ -401,6 +487,10 @@ func before_all() -> void:
 	for action in _TEST_ACTIONS:
 		InputMap.add_action(action)
 
+	var key := InputEventKey.new()
+	key.keycode = _TEST_KEY
+	InputMap.action_add_event(&"test_action", key)
+
 
 func before_each() -> void:
 	slot = make_slot()
@@ -408,6 +498,38 @@ func before_each() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _activate_joypad_under_set adds the slot to the scene with the keyboard claimed, a
+## joypad connected and active, an action set loaded whose `cursor_activates_kbm` is
+## `status`, and the cursor hidden. Returns the joypad.
+func _activate_joypad_under_set(
+	status: StdInputActionSet.PropertyStatus,
+) -> StdInputDevice:
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	var joypad: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(
+		joypad.device_type,
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+		"precondition: joypad active",
+	)
+
+	var action_set := _make_action_set(&"Test")
+	action_set.cursor_activates_kbm = status
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+
+	slot.cursor.hide_cursor()
+	assert_false(slot.cursor.get_is_visible(), "precondition: cursor hidden")
+
+	return joypad
 
 
 ## _make_action_set returns an action set called `id` declaring the test action.
@@ -424,3 +546,11 @@ func _make_layer(id: StringName, parent: StdInputActionSet) -> StdInputActionSet
 	layer.name = id
 	layer.parent = parent
 	return layer
+
+
+## _mouse_button returns a press of the mouse button `index`.
+func _mouse_button(index: MouseButton) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = index
+	event.pressed = true
+	return event

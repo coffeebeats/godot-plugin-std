@@ -64,10 +64,17 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## set layer enables it.
 @export var cursor_captured: bool = false
 
-## cursor_activates_kbm defines whether revealing the cursor will activate the keyboard
-## and mouse input device (defaults to "off" / not enabled). This is likely desired for
-## menu-based action sets, but should probably be disabled during gameplay due to the
-## prevalence of gyro controls (which are simulated as mouse input).
+## cursor_activates_kbm defines whether a press of one of `cursor_reveal_mouse_buttons`
+## activates the keyboard and mouse device even when that button is bound to no action
+## (defaults to "off" / not enabled). Menu action sets want this so that a click swaps
+## glyphs to the mouse; a bound key or mouse button activates the device regardless.
+## Mouse motion never activates it, since Steam Input emits motion for gyro and trackpad
+## input; see https://partner.steamgames.com/doc/steamhardware/recommendations.
+##
+## NOTE: Steam legacy bindings, and a Deck layout without touchscreen native support,
+## deliver real mouse clicks from a controller which cannot be told apart from a mouse.
+## Bind the trackpad click to an action in the default layout and enable touchscreen
+## native support there.
 ##
 ## NOTE: This property will be true if the current action set or any activated action
 ## set layer enables it.

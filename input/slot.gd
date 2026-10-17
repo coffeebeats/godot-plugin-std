@@ -10,6 +10,13 @@
 ## aren't tied to one player). Single player games should have a single `StdInputSlot`
 ## which defines how to swap between various connected `StdInputDevice`s.
 ##
+## Every connected device stays accepted at all times. The active device only decides
+## which device's glyphs are shown and which device haptics target. It changes on a
+## bound joypad input, on a bound key or mouse button, or on a press of one of the
+## cursor's reveal buttons when an action set opts in, and never on mouse motion, which
+## Steam Input also emits for gyro and trackpad input. See
+## https://partner.steamgames.com/doc/steamhardware/recommendations.
+##
 ## TODO: For now, this class only supports single player because there's no way to
 ## filter out device indices. Given that Godot has limited-at-best support for local
 ## multiplayer, this is not a priority.
@@ -143,6 +150,7 @@ class JoypadMonitor:
 var _actions: Array[String] = []
 var _active: StdInputDevice = null
 var _cursor_activates_kbm: bool = false
+var _cursor_reveal_mouse_buttons: Array[MouseButton] = []
 var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
 var _last_active_joypad: StdInputDevice = null
@@ -423,55 +431,10 @@ func _input(event: InputEvent) -> void:
 
 		return
 
-	# Swap to controller
-	if (
-		_active == null
-		or (
-			(
-				_active.device_type == DEVICE_TYPE_KEYBOARD
-				or _active.device_id != event.device
-			)
-			and (
-				event is InputEventJoypadButton
-				or event is InputEventJoypadMotion
-				or event is InputEventAction
-			)
-		)
-	):
-		var is_match := false
-		for action in _actions:
-			if not event.is_action_pressed(action):
-				continue
+	if _try_activate_joypad(event):
+		return
 
-			if action not in _pressed:
-				_pressed.append(action)
-				is_match = true
-				break
-
-		if not is_match:
-			return
-
-		for joypad in _joypad_devices:
-			if not joypad:
-				assert(false, "invalid state; missing device")
-				continue
-
-			if event.device != joypad.device_id:
-				continue
-
-			_activate_device(joypad)
-			break
-
-	# Swap to keyboard + mouse
-	elif (
-		claim_kbm_input
-		and (_active == null or _active.device_type != DEVICE_TYPE_KEYBOARD)
-		# NOTE: Do not swap based on mouse motion as that might be emulated from a gyro
-		# sensor.
-		and (event is InputEventKey or event is InputEventMouseButton)
-		and (_actions.any(func(a): return Input.is_action_just_pressed(a)))
-	):
-		_activate_device(_kbm_device)
+	_try_activate_kbm(event)
 
 
 func _ready() -> void:
@@ -684,14 +647,96 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 	return kbm
 
 
+## _try_activate_joypad activates the joypad which just pressed one of the active
+## actions and returns whether it did. Only joypad events and injected action events
+## are considered, so a key or mouse button never reaches a joypad.
+func _try_activate_joypad(event: InputEvent) -> bool:
+	if not (
+		event is InputEventJoypadButton
+		or event is InputEventJoypadMotion
+		or event is InputEventAction
+	):
+		return false
+
+	if (
+		_active
+		and _active.device_type != DEVICE_TYPE_KEYBOARD
+		and _active.device_id == event.device
+	):
+		return false
+
+	var is_match := false
+	for action in _actions:
+		if not event.is_action_pressed(action):
+			continue
+
+		if action not in _pressed:
+			_pressed.append(action)
+			is_match = true
+			break
+
+	if not is_match:
+		return false
+
+	for joypad in _joypad_devices:
+		if not joypad:
+			assert(false, "invalid state; missing device")
+			continue
+
+		if event.device != joypad.device_id:
+			continue
+
+		return _activate_device(joypad)
+
+	return false
+
+
+## _try_activate_kbm activates the keyboard and mouse device on a key or mouse button
+## which just pressed one of the active actions, or on a press of one of the cursor's
+## reveal buttons when an active action set opts in, and returns whether it did.
+##
+## NOTE: Mouse motion never activates the device, since Steam Input emits motion for
+## gyro and trackpad input. A mouse button Godot emulates from a touch is skipped for
+## the same reason. See
+## https://partner.steamgames.com/doc/steamhardware/recommendations.
+func _try_activate_kbm(event: InputEvent) -> bool:
+	if not claim_kbm_input:
+		return false
+
+	if not (event is InputEventKey or event is InputEventMouseButton):
+		return false
+
+	if _active and _active.device_type == DEVICE_TYPE_KEYBOARD:
+		return false
+
+	if (
+		event is InputEventMouseButton
+		and event.device == InputEvent.DEVICE_ID_EMULATION
+	):
+		return false
+
+	var is_match: bool = (
+		_cursor_activates_kbm
+		and event is InputEventMouseButton
+		and event.button_index in _cursor_reveal_mouse_buttons
+	)
+
+	if not is_match:
+		for action in _actions:
+			if event.is_action_pressed(action):
+				is_match = true
+				break
+
+	if not is_match:
+		return false
+
+	return _activate_device(_kbm_device)
+
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_cursor_visibility_changed(visible: bool) -> void:
-	if visible and claim_kbm_input and _cursor_activates_kbm:
-		assert(_kbm_device, "invalid state; missing input device")
-		_activate_device(_kbm_device)
-
 	cursor_visibility_changed.emit(visible)
 
 
@@ -700,6 +745,7 @@ func _on_Self_action_configuration_changed() -> void:
 
 	_actions = []
 	_cursor_activates_kbm = false
+	_cursor_reveal_mouse_buttons = []
 
 	# NOTE: These must be iterated in forward order so that later action set layers can
 	# override properties set in earlier action sets.
@@ -713,6 +759,11 @@ func _on_Self_action_configuration_changed() -> void:
 				or action_set.cursor_activates_kbm == PROPERTY_STATUS_ON
 			)
 		)
+
+		for button in action_set.cursor_reveal_mouse_buttons:
+			# NOTE: This operation makes this O(n^2), but arrays should be small.
+			if button not in _cursor_reveal_mouse_buttons:
+				_cursor_reveal_mouse_buttons.append(button)
 
 		# Update active actions.
 
@@ -728,17 +779,6 @@ func _on_Self_action_configuration_changed() -> void:
 
 	if cursor is StdInputCursor:
 		cursor.update_configuration(action_sets)
-
-	# NOTE: It's possible that removed action set layers had changed the cursor/keyboard
-	# activation state; reconcile that now.
-	if (
-		# The cursor is visible despite the keyboard not being active; a layer was
-		# removed that previously disabled 'cursor_activates_kbm'.
-		_cursor_activates_kbm
-		and device_type != DEVICE_TYPE_KEYBOARD
-		and cursor.get_is_visible()
-	):
-		cursor.call_deferred(&"hide_cursor")
 
 
 func _on_Self_device_activated(device: StdInputDevice) -> void:
