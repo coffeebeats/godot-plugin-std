@@ -341,9 +341,13 @@ func test_input_motion_older_than_reveal_window_is_dropped() -> void:
 	# Given: A hidden cursor whose action set sums motion over 50 ms against (4, 4).
 	_hide_with_reveal_minimum(Vector2(4, 4), 0.05)
 
-	# When: Two mouse motion events within the minimum arrive more than a window apart.
+	# Given: A mouse motion event within the minimum, aged past the window.
 	get_viewport().push_input(_motion(Vector2(3, 0)))
-	await wait_seconds(0.1)
+	var times := cursor._reveal_motion_times
+	times[0] -= 100_000
+	cursor._reveal_motion_times = times
+
+	# When: Another mouse motion event within the minimum arrives.
 	get_viewport().push_input(_motion(Vector2(3, 0)))
 
 	# Then: The cursor is still hidden.
