@@ -710,7 +710,14 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 
 	var is_match := false
 	for action in _actions:
-		if not event.is_action_pressed(action):
+		# NOTE: An injected action is matched by name, since `is_action_pressed` consults
+		# the `InputMap`, which needn't know an action Steam publishes directly.
+		var is_pressed: bool = (
+			event.action == action and event.pressed
+			if event is InputEventAction
+			else event.is_action_pressed(action)
+		)
+		if not is_pressed:
 			continue
 
 		# NOTE: Joypad motion already passes through the action's deadzone, but an
@@ -832,6 +839,15 @@ func _on_Self_action_configuration_changed() -> void:
 		for action in action_set.actions_digital:
 			assert(action not in _actions, "found duplicate action")
 			_actions.append(action)
+
+		# NOTE: Steam publishes the absolute mouse action as joypad activity, so a
+		# trackpad or gyro in use counts as the joypad being used.
+		if action_set.action_absolute_mouse:
+			assert(
+				action_set.action_absolute_mouse not in _actions,
+				"found duplicate action",
+			)
+			_actions.append(action_set.action_absolute_mouse)
 
 	if cursor is StdInputCursor:
 		cursor.update_configuration(action_sets)

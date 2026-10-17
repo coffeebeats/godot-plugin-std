@@ -24,6 +24,12 @@ const DEVICE_ID_ALL := Steam.INPUT_HANDLE_ALL_CONTROLLERS
 ## translations.
 @export var joypad_monitor: StdInputSlot.JoypadMonitor = null
 
+## pointer_activation_distance is how far (in pixels) one "absolute mouse" action event
+## must move the pointer to count as joypad activity for the `StdInputSlot`, so gyro
+## noise at rest doesn't activate the joypad. This is an activity signal rather than a
+## precision threshold, so a per-event distance is acceptable.
+@export var pointer_activation_distance: float = 2.0
+
 ## steam_input_enabled_property is a settings property that the joypad monitor will
 ## toggle based on connected controller activity.
 ##
@@ -324,6 +330,34 @@ func _publish_input_event(event: InputEvent) -> void:
 	Input.parse_input_event(event)
 
 
+## _publish_pointer_motion moves the pointer by `motion`, in pixels, for a Steam analog
+## action in a mouse mode. A captured cursor can't move, so the motion is delivered as a
+## mouse motion event for mouse-look; otherwise the cursor is warped, and the window
+## system echoes a positioned mouse motion event which hover and the cursor's reveal
+## logic handle like a real mouse.
+##
+## NOTE: Godot's Wayland backend can't warp a free pointer, so a Linux export must use
+## the X11 driver (Godot's default, and what gamescope presents on Steam Deck), and
+## macOS may not echo warps. A set which reads pointer deltas for mouse-look must
+## capture the cursor, or the pointer stops at the window edge, as a real mouse does.
+func _publish_pointer_motion(motion: Vector2) -> void:
+	if DisplayServer.mouse_get_mode() == DisplayServer.MOUSE_MODE_CAPTURED:
+		var event := InputEventMouseMotion.new()
+		event.device = InputEvent.DEVICE_ID_EMULATION
+		event.relative = motion
+		event.screen_relative = motion
+
+		Input.parse_input_event(event)
+		return
+
+	var position := Vector2(
+		DisplayServer.mouse_get_position() - DisplayServer.window_get_position()
+	)
+	var size := Vector2(DisplayServer.window_get_size())
+
+	Input.warp_mouse((position + motion).clamp(Vector2.ZERO, size))
+
+
 func _store_action_handles(action_set: StdInputActionSet) -> void:
 	if action_set in _actions_seen_action_sets:
 		return
@@ -415,11 +449,18 @@ func _on_input_action_event(
 					_publish_input_event(event)
 
 				Steam.INPUT_SOURCE_MODE_ABSOLUTE_MOUSE, Steam.INPUT_SOURCE_MODE_RELATIVE_MOUSE:
-					var event := InputEventMouseMotion.new()
-					event.device = -1  # FIXME: Should this be `0` or `device`?
-					event.relative = motion
+					_publish_pointer_motion(motion)
 
-					_publish_input_event(event)
+					# NOTE: The action is parsed without pressing it on `Input`, since it
+					# needn't exist in the `InputMap`; it only marks joypad activity.
+					var event := InputEventAction.new()
+					event.action = action
+					event.device = slot
+					event.event_index = action_handle
+					event.strength = 1.0
+					event.pressed = motion.length() >= pointer_activation_distance
+
+					Input.parse_input_event(event)
 
 				_:
 					var event_x := InputEventAction.new()

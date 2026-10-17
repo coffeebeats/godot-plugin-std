@@ -158,8 +158,10 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 @export_subgroup("Actions ")
 
 ## action_absolute_mouse is the name of an "absolute mouse"-typed action which will be
-## defined via the Steam Input API. That action should be converted into normal mouse
-## mouse input via `Input.parse_input_event`.
+## defined via the Steam Input API, so a trackpad or gyro drives the pointer. The Steam
+## actions component moves the cursor by the action's deltas, or delivers them as mouse
+## motion while the cursor is captured, and publishes the action as joypad activity for
+## the `StdInputSlot`.
 ##
 ## NOTE: This action must *not* be present in the `actions_analog_2d` array.
 @export var action_absolute_mouse: StringName = ""

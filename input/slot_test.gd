@@ -380,6 +380,33 @@ func test_input_slot_get_joypad_device_type_prefers_last_active_joypad() -> void
 	assert_eq(slot.get_joypad_device_type(), StdInputDevice.DEVICE_TYPE_STEAM_DECK)
 
 
+func test_input_slot_actions_include_absolute_mouse() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# When: An action set with an absolute mouse action is loaded.
+	var action_set := _make_action_set(&"Test")
+	action_set.action_absolute_mouse = &"aim"
+	assert_true(slot.load_action_set(action_set))
+
+	# Then: The absolute mouse action is among the active actions.
+	assert_has(slot._actions, "aim")
+
+
+func test_input_slot_absolute_mouse_action_activates_joypad() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+	slot._actions = [&"aim"]
+
+	# When: The joypad's absolute mouse action is published as pressed.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Then: The joypad is active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
 func test_input_slot_forwards_component_bindings_changed() -> void:
 	# Given: An input slot added to the scene, with its signals watched.
 	add_child_autofree(slot)
@@ -690,11 +717,13 @@ func _activate_kbm_with_joypad_connected() -> StdInputDevice:
 	return kbm
 
 
-## _injected_action returns a press of the test action injected for joypad `device`
-## at `strength`, as the Steam actions component publishes analog actions.
-func _injected_action(device: int, strength: float) -> InputEventAction:
+## _injected_action returns a press of `action` injected for joypad `device` at
+## `strength`, as the Steam actions component publishes analog actions.
+func _injected_action(
+	device: int, strength: float, action: StringName = &"test_action"
+) -> InputEventAction:
 	var event := InputEventAction.new()
-	event.action = &"test_action"
+	event.action = action
 	event.device = device
 	event.pressed = true
 	event.strength = strength
