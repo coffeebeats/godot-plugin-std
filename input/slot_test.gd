@@ -324,6 +324,64 @@ func test_input_slot_bound_key_press_activates_kbm_with_no_active_device() -> vo
 	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
 
 
+func test_input_slot_get_joypad_device_type_returns_generic_without_joypads() -> void:
+	# Given: An input slot added to the scene with no joypad connected.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Then: The joypad device type is generic.
+	assert_eq(slot.get_joypad_device_type(), StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
+func test_input_slot_get_joypad_device_type_falls_back_to_first_connected() -> void:
+	# Given: An input slot added to the scene with the keyboard kept active.
+	slot.prefer_activate_joypad_on_ready = false
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: A PlayStation 5 joypad connects without becoming active.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_PS_5
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[0])
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# Then: The joypad device type is the connected joypad's.
+	assert_eq(slot.get_joypad_device_type(), StdInputDevice.DEVICE_TYPE_PS_5)
+
+
+func test_input_slot_get_joypad_device_type_prefers_last_active_joypad() -> void:
+	# Given: An input slot added to the scene with the keyboard claimed.
+	slot.claim_kbm_input = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: A Steam Deck joypad connects and becomes active.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_STEAM_DECK
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_active_device())
+
+	# Given: A key bound to an active action returns the keyboard to active.
+	slot._actions = [&"test_action"]
+	var event := InputEventKey.new()
+	event.keycode = _TEST_KEY
+	event.pressed = true
+	slot._input(event)
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# Then: The joypad device type is the last active joypad's.
+	assert_eq(slot.get_joypad_device_type(), StdInputDevice.DEVICE_TYPE_STEAM_DECK)
+
+
 func test_input_slot_load_of_another_action_set_clears_layers() -> void:
 	# Given: An input slot with a loaded action set.
 	add_child_autofree(slot)

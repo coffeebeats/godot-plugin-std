@@ -52,7 +52,11 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 @export_subgroup("Device")
 
 ## device_type_override is an optional settings property which specifies an override for
-## the device type when determining which glyph set to display for an origin.
+## the device type when determining which glyph set to display for an origin. The value
+## only changes what's displayed; every device stays accepted. `DEVICE_TYPE_UNKNOWN`
+## follows the active device, `DEVICE_TYPE_KEYBOARD` locks the keyboard and mouse,
+## `DEVICE_TYPE_GENERIC` locks a controller with the family detected from the connected
+## joypads, and any other value locks that family.
 @export var device_type_override: StdSettingsPropertyInt = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -181,6 +185,8 @@ func _device_activated(_device: StdInputDevice) -> void:
 func _get_device_type() -> DeviceType:
 	if device_type_override is StdSettingsPropertyInt:
 		var property_value: DeviceType = device_type_override.get_value()
+		if property_value == DEVICE_TYPE_GENERIC:
+			return _slot.get_joypad_device_type()
 		if property_value != DEVICE_TYPE_UNKNOWN:
 			return property_value
 
