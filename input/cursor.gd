@@ -44,8 +44,17 @@ const Signals := preload("../event/signal.gd")
 
 const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+## confined_property is an optional settings property which, when set, decides whether
+## the cursor is confined to the window in place of the active action sets' choice, so
+## a game can offer the player a "mouse lock" toggle. A captured cursor stays captured
+## either way.
+@export var confined_property: StdSettingsPropertyBool = null
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+# gdlint:ignore=class-definitions-order
 static var _logger := StdLogger.create("std/input/cursor")
 
 var _cursor_captured: bool = false
@@ -65,6 +74,7 @@ var _reveal_motion_deltas := PackedVector2Array()
 var _reveal_motion_times := PackedInt64Array()
 var _reveal_mouse_buttons: Array[MouseButton] = []
 var _reveal_window: float = 0.0
+var _sets_confined: bool = false
 var _time_since_mouse_motion: float = 0.0
 var _was_cursor_visible: bool = false
 
@@ -74,6 +84,11 @@ var _was_cursor_visible: bool = false
 ## get_hovered returns the control currently tracked as hovered, or null.
 func get_hovered() -> Control:
 	return _hovered
+
+
+## get_is_confined returns whether the cursor is currently confined to the window.
+func get_is_confined() -> bool:
+	return _cursor_confined
 
 
 ## get_is_visible returns whether the cursor is currently visible.
@@ -233,7 +248,8 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 	has_changed = has_changed or captured != _cursor_captured
 	_cursor_captured = captured
 
-	var confined := action_sets.any(func(s): return s.cursor_confined)
+	_sets_confined = action_sets.any(func(s): return s.cursor_confined)
+	var confined := _resolve_confined()
 	has_changed = has_changed or confined != _cursor_confined
 	_cursor_confined = confined
 
@@ -246,6 +262,11 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_INPUT_CURSOR).remove_member(self)
+
+	if confined_property:
+		Signals.disconnect_safe(
+			confined_property.value_changed, _on_confined_property_changed
+		)
 
 
 func _input(event: InputEvent) -> void:
@@ -327,6 +348,12 @@ func _ready() -> void:
 	assert(StdGroup.is_empty(GROUP_INPUT_CURSOR), "invalid state; duplicate node found")
 	StdGroup.with_id(GROUP_INPUT_CURSOR).add_member(self)
 
+	if confined_property:
+		Signals.connect_safe(
+			confined_property.value_changed, _on_confined_property_changed
+		)
+		_cursor_confined = _resolve_confined()
+
 	_cursor_visible = (
 		DisplayServer.mouse_get_mode()
 		in [DisplayServer.MOUSE_MODE_VISIBLE, DisplayServer.MOUSE_MODE_CONFINED]
@@ -399,6 +426,13 @@ func _is_significant_motion(relative: Vector2) -> bool:
 		total += delta
 
 	return _exceeds_reveal_minimum(total)
+
+
+func _resolve_confined() -> bool:
+	if confined_property:
+		return confined_property.get_value()
+
+	return _sets_confined
 
 
 func _update_focus(trigger: StringName = &"") -> void:
@@ -482,6 +516,15 @@ func _update_focus(trigger: StringName = &"") -> void:
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_confined_property_changed(_value: Variant) -> void:
+	var confined := _resolve_confined()
+	if confined == _cursor_confined:
+		return
+
+	_cursor_confined = confined
+	_on_properties_changed(&"", false)
 
 
 func _on_gui_focus_changed(control: Control) -> void:
