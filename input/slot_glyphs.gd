@@ -76,6 +76,53 @@ func _get_action_glyph(
 			)
 
 
+func _get_action_origin_count(
+	_device: int,  # Active device ID
+	device_type: StdInputDevice.DeviceType,  # Active or overridden device type
+	action_set: StdInputActionSet,
+	action: StringName,
+) -> int:
+	if not slot:
+		assert(false, "invalid state; missing input slot")
+		return 0
+
+	match device_type:
+		DEVICE_TYPE_KEYBOARD:
+			var device := slot._kbm_device.device_id if slot._kbm_device else -1
+			assert(
+				slot.glyphs_kbm is StdInputDeviceGlyphs,
+				"invalid state; missing component",
+			)
+			return (
+				slot
+				. glyphs_kbm
+				. get_action_origin_count(
+					device,
+					DEVICE_TYPE_KEYBOARD,
+					action_set,
+					action,
+				)
+			)
+		_:
+			var device := (
+				slot._last_active_joypad.device_id if slot._last_active_joypad else -1
+			)
+			assert(
+				slot.glyphs_joy is StdInputDeviceGlyphs,
+				"invalid state; missing component",
+			)
+			return (
+				slot
+				. glyphs_joy
+				. get_action_origin_count(
+					device,
+					device_type,
+					action_set,
+					action,
+				)
+			)
+
+
 func _get_action_origin_label(
 	_device: int,  # Active device ID
 	device_type: StdInputDevice.DeviceType,  # Active or overridden device type

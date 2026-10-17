@@ -36,6 +36,22 @@ func get_action_glyph(
 	)
 
 
+## get_action_origin_count returns how many origins are bound to the specified action,
+## counted from the primary binding up to the first unbound index.
+func get_action_origin_count(
+	device: int,
+	device_type: StdInputDevice.DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
+) -> int:
+	assert(
+		device_type != StdInputDevice.DEVICE_TYPE_UNKNOWN,
+		"invalid argument; unknown device type",
+	)
+
+	return _get_action_origin_count(device, device_type, action_set, action)
+
+
 ## get_action_origin_label returns the localized display name for the first origin bound
 ## to the specified action.
 func get_action_origin_label(
@@ -66,6 +82,16 @@ func _get_action_glyph(
 ) -> Texture2D:
 	assert(false, "unimplemented")
 	return null
+
+
+func _get_action_origin_count(
+	_device: int,
+	_device_type: StdInputDevice.DeviceType,
+	_action_set: StdInputActionSet,
+	_action: StringName,
+) -> int:
+	assert(false, "unimplemented")
+	return 0
 
 
 func _get_action_origin_label(

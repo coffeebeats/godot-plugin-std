@@ -59,6 +59,24 @@ func _get_action_glyph(
 	return null
 
 
+func _get_action_origin_count(
+	_device: int,
+	device_type: StdInputDevice.DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
+) -> int:
+	var category := StdInputDevice.get_device_category(device_type)
+
+	var count := 0
+	for index in StdInputDeviceActions.BindingIndex.values():
+		if not Bindings.get_action_binding(scope, action_set, action, category, index):
+			break
+
+		count += 1
+
+	return count
+
+
 func _get_action_origin_label(
 	_device: int,
 	device_type: StdInputDevice.DeviceType,

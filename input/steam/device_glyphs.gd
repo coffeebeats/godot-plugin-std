@@ -66,6 +66,15 @@ func _get_action_glyph(
 	return null
 
 
+func _get_action_origin_count(
+	slot: int,
+	device_type: StdInputDevice.DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
+) -> int:
+	return _list_all_action_origins(slot, device_type, action_set, action).size()
+
+
 func _get_action_origin_label(
 	slot: int,
 	device_type: StdInputDevice.DeviceType,
@@ -90,12 +99,29 @@ func _get_action_origin_label(
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _list_action_origins returns the origin bound to the action at binding `index`, as a
+## list which is empty when nothing is bound there.
 func _list_action_origins(
 	slot: int,
 	device_type: StdInputDevice.DeviceType,
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,
+) -> PackedInt64Array:
+	var origins := _list_all_action_origins(slot, device_type, action_set, action)
+	if index < 0 or index >= origins.size():
+		return PackedInt64Array()
+
+	return PackedInt64Array([origins[index]])
+
+
+## _list_all_action_origins returns every origin bound to the action, in binding order
+## and translated to the device type's glyphs.
+func _list_all_action_origins(
+	slot: int,
+	device_type: StdInputDevice.DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
 ) -> PackedInt64Array:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD,
@@ -117,43 +143,24 @@ func _list_action_origins(
 
 	# TODO: Find some means of specifying ahead of time which action type this is.
 
-	# First, consider digital actions.
-	var i: int = 0
+	# NOTE: An action is digital or analog, so at most one of these lists has entries.
 	var action_handle: int = SteamDeviceActions.get_digital_action_handle(action)
-	for origin in Steam.getDigitalActionOrigins(
+	var raw_origins := Steam.getDigitalActionOrigins(
 		device, action_set_handle, action_handle
-	):
-		if i != index:
-			i += 1
-			continue
+	)
 
-		var translated_origin := _translate_origin(origin, device_type)
-		if translated_origin:
-			origin = translated_origin
-
-		if origin:
-			origins.append(origin)
-
-		break
-
-	# Next, consider analog actions.
-	i = 0
 	action_handle = SteamDeviceActions.get_analog_action_handle(action)
-	for origin in Steam.getAnalogActionOrigins(
-		device, action_set_handle, action_handle
-	):
-		if i != index:
-			i += 1
-			continue
+	raw_origins.append_array(
+		Steam.getAnalogActionOrigins(device, action_set_handle, action_handle)
+	)
 
+	for origin in raw_origins:
 		var translated_origin := _translate_origin(origin, device_type)
 		if translated_origin:
 			origin = translated_origin
 
 		if origin:
 			origins.append(origin)
-
-		break
 
 	return origins
 
