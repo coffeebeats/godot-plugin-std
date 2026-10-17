@@ -218,6 +218,19 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[StdInputDevic
 	return devices
 
 
+## get_joypad_device_type returns the type of joypad whose glyphs should stand for "a
+## controller": the last active joypad's, else the first connected joypad's, else
+## `DEVICE_TYPE_GENERIC` when none is connected.
+func get_joypad_device_type() -> DeviceType:
+	if _last_active_joypad:
+		return _last_active_joypad.device_type
+
+	if _joypad_devices:
+		return _joypad_devices[0].device_type
+
+	return DEVICE_TYPE_GENERIC
+
+
 ## swap_joypad_components swaps the joypad monitor and device component implementations
 ## to the ones provided. This will cause all connected joypads to disconnect, at which
 ## point they should be once the new joypad monitor is ready.
