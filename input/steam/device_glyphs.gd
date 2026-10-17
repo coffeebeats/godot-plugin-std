@@ -124,6 +124,7 @@ func _list_action_origins(
 		device, action_set_handle, action_handle
 	):
 		if i != index:
+			i += 1
 			continue
 
 		var translated_origin := _translate_origin(origin, device_type)
@@ -132,6 +133,8 @@ func _list_action_origins(
 
 		if origin:
 			origins.append(origin)
+
+		break
 
 	# Next, consider analog actions.
 	i = 0
@@ -140,6 +143,7 @@ func _list_action_origins(
 		device, action_set_handle, action_handle
 	):
 		if i != index:
+			i += 1
 			continue
 
 		var translated_origin := _translate_origin(origin, device_type)
@@ -148,6 +152,8 @@ func _list_action_origins(
 
 		if origin:
 			origins.append(origin)
+
+		break
 
 	return origins
 
