@@ -82,9 +82,10 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
 @export_subgroup("Hide")
 
-## cursor_hide_actions is a list of actions which, when "just" triggered by a non-KBM
-## device, will request the cursor to be hidden. Note that this doesn't guarantee that
-## the cursor will be hidden, as the visibility is dependent on a number of factors.
+## cursor_hide_actions is a list of actions which, when "just" triggered by any device,
+## will request the cursor to be hidden. A keyboard press hides it as well, as a desktop
+## hides the pointer while typing. Note that this doesn't guarantee that the cursor will
+## be hidden, as the visibility is dependent on a number of factors.
 ##
 ## NOTE: Actions defined in layers will add to the total set of actions which will hide
 ## the cursor. As such, there's no need to include actions from parent layers.
@@ -126,16 +127,28 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 	MOUSE_BUTTON_RIGHT,
 ]
 
-## cursor_reveal_distance_minimum defines, per axis, how much relative motion a mouse
-## motion event must exceed on at least one axis to reveal the cursor. This is used to
-## filter out slight bumps to the cursor which should otherwise not reveal it.
-##
-## NOTE: No running total is kept across events, so a slow drift whose events each stay
-## within the minimum doesn't reveal the cursor.
+## cursor_reveal_distance_minimum defines, per axis in screen pixels, how far mouse
+## motion must exceed on at least one axis to reveal the cursor. This filters out slight
+## bumps to the mouse which should not reveal it. Each event is compared on its own
+## unless `cursor_reveal_window` sums motion first.
 ##
 ## NOTE: The maximum reveal distance threshold value across all active action sets and
 ## layers will be used.
 @export var cursor_reveal_distance_minimum: Vector2 = Vector2.ZERO
+
+## cursor_reveal_window is the duration (in seconds) over which signed mouse motion is
+## summed before it's compared to `cursor_reveal_distance_minimum`, so the minimum acts
+## as a speed of `minimum / window` pixels per second. Godot merges each frame's motion
+## into one event, so a per-event minimum (a window of `0`) scales with the frame rate.
+## Back-and-forth jitter cancels out within the window, and a drift slower than that
+## speed never reveals the cursor.
+##
+## NOTE: Events arrive once per frame, so the window is quantized to whole frames. Use
+## several frames at the lowest target frame rate (`0.1` or more) to keep the remaining
+## frame rate dependence small.
+##
+## NOTE: The maximum window across all active action sets and layers will be used.
+@export var cursor_reveal_window: float = 0.0
 
 # NOTE: Unfortunately, due to Steam Input offering a far richer API for defining action
 # sets, this abstraction must leak some Steam-related details.

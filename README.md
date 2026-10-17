@@ -33,6 +33,8 @@ Additionally, the [`StateMachine`](./fsm/state_machine.gd) implementation provid
 
 The [input](./input) directory contains types for setting up an action set-based input system, along with abstractions for device and player slot APIs. When used, both Steam and Godot-backed implementations can be easily switched between.
 
+Every connected device stays accepted at all times. The active device only picks which glyphs are shown, and it changes on a bound key, button, or click, never on mouse motion, following Valve's [Steam Deck guidance](https://partner.steamgames.com/doc/steamhardware/recommendations). The cursor is tracked separately: a click or motion past a threshold reveals it, and navigation actions hide it.
+
 #### **`iter`**
 
 The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
