@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## Tests pertaining to the `StdInputCursor` class.
 ##
@@ -276,6 +277,36 @@ func test_hide_cursor_makes_cursor_hidden() -> void:
 	assert_false(cursor.get_is_visible())
 
 
+func test_input_motion_past_reveal_minimum_on_either_axis_reveals_cursor(
+	relative = use_parameters(
+		[Vector2(5, 0), Vector2(0, 5), Vector2(-3, 200), Vector2(200, -3)]
+	),
+) -> void:
+	# Given: A hidden cursor whose action set reveals it on motion past (4, 4).
+	_hide_with_reveal_minimum(Vector2(4, 4))
+
+	# When: A mouse motion event moves past the minimum on one axis.
+	get_viewport().push_input(_motion(relative))
+
+	# Then: The cursor is visible.
+	assert_true(cursor.get_is_visible())
+
+
+func test_input_motion_within_reveal_minimum_on_both_axes_keeps_cursor_hidden(
+	relative = use_parameters(
+		[Vector2(4, 4), Vector2(-4, 3), Vector2(3, -4), Vector2(1, 1)]
+	),
+) -> void:
+	# Given: A hidden cursor whose action set reveals it on motion past (4, 4).
+	_hide_with_reveal_minimum(Vector2(4, 4))
+
+	# When: A mouse motion event stays within the minimum on both axes.
+	get_viewport().push_input(_motion(relative))
+
+	# Then: The cursor is still hidden.
+	assert_false(cursor.get_is_visible())
+
+
 func test_set_focus_root_preserves_focus_when_cursor_hidden() -> void:
 	# Given: A cursor added to the scene with hidden cursor (focus mode).
 	add_child_autofree(cursor)
@@ -334,3 +365,24 @@ func before_each() -> void:
 
 func after_each() -> void:
 	cursor = null
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _hide_with_reveal_minimum adds the cursor to the scene, configures it with an action
+## set whose reveal distance minimum is `minimum`, and hides it.
+func _hide_with_reveal_minimum(minimum: Vector2) -> void:
+	add_child_autofree(cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_reveal_distance_minimum = minimum
+	cursor.update_configuration([action_set])
+	cursor.hide_cursor()
+	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
+
+
+## _motion returns a mouse motion event which moves by `relative`.
+func _motion(relative: Vector2) -> InputEventMouseMotion:
+	var event := InputEventMouseMotion.new()
+	event.relative = relative
+	return event

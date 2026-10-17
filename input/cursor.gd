@@ -231,10 +231,15 @@ func _exit_tree() -> void:
 
 func _input(event: InputEvent) -> void:
 	if not _cursor_visible:
+		# NOTE: Each axis is compared on its own, since `Vector2`'s `>` compares the y
+		# components only when the x components are equal.
 		if (
 			(
 				event is InputEventMouseMotion
-				and event.relative.abs() > _reveal_distance_minimum
+				and (
+					absf(event.relative.x) > _reveal_distance_minimum.x
+					or absf(event.relative.y) > _reveal_distance_minimum.y
+				)
 			)
 			or (
 				event is InputEventMouseButton
