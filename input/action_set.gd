@@ -120,8 +120,12 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ]
 
 ## cursor_reveal_distance_minimum defines how much relative motion must be detected for
-## the cursor to be considered "moving". This is used to filter out slight bumps to the
-## cursor which should otherwise not reveal it.
+## the cursor to be considered "moving". A mouse motion event reveals the cursor if its
+## motion along either axis exceeds this value's component on that axis. This is used
+## to filter out slight bumps to the cursor which should otherwise not reveal it.
+##
+## NOTE: Each event is checked on its own, with no running total kept across events,
+## so a slow drift whose events each stay within the minimum doesn't reveal the cursor.
 ##
 ## NOTE: The maximum reveal distance threshold value across all active action sets and
 ## layers will be used.
