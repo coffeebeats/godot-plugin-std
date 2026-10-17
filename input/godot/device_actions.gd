@@ -84,6 +84,8 @@ func reload(device: int = DEVICE_ID_ALL) -> void:
 	for layer in layers:
 		_enable_action_set_layer(device, layer)
 
+	bindings_changed.emit()
+
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 

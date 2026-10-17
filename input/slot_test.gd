@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## std/input/slot_test.gd
 ##
@@ -319,6 +320,54 @@ func test_input_slot_key_press_activates_kbm_with_no_active_device() -> void:
 	var got: StdInputDevice = slot.get_active_device()
 	assert_not_null(got)
 	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_forwards_component_bindings_changed() -> void:
+	# Given: An input slot added to the scene, with its signals watched.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	watch_signals(slot)
+
+	# When: The keyboard's actions component reports changed bindings.
+	slot.actions_kbm.bindings_changed.emit()
+
+	# Then: The slot reports a changed action configuration.
+	assert_signal_emit_count(slot, "action_configuration_changed", 1)
+
+	# When: The joypad's actions component reports changed bindings.
+	slot.actions_joy.bindings_changed.emit()
+
+	# Then: The slot reports it again.
+	assert_signal_emit_count(slot, "action_configuration_changed", 2)
+
+
+func test_input_slot_swap_forwards_the_next_components_bindings_changed() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	var actions_prev := slot.actions_joy
+
+	# Given: The joypad components are swapped for new ones.
+	var joypad_monitor := JoypadMonitor.new()
+	add_child_autofree(joypad_monitor)
+	var actions_next := DeviceActions.new()
+	add_child_autofree(actions_next)
+	slot.swap_joypad_components(
+		joypad_monitor, actions_next, slot.glyphs_joy, slot.haptics_joy
+	)
+	watch_signals(slot)
+
+	# When: The previous actions component reports changed bindings.
+	actions_prev.bindings_changed.emit()
+
+	# Then: The slot ignores it.
+	assert_signal_not_emitted(slot, "action_configuration_changed")
+
+	# When: The next actions component reports changed bindings.
+	actions_next.bindings_changed.emit()
+
+	# Then: The slot reports a changed action configuration.
+	assert_signal_emit_count(slot, "action_configuration_changed", 1)
 
 
 func test_input_slot_connects_and_disconnects_joypads() -> void:
