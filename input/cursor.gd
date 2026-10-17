@@ -8,11 +8,16 @@
 ##
 ## Cursor visibility is tracked apart from the active input device. A press of one of
 ## the reveal buttons or motion past the reveal minimum shows the cursor, hide actions
-## hide it, and neither changes which device's glyphs the `StdInputSlot` shows. While
-## hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse, so the
-## pointer can neither hover nor click them. When the cursor hides, focus goes to the
-## hovered control, else to the control focused before the cursor was revealed, else to
-## the highest-priority anchor, so a visible focus is never dropped for nothing.
+## hide it, and neither changes which device's glyphs the `StdInputSlot` shows. When the
+## cursor hides, focus goes to the hovered control, else to the control focused before
+## the cursor was revealed, else to the highest-priority anchor, so a visible focus is
+## never dropped for nothing.
+##
+## While hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse, so
+## the pointer can neither hover nor click them. Godot keeps delivering mouse events to
+## a hidden cursor, so a control without a handler still hovers and clicks under the
+## invisible pointer; consuming those events here would starve `_unhandled_input` of
+## mouse-look too, so every interactive control should have a handler instead.
 ##
 
 class_name StdInputCursor
