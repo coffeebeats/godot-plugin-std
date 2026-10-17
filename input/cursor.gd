@@ -10,7 +10,9 @@
 ## the reveal buttons or motion past the reveal minimum shows the cursor, hide actions
 ## hide it, and neither changes which device's glyphs the `StdInputSlot` shows. While
 ## hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse, so the
-## pointer can neither hover nor click them.
+## pointer can neither hover nor click them. When the cursor hides, focus goes to the
+## hovered control, else to the control focused before the cursor was revealed, else to
+## the highest-priority anchor, so a visible focus is never dropped for nothing.
 ##
 
 class_name StdInputCursor
@@ -49,6 +51,7 @@ static var _logger := StdLogger.create("std/input/cursor")
 var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = false
+var _focus_before_reveal: Control = null
 var _focus_root: Control = null
 var _focus_version: int = 0
 var _hide_actions := PackedStringArray()
@@ -439,6 +442,11 @@ func _update_focus(trigger: StringName = &"") -> void:
 		else null
 	)
 
+	# NOTE: The control focused before the last reveal is consumed by whichever hide
+	# resolves focus first, so a stale one can't take focus from a later resolution.
+	var previous := _focus_before_reveal
+	_focus_before_reveal = null
+
 	# NOTE: Only use _hovered if it's under the focus root (or there is no
 	# root). This handles the case where a modal opens over a hovered element —
 	# the element remains hovered but shouldn't receive focus (Godot bug).
@@ -449,6 +457,18 @@ func _update_focus(trigger: StringName = &"") -> void:
 
 	if _hovered:
 		unset_hovered(_hovered)
+
+	# Return to the control focused before the cursor was revealed, if it's still
+	# eligible.
+	if (
+		previous
+		and is_instance_valid(previous)
+		and previous.is_visible_in_tree()
+		and (not root or root.is_ancestor_of(previous))
+		and not (previous is BaseButton and previous.disabled)
+	):
+		_grab_focus(previous, trigger)
+		return
 
 	# Fall back to the highest-priority anchor. Use deferred calls so that the
 	# cursor visibility signal is processed first, allowing focus handlers to
@@ -497,8 +517,10 @@ func _on_properties_changed(
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
-	# Release stale focus on hidden-to-visible transitions.
+	# Release stale focus on hidden-to-visible transitions, remembering it so the next
+	# hide can return to it.
 	if _cursor_visible and not _was_cursor_visible:
+		_focus_before_reveal = get_viewport().gui_get_focus_owner()
 		get_viewport().gui_release_focus()
 	_was_cursor_visible = _cursor_visible
 

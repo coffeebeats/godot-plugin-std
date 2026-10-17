@@ -354,6 +354,69 @@ func test_input_motion_older_than_reveal_window_is_dropped() -> void:
 	assert_false(cursor.get_is_visible())
 
 
+func test_hide_cursor_restores_focus_from_before_reveal() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed, which releases focus.
+	cursor.show_cursor()
+	assert_null(cursor.get_viewport().gui_get_focus_owner(), "precondition")
+
+	# When: The cursor hides with nothing hovered.
+	cursor.hide_cursor()
+
+	# Then: The button has focus again.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_hide_cursor_prefers_hovered_over_focus_from_before_reveal() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus, then a reveal.
+	var button := _make_focusable_button()
+	button.grab_focus()
+	cursor.show_cursor()
+
+	# Given: Another button is hovered.
+	var hovered := _make_focusable_button()
+	cursor.set_hovered(hovered)
+
+	# When: The cursor hides.
+	cursor.hide_cursor()
+
+	# Then: The hovered button has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), hovered)
+
+
+func test_hide_cursor_skips_focus_from_before_reveal_outside_focus_root() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus, then a reveal.
+	var button := _make_focusable_button()
+	button.grab_focus()
+	cursor.show_cursor()
+
+	# Given: A focus root which doesn't contain the button.
+	var root := Control.new()
+	add_child_autofree(root)
+	cursor.set_focus_root(root)
+
+	# When: The cursor hides.
+	cursor.hide_cursor()
+
+	# Then: The button doesn't have focus.
+	assert_ne(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
 func test_hide_cursor_clears_summed_motion() -> void:
 	# Given: A hidden cursor whose action set sums motion over a second against (4, 4).
 	_hide_with_reveal_minimum(Vector2(4, 4), 1.0)
@@ -504,6 +567,14 @@ func _hide_with_reveal_minimum(minimum: Vector2, window: float = 0.0) -> void:
 	cursor.update_configuration([action_set])
 	cursor.hide_cursor()
 	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
+
+
+## _make_focusable_button adds a focusable button to the scene and returns it.
+func _make_focusable_button() -> Button:
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	return button
 
 
 ## _motion returns a mouse motion event which moves by `relative` in screen pixels.
