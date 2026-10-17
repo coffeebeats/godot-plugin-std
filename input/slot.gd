@@ -592,6 +592,16 @@ func _disconnect_joy_device(device: int) -> bool:
 	return false
 
 
+## _get_activation_deadzone returns the strength an injected analog action must reach
+## to activate a joypad: the action's `InputMap` deadzone, or `0.5` for an action the
+## map doesn't know.
+func _get_activation_deadzone(action: StringName) -> float:
+	if InputMap.has_action(action):
+		return InputMap.action_get_deadzone(action)
+
+	return 0.5
+
+
 func _list_action_sets(
 	device: int = DEVICE_ID_ALL, reverse: bool = false
 ) -> Array[StdInputActionSet]:
@@ -668,6 +678,15 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 	var is_match := false
 	for action in _actions:
 		if not event.is_action_pressed(action):
+			continue
+
+		# NOTE: Joypad motion already passes through the action's deadzone, but an
+		# injected analog action is pressed at any strength, so hold it to the same
+		# threshold; otherwise drift on an idle stick would activate the joypad.
+		if (
+			event is InputEventAction
+			and event.strength < _get_activation_deadzone(action)
+		):
 			continue
 
 		if action not in _pressed:

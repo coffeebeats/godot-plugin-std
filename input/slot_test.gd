@@ -11,6 +11,9 @@ extends GutTest
 
 const _TEST_ACTIONS: Array[StringName] = [&"test_action"]
 
+## _TEST_DEADZONE is the deadzone of the test action.
+const _TEST_DEADZONE := 0.5
+
 ## _TEST_KEY is the key bound to the test action.
 const _TEST_KEY := KEY_T
 
@@ -208,6 +211,29 @@ func test_input_slot_swaps_device_for_action_with_matching_id() -> void:
 	# Then: The active device is the joypad.
 	var got: StdInputDevice = autofree(slot.get_active_device())
 	assert_ne(got, kbm)
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
+func test_input_slot_injected_action_below_deadzone_does_not_activate_joypad() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	var kbm := _activate_kbm_with_joypad_connected()
+
+	# When: An injected analog action from the joypad is pressed below its deadzone.
+	slot._input(_injected_action(0, _TEST_DEADZONE - 0.1))
+
+	# Then: The keyboard stays active.
+	assert_eq(slot.get_active_device(), kbm)
+
+
+func test_input_slot_injected_action_above_deadzone_activates_joypad() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# When: An injected analog action from the joypad is pressed past its deadzone.
+	slot._input(_injected_action(0, _TEST_DEADZONE + 0.1))
+
+	# Then: The joypad is active.
+	var got: StdInputDevice = slot.get_active_device()
 	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
 
 
@@ -485,7 +511,7 @@ func after_all() -> void:
 
 func before_all() -> void:
 	for action in _TEST_ACTIONS:
-		InputMap.add_action(action)
+		InputMap.add_action(action, _TEST_DEADZONE)
 
 	var key := InputEventKey.new()
 	key.keycode = _TEST_KEY
@@ -530,6 +556,41 @@ func _activate_joypad_under_set(
 	assert_false(slot.cursor.get_is_visible(), "precondition: cursor hidden")
 
 	return joypad
+
+
+## _activate_kbm_with_joypad_connected adds the slot to the scene with the keyboard
+## active, joypad `0` connected, and the test action active. Returns the keyboard.
+func _activate_kbm_with_joypad_connected() -> StdInputDevice:
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = false
+	add_child_autofree(slot)
+
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[0])
+
+	var kbm: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(
+		kbm.device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	slot._actions = [&"test_action"]
+
+	return kbm
+
+
+## _injected_action returns a press of the test action injected for joypad `device`
+## at `strength`, as the Steam actions component publishes analog actions.
+func _injected_action(device: int, strength: float) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = &"test_action"
+	event.device = device
+	event.pressed = true
+	event.strength = strength
+	return event
 
 
 ## _make_action_set returns an action set called `id` declaring the test action.
