@@ -708,6 +708,38 @@ func test_input_slot_held_joypad_action_does_not_reactivate_after_key_release() 
 	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
 
 
+func test_input_slot_layer_change_does_not_rearm_a_held_joypad_action() -> void:
+	# Given: The keyboard is active with a joypad connected, under an action set whose
+	# held joypad action activates the joypad.
+	_activate_kbm_with_joypad_connected()
+	var action_set := _make_action_set(&"Test")
+	action_set.actions_digital = [&"aim", &"test_action"]
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+		"precondition: joypad active",
+	)
+
+	# Given: A key bound to an action is pressed and released, activating the keyboard.
+	slot._input(_key())
+	slot._input(_key(false))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# When: A layer is enabled and the still-held joypad action reports pressed again.
+	assert_true(slot.enable_action_set_layer(_make_layer(&"TestLayer", action_set)))
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Then: The keyboard stays active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
 func test_input_slot_joypad_disconnect_clears_tracked_actions() -> void:
 	# Given: The keyboard is active with a joypad connected, and a held joypad action
 	# activates the joypad.

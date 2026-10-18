@@ -838,7 +838,6 @@ func _on_Self_action_configuration_changed() -> void:
 	_actions = []
 	_cursor_activates_kbm = false
 	_cursor_reveal_mouse_buttons = []
-	_pressed = []
 
 	# NOTE: These must be iterated in forward order so that later action set layers can
 	# override properties set in earlier action sets.
