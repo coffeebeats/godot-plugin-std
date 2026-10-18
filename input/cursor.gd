@@ -305,7 +305,6 @@ func _input(event: InputEvent) -> void:
 	if _hovered:
 		for action in _hide_actions_if_hovered:
 			if not event.is_action_pressed(action):
-				_pressed.erase(action)
 				continue
 
 			if action not in _pressed:
@@ -317,7 +316,6 @@ func _input(event: InputEvent) -> void:
 
 	for action in _hide_actions:
 		if not event.is_action_pressed(action):
-			_pressed.erase(action)
 			continue
 
 		if action not in _pressed:

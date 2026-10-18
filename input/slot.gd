@@ -463,8 +463,8 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if not event.is_pressed():
-		for action in _pressed:
-			if not event.is_action_pressed(action):
+		for action in _pressed.duplicate():
+			if _is_action_released(event, action):
 				_pressed.erase(action)
 
 		return
@@ -634,6 +634,9 @@ func _disconnect_joy_device(device: int) -> bool:
 		remove_child(joypad)
 		joypad.queue_free()
 
+		# NOTE: An action held on the removed joypad would never be released.
+		_pressed = []
+
 		return true
 
 	return false
@@ -647,6 +650,25 @@ func _get_activation_deadzone(action: StringName) -> float:
 		return InputMap.action_get_deadzone(action)
 
 	return 0.5
+
+
+## _is_action_pressed returns whether `event` is a press of `action`. An injected action
+## is matched by name, and a key, button, or motion only against an action the
+## `InputMap` knows, since Steam publishes actions the map needn't define.
+func _is_action_pressed(event: InputEvent, action: StringName) -> bool:
+	if event is InputEventAction:
+		return event.action == action and event.pressed
+
+	return InputMap.has_action(action) and event.is_action_pressed(action)
+
+
+## _is_action_released returns whether `event` is a release of `action`, matched as
+## `_is_action_pressed` does.
+func _is_action_released(event: InputEvent, action: StringName) -> bool:
+	if event is InputEventAction:
+		return event.action == action and not event.pressed
+
+	return InputMap.has_action(action) and event.is_action_released(action)
 
 
 func _list_action_sets(
@@ -724,14 +746,7 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 
 	var is_match := false
 	for action in _actions:
-		# NOTE: An injected action is matched by name, since `is_action_pressed` consults
-		# the `InputMap`, which needn't know an action Steam publishes directly.
-		var is_pressed: bool = (
-			event.action == action and event.pressed
-			if event is InputEventAction
-			else event.is_action_pressed(action)
-		)
-		if not is_pressed:
+		if not _is_action_pressed(event, action):
 			continue
 
 		# NOTE: Joypad motion already passes through the action's deadzone, but an
@@ -796,7 +811,7 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 
 	if not is_match:
 		for action in _actions:
-			if event.is_action_pressed(action):
+			if _is_action_pressed(event, action):
 				is_match = true
 				break
 
@@ -823,6 +838,7 @@ func _on_Self_action_configuration_changed() -> void:
 	_actions = []
 	_cursor_activates_kbm = false
 	_cursor_reveal_mouse_buttons = []
+	_pressed = []
 
 	# NOTE: These must be iterated in forward order so that later action set layers can
 	# override properties set in earlier action sets.

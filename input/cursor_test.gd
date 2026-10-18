@@ -5,6 +5,11 @@
 
 extends GutTest
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## _TEST_HIDE_ACTION is an action registered in the `InputMap` for hiding the cursor.
+const _TEST_HIDE_ACTION := &"test_hide"
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var cursor: StdInputCursor = null
@@ -518,6 +523,29 @@ func test_input_ignored_while_cursor_captured() -> void:
 	assert_signal_not_emitted(cursor, "cursor_visibility_changed")
 
 
+func test_input_held_hide_action_does_not_rehide_after_unrelated_press() -> void:
+	# Given: A visible cursor whose action set hides on the test hide action.
+	add_child_autofree(cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
+	cursor.update_configuration([action_set])
+	cursor.show_cursor()
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+
+	# Given: The hide action is pressed and held, hiding the cursor, which is then shown
+	# again.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
+	cursor.show_cursor()
+
+	# When: An unrelated key is pressed, then the held hide action reports pressed again.
+	get_viewport().push_input(_key_press())
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+
+	# Then: The cursor is still visible.
+	assert_true(cursor.get_is_visible())
+
+
 func test_input_motion_within_reveal_minimum_keeps_hide_delay_running() -> void:
 	# Given: A visible cursor whose action set reveals it on motion past (4, 4).
 	add_child_autofree(cursor)
@@ -584,9 +612,15 @@ func test_unset_hovered_rejects_wrong_control() -> void:
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
+func after_all() -> void:
+	InputMap.erase_action(_TEST_HIDE_ACTION)
+
+
 func before_all() -> void:
 	# NOTE: Hide unactionable errors when using object doubles.
 	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
+
+	InputMap.add_action(_TEST_HIDE_ACTION)
 
 
 func before_each() -> void:
@@ -606,6 +640,14 @@ func after_each() -> void:
 ## _hide_with_reveal_minimum adds the cursor to the scene, configures it with an action
 ## set whose reveal distance minimum is `minimum` and reveal window is `window`, and
 ## hides it.
+## _action returns a press of `action`, as the Steam actions component publishes one.
+func _action(action: StringName) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	return event
+
+
 func _hide_with_reveal_minimum(minimum: Vector2, window: float = 0.0) -> void:
 	add_child_autofree(cursor)
 	var action_set := StdInputActionSet.new()
@@ -618,6 +660,14 @@ func _hide_with_reveal_minimum(minimum: Vector2, window: float = 0.0) -> void:
 
 ## _make_confined_property returns a cursor confinement property whose value defaults
 ## to `value`.
+## _key_press returns a press of a key bound to no action.
+func _key_press() -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = KEY_A
+	event.pressed = true
+	return event
+
+
 func _make_confined_property(value: bool) -> StdSettingsPropertyBool:
 	var property := StdSettingsPropertyBool.new()
 	property.scope = StdSettingsScope.new()
