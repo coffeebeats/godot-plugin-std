@@ -462,11 +462,13 @@ func _input(event: InputEvent) -> void:
 	if not event.is_action_type():
 		return
 
-	if not event.is_pressed():
-		for action in _pressed.duplicate():
-			if _is_action_released(event, action):
-				_pressed.erase(action)
+	# NOTE: A pressed event can release a tracked action too, as a stick flicked from
+	# one side to the other releases the first direction without a centered event.
+	for action in _pressed.duplicate():
+		if _is_action_released(event, action):
+			_pressed.erase(action)
 
+	if not event.is_pressed():
 		return
 
 	_has_player_input = true
@@ -737,13 +739,10 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 	):
 		return false
 
-	if (
-		_active
-		and _active.device_type != DEVICE_TYPE_KEYBOARD
-		and _active.device_id == event.device
-	):
-		return false
-
+	# NOTE: Presses are tracked for the active joypad too, and every action an event
+	# presses is tracked, so an input held across a switch to the keyboard is known to
+	# be held however it was bound, and can't switch back until released.
+	var is_held := false
 	var is_match := false
 	for action in _actions:
 		if not _is_action_pressed(event, action):
@@ -758,12 +757,21 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 		):
 			continue
 
-		if action not in _pressed:
-			_pressed.append(action)
-			is_match = true
-			break
+		if action in _pressed:
+			is_held = true
+			continue
 
-	if not is_match:
+		_pressed.append(action)
+		is_match = true
+
+	if is_held or not is_match:
+		return false
+
+	if (
+		_active
+		and _active.device_type != DEVICE_TYPE_KEYBOARD
+		and _active.device_id == event.device
+	):
 		return false
 
 	for joypad in _joypad_devices:

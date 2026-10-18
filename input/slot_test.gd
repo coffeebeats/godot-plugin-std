@@ -12,6 +12,9 @@ extends GutTest
 
 const _TEST_ACTIONS: Array[StringName] = [&"test_action"]
 
+## _TEST_AXIS_ACTIONS are two actions bound to the same joypad axis direction.
+const _TEST_AXIS_ACTIONS: Array[StringName] = [&"test_axis_a", &"test_axis_b"]
+
 ## _TEST_DEADZONE is the deadzone of the test action.
 const _TEST_DEADZONE := 0.5
 
@@ -708,6 +711,82 @@ func test_input_slot_held_joypad_action_does_not_reactivate_after_key_release() 
 	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
 
 
+func test_input_slot_joypad_held_before_switching_does_not_reactivate() -> void:
+	# Given: The keyboard is active with a joypad connected, and a joypad press
+	# activates the joypad.
+	_activate_kbm_with_joypad_connected()
+	slot._actions = [&"aim", &"fire", &"test_action"]
+	slot._input(_injected_action(0, 1.0, &"fire"))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+		"precondition: joypad active",
+	)
+
+	# Given: A joypad action is held from while the joypad is active.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Given: A key bound to an action is pressed and released, activating the keyboard.
+	slot._input(_key())
+	slot._input(_key(false))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# When: The still-held joypad action reports pressed again.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Then: The keyboard stays active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_held_axis_bound_to_two_actions_does_not_reactivate() -> void:
+	# Given: The keyboard is active with a joypad connected, and a held axis bound to
+	# two actions activates the joypad.
+	_activate_kbm_with_joypad_connected()
+	slot._actions = [&"test_axis_a", &"test_axis_b", &"test_action"]
+	slot._input(_joypad_motion(0, 1.0))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+		"precondition: joypad active",
+	)
+
+	# Given: A key bound to an action is pressed and released, activating the keyboard.
+	slot._input(_key())
+	slot._input(_key(false))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# When: The still-held axis reports motion again.
+	slot._input(_joypad_motion(0, 0.9))
+
+	# Then: The keyboard stays active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_opposite_axis_motion_releases_a_tracked_action() -> void:
+	# Given: The keyboard is active with a joypad connected, and a held axis is
+	# tracked.
+	_activate_kbm_with_joypad_connected()
+	slot._actions = [&"test_axis_a", &"test_axis_b"]
+	slot._input(_joypad_motion(0, 1.0))
+	assert_has(slot._pressed, "test_axis_a", "precondition: action tracked")
+
+	# When: The axis flicks to the opposite side without a centered event.
+	slot._input(_joypad_motion(0, -1.0))
+
+	# Then: The action is no longer tracked.
+	assert_does_not_have(slot._pressed, "test_axis_a")
+
+
 func test_input_slot_layer_change_does_not_rearm_a_held_joypad_action() -> void:
 	# Given: The keyboard is active with a joypad connected, under an action set whose
 	# held joypad action activates the joypad.
@@ -759,7 +838,7 @@ func test_input_slot_joypad_disconnect_clears_tracked_actions() -> void:
 
 
 func after_all() -> void:
-	for action in _TEST_ACTIONS:
+	for action in _TEST_ACTIONS + _TEST_AXIS_ACTIONS:
 		InputMap.erase_action(action)
 
 
@@ -770,6 +849,10 @@ func before_all() -> void:
 	var key := InputEventKey.new()
 	key.keycode = _TEST_KEY
 	InputMap.action_add_event(&"test_action", key)
+
+	for action in _TEST_AXIS_ACTIONS:
+		InputMap.add_action(action, _TEST_DEADZONE)
+		InputMap.action_add_event(action, _joypad_motion(0, 1.0))
 
 
 func before_each() -> void:
@@ -846,6 +929,16 @@ func _injected_action(
 	event.device = device
 	event.pressed = true
 	event.strength = strength
+	return event
+
+
+## _joypad_motion returns a motion of the left stick's horizontal axis on joypad
+## `device` to `value`.
+func _joypad_motion(device: int, value: float) -> InputEventJoypadMotion:
+	var event := InputEventJoypadMotion.new()
+	event.device = device
+	event.axis = JOY_AXIS_LEFT_X
+	event.axis_value = value
 	return event
 
 
