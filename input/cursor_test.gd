@@ -390,9 +390,9 @@ func test_input_motion_older_than_reveal_window_is_dropped() -> void:
 
 	# Given: A mouse motion event within the minimum, aged past the window.
 	get_viewport().push_input(_motion(Vector2(3, 0)))
-	var times := cursor._reveal_motion_times
+	var times := cursor._reveal_motion._times
 	times[0] -= 100_000
-	cursor._reveal_motion_times = times
+	cursor._reveal_motion._times = times
 
 	# When: Another mouse motion event within the minimum arrives.
 	get_viewport().push_input(_motion(Vector2(3, 0)))
@@ -494,7 +494,7 @@ func test_update_configuration_uses_largest_reveal_window() -> void:
 	cursor.update_configuration([shorter, longer])
 
 	# Then: The longer window is used.
-	assert_eq(cursor._reveal_window, 0.5)
+	assert_eq(cursor._reveal_motion.window, 0.5)
 
 
 func test_input_ignored_while_cursor_captured() -> void:
