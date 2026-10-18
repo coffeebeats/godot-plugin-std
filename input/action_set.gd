@@ -130,7 +130,9 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## cursor_reveal_distance_minimum defines, per axis in screen pixels, how far mouse
 ## motion must exceed on at least one axis to reveal the cursor. This filters out slight
 ## bumps to the mouse which should not reveal it. Each event is compared on its own
-## unless `cursor_reveal_window` sums motion first.
+## unless `cursor_reveal_window` sums motion first. The same threshold decides when
+## `action_absolute_mouse` motion counts as joypad activity, so the cursor and the
+## active device agree on what deliberate pointing is.
 ##
 ## NOTE: The maximum reveal distance threshold value across all active action sets and
 ## layers will be used.
@@ -161,7 +163,12 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## defined via the Steam Input API, so a trackpad or gyro drives the pointer. The Steam
 ## actions component moves the cursor by the action's deltas, or delivers them as mouse
 ## motion while the cursor is captured, and publishes the action as joypad activity for
-## the `StdInputSlot`.
+## the `StdInputSlot` once its motion passes `cursor_reveal_distance_minimum`, summed
+## over `cursor_reveal_window`.
+##
+## NOTE: A captured set which reads these deltas for aiming should set a non-zero
+## `cursor_reveal_distance_minimum` too; otherwise an always-on gyro at rest switches
+## glyphs to the controller while a mouse aims.
 ##
 ## NOTE: This action must *not* be present in the `actions_analog_2d` array.
 @export var action_absolute_mouse: StringName = ""

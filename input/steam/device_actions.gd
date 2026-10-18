@@ -11,6 +11,7 @@ extends StdInputDeviceActions
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const MotionFilter := preload("../motion_filter.gd")
 const Signals := preload("../../event/signal.gd")
 const SteamJoypadMonitor := preload("joypad_monitor.gd")
 
@@ -23,12 +24,6 @@ const DEVICE_ID_ALL := Steam.INPUT_HANDLE_ALL_CONTROLLERS
 ## joypad_monitor is a Steam-specific joypad monitor, used to look up slot-to-device ID
 ## translations.
 @export var joypad_monitor: StdInputSlot.JoypadMonitor = null
-
-## pointer_activation_distance is how far (in pixels) one "absolute mouse" action event
-## must move the pointer to count as joypad activity for the `StdInputSlot`, so gyro
-## noise at rest doesn't activate the joypad. This is an activity signal rather than a
-## precision threshold, so a per-event distance is acceptable.
-@export var pointer_activation_distance: float = 2.0
 
 ## steam_input_enabled_property is a settings property that the joypad monitor will
 ## toggle based on connected controller activity.
@@ -64,6 +59,10 @@ static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ig
 static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-order
 
 var _logger := StdLogger.create("std/input/steam/device-actions")
+
+## _pointer_motion maps slots to the filter which decides when that slot's "absolute
+## mouse" motion counts as joypad activity.
+var _pointer_motion: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -318,6 +317,30 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _get_pointer_motion_filter returns the slot's pointer motion filter, configured from
+## the action sets Steam currently reports active for it.
+##
+## NOTE: The threshold is read on each event rather than when sets change, since Steam
+## only reflects a set or layer change once the next input arrives.
+func _get_pointer_motion_filter(slot: int) -> MotionFilter:
+	var filter: MotionFilter = _pointer_motion.get(slot)
+	if not filter:
+		filter = MotionFilter.new()
+		_pointer_motion[slot] = filter
+
+	var action_sets: Array[StdInputActionSet] = []
+
+	var action_set := get_action_set(slot)
+	if action_set:
+		action_sets.append(action_set)
+
+	action_sets.append_array(list_action_set_layers(slot))
+
+	filter.configure(action_sets)
+
+	return filter
+
+
 func _publish_input_event(event: InputEvent) -> void:
 	if not event is InputEventAction:
 		return
@@ -452,13 +475,16 @@ func _on_input_action_event(
 					_publish_pointer_motion(motion)
 
 					# NOTE: The action is parsed without pressing it on `Input`, since it
-					# needn't exist in the `InputMap`; it only marks joypad activity.
+					# needn't exist in the `InputMap`; it only marks joypad activity. It's
+					# pressed once motion passes the active sets' cursor reveal threshold,
+					# the same filter `StdInputCursor` applies, so gyro wobble from a
+					# controller at rest can't switch glyphs away from a mouse in use.
 					var event := InputEventAction.new()
 					event.action = action
 					event.device = slot
 					event.event_index = action_handle
 					event.strength = 1.0
-					event.pressed = motion.length() >= pointer_activation_distance
+					event.pressed = _get_pointer_motion_filter(slot).push(motion)
 
 					Input.parse_input_event(event)
 
