@@ -365,8 +365,15 @@ func _publish_input_event(event: InputEvent) -> void:
 ## capture the cursor, or the pointer stops at the window edge, as a real mouse does.
 func _publish_pointer_motion(motion: Vector2) -> void:
 	if DisplayServer.mouse_get_mode() == DisplayServer.MOUSE_MODE_CAPTURED:
+		# NOTE: The viewport resolves hover from the event's position and `Input` stores
+		# it as the pointer's, so the current position is carried; a zero position would
+		# hover whatever control sits at the window origin on every delta.
+		var pointer := get_viewport().get_mouse_position()
+
 		var event := InputEventMouseMotion.new()
 		event.device = InputEvent.DEVICE_ID_EMULATION
+		event.position = pointer
+		event.global_position = pointer
 		event.relative = motion
 		event.screen_relative = motion
 
