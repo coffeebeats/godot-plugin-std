@@ -136,6 +136,41 @@ static func resolve_action_set_name(
 	return StringName("%s_%s" % [action_set.name, current.name])
 
 
+## split_analog_2d returns the four directional action events a stick's `motion` drives
+## for the 2D analog `action`, in `StdInputActionSet.ANALOG_2D_DIRECTIONS` order, each
+## pressed at the strength of its half of the axis. Godot clamps an action's strength
+## to `[0, 1]`, so a signed axis can't travel on one action.
+##
+## NOTE: Steam reports a stick's `y` as positive upward, so `+y` drives `_up`.
+static func split_analog_2d(
+	action: StringName,
+	motion: Vector2,
+	action_handle: int,
+	slot: int,
+) -> Array[InputEventAction]:
+	var events: Array[InputEventAction] = []
+
+	var names := StdInputActionSet.list_analog_2d_actions(action)
+	var strengths: Array[float] = [
+		maxf(-motion.x, 0.0),
+		maxf(motion.x, 0.0),
+		maxf(motion.y, 0.0),
+		maxf(-motion.y, 0.0),
+	]
+
+	for i in names.size():
+		var event := InputEventAction.new()
+		event.action = names[i]
+		event.device = slot
+		event.event_index = action_handle
+		event.strength = strengths[i]
+		event.pressed = event.strength > 0.0
+
+		events.append(event)
+
+	return events
+
+
 ## is_action_set_enabled returns whether the provided name refers to an active action
 ## set or action set layer.
 func is_action_set_enabled(slot: int, action_set_name: String) -> bool:
@@ -346,7 +381,7 @@ func _publish_input_event(event: InputEvent) -> void:
 		return
 
 	if event.pressed:
-		Input.action_press(event.action)
+		Input.action_press(event.action, event.strength)
 	else:
 		Input.action_release(event.action)
 
@@ -393,6 +428,11 @@ func _store_action_handles(action_set: StdInputActionSet) -> void:
 		return
 
 	for action in action_set.actions_digital:
+		# NOTE: A stick's directional actions have no Steam action of their own; the
+		# stick's 2D action publishes them.
+		if action_set.get_analog_2d_action(action):
+			continue
+
 		var handle := get_digital_action_handle(action)
 		if not handle:
 			assert(false, "failed to fetch action handle")
@@ -410,22 +450,16 @@ func _store_action_handles(action_set: StdInputActionSet) -> void:
 
 	for action in action_set.actions_analog_2d:
 		assert(
-			action.ends_with("_x") or action.ends_with("_y"),
-			"invalid action; 2D analog action must specify axis"
-		)
-		assert(
 			action != action_set.action_absolute_mouse,
 			"invalid config; conflicting action type"
 		)
 
-		var action_base := action.trim_suffix("_x").trim_suffix("_y")
-
-		var handle := get_analog_action_handle(action_base)
+		var handle := get_analog_action_handle(action)
 		if not handle:
 			assert(false, "failed to fetch action handle")
 			continue
 
-		_actions[handle] = action_base
+		_actions[handle] = action
 
 	if action_set.action_absolute_mouse:
 		var handle := get_analog_action_handle(action_set.action_absolute_mouse)
@@ -496,27 +530,8 @@ func _on_input_action_event(
 					Input.parse_input_event(event)
 
 				_:
-					var event_x := InputEventAction.new()
-					event_x.device = slot
-					event_x.action = action + "_x"
-					event_x.event_index = action_handle
-
-					event_x.strength = motion.x
-
-					# FIXME: It's not clear whether reported event strength is *after* deadzone
-					# handling or if it's always the raw value.
-					event_x.pressed = event_x.strength != 0.0
-
-					var event_y := event_x.duplicate()
-					event_y.action = action + "_y"
-					event_y.strength = action_data["y"]
-
-					# FIXME: It's not clear whether reported event strength is *after* deadzone
-					# handling or if it's always the raw value.
-					event_y.pressed = event_y.strength != 0.0
-
-					_publish_input_event(event_x)
-					_publish_input_event(event_y)
+					for event in split_analog_2d(action, motion, action_handle, slot):
+						_publish_input_event(event)
 
 		Steam.INPUT_ACTION_EVENT_TYPE_DIGITAL_ACTION:
 			var event := InputEventAction.new()

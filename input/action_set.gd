@@ -23,6 +23,10 @@ const PROPERTY_STATUS_INHERIT := PropertyStatus.INHERIT
 const PROPERTY_STATUS_ON := PropertyStatus.ON
 const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
+## ANALOG_2D_DIRECTIONS are the suffixes of the four digital actions a 2D analog
+## action's stick drives, in the order `Input.get_vector` takes them.
+const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"down"]
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## name is the name of the identifier for the action set. It must be unique among all
@@ -38,8 +42,17 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
 @export_subgroup("2D ")
 
-## actions_analog_2d is a list of input actions names which can be bound to 2D analog
-## input origins (e.g. left/right joysticks).
+## actions_analog_2d is a list of 2D analog actions, each naming a stick which drives
+## the four digital actions `<action>_left`, `<action>_right`, `<action>_up`, and
+## `<action>_down`, which must also be listed in `actions_digital`. Godot binds,
+## rebinds, and shows glyphs for those four as it does any digital action, and the game
+## reads them with `Input.get_vector`. Steam defines the 2D action as one
+## `joystick_move` action in their place: the four leave the manifest, the Steam actions
+## component publishes them from the stick's axes, and a glyph for any of them shows
+## the stick.
+##
+## NOTE: A name must not end in `_x` or `_y`; an axis is a pair of directions, not an
+## action, since Godot clamps an action's strength to `[0, 1]`.
 @export var actions_analog_2d: Array[StringName] = []
 
 @export_group("Digital actions ")
@@ -186,6 +199,16 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## get_analog_2d_action returns the 2D analog action whose stick drives the digital
+## `action`, or an empty name when no stick does.
+func get_analog_2d_action(action: StringName) -> StringName:
+	for stick in actions_analog_2d:
+		if action in list_analog_2d_actions(stick):
+			return stick
+
+	return &""
+
+
 ## list_action_names returns a list of all actions included in the action set. There is
 ## no guarantee on the order of returned items.
 func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArray:
@@ -196,6 +219,15 @@ func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArra
 		names.append(action)
 	for action in actions_analog_2d:
 		assert(action not in names, "invalid config; duplicate action")
+		assert(
+			not (action.ends_with("_x") or action.ends_with("_y")),
+			"invalid config; a 2D analog action names its stick, not an axis",
+		)
+		for direction in list_analog_2d_actions(action):
+			assert(
+				direction in actions_digital,
+				"invalid config; missing a stick's directional action",
+			)
 		names.append(action)
 	for action in actions_digital:
 		assert(action not in names, "invalid config; duplicate action")
@@ -203,6 +235,17 @@ func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArra
 	if include_absolute_mouse and action_absolute_mouse:
 		assert(action_absolute_mouse not in names, "invalid config; duplicate action")
 		names.append(action_absolute_mouse)
+
+	return names
+
+
+## list_analog_2d_actions returns the four digital actions the 2D analog `action`'s
+## stick drives, in `ANALOG_2D_DIRECTIONS` order.
+static func list_analog_2d_actions(action: StringName) -> Array[StringName]:
+	var names: Array[StringName] = []
+
+	for direction in ANALOG_2D_DIRECTIONS:
+		names.append(StringName("%s_%s" % [action, direction]))
 
 	return names
 

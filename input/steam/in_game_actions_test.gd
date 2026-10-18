@@ -74,17 +74,21 @@ func test_render_writes_sets_layers_and_localization() -> void:
 
 
 func test_render_writes_analog_sections() -> void:
-	# Given: A set with analog actions and an absolute mouse action.
+	# Given: A set with analog actions, a stick's directional actions beside another
+	# digital action, and an absolute mouse action.
 	var gameplay := StdInputActionSet.new()
 	gameplay.name = &"Gameplay"
 	gameplay.actions_analog_1d = [&"throttle"]
-	gameplay.actions_analog_2d = [&"look_x"]
+	gameplay.actions_analog_2d = [&"look"]
+	gameplay.actions_digital = StdInputActionSet.list_analog_2d_actions(&"look")
+	gameplay.actions_digital.append(&"fire")
 	gameplay.action_absolute_mouse = &"aim"
 
 	# When: The manifest is rendered with no languages.
 	var got := manifest.render([gameplay], {})
 
-	# Then: The stick and trigger sections precede the empty localization block.
+	# Then: The stick, trigger, and button sections precede the empty localization
+	# block, and the stick's directional actions are left out of the buttons.
 	var want := _lines(
 		[
 			'"In Game Actions"',
@@ -97,9 +101,9 @@ func test_render_writes_analog_sections() -> void:
 			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
 			'\t\t\t"StickPadGyro"',
 			"\t\t\t{",
-			'\t\t\t\t"look_x"',
+			'\t\t\t\t"look"',
 			"\t\t\t\t{",
-			'\t\t\t\t\t"title"\t\t\t"#action_look_x"',
+			'\t\t\t\t\t"title"\t\t\t"#action_look"',
 			'\t\t\t\t\t"input_mode"\t\t\t"joystick_move"',
 			"\t\t\t\t}",
 			'\t\t\t\t"aim"',
@@ -111,6 +115,10 @@ func test_render_writes_analog_sections() -> void:
 			'\t\t\t"AnalogTrigger"',
 			"\t\t\t{",
 			'\t\t\t\t"throttle"\t\t\t\t"#action_throttle"',
+			"\t\t\t}",
+			'\t\t\t"Button"',
+			"\t\t\t{",
+			'\t\t\t\t"fire"\t\t\t\t"#action_fire"',
 			"\t\t\t}",
 			"\t\t}",
 			"\t}",
