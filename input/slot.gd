@@ -14,7 +14,9 @@
 ## which device's glyphs are shown and which device haptics target. It changes on a
 ## bound joypad input, on a bound key or mouse button, or on a press of one of the
 ## cursor's reveal buttons when an action set opts in, and never on mouse motion, which
-## Steam Input also emits for gyro and trackpad input. See
+## Steam Input also emits for gyro and trackpad input. A joypad connected before the
+## player's first input is activated over the keyboard when preferred; one connected
+## after that is only connected, so a hot-plug never changes the prompts. See
 ## https://partner.steamgames.com/doc/steamhardware/recommendations.
 ##
 ## TODO: For now, this class only supports single player because there's no way to
@@ -98,9 +100,11 @@ class JoypadMonitor:
 ## NOTE: If `true`, the keyboard and mouse device will be activated initially.
 @export var claim_kbm_input: bool = true
 
-## prefer_activate_joypad_on_ready defines whether a connected controller should be
-## activated upon this `StdInputSlot` first loading (overriding an active keyboard).
-## Note that the first joypad will always be selected at first.
+## prefer_activate_joypad_on_ready defines whether a joypad connected before the
+## player's first input (a key, mouse button, or joypad press) is activated over the
+## keyboard, which the slot activates when it loads. Joypad monitors can report
+## controllers a few frames after `_ready`, so the preference lasts until that first
+## input, not until the slot is ready. A joypad connected later is only connected.
 @export var prefer_activate_joypad_on_ready: bool = true
 
 @export_group("Properties")
@@ -151,6 +155,7 @@ var _actions: Array[String] = []
 var _active: StdInputDevice = null
 var _cursor_activates_kbm: bool = false
 var _cursor_reveal_mouse_buttons: Array[MouseButton] = []
+var _has_player_input: bool = false
 var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
 var _last_active_joypad: StdInputDevice = null
@@ -464,6 +469,8 @@ func _input(event: InputEvent) -> void:
 
 		return
 
+	_has_player_input = true
+
 	if _try_activate_joypad(event):
 		return
 
@@ -597,7 +604,14 @@ func _connect_joy_device(
 	add_child(joypad, false, INTERNAL_MODE_BACK)
 	device_connected.emit(joypad)
 
-	if not _active or (_active == _kbm_device and prefer_activate_joypad_on_ready):
+	if (
+		not _active
+		or (
+			_active == _kbm_device
+			and prefer_activate_joypad_on_ready
+			and not _has_player_input
+		)
+	):
 		_activate_device(joypad)
 		cursor.call_deferred(&"hide_cursor")
 

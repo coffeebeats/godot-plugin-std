@@ -636,6 +636,49 @@ func test_input_slot_layer_enabled_before_any_device_reaches_a_later_joypad() ->
 	assert_eq(_actions_joy.layers, [layer] as Array[StdInputActionSetLayer])
 
 
+func test_input_slot_joypad_connected_before_player_input_activates() -> void:
+	# Given: An input slot added to the scene with the keyboard active and a joypad
+	# preferred.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# When: A joypad connects before the player has pressed anything.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	# Then: The joypad is active.
+	var got: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
+func test_input_slot_joypad_connected_after_player_input_stays_inactive() -> void:
+	# Given: An input slot added to the scene with the keyboard active and a joypad
+	# preferred.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._actions = [&"test_action"]
+	watch_signals(slot)
+
+	# Given: The player presses a key bound to an action.
+	slot._input(_key())
+
+	# When: A joypad connects.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[0])
+
+	# Then: The keyboard stays active and nothing was activated.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+	assert_signal_not_emitted(slot, "device_activated")
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -727,6 +770,15 @@ func _injected_action(
 	event.device = device
 	event.pressed = true
 	event.strength = strength
+	return event
+
+
+## _key returns a press, or a release when `pressed` is `false`, of the key bound to the
+## test action.
+func _key(pressed: bool = true) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = _TEST_KEY
+	event.pressed = pressed
 	return event
 
 
