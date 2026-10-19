@@ -227,6 +227,7 @@ func test_input_slot_mouse_motion_reveals_cursor_without_activating_kbm() -> voi
 	# When: The mouse moves.
 	var event := InputEventMouseMotion.new()
 	event.relative = Vector2(10, 10)
+	event.screen_relative = Vector2(10, 10)
 	get_viewport().push_input(event)
 
 	# Then: The cursor is revealed.

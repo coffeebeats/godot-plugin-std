@@ -307,6 +307,129 @@ func test_input_motion_within_reveal_minimum_on_both_axes_keeps_cursor_hidden(
 	assert_false(cursor.get_is_visible())
 
 
+func test_input_motion_within_reveal_window_sums_across_events() -> void:
+	# Given: A hidden cursor whose action set sums motion over a second against (4, 4).
+	_hide_with_reveal_minimum(Vector2(4, 4), 1.0)
+
+	# When: Two mouse motion events each stay within the minimum.
+	get_viewport().push_input(_motion(Vector2(2, 0)))
+	get_viewport().push_input(_motion(Vector2(2, 0)))
+
+	# Then: The cursor is still hidden.
+	assert_false(cursor.get_is_visible())
+
+	# When: A third event carries the sum past the minimum.
+	get_viewport().push_input(_motion(Vector2(2, 0)))
+
+	# Then: The cursor is visible.
+	assert_true(cursor.get_is_visible())
+
+
+func test_input_motion_within_reveal_window_cancels_opposing_motion() -> void:
+	# Given: A hidden cursor whose action set sums motion over a second against (4, 4).
+	_hide_with_reveal_minimum(Vector2(4, 4), 1.0)
+
+	# When: Mouse motion events jitter back and forth within the window.
+	for relative in [Vector2(3, 0), Vector2(-3, 0), Vector2(3, 0)]:
+		get_viewport().push_input(_motion(relative))
+
+	# Then: The cursor is still hidden.
+	assert_false(cursor.get_is_visible())
+
+
+func test_input_motion_older_than_reveal_window_is_dropped() -> void:
+	# Given: A hidden cursor whose action set sums motion over 50 ms against (4, 4).
+	_hide_with_reveal_minimum(Vector2(4, 4), 0.05)
+
+	# Given: A mouse motion event within the minimum, aged past the window.
+	get_viewport().push_input(_motion(Vector2(3, 0)))
+	var times := cursor._reveal_motion_times
+	times[0] -= 100_000
+	cursor._reveal_motion_times = times
+
+	# When: Another mouse motion event within the minimum arrives.
+	get_viewport().push_input(_motion(Vector2(3, 0)))
+
+	# Then: The cursor is still hidden.
+	assert_false(cursor.get_is_visible())
+
+
+func test_hide_cursor_clears_summed_motion() -> void:
+	# Given: A hidden cursor whose action set sums motion over a second against (4, 4).
+	_hide_with_reveal_minimum(Vector2(4, 4), 1.0)
+
+	# Given: A mouse motion event within the minimum, then a show and a hide.
+	get_viewport().push_input(_motion(Vector2(3, 0)))
+	cursor.show_cursor()
+	cursor.hide_cursor()
+
+	# When: Another mouse motion event within the minimum arrives.
+	get_viewport().push_input(_motion(Vector2(3, 0)))
+
+	# Then: The cursor is still hidden.
+	assert_false(cursor.get_is_visible())
+
+
+func test_update_configuration_uses_largest_reveal_window() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: Two action sets with different reveal windows.
+	var shorter := StdInputActionSet.new()
+	shorter.cursor_reveal_window = 0.2
+	var longer := StdInputActionSet.new()
+	longer.cursor_reveal_window = 0.5
+
+	# When: The configuration is updated with both.
+	cursor.update_configuration([shorter, longer])
+
+	# Then: The longer window is used.
+	assert_eq(cursor._reveal_window, 0.5)
+
+
+func test_input_ignored_while_cursor_captured() -> void:
+	# Given: A cursor added to the scene under an action set which captures it.
+	add_child_autofree(cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_captured = true
+	cursor.update_configuration([action_set])
+	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
+	watch_signals(cursor)
+
+	# When: The mouse moves and a reveal button is pressed.
+	get_viewport().push_input(_motion(Vector2(10, 10)))
+	var button := InputEventMouseButton.new()
+	button.button_index = MOUSE_BUTTON_LEFT
+	button.pressed = true
+	get_viewport().push_input(button)
+
+	# Then: The cursor stays hidden and no visibility change is reported.
+	assert_false(cursor.get_is_visible())
+	assert_signal_not_emitted(cursor, "cursor_visibility_changed")
+
+
+func test_input_motion_within_reveal_minimum_keeps_hide_delay_running() -> void:
+	# Given: A visible cursor whose action set reveals it on motion past (4, 4).
+	add_child_autofree(cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_reveal_distance_minimum = Vector2(4, 4)
+	cursor.update_configuration([action_set])
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+	cursor._time_since_mouse_motion = 5.0
+
+	# When: A mouse motion event stays within the minimum.
+	get_viewport().push_input(_motion(Vector2(1, 0)))
+
+	# Then: The time since motion is untouched.
+	assert_eq(cursor._time_since_mouse_motion, 5.0)
+
+	# When: A mouse motion event moves past the minimum.
+	get_viewport().push_input(_motion(Vector2(10, 0)))
+
+	# Then: The time since motion is reset.
+	assert_eq(cursor._time_since_mouse_motion, 0.0)
+
+
 func test_set_focus_root_preserves_focus_when_cursor_hidden() -> void:
 	# Given: A cursor added to the scene with hidden cursor (focus mode).
 	add_child_autofree(cursor)
@@ -371,18 +494,21 @@ func after_each() -> void:
 
 
 ## _hide_with_reveal_minimum adds the cursor to the scene, configures it with an action
-## set whose reveal distance minimum is `minimum`, and hides it.
-func _hide_with_reveal_minimum(minimum: Vector2) -> void:
+## set whose reveal distance minimum is `minimum` and reveal window is `window`, and
+## hides it.
+func _hide_with_reveal_minimum(minimum: Vector2, window: float = 0.0) -> void:
 	add_child_autofree(cursor)
 	var action_set := StdInputActionSet.new()
 	action_set.cursor_reveal_distance_minimum = minimum
+	action_set.cursor_reveal_window = window
 	cursor.update_configuration([action_set])
 	cursor.hide_cursor()
 	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
 
 
-## _motion returns a mouse motion event which moves by `relative`.
+## _motion returns a mouse motion event which moves by `relative` in screen pixels.
 func _motion(relative: Vector2) -> InputEventMouseMotion:
 	var event := InputEventMouseMotion.new()
 	event.relative = relative
+	event.screen_relative = relative
 	return event
