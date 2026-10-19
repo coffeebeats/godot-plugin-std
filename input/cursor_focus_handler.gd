@@ -5,6 +5,11 @@
 ## `Control` node. It will work with a `StdInputCursor` singleton node to grab or
 ## release focus depending on whether the UI navigation mode is cursor or focus-based.
 ##
+## A handler also makes its control ignore the mouse while the cursor is hidden. Godot
+## keeps delivering mouse events to a hidden cursor, so a control without a handler
+## still hovers and clicks under the invisible pointer; give every interactive control
+## one.
+##
 
 class_name StdInputCursorFocusHandler
 extends Control

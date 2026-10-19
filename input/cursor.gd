@@ -8,8 +8,15 @@
 ##
 ## Cursor visibility is tracked apart from the active input device; showing or hiding
 ## the cursor never activates a device, though the `StdInputSlot` may activate one from
-## the same press. While hidden, controls managed by a `StdInputCursorFocusHandler`
-## ignore the mouse, so the pointer can neither hover nor click them.
+## the same press. When the cursor hides, focus goes to the hovered control, else to the
+## control focused before the cursor was revealed, else to the highest-priority anchor,
+## so a visible focus is never dropped for nothing.
+##
+## While hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse, so
+## the pointer can neither hover nor click them. Godot keeps delivering mouse events to
+## a hidden cursor, so a control without a handler still hovers and clicks under the
+## invisible pointer; consuming those events here would starve `_unhandled_input` of
+## mouse-look too, so every interactive control should have a handler instead.
 ##
 
 class_name StdInputCursor
@@ -48,6 +55,7 @@ static var _logger := StdLogger.create("std/input/cursor")
 var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = false
+var _focus_before_reveal: Control = null
 var _focus_root: Control = null
 var _focus_version: int = 0
 var _hide_actions := PackedStringArray()
@@ -354,6 +362,26 @@ func _grab_focus(target: Control, trigger: StringName) -> void:
 	target.grab_focus()
 
 
+## _grab_focus_deferred focuses `target` at the end of the frame, once the event which
+## hid the cursor has finished propagating, so a hide action which also navigates focus
+## can't move it off the control it was just given. With `make_focusable`, the control's
+## focus mode is set first; otherwise its focus handler is expected to restore it.
+func _grab_focus_deferred(
+	target: Control, trigger: StringName, make_focusable: bool
+) -> void:
+	var grab := func() -> void:
+		if not is_instance_valid(target) or not target.is_inside_tree():
+			return
+
+		if make_focusable:
+			target.focus_mode = Control.FOCUS_ALL
+
+		about_to_grab_focus.emit(target, trigger)
+		target.grab_focus()
+
+	grab.call_deferred()
+
+
 ## _is_significant_motion returns whether `relative`, a mouse motion in screen pixels,
 ## exceeds the reveal minimum on either axis, after summing it with the signed motion
 ## within the reveal window if one is set.
@@ -416,6 +444,14 @@ func _update_focus(trigger: StringName = &"") -> void:
 		_pending_focus = null
 		return
 
+	# NOTE: The control focused before the last reveal is consumed by the first hidden
+	# resolution, whichever target that resolution picks, so a stale one can't take
+	# focus from a later resolution, such as one after the picked control closes.
+	var previous: Control = null
+	if not _cursor_visible:
+		previous = _focus_before_reveal
+		_focus_before_reveal = null
+
 	# Consume the pending focus target.
 	var pending := _pending_focus
 	_pending_focus = null
@@ -448,20 +484,31 @@ func _update_focus(trigger: StringName = &"") -> void:
 	# root). This handles the case where a modal opens over a hovered element —
 	# the element remains hovered but shouldn't receive focus (Godot bug).
 	if _hovered and (not root or root.is_ancestor_of(_hovered)):
-		_grab_focus(_hovered, trigger)
+		_grab_focus_deferred(_hovered, trigger, true)
 		unset_hovered(_hovered)
 		return
 
 	if _hovered:
 		unset_hovered(_hovered)
 
-	# Fall back to the highest-priority anchor. Use deferred calls so that the
-	# cursor visibility signal is processed first, allowing focus handlers to
-	# restore focus_mode before grab_focus runs.
+	# Return to the control focused before the cursor was revealed, if it's still
+	# eligible.
+	if (
+		previous
+		and is_instance_valid(previous)
+		and previous.is_visible_in_tree()
+		and (not root or root.is_ancestor_of(previous))
+		and not (previous is BaseButton and previous.disabled)
+	):
+		_grab_focus_deferred(previous, trigger, true)
+		return
+
+	# Fall back to the highest-priority anchor. Its focus mode is left to its focus
+	# handler, which restores it on the cursor visibility signal before the deferred
+	# grab runs.
 	var anchor := StdInputCursorFocusHandler.get_focus_target(root)
 	if anchor:
-		about_to_grab_focus.emit.call_deferred(anchor, trigger)
-		anchor.grab_focus.call_deferred()
+		_grab_focus_deferred(anchor, trigger, false)
 	elif current_focus:
 		current_focus.release_focus()
 
@@ -502,8 +549,10 @@ func _on_properties_changed(
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
-	# Release stale focus on hidden-to-visible transitions.
+	# Release stale focus on hidden-to-visible transitions, remembering it so the next
+	# hide can return to it.
 	if _cursor_visible and not _was_cursor_visible:
+		_focus_before_reveal = get_viewport().gui_get_focus_owner()
 		get_viewport().gui_release_focus()
 	_was_cursor_visible = _cursor_visible
 
