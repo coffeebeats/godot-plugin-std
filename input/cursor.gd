@@ -69,6 +69,12 @@ func get_is_visible() -> bool:
 	return _cursor_visible
 
 
+## get_reveal_mouse_buttons returns the mouse buttons which reveal the cursor under the
+## current configuration.
+func get_reveal_mouse_buttons() -> Array[MouseButton]:
+	return _reveal_mouse_buttons.duplicate()
+
+
 ## hide_cursor hides the cursor and transitions to focus-based navigation. If the cursor
 ## is already hidden, then nothing happens.
 ##

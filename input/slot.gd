@@ -149,8 +149,7 @@ class JoypadMonitor:
 
 var _actions: Array[String] = []
 var _active: StdInputDevice = null
-var _cursor_activates_kbm: bool = false
-var _cursor_reveal_mouse_buttons: Array[MouseButton] = []
+var _cursor_click_activates_kbm: bool = false
 var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
 var _last_active_joypad: StdInputDevice = null
@@ -695,10 +694,8 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 ## which just pressed one of the active actions, or on a press of one of the cursor's
 ## reveal buttons when an active action set opts in, and returns whether it did.
 ##
-## NOTE: Mouse motion never activates the device, since Steam Input emits motion for
-## gyro and trackpad input. A mouse button Godot emulates from a touch is skipped for
-## the same reason. See
-## https://partner.steamgames.com/doc/steamhardware/recommendations.
+## NOTE: A mouse button which Godot emulates from a touch is skipped, since a touch
+## comes from a touchscreen rather than a mouse.
 func _try_activate_kbm(event: InputEvent) -> bool:
 	if not claim_kbm_input:
 		return false
@@ -716,9 +713,9 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 		return false
 
 	var is_match: bool = (
-		_cursor_activates_kbm
+		_cursor_click_activates_kbm
 		and event is InputEventMouseButton
-		and event.button_index in _cursor_reveal_mouse_buttons
+		and event.button_index in cursor.get_reveal_mouse_buttons()
 	)
 
 	if not is_match:
@@ -744,26 +741,20 @@ func _on_Self_action_configuration_changed() -> void:
 	var action_sets := _list_action_sets(device_id, false)
 
 	_actions = []
-	_cursor_activates_kbm = false
-	_cursor_reveal_mouse_buttons = []
+	_cursor_click_activates_kbm = false
 
 	# NOTE: These must be iterated in forward order so that later action set layers can
 	# override properties set in earlier action sets.
 	for action_set in action_sets:
 		# Update cursor properties.
-		_cursor_activates_kbm = (
+		_cursor_click_activates_kbm = (
 			false
-			if action_set.cursor_activates_kbm == PROPERTY_STATUS_OFF
+			if action_set.cursor_click_activates_kbm == PROPERTY_STATUS_OFF
 			else (
-				_cursor_activates_kbm
-				or action_set.cursor_activates_kbm == PROPERTY_STATUS_ON
+				_cursor_click_activates_kbm
+				or action_set.cursor_click_activates_kbm == PROPERTY_STATUS_ON
 			)
 		)
-
-		for button in action_set.cursor_reveal_mouse_buttons:
-			# NOTE: This operation makes this O(n^2), but arrays should be small.
-			if button not in _cursor_reveal_mouse_buttons:
-				_cursor_reveal_mouse_buttons.append(button)
 
 		# Update active actions.
 

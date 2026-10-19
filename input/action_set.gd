@@ -64,22 +64,6 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## set layer enables it.
 @export var cursor_captured: bool = false
 
-## cursor_activates_kbm defines whether a press of one of `cursor_reveal_mouse_buttons`
-## activates the keyboard and mouse device even when that button is bound to no action
-## (defaults to "off" / not enabled). Menu action sets want this so that a click swaps
-## glyphs to the mouse; a bound key or mouse button activates the device regardless.
-## Mouse motion never activates it, since Steam Input emits motion for gyro and trackpad
-## input; see https://partner.steamgames.com/doc/steamhardware/recommendations.
-##
-## NOTE: Steam legacy bindings, and a Deck layout without touchscreen native support,
-## deliver real mouse clicks from a controller which cannot be told apart from a mouse.
-## Bind the trackpad click to an action in the default layout and enable touchscreen
-## native support there.
-##
-## NOTE: This property will be true if the current action set or any activated action
-## set layer enables it.
-@export var cursor_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
-
 @export_subgroup("Hide")
 
 ## cursor_hide_actions is a list of actions which, when "just" triggered by a non-KBM
@@ -136,6 +120,23 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## NOTE: The maximum reveal distance threshold value across all active action sets and
 ## layers will be used.
 @export var cursor_reveal_distance_minimum: Vector2 = Vector2.ZERO
+
+## cursor_click_activates_kbm defines whether a press of one of
+## `cursor_reveal_mouse_buttons` activates the keyboard and mouse device even when that
+## button is bound to no action (defaults to "off" / not enabled). Menu action sets want
+## this so that a click swaps glyphs to the mouse; a bound key or mouse button activates
+## the device regardless. Mouse motion never activates the device, since Steam Input
+## emits motion for gyro and trackpad input; see
+## https://partner.steamgames.com/doc/steamhardware/recommendations.
+##
+## NOTE: Steam legacy bindings, and a Deck layout without touchscreen native support,
+## deliver real mouse clicks from a controller which cannot be told apart from a mouse.
+## Bind the trackpad click to an action in the default layout and enable touchscreen
+## native support there.
+##
+## NOTE: The last of the current action set and its activated action set layers which
+## sets this property decides its value; one which inherits it leaves the value as is.
+@export var cursor_click_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
 
 # NOTE: Unfortunately, due to Steam Input offering a far richer API for defining action
 # sets, this abstraction must leak some Steam-related details.
