@@ -24,6 +24,9 @@ const REVEAL_RAMP_STEP := 5.0
 ## REVEAL_RAMP_X is the window x coordinate the pointer ramp starts from.
 const REVEAL_RAMP_X := 100.0
 
+## REVEAL_RETRIES is how many spurious reveals a frame-rate step re-arms after.
+const REVEAL_RETRIES := 3
+
 ## CONFIRMED lists the steps whose behaviour the hardware pass of 2026-10-19 confirmed
 ## (DualShock 4, Windows, app 480, the #495 stack through #523). A run skips them unless
 ## `--all` is given, so a default run covers only what is still open.
@@ -41,6 +44,8 @@ const CONFIRMED := [
 	"trigger",
 	"pointer",
 	"pointer_slow",
+	"reveal_60",
+	"reveal_240",
 	"captured",
 	"origins",
 	"rebind",
@@ -879,7 +884,7 @@ func _s_reveal_60_tick(delta: float) -> void:
 
 
 func _s_reveal_60_check() -> bool:
-	return _state["armed"] and _cursor.get_is_visible()
+	return _check_reveal_at()
 
 
 func _s_reveal_60_exit() -> void:
@@ -895,7 +900,7 @@ func _s_reveal_240_tick(delta: float) -> void:
 
 
 func _s_reveal_240_check() -> bool:
-	return _state["armed"] and _cursor.get_is_visible()
+	return _check_reveal_at()
 
 
 func _s_reveal_240_exit() -> void:
@@ -1104,7 +1109,7 @@ func _log_move(label: String) -> void:
 ## _begin_reveal_at caps the frame rate at `fps` and prepares a pointer ramp which starts
 ## once the pointer has rested for a second, so the speed at which the cursor reveals can
 ## be compared across rates.
-func _begin_reveal_at(fps: int) -> void:
+func _begin_reveal_at(fps: int, retries: int = 0) -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = fps
 
@@ -1121,6 +1126,7 @@ func _begin_reveal_at(fps: int) -> void:
 		"t": 0.0,
 		"x": REVEAL_RAMP_X,
 		"speed": 0.0,
+		"retries": retries,
 	}
 
 
@@ -1157,6 +1163,27 @@ func _arm_reveal_at(delta: float) -> void:
 		Input.warp_mouse(
 			Vector2(int(_state["x"]), get_viewport().get_visible_rect().size.y / 2.0)
 		)
+
+
+## _check_reveal_at reports whether the ramp revealed the cursor. A reveal before the ramp
+## has moved the pointer a window's minimum is jitter from elsewhere, so the step re-arms
+## up to `REVEAL_RETRIES` times rather than measuring it.
+func _check_reveal_at() -> bool:
+	if not _state["armed"] or not _cursor.get_is_visible():
+		return false
+
+	var moved: float = _state["x"] - REVEAL_RAMP_X
+	if moved >= _set.cursor_reveal_distance_minimum.x:
+		return true
+
+	_state["retries"] = _state.get("retries", 0) + 1
+	if _state["retries"] > REVEAL_RETRIES:
+		_log("  reveal before the ramp moved %.0f px, out of retries" % moved)
+		return true
+
+	_log("  reveal before the ramp moved (%.1f px); re-arming" % moved)
+	_begin_reveal_at(_state["fps"], _state["retries"])
+	return false
 
 
 ## _end_reveal_at logs the commanded pointer speed at which the cursor revealed.

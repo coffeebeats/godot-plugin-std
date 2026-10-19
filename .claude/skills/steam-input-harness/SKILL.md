@@ -20,7 +20,7 @@ printf 480 > steam_appid.txt     # git-ignored; the game's own ID when it has a 
 godot --path . -s res://.claude/skills/steam-input-harness/run.gd -- --late-slot > /dev/null 2>&1 &
 ```
 
-Run it in the background and read `results.log` beside the harness. User arguments after `--`: `--appid=N` (default 480) and `--late-slot`, which mounts the slot only after Steam connected a pad so the monitor's broadcast path is exercised. The first lines say whether `steamInitEx` succeeded and `current steam set handle=N (Harness=M)`; `Harness=0` means Steam loaded another manifest. The window must keep focus, since Steam applies a layout by foreground window and the keys need it: Enter skips a step, F1 opens Steam's binding panel for the pad, F2 toggles a captured cursor.
+Run it in the background and read `results.log` beside the harness. User arguments after `--`: `--appid=N` (default 480); `--late-slot`, which mounts the slot only after Steam connected a pad so the monitor's broadcast path is exercised; `--from=<step>` to jump to a step; and `--all` to run the steps the `CONFIRMED` list in `harness.gd` marks as confirmed on hardware, which a default run skips so it covers only what is still open. The first lines say whether `steamInitEx` succeeded and `current steam set handle=N (Harness=M)`; `Harness=0` means Steam loaded another manifest. The window must keep focus, since Steam applies a layout by foreground window and the keys need it: Enter skips a step, F1 opens Steam's binding panel for the pad, F2 toggles a captured cursor.
 
 In a game, std sits under `addons/std` and the harness finds its scripts from `StdInputSlot`'s path, so `harness.gd` and `run.gd` work from any directory under `res://`.
 
@@ -53,7 +53,7 @@ Steam autosaves the selected layout as plain VDF at `Steam/steamapps/common/Stea
 
 ## The steps
 
-Each step ends by itself when its condition is met; Enter skips one. Steps that expect an activation ask for the other device first (the pointer step says to press Space), and a real mouse moving during the pointer steps counts as motion.
+Each step ends by itself when its condition is met; Enter skips one. When a step's behaviour is confirmed, add it to `CONFIRMED` so later runs stay short; a change to the component it covers is the reason to run with `--all` again. Steps that expect an activation ask for the other device first (the pointer step says to press Space), and a real mouse moving during the pointer steps counts as motion.
 
 | Step | Confirms |
 | --- | --- |
