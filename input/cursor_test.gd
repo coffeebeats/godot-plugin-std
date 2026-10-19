@@ -10,6 +10,10 @@ extends GutTest
 ## _TEST_HIDE_ACTION is an action registered in the `InputMap` for hiding the cursor.
 const _TEST_HIDE_ACTION := &"test_hide"
 
+## _TEST_HIDE_ACTION_OTHER is a second action registered in the `InputMap` for hiding
+## the cursor.
+const _TEST_HIDE_ACTION_OTHER := &"test_hide_other"
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var cursor: StdInputCursor = null
@@ -546,6 +550,108 @@ func test_input_held_hide_action_does_not_rehide_after_unrelated_press() -> void
 	assert_true(cursor.get_is_visible())
 
 
+func test_input_hide_action_held_before_reveal_does_not_rehide() -> void:
+	# Given: A hidden cursor whose action set hides on the test hide action.
+	add_child_autofree(cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
+	cursor.update_configuration([action_set])
+	cursor.hide_cursor()
+	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
+
+	# Given: The hide action is pressed and held while the cursor is hidden, and the
+	# cursor is then shown.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+	cursor.show_cursor()
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+
+	# When: The still-held hide action reports pressed again.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+
+	# Then: The cursor is still visible.
+	assert_true(cursor.get_is_visible())
+
+
+func test_input_hide_action_held_within_hide_delay_does_not_hide_after_it() -> void:
+	# Given: A visible cursor whose action set hides on the test hide action after a
+	# delay.
+	add_child_autofree(cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
+	action_set.cursor_hide_delay = 1.0
+	cursor.update_configuration([action_set])
+	cursor.show_cursor()
+	cursor._time_since_mouse_motion = 0.0
+
+	# Given: The hide action is pressed and held within the delay.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+
+	# When: The delay elapses and the still-held hide action reports pressed again.
+	cursor._time_since_mouse_motion = 5.0
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+
+	# Then: The cursor is still visible.
+	assert_true(cursor.get_is_visible())
+
+
+func test_input_hide_action_pressed_after_hide_delay_hides() -> void:
+	# Given: A visible cursor whose action set hides on the test hide action after a
+	# delay which has elapsed.
+	add_child_autofree(cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
+	action_set.cursor_hide_delay = 1.0
+	cursor.update_configuration([action_set])
+	cursor.show_cursor()
+	cursor._time_since_mouse_motion = 5.0
+
+	# When: The hide action is pressed.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+
+	# Then: The cursor is hidden.
+	assert_false(cursor.get_is_visible())
+
+
+func test_input_reveal_button_release_keeps_cursor_hidden() -> void:
+	# Given: A hidden cursor whose action set reveals on the left mouse button.
+	add_child_autofree(cursor)
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_reveal_mouse_buttons = [MOUSE_BUTTON_LEFT]
+	cursor.update_configuration([action_set])
+	cursor.hide_cursor()
+	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
+
+	# When: The button's release arrives.
+	var button := InputEventMouseButton.new()
+	button.button_index = MOUSE_BUTTON_LEFT
+	button.pressed = false
+	get_viewport().push_input(button)
+
+	# Then: The cursor stays hidden.
+	assert_false(cursor.get_is_visible())
+
+	# When: The button is pressed.
+	button.pressed = true
+	get_viewport().push_input(button)
+
+	# Then: The cursor is revealed.
+	assert_true(cursor.get_is_visible())
+
+
+func test_process_releases_every_hide_action_no_longer_pressed() -> void:
+	# Given: A cursor added to the scene tracking two held hide actions which are no
+	# longer pressed.
+	add_child_autofree(cursor)
+	cursor._pressed = [_TEST_HIDE_ACTION, _TEST_HIDE_ACTION_OTHER] as Array[String]
+
+	# When: A frame is processed.
+	cursor._process(0.1)
+
+	# Then: Neither action is tracked.
+	assert_true(cursor._pressed.is_empty())
+
+
 func test_input_motion_within_reveal_minimum_keeps_hide_delay_running() -> void:
 	# Given: A visible cursor whose action set reveals it on motion past (4, 4).
 	add_child_autofree(cursor)
@@ -614,6 +720,7 @@ func test_unset_hovered_rejects_wrong_control() -> void:
 
 func after_all() -> void:
 	InputMap.erase_action(_TEST_HIDE_ACTION)
+	InputMap.erase_action(_TEST_HIDE_ACTION_OTHER)
 
 
 func before_all() -> void:
@@ -621,6 +728,7 @@ func before_all() -> void:
 	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
 
 	InputMap.add_action(_TEST_HIDE_ACTION)
+	InputMap.add_action(_TEST_HIDE_ACTION_OTHER)
 
 
 func before_each() -> void:
@@ -637,9 +745,6 @@ func after_each() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _hide_with_reveal_minimum adds the cursor to the scene, configures it with an action
-## set whose reveal distance minimum is `minimum` and reveal window is `window`, and
-## hides it.
 ## _action returns a press of `action`, as the Steam actions component publishes one.
 func _action(action: StringName) -> InputEventAction:
 	var event := InputEventAction.new()
@@ -648,6 +753,9 @@ func _action(action: StringName) -> InputEventAction:
 	return event
 
 
+## _hide_with_reveal_minimum adds the cursor to the scene, configures it with an action
+## set whose reveal distance minimum is `minimum` and reveal window is `window`, and
+## hides it.
 func _hide_with_reveal_minimum(minimum: Vector2, window: float = 0.0) -> void:
 	add_child_autofree(cursor)
 	var action_set := StdInputActionSet.new()
@@ -658,8 +766,6 @@ func _hide_with_reveal_minimum(minimum: Vector2, window: float = 0.0) -> void:
 	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
 
 
-## _make_confined_property returns a cursor confinement property whose value defaults
-## to `value`.
 ## _key_press returns a press of a key bound to no action.
 func _key_press() -> InputEventKey:
 	var event := InputEventKey.new()
@@ -668,6 +774,8 @@ func _key_press() -> InputEventKey:
 	return event
 
 
+## _make_confined_property returns a cursor confinement property whose value defaults
+## to `value`.
 func _make_confined_property(value: bool) -> StdSettingsPropertyBool:
 	var property := StdSettingsPropertyBool.new()
 	property.scope = StdSettingsScope.new()
