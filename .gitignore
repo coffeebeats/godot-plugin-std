@@ -20,7 +20,8 @@ Godot.exe
 godot.exe
 
 # Testing-related ignores
-# ...
+/steam_appid.txt
+/zz_harness/
 
 # IDE-related files
 .claude/settings.local.json
