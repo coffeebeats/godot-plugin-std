@@ -520,6 +520,10 @@ func _s_bindings_exit() -> void:
 	_log("bindings present: jump origins=%d" % _jump_origin_count())
 
 
+func _s_stick_up_enter() -> void:
+	_log_action_origins(&"move_left")
+
+
 func _s_stick_up_check() -> bool:
 	return _max_move_strength() > 0.8
 
@@ -689,6 +693,7 @@ func _s_stick_held_while_typing_exit() -> void:
 
 
 func _s_trigger_enter() -> void:
+	_log_action_origins(&"fire")
 	_state = {
 		"press_strength": -1.0, "release_strength": -1.0, "max": 0.0, "samples": []
 	}
@@ -729,6 +734,15 @@ func _s_trigger_exit() -> void:
 
 
 func _s_pointer_enter() -> void:
+	_log_action_origins(&"pointer")
+	_set.cursor_captured = false
+	_cursor.update_configuration([_set])
+	_log(
+		(
+			"pointer: mouse_mode=%d; keep the real mouse still"
+			% DisplayServer.mouse_get_mode()
+		)
+	)
 	_activations.clear()
 	_cursor_visibility.clear()
 	_state = {"start": DisplayServer.mouse_get_position(), "far": 0.0}
@@ -975,6 +989,20 @@ func _log_move(label: String) -> void:
 			]
 		)
 	)
+
+
+## _log_action_origins logs the labels bound to `action` on the connected joypad, so an
+## unbound action is obvious before a step waits on it.
+func _log_action_origins(action: StringName) -> void:
+	var joy := _slot.get_connected_devices(false)
+	if joy.is_empty():
+		_log("origins[%s]: no joypad" % action)
+		return
+	var device: StdInputDevice = joy[0]
+	var labels := []
+	for i in device.get_action_origin_count(_set, action):
+		labels.append(device.get_action_origin_label(_set, action, i))
+	_log("origins[%s]: %s" % [action, labels])
 
 
 func _log_origins() -> void:
