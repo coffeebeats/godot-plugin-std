@@ -58,6 +58,14 @@ const STEPS := [
 		"Move the pointer VERY slowly with the controller for 3 seconds (sub-pixel motion should still creep)."
 	],
 	[
+		"reveal_60",
+		"Frame rate capped at 60 fps and the cursor hidden. Let the stick rest, then move the pointer with it, slowly at first and speeding up until the cursor appears. Keep the real mouse still."
+	],
+	[
+		"reveal_240",
+		"Frame rate capped at 240 fps and the cursor hidden. Same again: rest, then move the pointer slowly and speed up until the cursor appears."
+	],
+	[
 		"captured",
 		"Cursor is now CAPTURED. Move the pointer with the controller again, for about 6 seconds (the step ends after 60 motion events)."
 	],
@@ -148,6 +156,7 @@ var _config_changes: int = 0
 var _native_joy_events: int = 0
 var _motion_events: Array[String] = []
 var _record_motion: bool = false
+var _late_slot: bool = false
 var _cursor_visibility: Array[bool] = []
 
 # -- ENGINE METHODS ------------------------------------------------------------------ #
@@ -160,6 +169,8 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--appid="):
 			_app_id = int(arg.trim_prefix("--appid="))
+		if arg == "--late-slot":
+			_late_slot = true
 
 	# NOTE: std may live at `res://` (its own repository) or `res://addons/std`.
 	var slot_script: Script = StdInputSlot
@@ -415,6 +426,14 @@ func _build_input() -> void:
 		_slot.haptics_joy
 	]:
 		add_child(n)
+
+	# NOTE: With `--late-slot` the slot enters the tree only after Steam connected a
+	# pad, so the monitor must report it through `broadcast_connected_joypads`.
+	if not _late_slot:
+		_mount_slot()
+
+
+func _mount_slot() -> void:
 	add_child(_slot)
 
 	_log("slot ready; loading set -> %s" % _slot.load_action_set(_set))
@@ -798,6 +817,40 @@ func _s_pointer_slow_exit() -> void:
 	)
 
 
+func _s_reveal_60_enter() -> void:
+	_begin_reveal_at(60)
+
+
+func _s_reveal_60_tick(_delta: float) -> void:
+	_sample_pointer()
+
+
+func _s_reveal_60_check() -> bool:
+	return _cursor.get_is_visible()
+
+
+func _s_reveal_60_exit() -> void:
+	_end_reveal_at()
+
+
+func _s_reveal_240_enter() -> void:
+	_begin_reveal_at(240)
+
+
+func _s_reveal_240_tick(_delta: float) -> void:
+	_sample_pointer()
+
+
+func _s_reveal_240_check() -> bool:
+	return _cursor.get_is_visible()
+
+
+func _s_reveal_240_exit() -> void:
+	_end_reveal_at()
+	Engine.max_fps = 0
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+
+
 func _s_captured_enter() -> void:
 	_set.cursor_captured = true
 	_cursor.update_configuration([_set])
@@ -945,6 +998,10 @@ func _on_steam_bindings_changed() -> void:
 func _on_steam_enabled_changed(value: Variant) -> void:
 	_log("  steam_input_enabled -> %s" % value)
 
+	if value and _late_slot and not _slot.is_inside_tree():
+		_log("  mounting the slot after the joypad connected (--late-slot)")
+		_mount_slot.call_deferred()
+
 
 # -- HELPERS ------------------------------------------------------------------------- #
 
@@ -991,6 +1048,44 @@ func _log_move(label: String) -> void:
 	)
 
 
+## _begin_reveal_at caps the frame rate at `fps`, hides the cursor and starts sampling the
+## pointer, so the speed at which the cursor reveals can be compared across rates.
+func _begin_reveal_at(fps: int) -> void:
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = fps
+	_cursor.hide_cursor()
+	_state = {"fps": fps, "samples": []}
+	_log_action_origins(&"pointer")
+
+
+## _end_reveal_at logs the pointer's speed over the reveal window before the reveal.
+func _end_reveal_at() -> void:
+	var samples: Array = _state["samples"]
+	var now: int = Time.get_ticks_usec()
+	var window_usec: int = int(_set.cursor_reveal_window * 1_000_000.0)
+	var inside: Array = samples.filter(
+		func(sample): return now - sample[0] <= window_usec
+	)
+	var speed := 0.0
+	if inside.size() >= 2:
+		var dt: float = float(inside[-1][0] - inside[0][0]) / 1_000_000.0
+		if dt > 0.0:
+			speed = (inside[-1][1] - inside[0][1]).length() / dt
+	_log(
+		(
+			"reveal at %d fps (measured %.0f): speed over the last %.2fs=%.0f px/s from %d samples (threshold %s px over the window)"
+			% [
+				_state["fps"],
+				Engine.get_frames_per_second(),
+				_set.cursor_reveal_window,
+				speed,
+				inside.size(),
+				_set.cursor_reveal_distance_minimum,
+			]
+		)
+	)
+
+
 ## _log_action_origins logs the labels bound to `action` on the connected joypad, so an
 ## unbound action is obvious before a step waits on it.
 func _log_action_origins(action: StringName) -> void:
@@ -1003,6 +1098,14 @@ func _log_action_origins(action: StringName) -> void:
 	for i in device.get_action_origin_count(_set, action):
 		labels.append(device.get_action_origin_label(_set, action, i))
 	_log("origins[%s]: %s" % [action, labels])
+
+
+## _sample_pointer records the pointer's position for `_end_reveal_at`, keeping a second.
+func _sample_pointer() -> void:
+	var samples: Array = _state["samples"]
+	samples.append([Time.get_ticks_usec(), Vector2(DisplayServer.mouse_get_position())])
+	while samples.size() > 1 and Time.get_ticks_usec() - samples[0][0] > 1_000_000:
+		samples.pop_front()
 
 
 func _log_origins() -> void:
