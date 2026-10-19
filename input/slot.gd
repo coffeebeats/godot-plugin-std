@@ -10,11 +10,11 @@
 ## aren't tied to one player). Single player games should have a single `StdInputSlot`
 ## which defines how to swap between various connected `StdInputDevice`s.
 ##
-## Every connected device stays accepted at all times. The active device only decides
-## which device's glyphs are shown and which device haptics target. It changes on a
-## bound joypad input, on a bound key or mouse button, or on a press of one of the
-## cursor's reveal buttons when an action set opts in, and never on mouse motion, which
-## Steam Input also emits for gyro and trackpad input. See
+## The slot accepts input from every connected device at all times; the active device
+## only decides which glyphs are shown and which device haptics target. A press bound to
+## an active action activates its device, as does a reveal-button click while
+## `StdInputActionSet.cursor_click_activates_kbm` is on. Mouse motion never does, since
+## Steam Input emits it for gyro and trackpad input; see
 ## https://partner.steamgames.com/doc/steamhardware/recommendations.
 ##
 ## TODO: For now, this class only supports single player because there's no way to
@@ -647,8 +647,7 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 
 
 ## _try_activate_joypad activates the joypad which just pressed one of the active
-## actions and returns whether it did. Only joypad events and injected action events
-## are considered, so a key or mouse button never reaches a joypad.
+## actions and returns whether it did. Key and mouse button events are ignored.
 func _try_activate_joypad(event: InputEvent) -> bool:
 	if not (
 		event is InputEventJoypadButton
@@ -691,8 +690,8 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 
 
 ## _try_activate_kbm activates the keyboard and mouse device on a key or mouse button
-## which just pressed one of the active actions, or on a press of one of the cursor's
-## reveal buttons when an active action set opts in, and returns whether it did.
+## press of an active action, or on a reveal-button click while
+## `cursor_click_activates_kbm` is on, and returns whether it did.
 ##
 ## NOTE: A mouse button which Godot emulates from a touch is skipped, since a touch
 ## comes from a touchscreen rather than a mouse.

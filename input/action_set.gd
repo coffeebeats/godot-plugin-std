@@ -122,20 +122,14 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 @export var cursor_reveal_distance_minimum: Vector2 = Vector2.ZERO
 
 ## cursor_click_activates_kbm defines whether a press of one of
-## `cursor_reveal_mouse_buttons` activates the keyboard and mouse device even when that
-## button is bound to no action (defaults to "off" / not enabled). Menu action sets want
-## this so that a click swaps glyphs to the mouse; a bound key or mouse button activates
-## the device regardless. Mouse motion never activates the device, since Steam Input
-## emits motion for gyro and trackpad input; see
-## https://partner.steamgames.com/doc/steamhardware/recommendations.
+## `cursor_reveal_mouse_buttons` activates the keyboard and mouse device even when no
+## action binds that button (defaults to off). Mouse motion never activates the device.
 ##
 ## NOTE: Steam legacy bindings, and a Deck layout without touchscreen native support,
-## deliver real mouse clicks from a controller which cannot be told apart from a mouse.
-## Bind the trackpad click to an action in the default layout and enable touchscreen
-## native support there.
+## send controller clicks as real mouse clicks; bind those clicks to actions instead.
 ##
-## NOTE: The last of the current action set and its activated action set layers which
-## sets this property decides its value; one which inherits it leaves the value as is.
+## NOTE: The last of the action set and its active layers to set this property decides
+## its value.
 @export var cursor_click_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
 
 # NOTE: Unfortunately, due to Steam Input offering a far richer API for defining action

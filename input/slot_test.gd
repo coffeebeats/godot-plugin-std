@@ -212,7 +212,7 @@ func test_input_slot_swaps_device_for_action_with_matching_id() -> void:
 
 
 func test_input_slot_mouse_motion_reveals_cursor_without_activating_kbm() -> void:
-	# Given: A joypad is active under a set which lets the cursor activate the keyboard.
+	# Given: A joypad is active under a set where a click activates the keyboard.
 	var joypad := _activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_ON)
 
 	# When: The mouse moves.
@@ -220,13 +220,15 @@ func test_input_slot_mouse_motion_reveals_cursor_without_activating_kbm() -> voi
 	event.relative = Vector2(10, 10)
 	get_viewport().push_input(event)
 
-	# Then: The cursor is revealed and the joypad stays active.
+	# Then: The cursor is revealed.
 	assert_true(slot.cursor.get_is_visible())
+
+	# Then: The joypad stays active.
 	assert_eq(slot.get_active_device(), joypad)
 
 
 func test_input_slot_reveal_button_press_activates_kbm() -> void:
-	# Given: A joypad is active under a set which lets the cursor activate the keyboard.
+	# Given: A joypad is active under a set where a click activates the keyboard.
 	_activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_ON)
 
 	# When: A cursor reveal button is pressed.
@@ -237,7 +239,7 @@ func test_input_slot_reveal_button_press_activates_kbm() -> void:
 
 
 func test_input_slot_emulated_mouse_button_does_not_activate_kbm() -> void:
-	# Given: A joypad is active under a set which lets the cursor activate the keyboard.
+	# Given: A joypad is active under a set where a click activates the keyboard.
 	var joypad := _activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_ON)
 
 	# When: A mouse button which Godot emulated from a touch is pressed.
@@ -250,7 +252,7 @@ func test_input_slot_emulated_mouse_button_does_not_activate_kbm() -> void:
 
 
 func test_input_slot_unlisted_mouse_button_does_not_activate_kbm() -> void:
-	# Given: A joypad is active under a set which lets the cursor activate the keyboard.
+	# Given: A joypad is active under a set where a click activates the keyboard.
 	var joypad := _activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_ON)
 
 	# When: A mouse button outside the cursor's reveal buttons is pressed.
@@ -261,8 +263,7 @@ func test_input_slot_unlisted_mouse_button_does_not_activate_kbm() -> void:
 
 
 func test_input_slot_mouse_button_does_not_activate_kbm_when_property_off() -> void:
-	# Given: A joypad is active under a set which keeps the cursor from activating the
-	# keyboard.
+	# Given: A joypad is active under a set where a click doesn't activate the keyboard.
 	var joypad := _activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_OFF)
 
 	# When: A cursor reveal button is pressed.
@@ -273,8 +274,7 @@ func test_input_slot_mouse_button_does_not_activate_kbm_when_property_off() -> v
 
 
 func test_input_slot_bound_key_press_activates_kbm_when_property_off() -> void:
-	# Given: A joypad is active under a set which keeps the cursor from activating the
-	# keyboard.
+	# Given: A joypad is active under a set where a click doesn't activate the keyboard.
 	_activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_OFF)
 
 	# When: A key bound to the test action is pressed.
@@ -285,12 +285,10 @@ func test_input_slot_bound_key_press_activates_kbm_when_property_off() -> void:
 
 
 func test_input_slot_bound_key_press_activates_kbm_with_no_active_device() -> void:
-	# Given: A joypad is active under a set which keeps the cursor from activating the
-	# keyboard.
+	# Given: A joypad is active under a set where a click doesn't activate the keyboard.
 	_activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_OFF)
 
-	# Given: The joypad monitor is swapped for one with no joypads, leaving no device
-	# active.
+	# Given: The joypad monitor is swapped for an empty one, leaving no device active.
 	var joypad_monitor := JoypadMonitor.new()
 	add_child_autofree(joypad_monitor)
 
