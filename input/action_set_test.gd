@@ -110,6 +110,24 @@ func test_list_analog_2d_actions_returns_four_directions() -> void:
 	)
 
 
+func test_list_action_names_allows_a_layer_stick_whose_directions_its_parent_binds(
+) -> void:
+	# Given: An action set binding a stick's four directional actions.
+	action_set.actions_digital = StdInputActionSet.list_analog_2d_actions(&"move")
+
+	# Given: A layer of it declaring the stick alone.
+	var layer := StdInputActionSetLayer.new()
+	layer.name = &"test-layer"
+	layer.parent = action_set
+	layer.actions_analog_2d = [&"move"]
+
+	# When: The layer's action names are listed.
+	var got := layer.list_action_names()
+
+	# Then: The stick is listed without its directions.
+	assert_eq(got, PackedStringArray([&"move"]))
+
+
 func test_is_matching_event_origin_rejects_mouse_motion() -> void:
 	# Given: An action set with a digital action.
 	action_set.actions_digital = [&"jump"]

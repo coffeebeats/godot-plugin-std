@@ -225,7 +225,7 @@ func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArra
 		)
 		for direction in list_analog_2d_actions(action):
 			assert(
-				direction in actions_digital,
+				direction in actions_digital or _is_parent_action(direction),
 				"invalid config; missing a stick's directional action",
 			)
 		names.append(action)
@@ -274,3 +274,15 @@ func is_matching_event_origin(action: StringName, event: InputEvent) -> bool:
 		return action in actions_digital
 
 	return false
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _is_parent_action returns whether `action` is a digital action of the set this one is
+## a layer of, so a layer can declare a stick whose directions its parent binds.
+func _is_parent_action(action: StringName) -> bool:
+	if not self is StdInputActionSetLayer or not self.parent:
+		return false
+
+	return action in self.parent.actions_digital

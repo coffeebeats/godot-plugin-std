@@ -130,9 +130,10 @@ func _list_all_action_origins(
 
 	var origins := PackedInt64Array()
 
+	# NOTE: A glyph can ask about a slot no joypad occupies, such as a controller glyph
+	# while none is connected, which has no origins.
 	var device: int = joypad_monitor.get_device_id_for_slot(slot)
 	if device == -1:
-		assert(false, "invalid argument; failed to find device for slot")
 		return origins
 
 	# NOTE: A stick's directional actions have no Steam action of their own, so each
@@ -160,12 +161,14 @@ func _list_all_action_origins(
 		Steam.getAnalogActionOrigins(device, action_set_handle, action_handle)
 	)
 
+	# NOTE: Two bindings can translate to one origin on the target device type, which
+	# is listed once so a cycling glyph doesn't show it twice.
 	for origin in raw_origins:
 		var translated_origin := _translate_origin(origin, device_type)
 		if translated_origin:
 			origin = translated_origin
 
-		if origin:
+		if origin and origin not in origins:
 			origins.append(origin)
 
 	return origins

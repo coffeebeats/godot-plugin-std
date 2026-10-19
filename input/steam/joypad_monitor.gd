@@ -32,14 +32,19 @@ var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_f
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_device_id_for_slot returns the input device handle at the specified "slot" index.
+## get_device_id_for_slot returns the input device handle at the specified "slot" index,
+## or `-1` when no connected device occupies it.
 func get_device_id_for_slot(slot: int) -> int:
-	return _connected[slot] if (slot >= 0 and slot < _connected.size()) else 0
+	return _connected[slot] if (slot >= 0 and slot < _connected.size()) else -1
 
 
-## get_slot_for_device_id returns the "slot" index of the specified input device handle.
+## get_slot_for_device_id returns the "slot" index of the specified input device handle,
+## or `-1` when the device isn't connected.
+##
+## NOTE: Slots index the devices this monitor has connected, in that order, so a slot
+## maps back to the same device it was reported with.
 func get_slot_for_device_id(device: int) -> int:
-	return Steam.getConnectedControllers().find(device)
+	return _connected.find(device)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -138,17 +143,12 @@ func _connect_device(device: int) -> void:
 
 	_logger.info("Joypad connected.", {&"device": device, &"type": device_type})
 
-	var slot: int = get_slot_for_device_id(device)
-	if slot == -1:
-		assert(false, "invalid argument; failed to find slot for device")
-		return
-
 	# Update this property first so that subsequent notifications are handled by Steam-
 	# backed components.
 	steam_input_enabled_property.set_value(true)
 
 	_connected.append(device)
-	joy_connected.emit(slot, device_type)
+	joy_connected.emit(_connected.size() - 1, device_type)
 
 
 func _disconnect_device(device: int) -> void:
