@@ -58,11 +58,19 @@ static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ig
 ## occur once *after the first joypad has been connected*.
 static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-order
 
+## _is_listening tracks whether this instance receives Steam Input events; the caches
+## above are shared, but each instance connects to the signals itself.
+var _is_listening: bool = false
+
 var _logger := StdLogger.create("std/input/steam/device-actions")
 
 ## _pointer_motion maps slots to the filter which decides when that slot's "absolute
 ## mouse" motion counts as joypad activity.
 var _pointer_motion: Dictionary = {}
+
+## _published maps slots to the pressed state and strength last published for each of
+## that slot's actions.
+var _published: Dictionary = {}
 
 ## _warp_remainder is the sub-pixel pointer motion not yet applied by a warp, which the
 ## window system only accepts in whole pixels.
@@ -124,6 +132,16 @@ static func get_digital_action_handle(action: StringName) -> int:
 	return handle
 
 
+## get_press_threshold returns the strength at which an injected analog action reads as
+## pressed: the action's `InputMap` deadzone, or `0.5` for an action the map doesn't
+## know, so a Steam stick or trigger presses as a joypad axis bound through Godot does.
+static func get_press_threshold(action: StringName) -> float:
+	if InputMap.has_action(action):
+		return InputMap.action_get_deadzone(action)
+
+	return 0.5
+
+
 ## resolve_action_set_name returns the name the Steam Input manifest knows `action_set`
 ## by on `device`. A layer with no parent resolves to its `<Layer>_<Set>` copy under the
 ## device's current set; anything else keeps its own name.
@@ -138,6 +156,39 @@ static func resolve_action_set_name(
 		return action_set.name
 
 	return StringName("%s_%s" % [action_set.name, current.name])
+
+
+## split_analog_2d returns the four directional action events a stick's `motion` drives
+## for the 2D analog `action`, in `StdInputActionSet.ANALOG_2D_DIRECTIONS` order, each
+## at the strength of its half of the axis and pressed from its press threshold. Godot
+## clamps an action's strength to `[0, 1]`, so a signed axis can't travel on one action.
+##
+## NOTE: Steam reports a stick's `y` as positive upward, so `+y` drives `_up`.
+static func split_analog_2d(
+	action: StringName,
+	motion: Vector2,
+	slot: int,
+) -> Array[InputEventAction]:
+	var events: Array[InputEventAction] = []
+
+	var names := StdInputActionSet.list_analog_2d_actions(action)
+	var strengths: Array[float] = [
+		maxf(-motion.x, 0.0),
+		maxf(motion.x, 0.0),
+		maxf(motion.y, 0.0),
+		maxf(-motion.y, 0.0),
+	]
+
+	for i in names.size():
+		var event := InputEventAction.new()
+		event.action = names[i]
+		event.device = slot
+		event.strength = strengths[i]
+		event.pressed = event.strength >= get_press_threshold(event.action)
+
+		events.append(event)
+
+	return events
 
 
 ## is_action_set_enabled returns whether the provided name refers to an active action
@@ -162,12 +213,31 @@ func is_action_set_enabled(slot: int, action_set_name: String) -> bool:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _exit_tree() -> void:
+	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
+	Signals.disconnect_safe(
+		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
+	)
+
+	if not _is_listening:
+		return
+
+	_is_listening = false
+
+	Signals.disconnect_safe(Steam.input_action_event, _on_input_action_event)
+	Signals.disconnect_safe(
+		Steam.input_configuration_loaded, _on_input_configuration_loaded
+	)
+
+
 func _ready() -> void:
 	assert(joypad_monitor is SteamJoypadMonitor, "invalid state; missing node")
 	assert(
 		steam_input_enabled_property is StdSettingsPropertyBool,
 		"invalid state; missing property",
 	)
+
+	Signals.connect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
 
 	if steam_input_enabled_property.get_value():
 		_on_steam_input_state_changed(true)
@@ -345,14 +415,24 @@ func _get_pointer_motion_filter(slot: int) -> MotionFilter:
 	return filter
 
 
-func _publish_input_event(event: InputEvent) -> void:
-	if not event is InputEventAction:
+## _publish_input_event parses an injected action event once its state differs from the
+## one last published for its slot and action. Parsing presses the action on `Input` at
+## the event's strength, so no explicit press or release is needed; an explicit release
+## would also release the action for every other device, such as a key held for it.
+##
+## NOTE: Steam reports a stick on every change, so a direction it keeps reporting as
+## released would otherwise read as just released on every event.
+func _publish_input_event(event: InputEventAction) -> void:
+	var published: Dictionary = _published.get_or_add(event.device, {})
+	var previous: Array = published.get(event.action, [false, 0.0])
+
+	if (
+		event.pressed == previous[0]
+		and (not event.pressed or is_equal_approx(event.strength, previous[1]))
+	):
 		return
 
-	if event.pressed:
-		Input.action_press(event.action)
-	else:
-		Input.action_release(event.action)
+	published[event.action] = [event.pressed, event.strength]
 
 	Input.parse_input_event(event)
 
@@ -408,6 +488,11 @@ func _store_action_handles(action_set: StdInputActionSet) -> void:
 		return
 
 	for action in action_set.actions_digital:
+		# NOTE: A stick's directional actions have no Steam action of their own; the
+		# stick's 2D action publishes them.
+		if action_set.get_analog_2d_action(action):
+			continue
+
 		var handle := get_digital_action_handle(action)
 		if not handle:
 			assert(false, "failed to fetch action handle")
@@ -425,22 +510,16 @@ func _store_action_handles(action_set: StdInputActionSet) -> void:
 
 	for action in action_set.actions_analog_2d:
 		assert(
-			action.ends_with("_x") or action.ends_with("_y"),
-			"invalid action; 2D analog action must specify axis"
-		)
-		assert(
 			action != action_set.action_absolute_mouse,
 			"invalid config; conflicting action type"
 		)
 
-		var action_base := action.trim_suffix("_x").trim_suffix("_y")
-
-		var handle := get_analog_action_handle(action_base)
+		var handle := get_analog_action_handle(action)
 		if not handle:
 			assert(false, "failed to fetch action handle")
 			continue
 
-		_actions[handle] = action_base
+		_actions[handle] = action
 
 	if action_set.action_absolute_mouse:
 		var handle := get_analog_action_handle(action_set.action_absolute_mouse)
@@ -479,65 +558,42 @@ func _on_input_action_event(
 		Steam.INPUT_ACTION_EVENT_TYPE_ANALOG_ACTION:
 			var motion := Vector2(action_data["x"], action_data["y"])
 
+			# NOTE: No event carries the action's handle as its `event_index`, which names
+			# one of an action's bound events and is rejected at `32` and above.
 			match action_data["mode"]:
 				Steam.INPUT_SOURCE_MODE_TRIGGER:
 					var event := InputEventAction.new()
 					event.action = action
 					event.device = slot
-					event.event_index = action_handle
 					event.strength = motion.x
-
-					# FIXME: It's not clear whether reported event strength is *after* deadzone
-					# handling or if it's always the raw value.
-					event.pressed = event.strength != 0.0
+					event.pressed = event.strength >= get_press_threshold(action)
 
 					_publish_input_event(event)
 
 				Steam.INPUT_SOURCE_MODE_ABSOLUTE_MOUSE, Steam.INPUT_SOURCE_MODE_RELATIVE_MOUSE:
 					_publish_pointer_motion(motion)
 
-					# NOTE: The action is parsed without pressing it on `Input`, since it
-					# needn't exist in the `InputMap`; it only marks joypad activity. It's
+					# NOTE: The action is parsed on every motion, since it needn't exist in
+					# the `InputMap`; it only marks joypad activity for the slot. It's
 					# pressed once motion passes the active sets' cursor reveal threshold,
 					# the same filter `StdInputCursor` applies, so gyro wobble from a
 					# controller at rest can't switch glyphs away from a mouse in use.
 					var event := InputEventAction.new()
 					event.action = action
 					event.device = slot
-					event.event_index = action_handle
 					event.strength = 1.0
 					event.pressed = _get_pointer_motion_filter(slot).push(motion)
 
 					Input.parse_input_event(event)
 
 				_:
-					var event_x := InputEventAction.new()
-					event_x.device = slot
-					event_x.action = action + "_x"
-					event_x.event_index = action_handle
-
-					event_x.strength = motion.x
-
-					# FIXME: It's not clear whether reported event strength is *after* deadzone
-					# handling or if it's always the raw value.
-					event_x.pressed = event_x.strength != 0.0
-
-					var event_y := event_x.duplicate()
-					event_y.action = action + "_y"
-					event_y.strength = action_data["y"]
-
-					# FIXME: It's not clear whether reported event strength is *after* deadzone
-					# handling or if it's always the raw value.
-					event_y.pressed = event_y.strength != 0.0
-
-					_publish_input_event(event_x)
-					_publish_input_event(event_y)
+					for event in split_analog_2d(action, motion, slot):
+						_publish_input_event(event)
 
 		Steam.INPUT_ACTION_EVENT_TYPE_DIGITAL_ACTION:
 			var event := InputEventAction.new()
 			event.action = action
 			event.device = slot
-			event.event_index = action_handle
 
 			event.pressed = action_data["state"]
 			event.strength = 1.0 if event.pressed else 0.0
@@ -555,11 +611,32 @@ func _on_input_configuration_loaded(
 	bindings_changed.emit()
 
 
+## _on_joypad_disconnected releases every action the joypad in `slot` was holding, since
+## Steam reports nothing further for it, and forgets the slot's published state.
+func _on_joypad_disconnected(slot: int) -> void:
+	var published: Dictionary = _published.get(slot, {})
+
+	for action in published.keys():
+		if not published[action][0]:
+			continue
+
+		var event := InputEventAction.new()
+		event.action = action
+		event.device = slot
+		event.pressed = false
+
+		_publish_input_event(event)
+
+	_published.erase(slot)
+	_pointer_motion.erase(slot)
+
+
 func _on_steam_input_state_changed(enabled: bool) -> void:
-	if not enabled or _is_initialized:
+	if not enabled or _is_listening:
 		return
 
 	_is_initialized = true
+	_is_listening = true
 
 	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
 	Signals.connect_safe(

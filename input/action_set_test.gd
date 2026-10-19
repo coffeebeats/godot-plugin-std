@@ -12,10 +12,13 @@ var action_set: StdInputActionSet = null
 
 
 func test_list_action_names_returns_all_action_types() -> void:
-	# Given: An action set with actions of each type.
+	# Given: An action set with actions of each type, including a stick's directions.
 	action_set.actions_analog_1d = [&"throttle", &"brake"]
-	action_set.actions_analog_2d = [&"move", &"look"]
+	action_set.actions_analog_2d = [&"move"]
 	action_set.actions_digital = [&"jump", &"fire"]
+	action_set.actions_digital.append_array(
+		StdInputActionSet.list_analog_2d_actions(&"move")
+	)
 
 	# When: Action names are listed.
 	var got := action_set.list_action_names()
@@ -23,7 +26,19 @@ func test_list_action_names_returns_all_action_types() -> void:
 	# Then: All actions are returned in order (analog_1d, analog_2d, digital).
 	assert_eq(
 		got,
-		PackedStringArray([&"throttle", &"brake", &"move", &"look", &"jump", &"fire"]),
+		PackedStringArray(
+			[
+				&"throttle",
+				&"brake",
+				&"move",
+				&"jump",
+				&"fire",
+				&"move_left",
+				&"move_right",
+				&"move_up",
+				&"move_down",
+			]
+		),
 	)
 
 
@@ -60,6 +75,57 @@ func test_list_action_names_returns_empty_for_empty_action_set() -> void:
 
 	# Then: An empty array is returned.
 	assert_eq(got, PackedStringArray())
+
+
+func test_get_analog_2d_action_resolves_each_direction() -> void:
+	# Given: An action set with a 2D analog action and its directional actions.
+	action_set.actions_analog_2d = [&"move"]
+	action_set.actions_digital = StdInputActionSet.list_analog_2d_actions(&"move")
+
+	# When/Then: Each directional action resolves to the stick.
+	for direction in action_set.actions_digital:
+		assert_eq(action_set.get_analog_2d_action(direction), &"move")
+
+
+func test_get_analog_2d_action_returns_empty_for_other_actions() -> void:
+	# Given: An action set with a 2D analog action, its directional actions, and another
+	# digital action.
+	action_set.actions_analog_2d = [&"move"]
+	action_set.actions_digital = StdInputActionSet.list_analog_2d_actions(&"move")
+	action_set.actions_digital.append(&"jump")
+
+	# When/Then: Neither the other action nor the stick itself resolves to a stick.
+	assert_eq(action_set.get_analog_2d_action(&"jump"), &"")
+	assert_eq(action_set.get_analog_2d_action(&"move"), &"")
+
+
+func test_list_analog_2d_actions_returns_four_directions() -> void:
+	# When: The directional actions of a stick are listed.
+	var got := StdInputActionSet.list_analog_2d_actions(&"move")
+
+	# Then: The four directions follow `Input.get_vector`'s order.
+	assert_eq(
+		got,
+		[&"move_left", &"move_right", &"move_up", &"move_down"] as Array[StringName],
+	)
+
+
+func test_list_action_names_allows_a_layer_stick_whose_directions_its_parent_binds(
+) -> void:
+	# Given: An action set binding a stick's four directional actions.
+	action_set.actions_digital = StdInputActionSet.list_analog_2d_actions(&"move")
+
+	# Given: A layer of it declaring the stick alone.
+	var layer := StdInputActionSetLayer.new()
+	layer.name = &"test-layer"
+	layer.parent = action_set
+	layer.actions_analog_2d = [&"move"]
+
+	# When: The layer's action names are listed.
+	var got := layer.list_action_names()
+
+	# Then: The stick is listed without its directions.
+	assert_eq(got, PackedStringArray([&"move"]))
 
 
 func test_is_matching_event_origin_rejects_mouse_motion() -> void:

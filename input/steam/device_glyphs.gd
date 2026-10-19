@@ -136,6 +136,12 @@ func _list_all_action_origins(
 	if device == -1:
 		return origins
 
+	# NOTE: A stick's directional actions have no Steam action of their own, so each
+	# shows the stick which drives it.
+	var stick := action_set.get_analog_2d_action(action)
+	if stick:
+		action = stick
+
 	var action_set_handle := SteamDeviceActions.get_action_set_handle(
 		SteamDeviceActions.resolve_action_set_name(action_set, device)
 	)

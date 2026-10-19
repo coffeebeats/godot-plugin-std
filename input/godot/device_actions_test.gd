@@ -20,6 +20,10 @@ const _DEFAULTS := {
 	&"test_set_b": KEY_B,
 	&"test_layer": KEY_L,
 	&"test_layer_stomp": KEY_A,
+	&"test_move_left": KEY_J,
+	&"test_move_right": KEY_L,
+	&"test_move_up": KEY_I,
+	&"test_move_down": KEY_K,
 }
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -84,6 +88,27 @@ func test_device_actions_layer_takes_an_origin_from_the_set() -> void:
 	# Then: The set's action holds the key again.
 	assert_true(_is_bound(&"test_set_a", KEY_A))
 	assert_false(_is_bound(&"test_layer_stomp", KEY_A))
+
+
+func test_device_actions_set_with_a_2d_analog_action_binds_its_directions() -> void:
+	# Given: An action set declaring a stick, which the input map doesn't know, and its
+	# four directional actions.
+	var set_move := _make_action_set(
+		&"Move",
+		[&"test_move_left", &"test_move_right", &"test_move_up", &"test_move_down"],
+	)
+	set_move.actions_analog_2d = [&"test_move"]
+	assert_false(InputMap.has_action(&"test_move"), "precondition: stick unknown")
+
+	# When: The set is loaded.
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_move))
+
+	# Then: The four directional actions are bound and the stick was left alone.
+	assert_true(_is_bound(&"test_move_left", KEY_J))
+	assert_true(_is_bound(&"test_move_right", KEY_L))
+	assert_true(_is_bound(&"test_move_up", KEY_I))
+	assert_true(_is_bound(&"test_move_down", KEY_K))
+	assert_false(InputMap.has_action(&"test_move"))
 
 
 func test_device_actions_layer_disable_does_not_report_a_bindings_change() -> void:
