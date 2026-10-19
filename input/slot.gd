@@ -256,6 +256,13 @@ func swap_joypad_components(
 		Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 		Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
+	# NOTE: The keyboard may share the joypad's actions component, in which case its
+	# connection must survive the swap.
+	if actions_joy and actions_joy != actions_kbm:
+		Signals.disconnect_safe(
+			actions_joy.bindings_changed, _on_component_bindings_changed
+		)
+
 	actions_joy = next_device_actions
 	glyphs_joy = next_device_glyphs
 	haptics_joy = next_device_haptics
@@ -263,6 +270,9 @@ func swap_joypad_components(
 
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+	Signals.ensure_connected(
+		actions_joy.bindings_changed, _on_component_bindings_changed
+	)
 
 	joypad_monitor.broadcast_connected_joypads()
 
@@ -381,6 +391,14 @@ func _enter_tree() -> void:
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
+	# NOTE: The keyboard and joypads may share one actions component, which is then
+	# connected once.
+	for component in [actions_kbm, actions_joy]:
+		if component is StdInputDeviceActions:
+			Signals.ensure_connected(
+				component.bindings_changed, _on_component_bindings_changed
+			)
+
 	Signals.connect_safe(
 		action_configuration_changed, _on_Self_action_configuration_changed
 	)
@@ -409,6 +427,12 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(device_disconnected, _on_Self_device_disconnected)
 	Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+
+	for component in [actions_kbm, actions_joy]:
+		if component is StdInputDeviceActions:
+			Signals.disconnect_safe(
+				component.bindings_changed, _on_component_bindings_changed
+			)
 
 	_active = null
 
@@ -796,6 +820,16 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_component_bindings_changed() -> void:
+	# NOTE: A component can reload before the slot is ready, such as when a scene change
+	# creates a new component while the active set survives in its static state, and
+	# the slot has no configuration to recompute until it loads a set itself.
+	if not is_node_ready():
+		return
+
+	action_configuration_changed.emit()
 
 
 func _on_cursor_visibility_changed(visible: bool) -> void:

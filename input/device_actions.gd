@@ -8,6 +8,14 @@
 class_name StdInputDeviceActions
 extends Node
 
+# -- SIGNALS ------------------------------------------------------------------------- #
+
+## bindings_changed is emitted when the origins bound to actions change for a reason
+## other than a set or layer being loaded, enabled, or disabled, such as a rebind.
+## Glyphs listen for it through the `StdInputSlot` so prompts follow a remap.
+@warning_ignore("UNUSED_SIGNAL")
+signal bindings_changed
+
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## BindingIndex is an enumeration of "ranks"/"indices" in which a binding can occupy.

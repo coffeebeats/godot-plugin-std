@@ -68,21 +68,11 @@ var _logger := StdLogger.create("std/input/godot/device-actions")
 
 ## reload refreshes the state of all input bindings for the specified device (defaults
 ## to updating all devices). This is helpful for rebuilding Godot's input map after
-## configuration changes.
+## configuration changes, which it reports through `bindings_changed`.
 func reload(device: int = DEVICE_ID_ALL) -> void:
-	var action_set := get_action_set(device)
-	var layers := list_action_set_layers(device)
+	_rebuild(device)
 
-	_reset(device)
-
-	if not action_set:
-		assert(not layers, "invalid state; found dangling layers")
-		return
-
-	_load_action_set(device, action_set)
-
-	for layer in layers:
-		_enable_action_set_layer(device, layer)
+	bindings_changed.emit()
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -166,7 +156,9 @@ func _disable_action_set_layer(
 	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
 	# necessary origins.
 
-	reload(DEVICE_ID_ALL)
+	# NOTE: The caller reports the layer change itself, so `bindings_changed` is not
+	# emitted here; it would reach the slot while the layer is still listed as active.
+	_rebuild(DEVICE_ID_ALL)
 
 	return true
 
@@ -290,6 +282,24 @@ func _get_action_origins(
 			origins.append(value_encoded)
 
 	return origins
+
+
+## _rebuild rebinds the active action set and layers for `device` from scratch, without
+## reporting a change.
+func _rebuild(device: int) -> void:
+	var action_set := get_action_set(device)
+	var layers := list_action_set_layers(device)
+
+	_reset(device)
+
+	if not action_set:
+		assert(not layers, "invalid state; found dangling layers")
+		return
+
+	_load_action_set(device, action_set)
+
+	for layer in layers:
+		_enable_action_set_layer(device, layer)
 
 
 func _reset(_device: int) -> void:
