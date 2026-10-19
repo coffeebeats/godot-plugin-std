@@ -157,6 +157,7 @@ var _native_joy_events: int = 0
 var _motion_events: Array[String] = []
 var _record_motion: bool = false
 var _late_slot: bool = false
+var _from_step: String = ""
 var _cursor_visibility: Array[bool] = []
 
 # -- ENGINE METHODS ------------------------------------------------------------------ #
@@ -171,6 +172,8 @@ func _ready() -> void:
 			_app_id = int(arg.trim_prefix("--appid="))
 		if arg == "--late-slot":
 			_late_slot = true
+		if arg.begins_with("--from="):
+			_from_step = arg.trim_prefix("--from=")
 
 	# NOTE: std may live at `res://` (its own repository) or `res://addons/std`.
 	var slot_script: Script = StdInputSlot
@@ -464,8 +467,19 @@ func _next_step() -> void:
 		_log("DONE")
 		return
 
+	# NOTE: `--from=<step>` skips every step before the named one, except the two which
+	# establish the pad and its bindings.
+	var step_name: String = STEPS[_step][0]
+	if _from_step:
+		if step_name == _from_step:
+			_from_step = ""
+		elif step_name not in ["connect", "bindings"]:
+			_log("--- step %s (skipped by --from)" % step_name)
+			_next_step.call_deferred()
+			return
+
 	_instruction.text = "[%d/%d] %s" % [_step + 1, STEPS.size(), STEPS[_step][1]]
-	_log("--- step %s" % STEPS[_step][0])
+	_log("--- step %s" % step_name)
 	_call_hook("enter", [])
 
 
@@ -821,12 +835,12 @@ func _s_reveal_60_enter() -> void:
 	_begin_reveal_at(60)
 
 
-func _s_reveal_60_tick(_delta: float) -> void:
-	_sample_pointer()
+func _s_reveal_60_tick(delta: float) -> void:
+	_arm_reveal_at(delta)
 
 
 func _s_reveal_60_check() -> bool:
-	return _cursor.get_is_visible()
+	return _state["armed"] and _cursor.get_is_visible()
 
 
 func _s_reveal_60_exit() -> void:
@@ -837,12 +851,12 @@ func _s_reveal_240_enter() -> void:
 	_begin_reveal_at(240)
 
 
-func _s_reveal_240_tick(_delta: float) -> void:
-	_sample_pointer()
+func _s_reveal_240_tick(delta: float) -> void:
+	_arm_reveal_at(delta)
 
 
 func _s_reveal_240_check() -> bool:
-	return _cursor.get_is_visible()
+	return _state["armed"] and _cursor.get_is_visible()
 
 
 func _s_reveal_240_exit() -> void:
@@ -1053,9 +1067,34 @@ func _log_move(label: String) -> void:
 func _begin_reveal_at(fps: int) -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = fps
-	_cursor.hide_cursor()
-	_state = {"fps": fps, "samples": []}
+	_state = {
+		"fps": fps,
+		"samples": [],
+		"armed": false,
+		"rest": 0.0,
+		"last": Vector2(DisplayServer.mouse_get_position()),
+	}
 	_log_action_origins(&"pointer")
+
+
+## _arm_reveal_at hides the cursor once the pointer has rested for a second, so the
+## reveal measured is the person's deliberate motion, then samples the pointer.
+func _arm_reveal_at(delta: float) -> void:
+	if _state["armed"]:
+		_sample_pointer()
+		return
+
+	var position := Vector2(DisplayServer.mouse_get_position())
+	if position == _state["last"]:
+		_state["rest"] += delta
+	else:
+		_state["rest"] = 0.0
+		_state["last"] = position
+
+	if _state["rest"] >= 1.0:
+		_state["armed"] = true
+		_cursor.hide_cursor()
+		_log("  pointer at rest; cursor hidden, measuring at %d fps" % _state["fps"])
 
 
 ## _end_reveal_at logs the pointer's speed over the reveal window before the reveal.
