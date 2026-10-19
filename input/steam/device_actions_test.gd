@@ -6,11 +6,12 @@
 
 extends GutTest
 
-# -- DEPENDENCIES -------------------------------------------------------------------- #
-
-const SteamDeviceActions := preload("device_actions.gd")
-
 # -- DEFINITIONS --------------------------------------------------------------------- #
+
+## _DEVICE_ACTIONS_PATH is the component script, loaded in `before_all` rather than
+## preloaded, since it can't be parsed without the `Steam` singleton the GodotSteam
+## extension registers and `should_skip_script` skips this script without it.
+const _DEVICE_ACTIONS_PATH := "device_actions.gd"
 
 ## _TEST_ACTIONS are the directional actions of the `move` stick, registered in the
 ## `InputMap` with `_TEST_DEADZONE`.
@@ -26,14 +27,17 @@ const _TEST_KEY := KEY_D
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _actions: SteamDeviceActions = null
+var _actions: StdInputDeviceActions = null
+var _device_actions: Variant = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
 func test_split_analog_2d_presses_each_direction_past_its_deadzone() -> void:
 	# When: A stick deflected left and up is split for the `move` action on slot 0.
-	var got := SteamDeviceActions.split_analog_2d(&"move", Vector2(-0.5, 0.25), 0)
+	var got: Array[InputEventAction] = _device_actions.split_analog_2d(
+		&"move", Vector2(-0.5, 0.25), 0
+	)
 
 	# Then: The four directional actions are in `Input.get_vector` order.
 	assert_eq(
@@ -54,7 +58,9 @@ func test_split_analog_2d_presses_each_direction_past_its_deadzone() -> void:
 
 func test_split_analog_2d_presses_an_unknown_action_from_half_strength() -> void:
 	# When: A stick deflected up is split for an action the `InputMap` doesn't know.
-	var got := SteamDeviceActions.split_analog_2d(&"look", Vector2(0.0, 0.25), 0)
+	var got: Array[InputEventAction] = _device_actions.split_analog_2d(
+		&"look", Vector2(0.0, 0.25), 0
+	)
 
 	# Then: The direction is released below half strength.
 	assert_eq(got.map(func(e): return e.pressed), [false, false, false, false])
@@ -64,9 +70,9 @@ func test_get_press_threshold_reads_the_input_map_deadzone() -> void:
 	# When/Then: A registered action's threshold is its deadzone, and an unknown
 	# action's is half strength.
 	assert_almost_eq(
-		SteamDeviceActions.get_press_threshold(&"move_up"), _TEST_DEADZONE, 0.001
+		_device_actions.get_press_threshold(&"move_up"), _TEST_DEADZONE, 0.001
 	)
-	assert_eq(SteamDeviceActions.get_press_threshold(&"unknown"), 0.5)
+	assert_eq(_device_actions.get_press_threshold(&"unknown"), 0.5)
 
 
 func test_publish_input_event_presses_an_action_once_per_state_change() -> void:
@@ -159,6 +165,11 @@ func after_each() -> void:
 
 
 func before_all() -> void:
+	var path: String = get_script().resource_path.get_base_dir().path_join(
+		_DEVICE_ACTIONS_PATH
+	)
+	_device_actions = load(path)
+
 	for action in _TEST_ACTIONS:
 		InputMap.add_action(action, _TEST_DEADZONE)
 
@@ -170,7 +181,14 @@ func before_all() -> void:
 func before_each() -> void:
 	# NOTE: The component isn't added to the scene, since its `_ready` needs Steam Input;
 	# publishing only touches `Input` and the instance's own state.
-	_actions = autofree(SteamDeviceActions.new())
+	_actions = autofree(_device_actions.new())
+
+
+func should_skip_script():
+	if not ClassDB.class_exists(&"Steam"):
+		return "the GodotSteam extension isn't available on this platform"
+
+	return false
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
