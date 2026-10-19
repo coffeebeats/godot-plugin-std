@@ -37,6 +37,50 @@ var _joypad_monitor: Variant = null
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
+func test_get_action_for_event_resolves_a_handle_by_the_event_type() -> void:
+	# Given: A digital action and an analog action which share a handle, as Steam
+	# numbers each kind separately.
+	_device_actions._digital_actions[1] = &"move_up"
+	_device_actions._analog_actions[1] = &"move"
+
+	# When/Then: The event type picks the action, and an unknown handle has no name.
+	assert_eq(
+		_device_actions.get_action_for_event(
+			Steam.INPUT_ACTION_EVENT_TYPE_DIGITAL_ACTION, 1
+		),
+		&"move_up",
+	)
+	assert_eq(
+		_device_actions.get_action_for_event(
+			Steam.INPUT_ACTION_EVENT_TYPE_ANALOG_ACTION, 1
+		),
+		&"move",
+	)
+	assert_eq(
+		_device_actions.get_action_for_event(
+			Steam.INPUT_ACTION_EVENT_TYPE_DIGITAL_ACTION, 2
+		),
+		&"",
+	)
+
+
+func test_get_action_handles_keep_a_shared_handle_per_kind() -> void:
+	# Given: A digital action and an analog action whose handles are known and equal.
+	_device_actions._is_initialized = true
+	_device_actions._digital_action_handles[&"move_up"] = 1
+	_device_actions._analog_action_handles[&"move"] = 1
+
+	# When: Each handle is fetched again.
+	var digital: int = _device_actions.get_digital_action_handle(&"move_up")
+	var analog: int = _device_actions.get_analog_action_handle(&"move")
+
+	# Then: Both are found, and each kind maps the handle back to its own action.
+	assert_eq(digital, 1)
+	assert_eq(analog, 1)
+	assert_eq(_device_actions._digital_actions[1], &"move_up")
+	assert_eq(_device_actions._analog_actions[1], &"move")
+
+
 func test_split_analog_2d_presses_each_direction_the_stick_deflects() -> void:
 	# When: A stick deflected left, and up inside the deadzone, is split for slot 0.
 	var got: Array[InputEventAction] = _device_actions.split_analog_2d(
@@ -242,6 +286,13 @@ func after_each() -> void:
 		Input.action_release(action)
 
 	_device_actions._restore_stick_deadzones()
+
+	# NOTE: The handle maps are static, so a test's entries are dropped here.
+	_device_actions._is_initialized = false
+	_device_actions._analog_actions.clear()
+	_device_actions._analog_action_handles.clear()
+	_device_actions._digital_actions.clear()
+	_device_actions._digital_action_handles.clear()
 
 
 func before_all() -> void:
