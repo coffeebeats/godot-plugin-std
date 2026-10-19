@@ -256,6 +256,19 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _enter_tree() -> void:
+	if not confined_property:
+		return
+
+	Signals.connect_safe(confined_property.value_changed, _on_confined_property_changed)
+
+	# NOTE: A loaded scope emits no value change, so a saved value is read on load.
+	if confined_property.scope and not confined_property.scope.is_loaded:
+		Signals.connect_safe(
+			confined_property.scope.loaded, _on_confined_property_changed
+		)
+
+
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_INPUT_CURSOR).remove_member(self)
 
@@ -263,6 +276,11 @@ func _exit_tree() -> void:
 		Signals.disconnect_safe(
 			confined_property.value_changed, _on_confined_property_changed
 		)
+
+		if confined_property.scope:
+			Signals.disconnect_safe(
+				confined_property.scope.loaded, _on_confined_property_changed
+			)
 
 
 func _input(event: InputEvent) -> void:
@@ -331,9 +349,6 @@ func _ready() -> void:
 	StdGroup.with_id(GROUP_INPUT_CURSOR).add_member(self)
 
 	if confined_property:
-		Signals.connect_safe(
-			confined_property.value_changed, _on_confined_property_changed
-		)
 		_cursor_confined = _resolve_confined()
 
 	_cursor_visible = (
@@ -502,7 +517,7 @@ func _update_focus(trigger: StringName = &"") -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_confined_property_changed(_value: Variant) -> void:
+func _on_confined_property_changed(_value: Variant = null) -> void:
 	var confined := _resolve_confined()
 	if confined == _cursor_confined:
 		return

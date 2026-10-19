@@ -90,6 +90,23 @@ func test_get_is_confined_true_when_property_on_over_unconfined_set() -> void:
 	assert_true(cursor.get_is_confined())
 
 
+func test_get_is_confined_follows_confined_property_once_its_scope_loads() -> void:
+	# Given: A cursor added to the scene whose confinement property defaults to off
+	# under a scope not yet loaded.
+	var property := _make_confined_property(false)
+	cursor.confined_property = property
+	add_child_autofree(cursor)
+	assert_false(cursor.get_is_confined(), "precondition: not confined")
+
+	# When: The scope loads a saved value turning the property on.
+	property.scope.config.set_bool(property.category, property.name, true)
+	property.scope.is_loaded = true
+	property.scope.loaded.emit()
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+
 func test_get_is_visible_returns_true_by_default() -> void:
 	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
