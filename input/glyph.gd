@@ -45,7 +45,22 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 ## cycle_interval is the time (in seconds) each origin bound to the action is shown
 ## before the glyph advances to the next one, starting over from `binding_index`, so a
 ## player sees every binding. `0` shows `binding_index` alone.
-@export var cycle_interval: float = 0.0
+@export var cycle_interval: float = 0.0:
+	set(value):
+		if value == cycle_interval:
+			return
+
+		cycle_interval = value
+
+		if Engine.is_editor_hint() or not is_node_ready():
+			return
+
+		# NOTE: A change restarts the cycle, since the origin count is only fetched while
+		# cycling, and starts or stops the processing which drives it.
+		_cycle_offset = 0
+		_cycle_time = 0.0
+		set_process(_slot.device_type == DeviceType.KEYBOARD or cycle_interval > 0.0)
+		_handle_update()
 
 @export_subgroup("Player")
 
@@ -81,9 +96,11 @@ func get_binding_index() -> int:
 	return binding_index + _cycle_offset
 
 
-## update forces the glyph icon to update itself; this should be called after changing
-## the action configuration.
+## update forces the glyph icon to update itself, restarting its cycle from
+## `binding_index`; this should be called after changing the action configuration.
 func update() -> void:
+	_cycle_offset = 0
+	_cycle_time = 0.0
 	_handle_update()
 
 
@@ -136,7 +153,9 @@ func _process(delta: float) -> void:
 	if _cycle_time < cycle_interval:
 		return
 
-	_cycle_time -= cycle_interval
+	# NOTE: A frame longer than the interval advances the glyph once and drops the
+	# surplus, rather than catching up a step per frame afterwards.
+	_cycle_time = fmod(_cycle_time, cycle_interval)
 	_cycle_offset = (_cycle_offset + 1) % _get_cycle_length()
 	_handle_update()
 
@@ -151,6 +170,11 @@ func _ready() -> void:
 	Signals.connect_safe(_slot.action_configuration_changed, _on_actions_changed)
 	Signals.connect_safe(_slot.cursor_visibility_changed, _on_cursor_visibility_changed)
 	Signals.connect_safe(_slot.device_activated, _on_device_activated)
+
+	# NOTE: A controller glyph locked by a `DEVICE_TYPE_GENERIC` override follows the
+	# connected joypads, so a connect or disconnect can change its family.
+	Signals.connect_safe(_slot.device_connected, _on_device_connection_changed)
+	Signals.connect_safe(_slot.device_disconnected, _on_device_connection_changed)
 
 	if device_type_override is StdSettingsPropertyInt:
 		(
@@ -271,6 +295,10 @@ func _on_device_activated(device: StdInputDevice) -> void:
 	_cycle_offset = 0
 	_cycle_time = 0.0
 	_device_activated(device)
+	_handle_update()
+
+
+func _on_device_connection_changed(_device: StdInputDevice) -> void:
 	_handle_update()
 
 
