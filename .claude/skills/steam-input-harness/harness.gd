@@ -51,7 +51,7 @@ const STEPS := [
 	],
 	[
 		"pointer",
-		"Move the pointer with the controller (right stick, trackpad or gyro, bound to 'pointer' as mouse). Move it at least 200 px."
+		"Press SPACE first so the keyboard is active, then move the pointer with the controller (right stick, trackpad or gyro, bound to 'pointer' as mouse). Move it at least 200 px; keep the real mouse still."
 	],
 	[
 		"pointer_slow",
@@ -59,7 +59,7 @@ const STEPS := [
 	],
 	[
 		"captured",
-		"Cursor is now CAPTURED. Move the pointer with the controller again for 2 seconds."
+		"Cursor is now CAPTURED. Move the pointer with the controller again, for about 6 seconds (the step ends after 60 motion events)."
 	],
 	[
 		"origins",
@@ -739,8 +739,8 @@ func _s_pointer_enter() -> void:
 	_cursor.update_configuration([_set])
 	_log(
 		(
-			"pointer: mouse_mode=%d; keep the real mouse still"
-			% DisplayServer.mouse_get_mode()
+			"pointer: mouse_mode=%d active=%s (expect the keyboard before moving)"
+			% [DisplayServer.mouse_get_mode(), _active_name()]
 		)
 	)
 	_activations.clear()
@@ -820,7 +820,7 @@ func _s_captured_tick(delta: float) -> void:
 
 
 func _s_captured_check() -> bool:
-	return _state["t"] >= 2.0
+	return _state["t"] >= 6.0 or _motion_events.size() >= 60
 
 
 func _s_captured_exit() -> void:
