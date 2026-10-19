@@ -327,11 +327,16 @@ func _register_actions() -> void:
 		MOVE[2]: KEY_W,
 		MOVE[3]: KEY_S
 	}
-	for action in binds:
-		var key := InputEventKey.new()
-		key.keycode = binds[action]
+	# NOTE: Every action gets a project setting, since the Godot binding component reads
+	# `input/<action>` for each action in the set and warns when one is missing.
+	for action in all:
+		var events: Array = []
+		if action in binds:
+			var key := InputEventKey.new()
+			key.keycode = binds[action]
+			events.append(key)
 		ProjectSettings.set_setting(
-			"input/" + action, {"deadzone": DEADZONE, "events": [key]}
+			"input/" + action, {"deadzone": DEADZONE, "events": events}
 		)
 
 
