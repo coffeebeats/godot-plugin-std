@@ -41,6 +41,7 @@ signal focus_root_changed(root: Control)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const MotionFilter := preload("motion_filter.gd")
 const Signals := preload("../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
@@ -73,11 +74,8 @@ var _hide_delay: float = 0.0
 var _hovered: Control = null
 var _pending_focus: Control = null
 var _pressed: Array[String] = []
-var _reveal_distance_minimum: Vector2 = Vector2.ZERO
-var _reveal_motion_deltas := PackedVector2Array()
-var _reveal_motion_times := PackedInt64Array()
+var _reveal_motion := MotionFilter.new()
 var _reveal_mouse_buttons: Array[MouseButton] = []
-var _reveal_window: float = 0.0
 var _sets_confined: bool = false
 var _time_since_mouse_motion: float = 0.0
 var _was_cursor_visible: bool = false
@@ -118,7 +116,7 @@ func hide_cursor() -> void:
 
 	_cursor_visible = false
 	_time_since_mouse_motion = 0.0
-	_clear_reveal_motion()
+	_reveal_motion.clear()
 	_on_properties_changed()
 
 
@@ -191,7 +189,7 @@ func show_cursor() -> void:
 
 	_cursor_visible = true
 	_time_since_mouse_motion = 0.0
-	_clear_reveal_motion()
+	_reveal_motion.clear()
 	_on_properties_changed()
 
 
@@ -235,14 +233,7 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 			if action not in _hide_actions_if_hovered:
 				_hide_actions_if_hovered.append(action)
 
-	_reveal_distance_minimum = action_sets.reduce(
-		func(v, s): return v.max(s.cursor_reveal_distance_minimum), Vector2.ZERO
-	)
-
-	_reveal_window = action_sets.reduce(
-		func(w, s): return max(w, s.cursor_reveal_window), 0.0
-	)
-	_clear_reveal_motion()
+	_reveal_motion.configure(action_sets)
 
 	_reveal_mouse_buttons = []
 	for action_set in action_sets:
@@ -315,7 +306,7 @@ func _input(event: InputEvent) -> void:
 		if (
 			(
 				event is InputEventMouseMotion
-				and _is_significant_motion(event.screen_relative)
+				and _reveal_motion.push(event.screen_relative)
 			)
 			or (
 				event is InputEventMouseButton
@@ -325,14 +316,14 @@ func _input(event: InputEvent) -> void:
 		):
 			_cursor_visible = true
 			_time_since_mouse_motion = 0.0
-			_clear_reveal_motion()
+			_reveal_motion.clear()
 			_on_properties_changed()
 
 		return
 
 	# Mouse is currently visible, so motion past the minimum restarts the hide delay.
 	if event is InputEventMouseMotion:
-		if _is_significant_motion(event.screen_relative):
+		if _reveal_motion.push(event.screen_relative):
 			_time_since_mouse_motion = 0.0
 
 		return
@@ -344,7 +335,7 @@ func _input(event: InputEvent) -> void:
 	# Finally, hide the cursor if a hide action was just pressed.
 	if hide_action:
 		_cursor_visible = false
-		_clear_reveal_motion()
+		_reveal_motion.clear()
 		_on_properties_changed(hide_action)
 
 
@@ -381,11 +372,6 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _clear_reveal_motion() -> void:
-	_reveal_motion_deltas = PackedVector2Array()
-	_reveal_motion_times = PackedInt64Array()
-
-
 func _deferred_grab_focus(id: int, trigger: StringName, make_focusable: bool) -> void:
 	if id != _deferred_focus_id:
 		return
@@ -410,15 +396,6 @@ func _deferred_update_focus(version: int) -> void:
 	_update_focus()
 
 
-func _exceeds_reveal_minimum(motion: Vector2) -> bool:
-	# NOTE: Each axis is compared on its own, since `Vector2`'s `>` compares the y
-	# components only when the x components are equal.
-	return (
-		absf(motion.x) > _reveal_distance_minimum.x
-		or absf(motion.y) > _reveal_distance_minimum.y
-	)
-
-
 func _grab_focus(target: Control, trigger: StringName) -> void:
 	about_to_grab_focus.emit(target, trigger)
 	target.focus_mode = Control.FOCUS_ALL
@@ -437,38 +414,6 @@ func _grab_focus_deferred(
 	_deferred_focus = target
 	_deferred_focus_id += 1
 	_deferred_grab_focus.call_deferred(_deferred_focus_id, trigger, make_focusable)
-
-
-## _is_significant_motion returns whether `relative`, a mouse motion in screen pixels,
-## exceeds the reveal minimum on either axis, after summing it with the signed motion
-## within the reveal window if one is set.
-func _is_significant_motion(relative: Vector2) -> bool:
-	if _reveal_window <= 0.0:
-		return _exceeds_reveal_minimum(relative)
-
-	# NOTE: Ticks are wall clock time, so neither `Engine.time_scale` nor a paused tree
-	# stretches the window.
-	var now := Time.get_ticks_usec()
-	var cutoff := now - int(_reveal_window * 1_000_000.0)
-
-	var expired := 0
-	while (
-		expired < _reveal_motion_times.size() and _reveal_motion_times[expired] < cutoff
-	):
-		expired += 1
-
-	if expired > 0:
-		_reveal_motion_deltas = _reveal_motion_deltas.slice(expired)
-		_reveal_motion_times = _reveal_motion_times.slice(expired)
-
-	_reveal_motion_deltas.append(relative)
-	_reveal_motion_times.append(now)
-
-	var total := Vector2.ZERO
-	for delta in _reveal_motion_deltas:
-		total += delta
-
-	return _exceeds_reveal_minimum(total)
 
 
 func _resolve_confined() -> bool:

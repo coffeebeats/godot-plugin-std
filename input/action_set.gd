@@ -111,7 +111,8 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
 ## cursor_reveal_distance_minimum defines the distance, per axis in screen pixels, which
 ## mouse motion must exceed on at least one axis to reveal the cursor or, while it's
-## visible, to restart `cursor_hide_delay`. This filters out slight bumps to the mouse.
+## visible, to restart `cursor_hide_delay`. The same threshold decides when
+## `action_absolute_mouse` motion counts as joypad activity.
 ##
 ## NOTE: Godot merges each frame's motion into one event, so a per-event minimum scales
 ## with the frame rate. Pair a nonzero minimum with a `cursor_reveal_window`.
@@ -149,8 +150,15 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 @export_subgroup("Actions ")
 
 ## action_absolute_mouse is the name of an "absolute mouse"-typed action which will be
-## defined via the Steam Input API. That action should be converted into normal mouse
-## mouse input via `Input.parse_input_event`.
+## defined via the Steam Input API, so a trackpad or gyro drives the pointer. The Steam
+## actions component moves the cursor by the action's deltas, or delivers them as mouse
+## motion while the cursor is captured, and publishes the action as joypad activity for
+## the `StdInputSlot` once its motion passes `cursor_reveal_distance_minimum`, summed
+## over `cursor_reveal_window`.
+##
+## NOTE: A captured set which reads these deltas for aiming should set a non-zero
+## `cursor_reveal_distance_minimum` too; otherwise an always-on gyro at rest switches
+## glyphs to the controller while a mouse aims.
 ##
 ## NOTE: This action must *not* be present in the `actions_analog_2d` array.
 @export var action_absolute_mouse: StringName = ""

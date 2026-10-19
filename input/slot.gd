@@ -880,6 +880,15 @@ func _on_Self_action_configuration_changed() -> void:
 			assert(action not in _actions, "found duplicate action")
 			_actions.append(action)
 
+		# NOTE: Steam publishes the absolute mouse action as joypad activity, so a
+		# trackpad or gyro in use counts as the joypad being used.
+		if action_set.action_absolute_mouse:
+			assert(
+				action_set.action_absolute_mouse not in _actions,
+				"found duplicate action",
+			)
+			_actions.append(action_set.action_absolute_mouse)
+
 	# NOTE: A set change can erase the origins of a held action, so its release could
 	# never match; an action the active sets no longer bind is dropped instead.
 	for held in _pressed.values():
