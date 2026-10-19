@@ -363,6 +363,26 @@ func _grab_focus(target: Control, trigger: StringName) -> void:
 	target.grab_focus()
 
 
+## _grab_focus_deferred focuses `target` at the end of the frame, once the event which
+## hid the cursor has finished propagating, so a hide action which also navigates focus
+## can't move it off the control it was just given. With `make_focusable`, the control's
+## focus mode is set first; otherwise its focus handler is expected to restore it.
+func _grab_focus_deferred(
+	target: Control, trigger: StringName, make_focusable: bool
+) -> void:
+	var grab := func() -> void:
+		if not is_instance_valid(target) or not target.is_inside_tree():
+			return
+
+		if make_focusable:
+			target.focus_mode = Control.FOCUS_ALL
+
+		about_to_grab_focus.emit(target, trigger)
+		target.grab_focus()
+
+	grab.call_deferred()
+
+
 func _resolve_confined() -> bool:
 	if confined_property:
 		return confined_property.get_value()
@@ -410,6 +430,14 @@ func _update_focus(trigger: StringName = &"") -> void:
 		_pending_focus = null
 		return
 
+	# NOTE: The control focused before the last reveal is consumed by the first hidden
+	# resolution, whichever target that resolution picks, so a stale one can't take
+	# focus from a later resolution, such as one after the picked control closes.
+	var previous: Control = null
+	if not _cursor_visible:
+		previous = _focus_before_reveal
+		_focus_before_reveal = null
+
 	# Consume the pending focus target.
 	var pending := _pending_focus
 	_pending_focus = null
@@ -438,16 +466,11 @@ func _update_focus(trigger: StringName = &"") -> void:
 		else null
 	)
 
-	# NOTE: The control focused before the last reveal is consumed by whichever hide
-	# resolves focus first, so a stale one can't take focus from a later resolution.
-	var previous := _focus_before_reveal
-	_focus_before_reveal = null
-
 	# NOTE: Only use _hovered if it's under the focus root (or there is no
 	# root). This handles the case where a modal opens over a hovered element —
 	# the element remains hovered but shouldn't receive focus (Godot bug).
 	if _hovered and (not root or root.is_ancestor_of(_hovered)):
-		_grab_focus(_hovered, trigger)
+		_grab_focus_deferred(_hovered, trigger, true)
 		unset_hovered(_hovered)
 		return
 
@@ -463,16 +486,15 @@ func _update_focus(trigger: StringName = &"") -> void:
 		and (not root or root.is_ancestor_of(previous))
 		and not (previous is BaseButton and previous.disabled)
 	):
-		_grab_focus(previous, trigger)
+		_grab_focus_deferred(previous, trigger, true)
 		return
 
-	# Fall back to the highest-priority anchor. Use deferred calls so that the
-	# cursor visibility signal is processed first, allowing focus handlers to
-	# restore focus_mode before grab_focus runs.
+	# Fall back to the highest-priority anchor. Its focus mode is left to its focus
+	# handler, which restores it on the cursor visibility signal before the deferred
+	# grab runs.
 	var anchor := StdInputCursorFocusHandler.get_focus_target(root)
 	if anchor:
-		about_to_grab_focus.emit.call_deferred(anchor, trigger)
-		anchor.grab_focus.call_deferred()
+		_grab_focus_deferred(anchor, trigger, false)
 	elif current_focus:
 		current_focus.release_focus()
 
