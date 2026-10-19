@@ -251,6 +251,11 @@ func _exit_tree() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# NOTE: A hide action is tracked from its press whatever the cursor's state, so one
+	# held from before a reveal, or from within the hide delay, can't hide the cursor
+	# once a reveal or the delay's end would otherwise let its next event do so.
+	var hide_action := _track_hide_actions(event)
+
 	if not _cursor_visible:
 		# NOTE: A captured cursor can't be revealed, and `_on_properties_changed`
 		# would hide it again and re-emit its visibility, so reveal input is ignored.
@@ -264,6 +269,7 @@ func _input(event: InputEvent) -> void:
 			)
 			or (
 				event is InputEventMouseButton
+				and event.pressed
 				and event.button_index in _reveal_mouse_buttons
 			)
 		):
@@ -285,39 +291,19 @@ func _input(event: InputEvent) -> void:
 	if _time_since_mouse_motion < _hide_delay:
 		return
 
-	# Finally, check if any of the hide actions have just been pressed.
-
-	if _hovered:
-		for action in _hide_actions_if_hovered:
-			if not event.is_action_pressed(action):
-				_pressed.erase(action)
-				continue
-
-			if action not in _pressed:
-				_pressed.append(action)
-				_cursor_visible = false
-				_clear_reveal_motion()
-				_on_properties_changed(action)
-				break
-
-	for action in _hide_actions:
-		if not event.is_action_pressed(action):
-			_pressed.erase(action)
-			continue
-
-		if action not in _pressed:
-			_pressed.append(action)
-			_cursor_visible = false
-			_clear_reveal_motion()
-			_on_properties_changed(action)
-			break
+	# Finally, hide the cursor if a hide action was just pressed.
+	if hide_action:
+		_cursor_visible = false
+		_clear_reveal_motion()
+		_on_properties_changed(hide_action)
 
 
 func _process(delta: float) -> void:
 	if _cursor_visible:
 		_time_since_mouse_motion += delta
 
-	for action in _pressed:
+	# NOTE: Erasing removes from the list, so a copy is iterated.
+	for action in _pressed.duplicate():
 		if not Input.is_action_pressed(action):
 			_pressed.erase(action)
 
@@ -400,6 +386,33 @@ func _is_significant_motion(relative: Vector2) -> bool:
 		total += delta
 
 	return _exceeds_reveal_minimum(total)
+
+
+## _track_hide_actions records every hide action `event` newly presses and returns the
+## first of them which may hide the cursor now: one of the hovered-only actions while a
+## control is hovered, else one of the unconditional ones. A held action is skipped.
+func _track_hide_actions(event: InputEvent) -> StringName:
+	var trigger := &""
+
+	for action in _hide_actions_if_hovered:
+		if not event.is_action_pressed(action) or action in _pressed:
+			continue
+
+		_pressed.append(action)
+
+		if _hovered and not trigger:
+			trigger = action
+
+	for action in _hide_actions:
+		if not event.is_action_pressed(action) or action in _pressed:
+			continue
+
+		_pressed.append(action)
+
+		if not trigger:
+			trigger = action
+
+	return trigger
 
 
 func _update_focus(trigger: StringName = &"") -> void:
