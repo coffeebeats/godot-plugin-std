@@ -258,10 +258,8 @@ func swap_joypad_components(
 	var action_sets := _list_action_sets()
 
 	if joypad_monitor:
-		for joypad in _joypad_devices:
-			if joypad == _active:
-				_active = null
-
+		# NOTE: Disconnecting removes from the list, so a copy is iterated.
+		for joypad in _joypad_devices.duplicate():
 			_disconnect_joy_device(joypad.device_id)
 
 		Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
@@ -281,7 +279,9 @@ func swap_joypad_components(
 
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
-	Signals.connect_safe(actions_joy.bindings_changed, _on_component_bindings_changed)
+	Signals.ensure_connected(
+		actions_joy.bindings_changed, _on_component_bindings_changed
+	)
 
 	joypad_monitor.broadcast_connected_joypads()
 
@@ -400,9 +400,11 @@ func _enter_tree() -> void:
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
+	# NOTE: The keyboard and joypads may share one actions component, which is then
+	# connected once.
 	for component in [actions_kbm, actions_joy]:
 		if component is StdInputDeviceActions:
-			Signals.connect_safe(
+			Signals.ensure_connected(
 				component.bindings_changed, _on_component_bindings_changed
 			)
 
@@ -452,7 +454,8 @@ func _exit_tree() -> void:
 		remove_child(kbm)
 		kbm.queue_free()
 
-	for joypad in _joypad_devices:
+	# NOTE: Disconnecting removes from the list, so a copy is iterated.
+	for joypad in _joypad_devices.duplicate():
 		_disconnect_joy_device(joypad.device_id)
 
 	_joypad_devices = []
@@ -631,6 +634,14 @@ func _disconnect_joy_device(device: int) -> bool:
 			continue
 
 		_joypad_devices.remove_at(i)
+
+		# NOTE: The slot's own device ID and type keep depicting the removed joypad, so
+		# the prompts stay as they were until the next deliberate input.
+		if _active == joypad:
+			_active = null
+		if _last_active_joypad == joypad:
+			_last_active_joypad = null
+
 		device_disconnected.emit(joypad)
 
 		remove_child(joypad)
@@ -833,6 +844,12 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 
 
 func _on_component_bindings_changed() -> void:
+	# NOTE: A component can reload before the slot is ready, such as when a scene change
+	# creates a new component while the active set survives in its static state, and
+	# the slot has no configuration to recompute until it loads a set itself.
+	if not is_node_ready():
+		return
+
 	action_configuration_changed.emit()
 
 
