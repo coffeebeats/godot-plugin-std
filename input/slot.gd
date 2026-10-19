@@ -474,8 +474,6 @@ func _input(event: InputEvent) -> void:
 	if not event.is_pressed():
 		return
 
-	_has_player_input = true
-
 	if _try_activate_joypad(event):
 		return
 
@@ -775,6 +773,11 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 		_pressed.append(action)
 		is_match = true
 
+	# NOTE: Only a bound action counts as the player's first input; an emulated button,
+	# an unbound axis, or a stick inside its deadzone shows no preference.
+	if is_held or is_match:
+		_has_player_input = true
+
 	if is_held or not is_match:
 		return false
 
@@ -813,9 +816,6 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 	if not (event is InputEventKey or event is InputEventMouseButton):
 		return false
 
-	if _active and _active.device_type == DEVICE_TYPE_KEYBOARD:
-		return false
-
 	if (
 		event is InputEventMouseButton
 		and event.device == InputEvent.DEVICE_ID_EMULATION
@@ -835,6 +835,13 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 				break
 
 	if not is_match:
+		return false
+
+	# NOTE: A bound press counts as the player's first input even while the keyboard is
+	# already active, so a joypad connected afterwards is only connected.
+	_has_player_input = true
+
+	if _active and _active.device_type == DEVICE_TYPE_KEYBOARD:
 		return false
 
 	return _activate_device(_kbm_device)

@@ -512,6 +512,73 @@ func test_input_slot_joypad_connected_after_player_input_stays_inactive() -> voi
 	assert_signal_not_emitted(slot, "device_activated")
 
 
+func test_input_slot_emulated_mouse_button_is_not_player_input() -> void:
+	# Given: An input slot added to the scene with the keyboard active and a joypad
+	# preferred.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._actions = [&"test_action"]
+
+	# Given: A mouse button Godot emulated from a touch was pressed.
+	var event := _mouse_button(MOUSE_BUTTON_LEFT)
+	event.device = InputEvent.DEVICE_ID_EMULATION
+	slot._input(event)
+	assert_false(slot._has_player_input, "precondition: no player input")
+
+	# When: A joypad connects.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	# Then: The joypad is active, as the touch showed no preference.
+	var got: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
+func test_input_slot_unbound_key_is_not_player_input() -> void:
+	# Given: An input slot added to the scene with the keyboard active and the test
+	# action active.
+	slot.claim_kbm_input = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._actions = [&"test_action"]
+
+	# When: A key bound to no action is pressed.
+	var event := InputEventKey.new()
+	event.keycode = KEY_A
+	event.pressed = true
+	slot._input(event)
+
+	# Then: The slot has seen no player input.
+	assert_false(slot._has_player_input)
+
+	# When: The key bound to the test action is pressed.
+	slot._input(_key())
+
+	# Then: The slot has seen player input.
+	assert_true(slot._has_player_input)
+
+
+func test_input_slot_unbound_joypad_motion_is_not_player_input() -> void:
+	# Given: An input slot added to the scene with an active joypad and no active
+	# action.
+	slot.claim_kbm_input = false
+	add_child_autofree(slot)
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_active_device())
+	slot._actions = []
+
+	# When: A stick axis bound to no active action moves.
+	slot._input(_joypad_motion(0, 1.0))
+
+	# Then: The slot has seen no player input.
+	assert_false(slot._has_player_input)
+
+
 func test_input_slot_held_joypad_action_does_not_reactivate_after_key_release() -> void:
 	# Given: The keyboard is active with a joypad connected, and a held joypad action
 	# the InputMap doesn't know activates the joypad.
