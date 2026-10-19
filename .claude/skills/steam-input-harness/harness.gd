@@ -15,6 +15,37 @@
 extends Node
 
 const DEFAULT_APP_ID := 480
+
+## REVEAL_RAMP_START and REVEAL_RAMP_STEP shape the pointer ramp of the frame-rate reveal
+## steps, in px/s: the starting speed and the rise every half second.
+const REVEAL_RAMP_START := 10.0
+const REVEAL_RAMP_STEP := 5.0
+
+## REVEAL_RAMP_X is the window x coordinate the pointer ramp starts from.
+const REVEAL_RAMP_X := 100.0
+
+## CONFIRMED lists the steps whose behaviour the hardware pass of 2026-10-19 confirmed
+## (DualShock 4, Windows, app 480, the #495 stack through #523). A run skips them unless
+## `--all` is given, so a default run covers only what is still open.
+const CONFIRMED := [
+	"stick_up",
+	"stick_release_1",
+	"stick_left",
+	"stick_release_2",
+	"hold_counts",
+	"hold_release",
+	"jump_presses",
+	"switch_kbm_while_held",
+	"reactivate_joypad",
+	"stick_held_while_typing",
+	"trigger",
+	"pointer",
+	"pointer_slow",
+	"captured",
+	"origins",
+	"rebind",
+	"disconnect",
+]
 const DEADZONE := 0.5
 const MOVE: Array[StringName] = [&"move_left", &"move_right", &"move_up", &"move_down"]
 
@@ -59,11 +90,11 @@ const STEPS := [
 	],
 	[
 		"reveal_60",
-		"Frame rate capped at 60 fps and the cursor hidden. Let the stick rest, then move the pointer with it, slowly at first and speeding up until the cursor appears. Keep the real mouse still."
+		"Frame rate capped at 60 fps. Hands off the mouse and the stick: once the pointer has rested for a second, the harness hides the cursor and moves the pointer itself, faster and faster, until the cursor reveals."
 	],
 	[
 		"reveal_240",
-		"Frame rate capped at 240 fps and the cursor hidden. Same again: rest, then move the pointer slowly and speed up until the cursor appears."
+		"Frame rate capped at 240 fps. Same again, hands off: the harness ramps the pointer until the cursor reveals."
 	],
 	[
 		"captured",
@@ -158,6 +189,7 @@ var _motion_events: Array[String] = []
 var _record_motion: bool = false
 var _late_slot: bool = false
 var _from_step: String = ""
+var _run_all: bool = false
 var _cursor_visibility: Array[bool] = []
 
 # -- ENGINE METHODS ------------------------------------------------------------------ #
@@ -174,6 +206,8 @@ func _ready() -> void:
 			_late_slot = true
 		if arg.begins_with("--from="):
 			_from_step = arg.trim_prefix("--from=")
+		if arg == "--all":
+			_run_all = true
 
 	# NOTE: std may live at `res://` (its own repository) or `res://addons/std`.
 	var slot_script: Script = StdInputSlot
@@ -470,6 +504,11 @@ func _next_step() -> void:
 	# NOTE: `--from=<step>` skips every step before the named one, except the two which
 	# establish the pad and its bindings.
 	var step_name: String = STEPS[_step][0]
+	if step_name in CONFIRMED and not _run_all:
+		_log("--- step %s (skipped: confirmed on hardware; run with --all)" % step_name)
+		_next_step.call_deferred()
+		return
+
 	if _from_step:
 		if step_name == _from_step:
 			_from_step = ""
@@ -1062,64 +1101,77 @@ func _log_move(label: String) -> void:
 	)
 
 
-## _begin_reveal_at caps the frame rate at `fps`, hides the cursor and starts sampling the
-## pointer, so the speed at which the cursor reveals can be compared across rates.
+## _begin_reveal_at caps the frame rate at `fps` and prepares a pointer ramp which starts
+## once the pointer has rested for a second, so the speed at which the cursor reveals can
+## be compared across rates.
 func _begin_reveal_at(fps: int) -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = fps
+
+	# NOTE: The pointer is moved to the ramp's start now, while the cursor is visible, so
+	# the warp's echo lands inside the rest period instead of revealing the cursor.
+	Input.warp_mouse(
+		Vector2(REVEAL_RAMP_X, get_viewport().get_visible_rect().size.y / 2.0)
+	)
 	_state = {
 		"fps": fps,
-		"samples": [],
 		"armed": false,
 		"rest": 0.0,
 		"last": Vector2(DisplayServer.mouse_get_position()),
+		"t": 0.0,
+		"x": REVEAL_RAMP_X,
+		"speed": 0.0,
 	}
-	_log_action_origins(&"pointer")
 
 
-## _arm_reveal_at hides the cursor once the pointer has rested for a second, so the
-## reveal measured is the person's deliberate motion, then samples the pointer.
+## _arm_reveal_at hides the cursor once the pointer has rested for a second, then warps
+## the pointer along `x` at a speed which rises by `REVEAL_RAMP_STEP` px/s every half
+## second, carrying the sub-pixel remainder so slow speeds still move whole pixels.
 func _arm_reveal_at(delta: float) -> void:
-	if _state["armed"]:
-		_sample_pointer()
-		return
+	if not _state["armed"]:
+		var position := Vector2(DisplayServer.mouse_get_position())
+		if position == _state["last"]:
+			_state["rest"] += delta
+		else:
+			_state["rest"] = 0.0
+			_state["last"] = position
 
-	var position := Vector2(DisplayServer.mouse_get_position())
-	if position == _state["last"]:
-		_state["rest"] += delta
-	else:
-		_state["rest"] = 0.0
-		_state["last"] = position
+		if _state["rest"] < 1.0:
+			return
 
-	if _state["rest"] >= 1.0:
 		_state["armed"] = true
 		_cursor.hide_cursor()
-		_log("  pointer at rest; cursor hidden, measuring at %d fps" % _state["fps"])
+		_log(
+			(
+				"  pointer at rest; cursor hidden, ramping the pointer at %d fps"
+				% _state["fps"]
+			)
+		)
+		return
+
+	_state["t"] += delta
+	_state["speed"] = REVEAL_RAMP_START + REVEAL_RAMP_STEP * floorf(_state["t"] / 0.5)
+	var before := int(_state["x"])
+	_state["x"] += _state["speed"] * delta
+	if int(_state["x"]) != before:
+		Input.warp_mouse(
+			Vector2(int(_state["x"]), get_viewport().get_visible_rect().size.y / 2.0)
+		)
 
 
-## _end_reveal_at logs the pointer's speed over the reveal window before the reveal.
+## _end_reveal_at logs the commanded pointer speed at which the cursor revealed.
 func _end_reveal_at() -> void:
-	var samples: Array = _state["samples"]
-	var now: int = Time.get_ticks_usec()
-	var window_usec: int = int(_set.cursor_reveal_window * 1_000_000.0)
-	var inside: Array = samples.filter(
-		func(sample): return now - sample[0] <= window_usec
-	)
-	var speed := 0.0
-	if inside.size() >= 2:
-		var dt: float = float(inside[-1][0] - inside[0][0]) / 1_000_000.0
-		if dt > 0.0:
-			speed = (inside[-1][1] - inside[0][1]).length() / dt
 	_log(
 		(
-			"reveal at %d fps (measured %.0f): speed over the last %.2fs=%.0f px/s from %d samples (threshold %s px over the window)"
+			"reveal at %d fps (measured %.0f): revealed at %.0f px/s after %.1fs (threshold %s px over a %.2fs window, so about %.0f px/s)"
 			% [
 				_state["fps"],
 				Engine.get_frames_per_second(),
-				_set.cursor_reveal_window,
-				speed,
-				inside.size(),
+				_state["speed"],
+				_state["t"],
 				_set.cursor_reveal_distance_minimum,
+				_set.cursor_reveal_window,
+				_set.cursor_reveal_distance_minimum.x / _set.cursor_reveal_window,
 			]
 		)
 	)
@@ -1137,14 +1189,6 @@ func _log_action_origins(action: StringName) -> void:
 	for i in device.get_action_origin_count(_set, action):
 		labels.append(device.get_action_origin_label(_set, action, i))
 	_log("origins[%s]: %s" % [action, labels])
-
-
-## _sample_pointer records the pointer's position for `_end_reveal_at`, keeping a second.
-func _sample_pointer() -> void:
-	var samples: Array = _state["samples"]
-	samples.append([Time.get_ticks_usec(), Vector2(DisplayServer.mouse_get_position())])
-	while samples.size() > 1 and Time.get_ticks_usec() - samples[0][0] > 1_000_000:
-		samples.pop_front()
 
 
 func _log_origins() -> void:
