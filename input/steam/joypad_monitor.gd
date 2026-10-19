@@ -43,6 +43,38 @@ func get_device_id_for_slot(slot: int) -> int:
 	return _connected[slot]
 
 
+## get_device_type maps a Steam Input device type to the `StdInputDevice` family it
+## belongs to; types without a family of their own are generic.
+static func get_device_type(input_type: int) -> StdInputDevice.DeviceType:
+	match input_type:
+		Steam.INPUT_TYPE_STEAM_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
+		Steam.INPUT_TYPE_STEAM_DECK_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_STEAM_DECK
+
+		Steam.INPUT_TYPE_PS3_CONTROLLER, Steam.INPUT_TYPE_PS4_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_PS_4
+		Steam.INPUT_TYPE_PS5_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_PS_5
+
+		Steam.INPUT_TYPE_SWITCH_JOYCON_PAIR:
+			return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR
+		Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE:
+			return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE
+		Steam.INPUT_TYPE_SWITCH_PRO_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_SWITCH_PRO
+
+		Steam.INPUT_TYPE_MOBILE_TOUCH:
+			return StdInputDevice.DEVICE_TYPE_TOUCH
+
+		Steam.INPUT_TYPE_XBOX360_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_XBOX_360
+		Steam.INPUT_TYPE_XBOXONE_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_XBOX_ONE
+
+	return StdInputDevice.DEVICE_TYPE_GENERIC
+
+
 ## get_slot_for_device_id returns the "slot" index of the specified input device handle,
 ## or `-1` when the device isn't connected.
 ##
@@ -102,8 +134,13 @@ func _input(event: InputEvent) -> void:
 
 func _broadcast_connected_joypads() -> void:
 	for slot in _connected.size():
-		if _connected[slot]:
-			joy_connected.emit(slot)
+		var device := _connected[slot]
+		if not device:
+			continue
+
+		# NOTE: The type is reported here too, so a pad connected before a slot listened
+		# gets its family's glyphs rather than generic ones.
+		joy_connected.emit(slot, get_device_type(Steam.getInputTypeForHandle(device)))
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -127,33 +164,7 @@ func _connect_device(device: int) -> void:
 		assert(false, "invalid argument: duplicate device")
 		return
 
-	var device_type := StdInputDevice.DEVICE_TYPE_GENERIC
-
-	match Steam.getInputTypeForHandle(device):
-		Steam.INPUT_TYPE_STEAM_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
-		Steam.INPUT_TYPE_STEAM_DECK_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_STEAM_DECK
-
-		Steam.INPUT_TYPE_PS3_CONTROLLER, Steam.INPUT_TYPE_PS4_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_PS_4
-		Steam.INPUT_TYPE_PS5_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_PS_5
-
-		Steam.INPUT_TYPE_SWITCH_JOYCON_PAIR:
-			device_type = StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR
-		Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE:
-			device_type = StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE
-		Steam.INPUT_TYPE_SWITCH_PRO_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_SWITCH_PRO
-
-		Steam.INPUT_TYPE_MOBILE_TOUCH:
-			device_type = StdInputDevice.DEVICE_TYPE_TOUCH
-
-		Steam.INPUT_TYPE_XBOX360_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_XBOX_360
-		Steam.INPUT_TYPE_XBOXONE_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_XBOX_ONE
+	var device_type := get_device_type(Steam.getInputTypeForHandle(device))
 
 	_logger.info("Joypad connected.", {&"device": device, &"type": device_type})
 
