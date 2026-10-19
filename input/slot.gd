@@ -159,7 +159,10 @@ var _has_player_input: bool = false
 var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
 var _last_active_joypad: StdInputDevice = null
-var _pressed: Array[String] = []
+
+## _pressed maps each active action a joypad holds to the device ID of that joypad, so
+## the hold can't activate it again and ends only with that joypad's own release.
+var _pressed: Dictionary = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -467,8 +470,8 @@ func _input(event: InputEvent) -> void:
 
 	# NOTE: A pressed event can release a tracked action too, as a stick flicked from
 	# one side to the other releases the first direction without a centered event.
-	for action in _pressed.duplicate():
-		if _is_action_released(event, action):
+	for action in _pressed.keys():
+		if _pressed[action] == event.device and _is_action_released(event, action):
 			_pressed.erase(action)
 
 	if not event.is_pressed():
@@ -645,8 +648,11 @@ func _disconnect_joy_device(device: int) -> bool:
 		remove_child(joypad)
 		joypad.queue_free()
 
-		# NOTE: An action held on the removed joypad would never be released.
-		_pressed = []
+		# NOTE: An action held on the removed joypad would never be released, while one
+		# held on another joypad stays held.
+		for action in _pressed.keys():
+			if _pressed[action] == device:
+				_pressed.erase(action)
 
 		return true
 
@@ -770,7 +776,7 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 			is_held = true
 			continue
 
-		_pressed.append(action)
+		_pressed[action] = event.device
 		is_match = true
 
 	# NOTE: Only a bound action counts as the player's first input; an emulated button,
@@ -909,6 +915,12 @@ func _on_Self_action_configuration_changed() -> void:
 				"found duplicate action",
 			)
 			_actions.append(action_set.action_absolute_mouse)
+
+	# NOTE: A set change can erase the origins of a held action, so its release could
+	# never match; an action the active sets no longer bind is dropped instead.
+	for action in _pressed.keys():
+		if action not in _actions:
+			_pressed.erase(action)
 
 	if cursor is StdInputCursor:
 		cursor.update_configuration(action_sets)

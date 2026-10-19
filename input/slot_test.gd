@@ -731,6 +731,67 @@ func test_input_slot_joypad_disconnect_clears_tracked_actions() -> void:
 	assert_true(slot._pressed.is_empty())
 
 
+func test_input_slot_joypad_disconnect_keeps_another_joypads_tracked_action() -> void:
+	# Given: The keyboard is active with two joypads connected, each holding an action.
+	_activate_kbm_with_joypad_connected()
+	slot.joypad_monitor.connected = [0, 1] as Array[int]
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[1])
+	slot._actions = [&"aim", &"fire"]
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	slot._input(_injected_action(1, 1.0, &"fire"))
+	assert_has(slot._pressed, "aim", "precondition: action tracked")
+	assert_has(slot._pressed, "fire", "precondition: action tracked")
+
+	# When: The first joypad disconnects.
+	slot.joypad_monitor.joy_disconnected.emit(0)
+
+	# Then: Only the second joypad's action is still tracked.
+	assert_does_not_have(slot._pressed, "aim")
+	assert_has(slot._pressed, "fire")
+
+
+func test_input_slot_release_from_another_joypad_keeps_a_tracked_action() -> void:
+	# Given: The keyboard is active with a joypad connected holding an action.
+	_activate_kbm_with_joypad_connected()
+	slot._actions = [&"aim"]
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_has(slot._pressed, "aim", "precondition: action tracked")
+
+	# When: Another joypad releases the same action.
+	var event := _injected_action(1, 0.0, &"aim")
+	event.pressed = false
+	slot._input(event)
+
+	# Then: The action is still tracked for the first joypad.
+	assert_has(slot._pressed, "aim")
+
+	# When: The first joypad releases it.
+	event.device = 0
+	slot._input(event)
+
+	# Then: The action is no longer tracked.
+	assert_does_not_have(slot._pressed, "aim")
+
+
+func test_input_slot_set_change_drops_a_tracked_action_it_no_longer_binds() -> void:
+	# Given: The keyboard is active with a joypad connected, under an action set whose
+	# held joypad action is tracked.
+	_activate_kbm_with_joypad_connected()
+	var action_set := _make_action_set(&"Test")
+	action_set.actions_digital = [&"aim", &"test_action"]
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_has(slot._pressed, "aim", "precondition: action tracked")
+
+	# When: A set without the held action is loaded.
+	var other := _make_action_set(&"Other")
+	assert_true(slot.load_action_set(other), "precondition: action set loaded")
+
+	# Then: The action is no longer tracked, so its next press activates the joypad.
+	assert_does_not_have(slot._pressed, "aim")
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
