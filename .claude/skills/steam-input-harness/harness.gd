@@ -41,7 +41,6 @@ const CONFIRMED := [
 	"switch_kbm_while_held",
 	"reactivate_joypad",
 	"stick_held_while_typing",
-	"trigger",
 	"pointer",
 	"pointer_slow",
 	"reveal_60",
@@ -64,6 +63,10 @@ const STEPS := [
 	[
 		"bindings",
 		"Steam knows the Harness set but nothing is bound to it yet. Press F1 to open the binding panel (or Big Picture > the app > Controller settings), bind: Left stick as Joystick -> move, Cross/A -> jump, Circle/B -> cancel, Right trigger -> fire, Right stick or trackpad as Mouse -> pointer. Save the layout privately. This step ends by itself once 'jump' has an origin."
+	],
+	[
+		"rest",
+		"Hands off the controller for 5 seconds. The harness presses SPACE itself to activate the keyboard, then watches the resting pad."
 	],
 	["stick_up", "Push the LEFT STICK fully UP and hold."],
 	["stick_release_1", "Release the stick."],
@@ -597,6 +600,39 @@ func _s_bindings_exit() -> void:
 	_log("bindings present: jump origins=%d" % _jump_origin_count())
 
 
+func _s_rest_enter() -> void:
+	_activations.clear()
+	_state = {"max": 0.0, "pressed_frames": 0}
+
+	# NOTE: The harness types SPACE itself, so the step runs with no hands on anything.
+	for pressed in [true, false]:
+		var key := InputEventKey.new()
+		key.keycode = KEY_SPACE
+		key.pressed = pressed
+		Input.parse_input_event(key)
+
+
+func _s_rest_tick(_delta: float) -> void:
+	for action in MOVE + [&"fire"]:
+		_state["max"] = maxf(_state["max"], Input.get_action_raw_strength(action))
+		if Input.is_action_pressed(action):
+			_state["pressed_frames"] += 1
+
+
+func _s_rest_check() -> bool:
+	return _step_time >= 5.0
+
+
+func _s_rest_exit() -> void:
+	var deadzones := MOVE.map(func(a): return InputMap.action_get_deadzone(a))
+	_log(
+		(
+			"rest: max strength=%.5f pressed frames=%d activations=%s move deadzones=%s (expect 0, 0, no joypad, all near 0)"
+			% [_state["max"], _state["pressed_frames"], _activations, deadzones]
+		)
+	)
+
+
 func _s_stick_up_enter() -> void:
 	_log_action_origins(&"move_left")
 
@@ -798,12 +834,11 @@ func _s_trigger_check() -> bool:
 func _s_trigger_exit() -> void:
 	_log(
 		(
-			"trigger: pressed at strength=%.2f released at %.2f max=%.2f (deadzone %.2f) samples=%s"
+			"trigger: pressed at strength=%.2f released at %.2f max=%.2f (expect a press at the first strength above 0) samples=%s"
 			% [
 				_state["press_strength"],
 				_state["release_strength"],
 				_state["max"],
-				DEADZONE,
 				_state["samples"]
 			]
 		)

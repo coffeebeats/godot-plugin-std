@@ -58,11 +58,12 @@ Each step ends by itself when its condition is met; Enter skips one. When a step
 | Step | Confirms |
 | --- | --- |
 | `connect` | the pad connects with its family; with `--late-slot`, through the monitor's broadcast |
+| `rest` | a resting stick and trigger read exactly 0 under the layout's deadzone and never activate the joypad over the keyboard; the stick's four directions carry a deadzone near 0 |
 | `stick_up`, `stick_left` | Steam's `+y` is up: `move_up` carries the strength and `get_vector` reads `(0, -1)` |
 | `hold_counts`, `hold_release` | publish-on-change: one just-pressed for a 3 s hold, one just-released after it |
 | `jump_presses` | digital presses arrive once each; `native joypad events seen` says whether Godot also saw the pad |
 | `switch_kbm_while_held`, `reactivate_joypad`, `stick_held_while_typing` | a bound key activates the keyboard while a joypad action is held, the hold never reactivates the joypad, a fresh press does |
-| `trigger` | the strength at which `fire` reads pressed is the InputMap deadzone |
+| `trigger` | `fire` reads pressed at its first strength above 0, since Steam rescales it from the layout's deadzone |
 | `pointer`, `pointer_slow` | `absolute_mouse` warps the pointer, activates the joypad from the keyboard, reveals the cursor, and sub-pixel motion creeps through the warp remainder |
 | `reveal_60`, `reveal_240` | the pointer speed at which the cursor reveals is the same at both frame rates |
 | `captured` | captured mode delivers motion events at the pointer's position; the button at the origin never hovers |
