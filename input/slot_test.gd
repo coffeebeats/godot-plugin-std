@@ -15,8 +15,10 @@ const _TEST_ACTIONS: Array[StringName] = [&"test_action"]
 ## _TEST_AXIS_ACTIONS are two actions bound to the same joypad axis direction.
 const _TEST_AXIS_ACTIONS: Array[StringName] = [&"test_axis_a", &"test_axis_b"]
 
-## _TEST_DEADZONE is the deadzone of the test axis actions.
-const _TEST_DEADZONE := 0.5
+## _TEST_DEADZONE is the deadzone of the test axis actions. It sits above the `0.5` at
+## which a joypad motion event reads as pressed, so a motion between the two is a press
+## which doesn't press the actions.
+const _TEST_DEADZONE := 0.75
 
 ## _TEST_KEY is the key bound to the test action.
 const _TEST_KEY := KEY_T
@@ -408,8 +410,9 @@ func test_input_slot_joypad_connected_after_player_input_stays_inactive() -> voi
 	slot._actions = [&"test_action"]
 	watch_signals(slot)
 
-	# Given: The player presses a key bound to an action.
+	# Given: The player presses and releases a key bound to an action.
 	slot._input(_key())
+	slot._input(_key(false))
 
 	# When: A joypad connects.
 	slot.joypad_monitor.connected = [0] as Array[int]
@@ -425,12 +428,14 @@ func test_input_slot_joypad_connected_after_player_input_stays_inactive() -> voi
 
 func test_input_slot_emulated_mouse_button_is_not_player_input() -> void:
 	# Given: An input slot added to the scene with the keyboard active and a joypad
-	# preferred.
+	# preferred, under a set where a click activates the keyboard.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = true
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
-	slot._actions = [&"test_action"]
+	var action_set := _make_action_set(&"Test")
+	action_set.cursor_click_activates_kbm = StdInputActionSet.PROPERTY_STATUS_ON
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
 
 	# Given: A mouse button Godot emulated from a touch was pressed.
 	var event := _mouse_button(MOUSE_BUTTON_LEFT)
@@ -473,21 +478,58 @@ func test_input_slot_unbound_key_is_not_player_input() -> void:
 
 
 func test_input_slot_unbound_joypad_motion_is_not_player_input() -> void:
-	# Given: An input slot added to the scene with an active joypad and no active
-	# action.
-	slot.claim_kbm_input = false
-	add_child_autofree(slot)
-	slot.joypad_monitor.connected = [0] as Array[int]
-	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
-	slot.joypad_monitor.broadcast_connected_joypads()
-	autofree(slot.get_active_device())
-	slot._actions = []
+	# Given: The keyboard is active beside a connected joypad, with the test axis
+	# actions active.
+	_connect_joypad_behind_kbm()
 
-	# When: A stick axis bound to no active action moves.
-	slot._input(_joypad_motion(0, 1.0))
+	# When: The right stick, which no active action is bound to, moves.
+	var event := _joypad_motion(0, 1.0)
+	event.axis = JOY_AXIS_RIGHT_X
+	slot._input(event)
 
 	# Then: The slot has seen no player input.
 	assert_false(slot._has_player_input)
+
+	# When: The stick bound to the test axis actions moves.
+	slot._input(_joypad_motion(0, 1.0))
+
+	# Then: The slot has seen player input.
+	assert_true(slot._has_player_input)
+
+
+func test_input_slot_joypad_motion_inside_deadzone_is_not_player_input() -> void:
+	# Given: The keyboard is active beside a connected joypad, with the test axis
+	# actions active.
+	_connect_joypad_behind_kbm()
+
+	# When: The bound stick moves far enough to read as a press but stays inside the
+	# actions' deadzone.
+	slot._input(_joypad_motion(0, (0.5 + _TEST_DEADZONE) / 2.0))
+
+	# Then: The slot has seen no player input.
+	assert_false(slot._has_player_input)
+
+
+func test_input_slot_joypad_pressed_before_connecting_activates_on_connect() -> void:
+	# Given: An input slot added to the scene with the keyboard active, a joypad
+	# preferred, and the test axis actions active.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._actions = [&"test_axis_a", &"test_axis_b"]
+
+	# Given: A joypad its monitor hasn't reported yet moves the bound stick.
+	slot._input(_joypad_motion(0, 1.0))
+
+	# When: The monitor reports the joypad.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	# Then: The joypad is active, as its press showed a preference for it.
+	var got: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
@@ -549,6 +591,29 @@ func _activate_joypad_under_set(
 	assert_false(slot.cursor.get_is_visible(), "precondition: cursor hidden")
 
 	return joypad
+
+
+## _connect_joypad_behind_kbm adds the slot to the scene with the keyboard active and a
+## joypad connected but not preferred, so the joypad stays inactive, and makes the test
+## axis actions the active actions.
+func _connect_joypad_behind_kbm() -> void:
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = false
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[0])
+
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	slot._actions = [&"test_axis_a", &"test_axis_b"]
 
 
 ## _joypad_motion returns a motion of the left stick's horizontal axis on joypad

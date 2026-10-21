@@ -15,8 +15,9 @@
 ## an active action activates its device, as does a reveal-button click while
 ## `StdInputActionSet.cursor_click_activates_kbm` is on. A joypad connected before the
 ## player's first input is activated over the keyboard when preferred; one connected
-## after that is only connected, so a hot-plug never changes the prompts. Mouse motion
-## never activates a device, since Steam Input emits it for gyro and trackpad input; see
+## after that is only connected, so a hot-plug leaves the prompts alone while another
+## device is active. Mouse motion never activates a device, since Steam Input emits it
+## for gyro and trackpad input; see
 ## https://partner.steamgames.com/doc/steamhardware/recommendations.
 ##
 ## TODO: For now, this class only supports single player because there's no way to
@@ -101,10 +102,11 @@ class JoypadMonitor:
 @export var claim_kbm_input: bool = true
 
 ## prefer_activate_joypad_on_ready defines whether a joypad connected before the
-## player's first input (a key, mouse button, or joypad press) is activated over the
-## keyboard, which the slot activates when it loads. Joypad monitors can report
-## controllers a few frames after `_ready`, so the preference lasts until that first
-## input, not until the slot is ready. A joypad connected later is only connected.
+## player's first input is activated over the keyboard, which the slot activates when it
+## loads. That input is a bound key press, a click which activates the keyboard, or a
+## bound press on a connected joypad. Joypad monitors can report controllers a few
+## frames after `_ready`, so the preference lasts until that input rather than until the
+## slot is ready. A joypad connected later is only connected.
 @export var prefer_activate_joypad_on_ready: bool = true
 
 @export_group("Properties")
@@ -593,8 +595,9 @@ func _disconnect_joy_device(device: int) -> bool:
 
 		_joypad_devices.remove_at(i)
 
-		# NOTE: The slot's own device ID and type keep depicting the removed joypad, so
-		# the prompts stay as they were until the next deliberate input.
+		# NOTE: The slot's device ID and type keep depicting the removed joypad until
+		# the next deliberate input, but a glyph refreshed meanwhile is looked up with
+		# no joypad, which leaves one from a per-device component like Steam's empty.
 		if _active == joypad:
 			_active = null
 		if _last_active_joypad == joypad:
@@ -692,11 +695,6 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 			is_match = true
 			break
 
-	# NOTE: Only a bound action counts as the player's first input; an emulated button,
-	# an unbound axis, or a stick inside its deadzone shows no preference.
-	if is_match:
-		_has_player_input = true
-
 	if not is_match:
 		return false
 
@@ -707,6 +705,11 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 
 		if event.device != joypad.device_id:
 			continue
+
+		# NOTE: Only a press from a connected joypad counts as the player's first input,
+		# since a joypad pressed before its monitor reports it should still be activated
+		# once it connects.
+		_has_player_input = true
 
 		return _activate_device(joypad)
 
