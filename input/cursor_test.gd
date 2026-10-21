@@ -466,22 +466,29 @@ func test_input_ignored_while_cursor_captured() -> void:
 
 
 func test_input_held_hide_action_does_not_rehide_after_unrelated_press() -> void:
-	# Given: A visible cursor whose action set hides on the test hide action.
+	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action.
 	var action_set := StdInputActionSet.new()
 	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
 	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible.
 	cursor.show_cursor()
 	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
 
-	# Given: The hide action is pressed and held, hiding the cursor, which is then shown
-	# again.
+	# Given: The hide action is pressed and held, hiding the cursor.
 	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
 	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
+
+	# Given: The cursor is shown again.
 	cursor.show_cursor()
 
-	# When: An unrelated key is pressed, then the held hide action reports pressed again.
+	# Given: A key bound to no action is pressed.
 	get_viewport().push_input(_key_press())
+
+	# When: The held hide action reports pressed again.
 	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
 
 	# Then: The cursor is still visible.
@@ -489,17 +496,22 @@ func test_input_held_hide_action_does_not_rehide_after_unrelated_press() -> void
 
 
 func test_input_hide_action_held_before_reveal_does_not_rehide() -> void:
-	# Given: A hidden cursor whose action set hides on the test hide action.
+	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action.
 	var action_set := StdInputActionSet.new()
 	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
 	cursor.update_configuration([action_set])
+
+	# Given: The cursor is hidden.
 	cursor.hide_cursor()
 	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
 
-	# Given: The hide action is pressed and held while the cursor is hidden, and the
-	# cursor is then shown.
+	# Given: The hide action is pressed and held.
 	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+
+	# Given: The cursor is shown.
 	cursor.show_cursor()
 	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
 
@@ -511,13 +523,16 @@ func test_input_hide_action_held_before_reveal_does_not_rehide() -> void:
 
 
 func test_input_hide_action_held_within_hide_delay_does_not_hide_after_it() -> void:
-	# Given: A visible cursor whose action set hides on the test hide action after a
-	# delay.
+	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action after a one-second delay.
 	var action_set := StdInputActionSet.new()
 	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
 	action_set.cursor_hide_delay = 1.0
 	cursor.update_configuration([action_set])
+
+	# Given: The cursor was just shown.
 	cursor.show_cursor()
 	cursor._time_since_mouse_motion = 0.0
 
@@ -525,8 +540,10 @@ func test_input_hide_action_held_within_hide_delay_does_not_hide_after_it() -> v
 	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
 	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
 
-	# When: The delay elapses and the still-held hide action reports pressed again.
+	# Given: The delay elapses.
 	cursor._time_since_mouse_motion = 5.0
+
+	# When: The still-held hide action reports pressed again.
 	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
 
 	# Then: The cursor is still visible.
@@ -534,14 +551,19 @@ func test_input_hide_action_held_within_hide_delay_does_not_hide_after_it() -> v
 
 
 func test_input_hide_action_pressed_after_hide_delay_hides() -> void:
-	# Given: A visible cursor whose action set hides on the test hide action after a
-	# delay which has elapsed.
+	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action after a one-second delay.
 	var action_set := StdInputActionSet.new()
 	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
 	action_set.cursor_hide_delay = 1.0
 	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible.
 	cursor.show_cursor()
+
+	# Given: The delay has elapsed.
 	cursor._time_since_mouse_motion = 5.0
 
 	# When: The hide action is pressed.
@@ -551,12 +573,87 @@ func test_input_hide_action_pressed_after_hide_delay_hides() -> void:
 	assert_false(cursor.get_is_visible())
 
 
-func test_input_reveal_button_release_keeps_cursor_hidden() -> void:
-	# Given: A hidden cursor whose action set reveals on the left mouse button.
+func test_input_hovered_only_hide_action_hides_while_hovered() -> void:
+	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action only while a control is hovered.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions_if_hovered = [_TEST_HIDE_ACTION]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible.
+	cursor.show_cursor()
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+
+	# Given: A control is hovered.
+	var control := Button.new()
+	add_child_autofree(control)
+	cursor.set_hovered(control)
+
+	# When: The hide action is pressed.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+
+	# Then: The cursor is hidden.
+	assert_false(cursor.get_is_visible())
+
+
+func test_input_hovered_only_hide_action_keeps_cursor_without_hover() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action only while a control is hovered.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions_if_hovered = [_TEST_HIDE_ACTION]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible with no control hovered.
+	cursor.show_cursor()
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+	assert_null(cursor.get_hovered(), "precondition: nothing hovered")
+
+	# When: The hide action is pressed.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+
+	# Then: The cursor is still visible.
+	assert_true(cursor.get_is_visible())
+
+
+func test_input_hide_action_also_hovered_only_hides_without_hover() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
+
+	# Given: A layer also hides on the test action while a control is hovered.
+	var layer := StdInputActionSet.new()
+	layer.cursor_hide_actions_if_hovered = [_TEST_HIDE_ACTION]
+	cursor.update_configuration([action_set, layer])
+
+	# Given: The cursor is visible with no control hovered.
+	cursor.show_cursor()
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+	assert_null(cursor.get_hovered(), "precondition: nothing hovered")
+
+	# When: The hide action is pressed.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+
+	# Then: The cursor is hidden.
+	assert_false(cursor.get_is_visible())
+
+
+func test_input_reveal_button_release_keeps_cursor_hidden() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set reveals on the left mouse button.
 	var action_set := StdInputActionSet.new()
 	action_set.cursor_reveal_mouse_buttons = [MOUSE_BUTTON_LEFT]
 	cursor.update_configuration([action_set])
+
+	# Given: The cursor is hidden.
 	cursor.hide_cursor()
 	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
 
@@ -578,9 +675,10 @@ func test_input_reveal_button_release_keeps_cursor_hidden() -> void:
 
 
 func test_process_releases_every_hide_action_no_longer_pressed() -> void:
-	# Given: A cursor added to the scene tracking two held hide actions which are no
-	# longer pressed.
+	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
+
+	# Given: Two tracked hide actions which are no longer pressed.
 	cursor._pressed = [_TEST_HIDE_ACTION, _TEST_HIDE_ACTION_OTHER] as Array[String]
 
 	# When: A frame is processed.
