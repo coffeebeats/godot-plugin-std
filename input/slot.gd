@@ -161,9 +161,9 @@ var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
 var _last_active_joypad: StdInputDevice = null
 
-## _pressed maps each active action a joypad holds to the device ID of that joypad, so
-## the hold can't activate it again and ends only with that joypad's own release.
-var _pressed: Dictionary = {}
+## _pressed maps each joypad's device ID to the active actions it holds, so a hold can't
+## activate that joypad again and ends only with that joypad's own release.
+var _pressed: Dictionary[int, Array] = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -434,9 +434,10 @@ func _input(event: InputEvent) -> void:
 
 	# NOTE: A pressed event can release a tracked action too, as a stick flicked from
 	# one side to the other releases the first direction without a centered event.
-	for action in _pressed.keys():
-		if _pressed[action] == event.device and _is_action_released(event, action):
-			_pressed.erase(action)
+	var held: Array = _pressed.get(event.device, [])
+	for action in held.duplicate():
+		if _is_action_released(event, action):
+			held.erase(action)
 
 	if not event.is_pressed():
 		return
@@ -613,11 +614,8 @@ func _disconnect_joy_device(device: int) -> bool:
 		remove_child(joypad)
 		joypad.queue_free()
 
-		# NOTE: An action held on the removed joypad would never be released, while one
-		# held on another joypad stays held.
-		for action in _pressed.keys():
-			if _pressed[action] == device:
-				_pressed.erase(action)
+		# NOTE: An action held on the removed joypad would never be released.
+		_pressed.erase(device)
 
 		return true
 
@@ -708,25 +706,24 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 	):
 		return false
 
-	# NOTE: Presses are tracked for the active joypad too, and every action an event
-	# presses is tracked, so an input held across a switch to the keyboard is known to
-	# be held however it was bound, and can't switch back until released.
+	# NOTE: Every action an event presses is tracked, even on the active joypad, so an
+	# input held across a switch to the keyboard can't switch back until released.
+	var held: Array = _pressed.get_or_add(event.device, [])
 	var is_held := false
 	var is_match := false
 	for action in _actions:
 		if not _is_action_pressed(event, action):
 			continue
 
-		if action in _pressed:
+		if action in held:
 			is_held = true
 			continue
 
-		_pressed[action] = event.device
+		held.append(action)
 		is_match = true
 
-	# NOTE: A bound action, held or newly pressed, counts as the player's first input
-	# only from a joypad its monitor has reported, since a joypad pressed before then
-	# should still be activated once it connects.
+	# NOTE: A held or new press counts as player input only from a reported joypad, so
+	# one pressed before its monitor reports it still activates once it connects.
 	var is_reported := _joypad_devices.any(func(d): return d.device_id == event.device)
 	if (is_held or is_match) and is_reported:
 		_has_player_input = true
@@ -838,9 +835,10 @@ func _on_Self_action_configuration_changed() -> void:
 
 	# NOTE: A set change can erase the origins of a held action, so its release could
 	# never match; an action the active sets no longer bind is dropped instead.
-	for action in _pressed.keys():
-		if action not in _actions:
-			_pressed.erase(action)
+	for held in _pressed.values():
+		for action in held.duplicate():
+			if action not in _actions:
+				held.erase(action)
 
 	if cursor is StdInputCursor:
 		cursor.update_configuration(action_sets)
