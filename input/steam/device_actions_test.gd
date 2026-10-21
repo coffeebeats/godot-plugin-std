@@ -33,10 +33,10 @@ var _device_actions: Variant = null
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
-func test_split_analog_2d_presses_each_direction_past_its_deadzone() -> void:
-	# When: A stick deflected left and up is split for the `move` action on slot 0.
+func test_split_analog_2d_presses_each_direction_the_stick_deflects() -> void:
+	# When: A stick deflected left, and up inside the deadzone, is split for slot 0.
 	var got: Array[InputEventAction] = _device_actions.split_analog_2d(
-		&"move", Vector2(-0.5, 0.25), 0
+		&"move", Vector2(-0.5, 0.125), 0
 	)
 
 	# Then: The four directional actions are in `Input.get_vector` order.
@@ -45,9 +45,10 @@ func test_split_analog_2d_presses_each_direction_past_its_deadzone() -> void:
 		[&"move_left", &"move_right", &"move_up", &"move_down"],
 	)
 
-	# Then: Each carries the strength of its half of the axis and is pressed past the
-	# action's deadzone.
-	assert_eq(got.map(func(e): return e.strength), [0.5, 0.0, 0.25, 0.0])
+	# Then: Each carries the strength of its half of the axis.
+	assert_eq(got.map(func(e): return e.strength), [0.5, 0.0, 0.125, 0.0])
+
+	# Then: Each is pressed at any strength, since Steam applied its own deadzone.
 	assert_eq(got.map(func(e): return e.pressed), [true, false, true, false])
 
 	# Then: Each carries the slot and names no bound event.
@@ -56,23 +57,37 @@ func test_split_analog_2d_presses_each_direction_past_its_deadzone() -> void:
 		assert_eq(event.event_index, -1)
 
 
-func test_split_analog_2d_presses_an_unknown_action_from_half_strength() -> void:
-	# When: A stick deflected up is split for an action the `InputMap` doesn't know.
-	var got: Array[InputEventAction] = _device_actions.split_analog_2d(
-		&"look", Vector2(0.0, 0.25), 0
-	)
+func test_clear_stick_deadzones_lasts_until_steam_input_stops() -> void:
+	# Given: An action set whose `move` stick drives the test actions.
+	var action_set := _make_stick_action_set()
 
-	# Then: The direction is released below half strength.
-	assert_eq(got.map(func(e): return e.pressed), [false, false, false, false])
+	# When: Steam Input takes over the stick's deadzone.
+	_device_actions._clear_stick_deadzones(action_set)
+
+	# Then: Each direction's deadzone is all but zero.
+	for action in _TEST_ACTIONS:
+		assert_almost_eq(InputMap.action_get_deadzone(action), 0.0, 0.0001)
+
+	# When: Steam Input stops.
+	_actions._on_steam_input_state_changed(false)
+
+	# Then: Each direction's deadzone is the one it had before.
+	for action in _TEST_ACTIONS:
+		assert_almost_eq(InputMap.action_get_deadzone(action), _TEST_DEADZONE, 0.0001)
 
 
-func test_get_press_threshold_reads_the_input_map_deadzone() -> void:
-	# When/Then: A registered action's threshold is its deadzone, and an unknown
-	# action's is half strength.
-	assert_almost_eq(
-		_device_actions.get_press_threshold(&"move_up"), _TEST_DEADZONE, 0.001
-	)
-	assert_eq(_device_actions.get_press_threshold(&"unknown"), 0.5)
+func test_get_vector_reads_a_steam_stick_without_a_second_deadzone() -> void:
+	# Given: Steam Input has taken over the `move` stick's deadzone.
+	_device_actions._clear_stick_deadzones(_make_stick_action_set())
+
+	# When: The stick is deflected right and up inside the test actions' deadzone.
+	for event in _device_actions.split_analog_2d(&"move", Vector2(0.125, 0.125), 0):
+		_publish(event)
+
+	# Then: `Input.get_vector` reads the deflection as Steam reported it.
+	var got := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	assert_almost_eq(got.x, 0.125, 0.001)
+	assert_almost_eq(got.y, -0.125, 0.001)
 
 
 func test_publish_input_event_presses_an_action_once_per_state_change() -> void:
@@ -159,9 +174,12 @@ func after_all() -> void:
 
 
 func after_each() -> void:
-	# NOTE: Any action left pressed is released, so a test can't leak into the next.
+	# NOTE: Any action left pressed is released, and any deadzone Steam took over is
+	# restored, so a test can't leak into the next.
 	for action in _TEST_ACTIONS:
 		Input.action_release(action)
+
+	_device_actions._restore_stick_deadzones()
 
 
 func before_all() -> void:
@@ -202,6 +220,15 @@ func _action(action: StringName, strength: float, pressed: bool) -> InputEventAc
 	event.strength = strength
 	event.pressed = pressed
 	return event
+
+
+## _make_stick_action_set returns an action set whose `move` stick drives the test
+## actions.
+func _make_stick_action_set() -> StdInputActionSet:
+	var action_set := StdInputActionSet.new()
+	action_set.actions_analog_2d = [&"move"] as Array[StringName]
+	action_set.actions_digital = _TEST_ACTIONS.duplicate()
+	return action_set
 
 
 ## _publish publishes `event` through the component and flushes `Input`, which buffers

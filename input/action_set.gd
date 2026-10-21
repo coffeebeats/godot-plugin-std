@@ -53,6 +53,9 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 ##
 ## NOTE: A name must not end in `_x` or `_y`; an axis is a pair of directions, not an
 ## action, since Godot clamps an action's strength to `[0, 1]`.
+##
+## NOTE: While Steam Input drives the stick, the four directions' `InputMap` deadzones
+## are all but `0`, since Steam reports the stick past its configurator's deadzone.
 @export var actions_analog_2d: Array[StringName] = []
 
 @export_group("Digital actions ")

@@ -19,6 +19,12 @@ const SteamJoypadMonitor := preload("joypad_monitor.gd")
 
 const DEVICE_ID_ALL := Steam.INPUT_HANDLE_ALL_CONTROLLERS
 
+## _STICK_DEADZONE is the `InputMap` deadzone of a stick's directions while Steam Input
+## drives the stick, since Steam reports it past the deadzone its configurator sets.
+##
+## NOTE: It stays above `0`, at which Godot reads a native axis at rest as pressed.
+const _STICK_DEADZONE := 0.00001
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## joypad_monitor is a Steam-specific joypad monitor, used to look up slot-to-device ID
@@ -57,6 +63,10 @@ static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ig
 ## _is_initialized tracks whether this component has been initialized. This needs to
 ## occur once *after the first joypad has been connected*.
 static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-order
+
+## _stick_deadzones maps each stick direction whose deadzone Steam Input took over to
+## the `InputMap` deadzone it had before, which is restored once Steam Input stops.
+static var _stick_deadzones: Dictionary = {}  # gdlint:ignore=class-definitions-order
 
 ## _is_listening tracks whether this instance receives Steam Input events; the caches
 ## above are shared, but each instance connects to the signals itself.
@@ -132,16 +142,6 @@ static func get_digital_action_handle(action: StringName) -> int:
 	return handle
 
 
-## get_press_threshold returns the strength at which an injected analog action reads as
-## pressed: the action's `InputMap` deadzone, or `0.5` for an action the map doesn't
-## know, so a Steam stick or trigger presses as a joypad axis bound through Godot does.
-static func get_press_threshold(action: StringName) -> float:
-	if InputMap.has_action(action):
-		return InputMap.action_get_deadzone(action)
-
-	return 0.5
-
-
 ## resolve_action_set_name returns the name the Steam Input manifest knows `action_set`
 ## by on `device`. A layer with no parent resolves to its `<Layer>_<Set>` copy under the
 ## device's current set; anything else keeps its own name.
@@ -160,8 +160,8 @@ static func resolve_action_set_name(
 
 ## split_analog_2d returns the four directional action events a stick's `motion` drives
 ## for the 2D analog `action`, in `StdInputActionSet.ANALOG_2D_DIRECTIONS` order, each
-## at the strength of its half of the axis and pressed from its press threshold. Godot
-## clamps an action's strength to `[0, 1]`, so a signed axis can't travel on one action.
+## at the strength of its half of the axis and pressed at any strength. Godot clamps an
+## action's strength to `[0, 1]`, so a signed axis can't travel on one action.
 ##
 ## NOTE: Steam reports a stick's `y` as positive upward, so `+y` drives `_up`.
 static func split_analog_2d(
@@ -184,7 +184,7 @@ static func split_analog_2d(
 		event.action = names[i]
 		event.device = slot
 		event.strength = strengths[i]
-		event.pressed = event.strength >= get_press_threshold(event.action)
+		event.pressed = event.strength > 0.0
 
 		events.append(event)
 
@@ -292,6 +292,7 @@ func _load_action_set(slot: int, action_set: StdInputActionSet) -> bool:
 	# NOTE: Incoming action events only contain the action's handle. In order to look
 	# up the corresponding action name, populate the action handles now.
 	_store_action_handles(action_set)
+	_clear_stick_deadzones(action_set)
 
 	# FIXME: Need to await first input.
 	return handle == Steam.getCurrentActionSet(device)
@@ -333,6 +334,7 @@ func _enable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
 	_action_sets[handle] = layer
 	Steam.activateActionSetLayer(DEVICE_ID_ALL, handle)
 	_store_action_handles(layer)
+	_clear_stick_deadzones(layer)
 
 	# NOTE: This won't organically return `true` until the next player action input is
 	# received by the game. This is an unfortunate discrepancy between the Godot
@@ -389,6 +391,23 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _clear_stick_deadzones sets the `InputMap` deadzone of each of `action_set`'s stick
+## directions to `_STICK_DEADZONE`, remembering the one it replaces, since Steam reports
+## a stick past the deadzone its configurator sets.
+##
+## NOTE: `Input.get_vector` applies the directions' deadzone even to injected actions.
+static func _clear_stick_deadzones(action_set: StdInputActionSet) -> void:
+	for stick in action_set.actions_analog_2d:
+		for action in StdInputActionSet.list_analog_2d_actions(stick):
+			if not InputMap.has_action(action):
+				continue
+
+			if action not in _stick_deadzones:
+				_stick_deadzones[action] = InputMap.action_get_deadzone(action)
+
+			InputMap.action_set_deadzone(action, _STICK_DEADZONE)
 
 
 ## _get_pointer_motion_filter returns the slot's pointer motion filter, configured from
@@ -483,6 +502,16 @@ func _publish_pointer_motion(motion: Vector2) -> void:
 	Input.warp_mouse(clamped)
 
 
+## _restore_stick_deadzones restores the `InputMap` deadzone of each stick direction
+## `_clear_stick_deadzones` changed, so a native joypad's stick is filtered again.
+static func _restore_stick_deadzones() -> void:
+	for action in _stick_deadzones:
+		if InputMap.has_action(action):
+			InputMap.action_set_deadzone(action, _stick_deadzones[action])
+
+	_stick_deadzones.clear()
+
+
 func _store_action_handles(action_set: StdInputActionSet) -> void:
 	if action_set in _actions_seen_action_sets:
 		return
@@ -566,7 +595,10 @@ func _on_input_action_event(
 					event.action = action
 					event.device = slot
 					event.strength = motion.x
-					event.pressed = event.strength >= get_press_threshold(action)
+
+					# NOTE: Steam rescales a trigger from the deadzone its configurator
+					# sets, so any strength is a press.
+					event.pressed = event.strength > 0.0
 
 					_publish_input_event(event)
 
@@ -632,7 +664,14 @@ func _on_joypad_disconnected(slot: int) -> void:
 
 
 func _on_steam_input_state_changed(enabled: bool) -> void:
-	if not enabled or _is_listening:
+	if not enabled:
+		_restore_stick_deadzones()
+		return
+
+	for action_set in _actions_seen_action_sets:
+		_clear_stick_deadzones(action_set)
+
+	if _is_listening:
 		return
 
 	_is_initialized = true
