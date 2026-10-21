@@ -33,7 +33,7 @@ Additionally, the [`StateMachine`](./fsm/state_machine.gd) implementation provid
 
 The [input](./input) directory contains types for setting up an action set-based input system, along with abstractions for device and player slot APIs. When used, both Steam and Godot-backed implementations can be easily switched between.
 
-Every connected device stays accepted at all times. The active device only picks which glyphs are shown, and it changes on a bound key, button, or click, never on mouse motion, following Valve's [Steam Deck guidance](https://partner.steamgames.com/doc/steamhardware/recommendations). The cursor is tracked separately: a click or motion past a threshold reveals it, and navigation actions hide it.
+Every connected device stays accepted at all times. The active device only picks which glyphs are shown. It changes on a key, button, or stick (past its deadzone) bound to a loaded action, or on a reveal-button click while `cursor_click_activates_kbm` is on. Mouse motion never changes it, following Valve's [Steam Deck guidance](https://partner.steamgames.com/doc/steamhardware/recommendations). The cursor is tracked separately. A reveal-button click or mouse motion past a threshold reveals it, and the hide actions hide it.
 
 #### **`iter`**
 

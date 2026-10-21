@@ -5,6 +5,11 @@
 
 extends GutTest
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## _TEST_HIDE_ACTION is an action registered in the `InputMap` for hiding the cursor.
+const _TEST_HIDE_ACTION := &"test_hide"
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var cursor: StdInputCursor = null
@@ -307,6 +312,19 @@ func test_input_motion_within_reveal_minimum_on_both_axes_keeps_cursor_hidden(
 	assert_false(cursor.get_is_visible())
 
 
+func test_input_motion_within_reveal_minimum_on_screen_keeps_cursor_hidden() -> void:
+	# Given: A hidden cursor whose action set reveals it on motion past (4, 4).
+	_hide_with_reveal_minimum(Vector2(4, 4))
+
+	# When: A mouse motion event exceeds the minimum in viewport but not screen pixels.
+	var event := _motion(Vector2(1, 0))
+	event.relative = Vector2(10, 0)
+	get_viewport().push_input(event)
+
+	# Then: The cursor is still hidden.
+	assert_false(cursor.get_is_visible())
+
+
 func test_input_motion_within_reveal_window_sums_across_events() -> void:
 	# Given: A hidden cursor whose action set sums motion over a second against (4, 4).
 	_hide_with_reveal_minimum(Vector2(4, 4), 1.0)
@@ -358,10 +376,41 @@ func test_hide_cursor_clears_summed_motion() -> void:
 	# Given: A hidden cursor whose action set sums motion over a second against (4, 4).
 	_hide_with_reveal_minimum(Vector2(4, 4), 1.0)
 
-	# Given: A mouse motion event within the minimum, then a show and a hide.
-	get_viewport().push_input(_motion(Vector2(3, 0)))
+	# Given: The cursor is shown, then the mouse moves within the minimum.
 	cursor.show_cursor()
+	get_viewport().push_input(_motion(Vector2(3, 0)))
+
+	# When: The cursor is hidden.
 	cursor.hide_cursor()
+
+	# When: Another mouse motion event within the minimum arrives.
+	get_viewport().push_input(_motion(Vector2(3, 0)))
+
+	# Then: The cursor is still hidden.
+	assert_false(cursor.get_is_visible())
+
+
+func test_input_hide_action_clears_summed_motion() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action and sums motion against (4, 4).
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
+	action_set.cursor_reveal_distance_minimum = Vector2(4, 4)
+	action_set.cursor_reveal_window = 1.0
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible.
+	cursor.show_cursor()
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+
+	# Given: The mouse moves within the minimum.
+	get_viewport().push_input(_motion(Vector2(3, 0)))
+
+	# When: The hide action is pressed.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
 
 	# When: Another mouse motion event within the minimum arrives.
 	get_viewport().push_input(_motion(Vector2(3, 0)))
@@ -396,15 +445,19 @@ func test_input_ignored_while_cursor_captured() -> void:
 	assert_false(cursor.get_is_visible(), "precondition: cursor hidden")
 	watch_signals(cursor)
 
-	# When: The mouse moves and a reveal button is pressed.
+	# When: The mouse moves.
 	get_viewport().push_input(_motion(Vector2(10, 10)))
+
+	# When: A reveal button is pressed.
 	var button := InputEventMouseButton.new()
 	button.button_index = MOUSE_BUTTON_LEFT
 	button.pressed = true
 	get_viewport().push_input(button)
 
-	# Then: The cursor stays hidden and no visibility change is reported.
+	# Then: The cursor stays hidden.
 	assert_false(cursor.get_is_visible())
+
+	# Then: No visibility change is reported.
 	assert_signal_not_emitted(cursor, "cursor_visibility_changed")
 
 
@@ -415,6 +468,8 @@ func test_input_motion_within_reveal_minimum_keeps_hide_delay_running() -> void:
 	action_set.cursor_reveal_distance_minimum = Vector2(4, 4)
 	cursor.update_configuration([action_set])
 	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+
+	# Given: Five seconds have passed since the last mouse motion.
 	cursor._time_since_mouse_motion = 5.0
 
 	# When: A mouse motion event stays within the minimum.
@@ -474,9 +529,15 @@ func test_unset_hovered_rejects_wrong_control() -> void:
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
+func after_all() -> void:
+	InputMap.erase_action(_TEST_HIDE_ACTION)
+
+
 func before_all() -> void:
 	# NOTE: Hide unactionable errors when using object doubles.
 	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
+
+	InputMap.add_action(_TEST_HIDE_ACTION)
 
 
 func before_each() -> void:
@@ -491,6 +552,14 @@ func after_each() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _action returns a press of `action`, as the Steam actions component publishes one.
+func _action(action: StringName) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	return event
 
 
 ## _hide_with_reveal_minimum adds the cursor to the scene, configures it with an action

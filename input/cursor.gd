@@ -6,11 +6,10 @@
 ## transition between "digital"/focus-based navigation and cursor navigation by keeping
 ## track of recently hovered UI elements and grabbing focus during mode transitions.
 ##
-## Cursor visibility is tracked apart from the active input device. A press of one of
-## the reveal buttons or motion past the reveal minimum shows the cursor, hide actions
-## hide it, and neither changes which device's glyphs the `StdInputSlot` shows. While
-## hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse, so the
-## pointer can neither hover nor click them.
+## Cursor visibility is tracked apart from the active input device; showing or hiding
+## the cursor never activates a device, though the `StdInputSlot` may activate one from
+## the same press. While hidden, controls managed by a `StdInputCursorFocusHandler`
+## ignore the mouse, so the pointer can neither hover nor click them.
 ##
 
 class_name StdInputCursor
@@ -253,8 +252,8 @@ func _exit_tree() -> void:
 
 func _input(event: InputEvent) -> void:
 	if not _cursor_visible:
-		# NOTE: A captured cursor can't be revealed, so its motion and clicks are
-		# ignored instead of being forced back to hidden on every event.
+		# NOTE: A captured cursor can't be revealed, and `_on_properties_changed`
+		# would hide it again and re-emit its visibility, so reveal input is ignored.
 		if _cursor_captured:
 			return
 
@@ -275,7 +274,7 @@ func _input(event: InputEvent) -> void:
 
 		return
 
-	# Mouse is currently visible - only motion past the minimum keeps it so.
+	# Mouse is currently visible, so motion past the minimum restarts the hide delay.
 	if event is InputEventMouseMotion:
 		if _is_significant_motion(event.screen_relative):
 			_time_since_mouse_motion = 0.0
@@ -372,9 +371,8 @@ func _grab_focus(target: Control, trigger: StringName) -> void:
 
 
 ## _is_significant_motion returns whether `relative`, a mouse motion in screen pixels,
-## exceeds the reveal minimum on either axis. With a reveal window, the signed motion
-## within the window is summed first, so the minimum acts as a speed instead of a
-## per-event distance which scales with the frame rate.
+## exceeds the reveal minimum on either axis, after summing it with the signed motion
+## within the reveal window if one is set.
 func _is_significant_motion(relative: Vector2) -> bool:
 	if _reveal_window <= 0.0:
 		return _exceeds_reveal_minimum(relative)
