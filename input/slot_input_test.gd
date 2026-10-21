@@ -37,8 +37,10 @@ var slot: StdInputSlot = null
 
 
 func test_input_slot_held_stick_cannot_reactivate_joypad_until_released() -> void:
-	# Given: The keyboard is active with a joypad connected and the stick action active.
+	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
+
+	# Given: The key and stick actions are active.
 	slot._actions = [_TEST_ACTION, _TEST_AXIS_ACTION]
 
 	# When: The stick is pushed past the deadzone.
@@ -47,7 +49,7 @@ func test_input_slot_held_stick_cannot_reactivate_joypad_until_released() -> voi
 	# Then: The joypad is active.
 	assert_eq(_active_type(), StdInputDevice.DEVICE_TYPE_GENERIC)
 
-	# When: The bound key is pressed and released while the stick is held.
+	# Given: The bound key is pressed and released while the stick is held.
 	await _dispatch(_key(true))
 	await _dispatch(_key(false))
 	assert_eq(_active_type(), StdInputDevice.DEVICE_TYPE_KEYBOARD, "precondition")
@@ -58,8 +60,10 @@ func test_input_slot_held_stick_cannot_reactivate_joypad_until_released() -> voi
 	# Then: The keyboard stays active.
 	assert_eq(_active_type(), StdInputDevice.DEVICE_TYPE_KEYBOARD)
 
-	# When: The stick returns inside the deadzone and is pushed again.
+	# When: The stick returns inside the deadzone.
 	await _dispatch(_stick(JOY_AXIS_LEFT_X, 0.3))
+
+	# When: The stick is pushed again.
 	await _dispatch(_stick(JOY_AXIS_LEFT_X, 1.0))
 
 	# Then: The joypad is active again.
@@ -67,17 +71,24 @@ func test_input_slot_held_stick_cannot_reactivate_joypad_until_released() -> voi
 
 
 func test_input_slot_opposite_stick_flick_releases_and_rearms_the_action() -> void:
-	# Given: The keyboard is active with a joypad connected and the stick action active,
-	# then the stick activates the joypad and a key activates the keyboard.
+	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
+
+	# Given: The key and stick actions are active.
 	slot._actions = [_TEST_ACTION, _TEST_AXIS_ACTION]
+
+	# Given: The stick is held, which activates the joypad.
 	await _dispatch(_stick(JOY_AXIS_LEFT_X, 1.0))
+
+	# Given: The bound key is pressed and released, which activates the keyboard.
 	await _dispatch(_key(true))
 	await _dispatch(_key(false))
 	assert_eq(_active_type(), StdInputDevice.DEVICE_TYPE_KEYBOARD, "precondition")
 
-	# When: The stick flicks to the opposite side without centering, then back.
+	# When: The stick flicks to the opposite side without centering.
 	await _dispatch(_stick(JOY_AXIS_LEFT_X, -1.0))
+
+	# When: The stick flicks back.
 	await _dispatch(_stick(JOY_AXIS_LEFT_X, 1.0))
 
 	# Then: The joypad is active again.
@@ -85,18 +96,23 @@ func test_input_slot_opposite_stick_flick_releases_and_rearms_the_action() -> vo
 
 
 func test_input_slot_mouse_motion_reveals_cursor_without_activating_kbm() -> void:
-	# Given: A joypad is active under a set which reveals the cursor on any motion, and
-	# the cursor is hidden.
+	# Given: The slot is added to the scene with a joypad preferred.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = true
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
+
+	# Given: A joypad connects, which activates it.
 	slot.joypad_monitor.connected = [0] as Array[int]
 	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
 	slot.joypad_monitor.broadcast_connected_joypads()
 	autofree(slot.get_active_device())
 	assert_eq(_active_type(), StdInputDevice.DEVICE_TYPE_GENERIC, "precondition")
+
+	# Given: A set which reveals the cursor on any motion is loaded.
 	slot.load_action_set(_make_action_set())
+
+	# Given: The cursor is hidden once a frame passes.
 	await wait_process_frames(1)
 	assert_false(slot.cursor.get_is_visible(), "precondition: cursor hidden")
 
@@ -106,16 +122,21 @@ func test_input_slot_mouse_motion_reveals_cursor_without_activating_kbm() -> voi
 	motion.screen_relative = Vector2(10, 0)
 	await _dispatch(motion)
 
-	# Then: The cursor is visible and the joypad is still active.
+	# Then: The cursor is visible.
 	assert_true(slot.cursor.get_is_visible())
+
+	# Then: The joypad is still active.
 	assert_eq(_active_type(), StdInputDevice.DEVICE_TYPE_GENERIC)
 
 
 func test_cursor_held_hide_action_is_released_by_input_state() -> void:
-	# Given: The keyboard is active with a joypad connected under a set whose hide
-	# action is bound to the stick, and the cursor is visible.
+	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
+
+	# Given: A set whose hide action is bound to the stick is loaded.
 	slot.load_action_set(_make_action_set())
+
+	# Given: The cursor is visible.
 	slot.cursor.show_cursor()
 	await wait_process_frames(1)
 	assert_true(slot.cursor.get_is_visible(), "precondition: cursor visible")
@@ -126,15 +147,19 @@ func test_cursor_held_hide_action_is_released_by_input_state() -> void:
 	# Then: The cursor is hidden.
 	assert_false(slot.cursor.get_is_visible())
 
-	# When: The cursor is shown and the still-held stick reports motion again.
+	# Given: The cursor is shown again.
 	slot.cursor.show_cursor()
+
+	# When: The still-held stick reports motion again.
 	await _dispatch(_stick(JOY_AXIS_LEFT_Y, 0.9))
 
 	# Then: The cursor stays visible.
 	assert_true(slot.cursor.get_is_visible())
 
-	# When: The stick is released for a frame, then pushed again.
+	# When: The stick is released for a frame.
 	await _dispatch(_stick(JOY_AXIS_LEFT_Y, 0.0))
+
+	# When: The stick is pushed again.
 	await _dispatch(_stick(JOY_AXIS_LEFT_Y, 1.0))
 
 	# Then: The cursor is hidden again.
@@ -198,8 +223,8 @@ func _active_type() -> StdInputDevice.DeviceType:
 	return slot.get_active_device().device_type
 
 
-## _dispatch parses `event` through `Input` and lets a frame pass so the engine delivers
-## it to the scene.
+## _dispatch parses `event` through `Input` and lets two frames pass so the engine
+## delivers it to the scene.
 func _dispatch(event: InputEvent) -> void:
 	Input.parse_input_event(event)
 	await wait_process_frames(2)
