@@ -64,15 +64,6 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## set layer enables it.
 @export var cursor_captured: bool = false
 
-## cursor_activates_kbm defines whether revealing the cursor will activate the keyboard
-## and mouse input device (defaults to "off" / not enabled). This is likely desired for
-## menu-based action sets, but should probably be disabled during gameplay due to the
-## prevalence of gyro controls (which are simulated as mouse input).
-##
-## NOTE: This property will be true if the current action set or any activated action
-## set layer enables it.
-@export var cursor_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
-
 @export_subgroup("Hide")
 
 ## cursor_hide_actions is a list of actions which, when "just" triggered by a non-KBM
@@ -129,6 +120,17 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## NOTE: The maximum reveal distance threshold value across all active action sets and
 ## layers will be used.
 @export var cursor_reveal_distance_minimum: Vector2 = Vector2.ZERO
+
+## cursor_click_activates_kbm defines whether a press of one of
+## `cursor_reveal_mouse_buttons` activates the keyboard and mouse device even when no
+## action binds that button (defaults to off). Mouse motion never activates the device.
+##
+## NOTE: Steam legacy bindings, and a Deck layout without touchscreen native support,
+## send controller clicks as real mouse clicks; bind those clicks to actions instead.
+##
+## NOTE: The last of the action set and its active layers to set this property decides
+## its value.
+@export var cursor_click_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
 
 # NOTE: Unfortunately, due to Steam Input offering a far richer API for defining action
 # sets, this abstraction must leak some Steam-related details.
