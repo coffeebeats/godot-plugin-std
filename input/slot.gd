@@ -160,7 +160,10 @@ var _has_player_input: bool = false
 var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
 var _last_active_joypad: StdInputDevice = null
-var _pressed: Array[String] = []
+
+## _pressed maps each joypad's device ID to the active actions it holds, so a hold can't
+## activate that joypad again and ends only with that joypad's own release.
+var _pressed: Dictionary[int, Array] = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -429,11 +432,14 @@ func _input(event: InputEvent) -> void:
 	if not event.is_action_type():
 		return
 
-	if not event.is_pressed():
-		for action in _pressed:
-			if not event.is_action_pressed(action):
-				_pressed.erase(action)
+	# NOTE: A pressed event can release a tracked action too, as a stick flicked from
+	# one side to the other releases the first direction without a centered event.
+	var held: Array = _pressed.get(event.device, [])
+	for action in held.duplicate():
+		if _is_action_released(event, action):
+			held.erase(action)
 
+	if not event.is_pressed():
 		return
 
 	if _try_activate_joypad(event):
@@ -608,9 +614,31 @@ func _disconnect_joy_device(device: int) -> bool:
 		remove_child(joypad)
 		joypad.queue_free()
 
+		# NOTE: An action held on the removed joypad would never be released.
+		_pressed.erase(device)
+
 		return true
 
 	return false
+
+
+## _is_action_pressed returns whether `event` is a press of `action`. An injected action
+## is matched by name, and a key, button, or motion only against an action the
+## `InputMap` knows, since Steam publishes actions the map needn't define.
+func _is_action_pressed(event: InputEvent, action: StringName) -> bool:
+	if event is InputEventAction:
+		return event.action == action and event.pressed
+
+	return InputMap.has_action(action) and event.is_action_pressed(action)
+
+
+## _is_action_released returns whether `event` is a release of `action`, matched as
+## `_is_action_pressed` does.
+func _is_action_released(event: InputEvent, action: StringName) -> bool:
+	if event is InputEventAction:
+		return event.action == action and not event.pressed
+
+	return InputMap.has_action(action) and event.is_action_released(action)
 
 
 func _list_action_sets(
@@ -678,24 +706,36 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 	):
 		return false
 
+	# NOTE: Every action an event presses is tracked, even on the active joypad, so an
+	# input held across a switch to the keyboard can't switch back until released.
+	var held: Array = _pressed.get_or_add(event.device, [])
+	var is_held := false
+	var is_match := false
+	for action in _actions:
+		if not _is_action_pressed(event, action):
+			continue
+
+		if action in held:
+			is_held = true
+			continue
+
+		held.append(action)
+		is_match = true
+
+	# NOTE: A held or new press counts as player input only from a reported joypad, so
+	# one pressed before its monitor reports it still activates once it connects.
+	var is_reported := _joypad_devices.any(func(d): return d.device_id == event.device)
+	if (is_held or is_match) and is_reported:
+		_has_player_input = true
+
+	if is_held or not is_match:
+		return false
+
 	if (
 		_active
 		and _active.device_type != DEVICE_TYPE_KEYBOARD
 		and _active.device_id == event.device
 	):
-		return false
-
-	var is_match := false
-	for action in _actions:
-		if not event.is_action_pressed(action):
-			continue
-
-		if action not in _pressed:
-			_pressed.append(action)
-			is_match = true
-			break
-
-	if not is_match:
 		return false
 
 	for joypad in _joypad_devices:
@@ -705,11 +745,6 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 
 		if event.device != joypad.device_id:
 			continue
-
-		# NOTE: Only a press from a connected joypad counts as the player's first input,
-		# since a joypad pressed before its monitor reports it should still be activated
-		# once it connects.
-		_has_player_input = true
 
 		return _activate_device(joypad)
 
@@ -743,7 +778,7 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 
 	if not is_match:
 		for action in _actions:
-			if event.is_action_pressed(action):
+			if _is_action_pressed(event, action):
 				is_match = true
 				break
 
@@ -797,6 +832,13 @@ func _on_Self_action_configuration_changed() -> void:
 		for action in action_set.actions_digital:
 			assert(action not in _actions, "found duplicate action")
 			_actions.append(action)
+
+	# NOTE: A set change can erase the origins of a held action, so its release could
+	# never match; an action the active sets no longer bind is dropped instead.
+	for held in _pressed.values():
+		for action in held.duplicate():
+			if action not in _actions:
+				held.erase(action)
 
 	if cursor is StdInputCursor:
 		cursor.update_configuration(action_sets)

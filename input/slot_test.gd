@@ -479,9 +479,11 @@ func test_input_slot_unbound_key_is_not_player_input() -> void:
 
 
 func test_input_slot_unbound_joypad_motion_is_not_player_input() -> void:
-	# Given: The keyboard is active beside a connected joypad, with the test axis
-	# actions active.
-	_connect_joypad_behind_kbm()
+	# Given: The keyboard is active beside a connected joypad.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: The test axis actions are active.
+	slot._actions = [&"test_axis_a", &"test_axis_b"]
 
 	# When: The right stick, which no active action is bound to, moves.
 	var event := _joypad_motion(0, 1.0)
@@ -499,9 +501,11 @@ func test_input_slot_unbound_joypad_motion_is_not_player_input() -> void:
 
 
 func test_input_slot_joypad_motion_inside_deadzone_is_not_player_input() -> void:
-	# Given: The keyboard is active beside a connected joypad, with the test axis
-	# actions active.
-	_connect_joypad_behind_kbm()
+	# Given: The keyboard is active beside a connected joypad.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: The test axis actions are active.
+	slot._actions = [&"test_axis_a", &"test_axis_b"]
 
 	# When: The bound stick moves far enough to read as a press but stays inside the
 	# actions' deadzone.
@@ -531,6 +535,278 @@ func test_input_slot_joypad_pressed_before_connecting_activates_on_connect() -> 
 	# Then: The joypad is active, as its press showed a preference for it.
 	var got: StdInputDevice = autofree(slot.get_active_device())
 	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
+func test_input_slot_held_joypad_action_does_not_reactivate_after_key_release() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: An action the InputMap doesn't know and the test action are active.
+	slot._actions = [&"aim", &"test_action"]
+
+	# Given: The joypad holds the unknown action, which activates it.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+		"precondition: joypad active",
+	)
+
+	# Given: A key bound to an action is pressed and released, activating the keyboard.
+	slot._input(_key())
+	slot._input(_key(false))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# When: The still-held joypad action reports pressed again.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Then: The keyboard stays active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_joypad_held_before_switching_does_not_reactivate() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: Two joypad actions and the test action are active.
+	slot._actions = [&"aim", &"fire", &"test_action"]
+
+	# Given: A joypad press activates the joypad.
+	slot._input(_injected_action(0, 1.0, &"fire"))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+		"precondition: joypad active",
+	)
+
+	# Given: A second action is pressed and held while the joypad is active.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Given: A key bound to an action is pressed and released, activating the keyboard.
+	slot._input(_key())
+	slot._input(_key(false))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# When: The still-held joypad action reports pressed again.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Then: The keyboard stays active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_held_axis_bound_to_two_actions_does_not_reactivate() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: Two actions bound to the same axis and the test action are active.
+	slot._actions = [&"test_axis_a", &"test_axis_b", &"test_action"]
+
+	# Given: The joypad holds the axis, which activates it.
+	slot._input(_joypad_motion(0, 1.0))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+		"precondition: joypad active",
+	)
+
+	# Given: A key bound to an action is pressed and released, activating the keyboard.
+	slot._input(_key())
+	slot._input(_key(false))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# When: The still-held axis reports motion again.
+	slot._input(_joypad_motion(0, 0.9))
+
+	# Then: The keyboard stays active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_held_action_pressed_on_another_joypad_activates_it() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: A second joypad connects.
+	slot.joypad_monitor.connected = [0, 1] as Array[int]
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[1])
+
+	# Given: A joypad action is active.
+	slot._actions = [&"aim"]
+
+	# Given: The first joypad holds the action, which activates it.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_eq(
+		slot.get_active_device().device_id, 0, "precondition: first joypad active"
+	)
+
+	# When: The second joypad presses the same action.
+	slot._input(_injected_action(1, 1.0, &"aim"))
+
+	# Then: The second joypad is active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_id, 1)
+
+
+func test_input_slot_opposite_axis_motion_releases_a_tracked_action() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: Two actions bound to the same axis are active.
+	slot._actions = [&"test_axis_a", &"test_axis_b"]
+
+	# Given: The joypad holds the axis.
+	slot._input(_joypad_motion(0, 1.0))
+	assert_has(slot._pressed[0], "test_axis_a", "precondition: action tracked")
+
+	# When: The axis flicks to the opposite side without a centered event.
+	slot._input(_joypad_motion(0, -1.0))
+
+	# Then: The action is no longer tracked.
+	assert_does_not_have(slot._pressed[0], "test_axis_a")
+
+
+func test_input_slot_layer_change_does_not_rearm_a_held_joypad_action() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: An action set declaring a joypad action and the test action is loaded.
+	var action_set := _make_action_set(&"Test")
+	action_set.actions_digital = [&"aim", &"test_action"]
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+
+	# Given: The joypad holds the joypad action, which activates it.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+		"precondition: joypad active",
+	)
+
+	# Given: A key bound to an action is pressed and released, activating the keyboard.
+	slot._input(_key())
+	slot._input(_key(false))
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# When: A layer is enabled.
+	assert_true(slot.enable_action_set_layer(_make_layer(&"TestLayer", action_set)))
+
+	# When: The still-held joypad action reports pressed again.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Then: The keyboard stays active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+
+
+func test_input_slot_joypad_disconnect_clears_tracked_actions() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: A joypad action is active.
+	slot._actions = [&"aim"]
+
+	# Given: The joypad holds the action.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_has(slot._pressed[0], "aim", "precondition: action tracked")
+
+	# When: The joypad disconnects.
+	slot.joypad_monitor.joy_disconnected.emit(0)
+
+	# Then: No action is tracked.
+	assert_true(slot._pressed.is_empty())
+
+
+func test_input_slot_joypad_disconnect_keeps_another_joypads_tracked_action() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: A second joypad connects.
+	slot.joypad_monitor.connected = [0, 1] as Array[int]
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[1])
+
+	# Given: Two joypad actions are active.
+	slot._actions = [&"aim", &"fire"]
+
+	# Given: Each joypad holds one of the actions.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	slot._input(_injected_action(1, 1.0, &"fire"))
+	assert_has(slot._pressed[0], "aim", "precondition: action tracked")
+	assert_has(slot._pressed[1], "fire", "precondition: action tracked")
+
+	# When: The first joypad disconnects.
+	slot.joypad_monitor.joy_disconnected.emit(0)
+
+	# Then: Only the second joypad's action is still tracked.
+	assert_does_not_have(slot._pressed, 0)
+	assert_has(slot._pressed[1], "fire")
+
+
+func test_input_slot_release_from_another_joypad_keeps_a_tracked_action() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: A joypad action is active.
+	slot._actions = [&"aim"]
+
+	# Given: The joypad holds the action.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_has(slot._pressed[0], "aim", "precondition: action tracked")
+
+	# When: Another joypad releases the same action.
+	var event := _injected_action(1, 0.0, &"aim")
+	event.pressed = false
+	slot._input(event)
+
+	# Then: The action is still tracked for the first joypad.
+	assert_has(slot._pressed[0], "aim")
+
+	# When: The first joypad releases it.
+	event.device = 0
+	slot._input(event)
+
+	# Then: The action is no longer tracked.
+	assert_does_not_have(slot._pressed[0], "aim")
+
+
+func test_input_slot_set_change_drops_a_tracked_action_it_no_longer_binds() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: An action set declaring a joypad action and the test action is loaded.
+	var action_set := _make_action_set(&"Test")
+	action_set.actions_digital = [&"aim", &"test_action"]
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+
+	# Given: The joypad holds the joypad action.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_has(slot._pressed[0], "aim", "precondition: action tracked")
+
+	# When: A set without the held action is loaded.
+	var other := _make_action_set(&"Other")
+	assert_true(slot.load_action_set(other), "precondition: action set loaded")
+
+	# Then: The action is no longer tracked.
+	assert_does_not_have(slot._pressed[0], "aim")
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
@@ -594,27 +870,39 @@ func _activate_joypad_under_set(
 	return joypad
 
 
-## _connect_joypad_behind_kbm adds the slot to the scene with the keyboard active and a
-## joypad connected but not preferred, so the joypad stays inactive, and makes the test
-## axis actions the active actions.
-func _connect_joypad_behind_kbm() -> void:
+## _activate_kbm_with_joypad_connected adds the slot to the scene with the keyboard
+## active, joypad `0` connected, and the test action active.
+func _activate_kbm_with_joypad_connected() -> void:
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = false
 	add_child_autofree(slot)
-	autofree(slot.get_active_device())
 
 	slot.joypad_monitor.connected = [0] as Array[int]
 	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
 	slot.joypad_monitor.broadcast_connected_joypads()
 	autofree(slot.get_connected_devices(false)[0])
 
+	var kbm: StdInputDevice = autofree(slot.get_active_device())
 	assert_eq(
-		slot.get_active_device().device_type,
+		kbm.device_type,
 		StdInputDevice.DEVICE_TYPE_KEYBOARD,
 		"precondition: keyboard active",
 	)
 
-	slot._actions = [&"test_axis_a", &"test_axis_b"]
+	slot._actions = [&"test_action"]
+
+
+## _injected_action returns a press of `action` injected for joypad `device` at
+## `strength`, as the Steam actions component publishes analog actions.
+func _injected_action(
+	device: int, strength: float, action: StringName = &"test_action"
+) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = action
+	event.device = device
+	event.pressed = true
+	event.strength = strength
+	return event
 
 
 ## _joypad_motion returns a motion of the left stick's horizontal axis on joypad
