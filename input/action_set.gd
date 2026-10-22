@@ -66,9 +66,9 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
 @export_subgroup("Hide")
 
-## cursor_hide_actions is a list of actions which, when "just" triggered by a non-KBM
-## device, will request the cursor to be hidden. Note that this doesn't guarantee that
-## the cursor will be hidden, as the visibility is dependent on a number of factors.
+## cursor_hide_actions is a list of actions which, when "just" triggered by any device,
+## request the cursor to be hidden, as a desktop hides the pointer while typing. Other
+## factors, such as `cursor_hide_delay`, can still keep the cursor visible.
 ##
 ## NOTE: Actions defined in layers will add to the total set of actions which will hide
 ## the cursor. As such, there's no need to include actions from parent layers.
@@ -87,10 +87,9 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## NOTE: This property will be ignored if `cursor_captured` is `true`.
 @export var cursor_hide_actions_if_hovered: Array[StringName] = []
 
-## cursor_hide_delay is a delay (in seconds) before the hiding the cursor after a
-## request to hide it. During this delay, further mouse motion will cancel the hide
-## effect. This can be used to limit rapid/distracting visibility changes when both
-## mouse motion and the `cursor_hide_actions` are anticipated to be used together.
+## cursor_hide_delay is how long (in seconds) hide actions are ignored after the cursor
+## is revealed or the mouse moves past `cursor_reveal_distance_minimum`. This limits
+## rapid visibility changes when the mouse and the hide actions are used together.
 ##
 ## NOTE: The maximum delay value across all active action sets and layers will be used.
 @export var cursor_hide_delay: float = 0.0
@@ -110,16 +109,26 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 	MOUSE_BUTTON_RIGHT,
 ]
 
-## cursor_reveal_distance_minimum defines, per axis, how much relative motion a mouse
-## motion event must exceed on at least one axis to reveal the cursor. This is used to
-## filter out slight bumps to the cursor which should otherwise not reveal it.
+## cursor_reveal_distance_minimum defines the distance, per axis in screen pixels, which
+## mouse motion must exceed on at least one axis to reveal the cursor or, while it's
+## visible, to restart `cursor_hide_delay`. This filters out slight bumps to the mouse.
 ##
-## NOTE: No running total is kept across events, so a slow drift whose events each stay
-## within the minimum doesn't reveal the cursor.
+## NOTE: Godot merges each frame's motion into one event, so a per-event minimum scales
+## with the frame rate. Pair a nonzero minimum with a `cursor_reveal_window`.
 ##
 ## NOTE: The maximum reveal distance threshold value across all active action sets and
 ## layers will be used.
 @export var cursor_reveal_distance_minimum: Vector2 = Vector2.ZERO
+
+## cursor_reveal_window is the duration (in seconds) over which signed mouse motion is
+## summed before it's compared to `cursor_reveal_distance_minimum`, so the minimum acts
+## as a speed of `minimum / window` pixels per second and back-and-forth jitter cancels.
+##
+## NOTE: Events arrive once per frame, so the window is quantized to whole frames. Use
+## several frames at the lowest target frame rate (`0.1` or more).
+##
+## NOTE: The maximum window across all active action sets and layers will be used.
+@export var cursor_reveal_window: float = 0.0
 
 ## cursor_click_activates_kbm defines whether a press of one of
 ## `cursor_reveal_mouse_buttons` activates the keyboard and mouse device even when no
