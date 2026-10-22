@@ -276,10 +276,15 @@ func _enter_tree() -> void:
 	if not confined_property:
 		return
 
+	assert(
+		confined_property.scope is StdSettingsScope,
+		"invalid config; missing scope for property",
+	)
+
 	Signals.connect_safe(confined_property.value_changed, _on_confined_property_changed)
 
 	# NOTE: A loaded scope emits no value change, so a saved value is read on load.
-	if confined_property.scope and not confined_property.scope.is_loaded:
+	if not confined_property.scope.is_loaded:
 		Signals.connect_safe(
 			confined_property.scope.loaded, _on_confined_property_changed
 		)
@@ -292,11 +297,9 @@ func _exit_tree() -> void:
 		Signals.disconnect_safe(
 			confined_property.value_changed, _on_confined_property_changed
 		)
-
-		if confined_property.scope:
-			Signals.disconnect_safe(
-				confined_property.scope.loaded, _on_confined_property_changed
-			)
+		Signals.disconnect_safe(
+			confined_property.scope.loaded, _on_confined_property_changed
+		)
 
 
 func _input(event: InputEvent) -> void:
