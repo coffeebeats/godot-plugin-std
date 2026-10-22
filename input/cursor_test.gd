@@ -453,7 +453,7 @@ func test_hide_cursor_skips_focus_from_before_reveal_outside_focus_root() -> voi
 	assert_ne(cursor.get_viewport().gui_get_focus_owner(), button)
 
 
-func test_input_hide_action_which_navigates_focuses_hovered_control() -> void:
+func test_input_hide_action_which_navigates_moves_focus_from_hovered_control() -> void:
 	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
 
@@ -480,8 +480,73 @@ func test_input_hide_action_which_navigates_focuses_hovered_control() -> void:
 	# When: The frame ends.
 	await wait_process_frames(1)
 
-	# Then: The hovered button has focus.
-	assert_eq(cursor.get_viewport().gui_get_focus_owner(), hovered)
+	# Then: The button below the hovered one has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), below)
+
+
+func test_input_hovered_only_hide_action_which_accepts_presses_hovered_button() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on `ui_accept` while a control is hovered.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions_if_hovered = [&"ui_accept"]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible.
+	cursor.show_cursor()
+
+	# Given: A hovered button.
+	var hovered := _make_focusable_button()
+	cursor.set_hovered(hovered)
+	watch_signals(hovered)
+
+	# When: The hide action is pressed.
+	get_viewport().push_input(_action(&"ui_accept"))
+	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
+
+	# When: The hide action is released in a later frame.
+	await wait_process_frames(1)
+	var release := _action(&"ui_accept")
+	release.pressed = false
+	get_viewport().push_input(release)
+
+	# Then: The hovered button emits `pressed`.
+	assert_signal_emitted(hovered, "pressed")
+
+
+func test_input_hide_action_which_navigates_restores_focus_from_before_reveal() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on `ui_down`, which also moves focus down.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [&"ui_down"]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is hidden.
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: A button below the focused one in focus order.
+	var below := _make_focusable_button()
+	button.focus_neighbor_bottom = button.get_path_to(below)
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# When: The hide action is pressed with nothing hovered.
+	get_viewport().push_input(_action(&"ui_down"))
+	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button from before the reveal has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
 
 
 func test_hide_cursor_consumes_focus_from_before_reveal_once() -> void:

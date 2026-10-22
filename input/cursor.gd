@@ -10,7 +10,8 @@
 ## the cursor never activates a device, though the `StdInputSlot` may activate one from
 ## the same press. When the cursor hides with no control focused, focus goes to the
 ## pending target, else the hovered control, else the control focused before the cursor
-## was revealed, else the highest-priority anchor.
+## was revealed, else the highest-priority anchor. The first two take focus at once, so
+## the press which hid the cursor acts on them; the others wait for the frame to end.
 ##
 ## While hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse.
 ## The cursor doesn't consume mouse events itself, which would starve `_unhandled_input`
@@ -509,7 +510,8 @@ func _update_focus(trigger: StringName = &"") -> void:
 	# root). This handles the case where a modal opens over a hovered element —
 	# the element remains hovered but shouldn't receive focus (Godot bug).
 	if _hovered and (not root or root.is_ancestor_of(_hovered)):
-		_grab_focus_deferred(_hovered, trigger, true)
+		# NOTE: Focus is grabbed at once, so the press which hid the cursor acts on it.
+		_grab_focus(_hovered, trigger)
 		unset_hovered(_hovered)
 		return
 
