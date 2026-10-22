@@ -91,9 +91,10 @@ func get_hovered() -> Control:
 	return _hovered
 
 
-## get_is_confined returns whether the cursor is currently confined to the window.
+## get_is_confined returns whether the cursor is currently confined to the window. A
+## captured cursor isn't confined.
 func get_is_confined() -> bool:
-	return _cursor_confined
+	return _cursor_confined and not _cursor_captured
 
 
 ## get_is_visible returns whether the cursor is currently visible.

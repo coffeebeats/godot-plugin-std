@@ -91,6 +91,21 @@ func test_get_is_confined_true_when_property_on_over_unconfined_set() -> void:
 	assert_true(cursor.get_is_confined())
 
 
+func test_get_is_confined_false_while_captured() -> void:
+	# Given: A cursor added to the scene whose confinement property is on.
+	cursor.confined_property = _make_confined_property(true)
+	add_child_autofree(cursor)
+	assert_true(cursor.get_is_confined(), "precondition: confined")
+
+	# When: An action set which captures the cursor is applied.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_captured = true
+	cursor.update_configuration([action_set])
+
+	# Then: The cursor isn't confined.
+	assert_false(cursor.get_is_confined())
+
+
 func test_get_is_confined_follows_confined_property_once_its_scope_loads() -> void:
 	# Given: A cursor added to the scene whose confinement property defaults to off
 	# under a scope not yet loaded.
