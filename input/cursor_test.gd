@@ -1,4 +1,5 @@
 # gdlint:ignore=max-public-methods
+# gdlint:disable=max-file-lines
 ##
 ## Tests pertaining to the `StdInputCursor` class.
 ##
@@ -374,6 +375,425 @@ func test_input_motion_older_than_reveal_window_is_dropped() -> void:
 
 	# Then: The cursor is still hidden.
 	assert_false(cursor.get_is_visible())
+
+
+func test_hide_cursor_restores_focus_from_before_reveal() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed, which releases focus.
+	cursor.show_cursor()
+	assert_null(cursor.get_viewport().gui_get_focus_owner(), "precondition")
+
+	# When: The cursor hides with nothing hovered.
+	cursor.hide_cursor()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button has focus again.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_hide_cursor_prefers_hovered_over_focus_from_before_reveal() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: Another button is hovered.
+	var hovered := _make_focusable_button()
+	cursor.set_hovered(hovered)
+
+	# When: The cursor hides.
+	cursor.hide_cursor()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The hovered button has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), hovered)
+
+
+func test_hide_cursor_skips_focus_from_before_reveal_outside_focus_root() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: A focus root which doesn't contain the button.
+	var root := Control.new()
+	add_child_autofree(root)
+	cursor.set_focus_root(root)
+
+	# When: The cursor hides.
+	cursor.hide_cursor()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button doesn't have focus.
+	assert_ne(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_input_hide_action_which_navigates_moves_focus_from_hovered_control() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on `ui_down`, which also moves focus down.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [&"ui_down"]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible.
+	cursor.show_cursor()
+
+	# Given: A hovered button.
+	var hovered := _make_focusable_button()
+	cursor.set_hovered(hovered)
+
+	# Given: A button below the hovered one in focus order.
+	var below := _make_focusable_button()
+	hovered.focus_neighbor_bottom = hovered.get_path_to(below)
+
+	# When: The hide action is pressed.
+	get_viewport().push_input(_action(&"ui_down"))
+	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button below the hovered one has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), below)
+
+
+func test_input_hovered_only_hide_action_which_accepts_presses_hovered_button() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on `ui_accept` while a control is hovered.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions_if_hovered = [&"ui_accept"]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible.
+	cursor.show_cursor()
+
+	# Given: A hovered button.
+	var hovered := _make_focusable_button()
+	cursor.set_hovered(hovered)
+	watch_signals(hovered)
+
+	# When: The hide action is pressed.
+	get_viewport().push_input(_action(&"ui_accept"))
+	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
+
+	# When: The hide action is released in a later frame.
+	await wait_process_frames(1)
+	var release := _action(&"ui_accept")
+	release.pressed = false
+	get_viewport().push_input(release)
+
+	# Then: The hovered button emits `pressed`.
+	assert_signal_emitted(hovered, "pressed")
+
+
+func test_input_hide_action_which_navigates_restores_focus_from_before_reveal() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on `ui_down`, which also moves focus down.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [&"ui_down"]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is hidden.
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: A button below the focused one in focus order.
+	var below := _make_focusable_button()
+	button.focus_neighbor_bottom = button.get_path_to(below)
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# When: The hide action is pressed with nothing hovered.
+	get_viewport().push_input(_action(&"ui_down"))
+	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button from before the reveal has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_hide_cursor_consumes_focus_from_before_reveal_once() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: A pending focus target.
+	var target := _make_focusable_button()
+	cursor.set_pending_focus(target)
+
+	# Given: The cursor hides, which focuses the pending target.
+	cursor.hide_cursor()
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), target, "precondition")
+
+	# When: The pending target loses focus.
+	target.release_focus()
+
+	# When: Focus is resolved again.
+	cursor._update_focus()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button from before the reveal doesn't regain focus.
+	assert_ne(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_hide_cursor_keeping_focus_consumes_focus_from_before_reveal() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: Another button takes focus, as a click would without a focus handler.
+	var other := _make_focusable_button()
+	other.grab_focus()
+
+	# Given: The cursor hides, which keeps the other button's focus.
+	cursor.hide_cursor()
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), other, "precondition")
+
+	# When: The other button loses focus.
+	other.release_focus()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button from before the reveal doesn't regain focus.
+	assert_ne(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_hide_cursor_restores_focus_from_before_reveal_to_handled_control() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button managed by a focus handler.
+	var button := _make_focusable_button()
+	button.add_child(StdInputCursorFocusHandler.new())
+
+	# Given: The button has focus.
+	button.grab_focus()
+
+	# Given: The cursor is revealed, which makes the button unfocusable.
+	cursor.show_cursor()
+	assert_eq(button.focus_mode, Control.FOCUS_NONE, "precondition: unfocusable")
+
+	# When: The cursor hides.
+	cursor.hide_cursor()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button has focus again.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_input_reveal_in_the_hiding_frame_keeps_focus_released() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is hidden.
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: The hide action is pressed, hiding the cursor.
+	get_viewport().push_input(_action(_TEST_HIDE_ACTION))
+	assert_false(cursor.get_is_visible(), "precondition: hidden by the action")
+
+	# When: The mouse moves within the same frame.
+	get_viewport().push_input(_motion(Vector2(3, 0)))
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The cursor is visible.
+	assert_true(cursor.get_is_visible())
+
+	# Then: Nothing has focus.
+	assert_null(cursor.get_viewport().gui_get_focus_owner())
+
+
+func test_set_focus_root_in_the_hiding_frame_focuses_pending_target() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: A focus root which doesn't contain the button.
+	var root := Control.new()
+	add_child_autofree(root)
+
+	# Given: A focusable button under the focus root.
+	var target := Button.new()
+	target.focus_mode = Control.FOCUS_ALL
+	root.add_child(target)
+
+	# Given: The cursor hides.
+	cursor.hide_cursor()
+
+	# When: The button under the root is set as the pending focus target.
+	cursor.set_pending_focus(target)
+
+	# When: The focus root is set within the same frame.
+	cursor.set_focus_root(root)
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The pending target has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), target)
+
+
+func test_report_focus_handler_visible_in_the_hiding_frame_skips_anchor() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: An anchor focus handler on another button.
+	var anchor := _make_anchor_handler()
+
+	# Given: The cursor hides.
+	cursor.hide_cursor()
+
+	# When: The anchor's focus handler reports itself visible within the same frame.
+	cursor.report_focus_handler_visible(anchor)
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button from before the reveal has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_hide_cursor_yields_to_focus_grabbed_in_the_same_frame() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: Another focusable button.
+	var other := _make_focusable_button()
+
+	# Given: The cursor hides.
+	cursor.hide_cursor()
+
+	# When: The other button grabs focus within the same frame.
+	other.grab_focus()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The other button has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), other)
+
+
+func test_hide_cursor_freeing_prior_focus_in_the_same_frame_focuses_nothing() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child(button)
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: The cursor hides.
+	cursor.hide_cursor()
+
+	# When: The button is freed within the same frame.
+	button.free()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: Nothing has focus.
+	#
+	# NOTE: GUT also fails the test on any engine error the freed button causes.
+	assert_null(cursor.get_viewport().gui_get_focus_owner())
 
 
 func test_hide_cursor_clears_summed_motion() -> void:
@@ -810,6 +1230,23 @@ func _key_press() -> InputEventKey:
 	event.keycode = KEY_A
 	event.pressed = true
 	return event
+
+
+## _make_anchor_handler adds a focusable button to the scene, managed by an anchor focus
+## handler, and returns the handler.
+func _make_anchor_handler() -> StdInputCursorFocusHandler:
+	var handler := StdInputCursorFocusHandler.new()
+	handler.use_as_anchor = true
+	_make_focusable_button().add_child(handler)
+	return handler
+
+
+## _make_focusable_button adds a focusable button to the scene and returns it.
+func _make_focusable_button() -> Button:
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	return button
 
 
 ## _motion returns a mouse motion event which moves by `relative` in screen pixels.
