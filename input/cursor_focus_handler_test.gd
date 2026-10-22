@@ -961,6 +961,84 @@ func test_button_enabled_behind_overlay_is_hovered_once_overlay_closes() -> void
 	handler.free()
 
 
+func test_button_hovered_behind_overlay_is_drawn_hovered_once_overlay_closes() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: An enabled button with a focus handler in a SubViewport.
+	var setup := _setup_button_in_viewport(false)
+	var sv: SubViewport = setup[0]
+	var button: Button = setup[1]
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The mouse hovers the button.
+	_move_mouse(sv, Vector2(50, 20))
+	await get_tree().process_frame
+
+	# Given: An overlay opens over the button, which clears its hover visuals.
+	var overlay := _open_overlay(sv)
+	await get_tree().process_frame
+	assert_false(button.is_hovered(), "precondition: button should look unhovered")
+	watch_signals(handler)
+
+	# When: The overlay closes.
+	cursor.set_focus_root(null)
+	overlay.free()
+	await get_tree().process_frame
+
+	# Then: The button is drawn hovered again.
+	assert_true(button.is_hovered())
+	assert_eq(button.get_draw_mode(), BaseButton.DRAW_HOVER)
+
+	# Then: The hover, which never ended, isn't reported again.
+	assert_true(handler.is_hovered())
+	assert_signal_not_emitted(handler, "hovered")
+	assert_eq(cursor.get_hovered(), button)
+
+	button.remove_child(handler)
+	handler.free()
+
+
+func test_button_left_behind_overlay_stays_unhovered_once_overlay_closes() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: An enabled button with a focus handler in a SubViewport.
+	var setup := _setup_button_in_viewport(false)
+	var sv: SubViewport = setup[0]
+	var button: Button = setup[1]
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The mouse hovers the button.
+	_move_mouse(sv, Vector2(50, 20))
+	await get_tree().process_frame
+
+	# Given: An overlay opens over the button as the focus root.
+	var overlay := _open_overlay(sv)
+	await get_tree().process_frame
+
+	# Given: The mouse moves, so the overlay takes it from the button.
+	_move_mouse(sv, Vector2(60, 22))
+	await get_tree().process_frame
+	watch_signals(handler)
+
+	# When: The overlay closes.
+	cursor.set_focus_root(null)
+	overlay.free()
+	await get_tree().process_frame
+
+	# Then: The button stays unhovered.
+	assert_false(button.is_hovered())
+	assert_false(handler.is_hovered())
+	assert_signal_not_emitted(handler, "hovered")
+	assert_null(cursor.get_hovered())
+
+	button.remove_child(handler)
+	handler.free()
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

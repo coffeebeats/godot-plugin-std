@@ -213,6 +213,15 @@ func _is_blocked() -> bool:
 	)
 
 
+## _is_hover_lost returns whether the mouse is over the target `Control` node while its
+## hover is unregistered or, for a `BaseButton`, not drawn.
+func _is_hover_lost() -> bool:
+	return (
+		_is_mouse_over
+		and (not _hovered or (_control is BaseButton and not _control.is_hovered()))
+	)
+
+
 ## _register_hover marks the target `Control` node as hovered, unless it's blocked.
 func _register_hover() -> void:
 	if _is_blocked():
@@ -231,11 +240,12 @@ func _register_hover() -> void:
 ## NOTE: The viewport keeps the mouse over a control that a new overlay covers until
 ## the mouse moves, so no hover is restored outside the focus root.
 func _restore_hover() -> void:
-	if _hovered or not _is_mouse_over or _is_blocked() or _is_outside_focus_root:
+	if not _is_hover_lost() or _is_blocked() or _is_outside_focus_root:
 		return
 
 	_control.notification(Control.NOTIFICATION_MOUSE_ENTER)
-	_register_hover()
+	if not _hovered:
+		_register_hover()
 
 
 ## _unregister_hover ends the hover of the target `Control` node, if it's hovered.
@@ -273,9 +283,9 @@ func _update_input_state(is_cursor_visible: bool) -> void:
 			_control.mouse_filter = MOUSE_FILTER_IGNORE
 		return
 
-	# NOTE: No mouse enter follows a button unblocking under the mouse, and a redraw
-	# can't be queued while drawing, so the hover is restored deferred.
-	if _is_mouse_over and not _hovered:
+	# NOTE: No mouse enter follows a button unblocking or an overlay closing, and a
+	# redraw can't be queued while drawing, so the hover is restored deferred.
+	if _is_hover_lost():
 		_restore_hover.call_deferred()
 
 	if not is_cursor_visible:
