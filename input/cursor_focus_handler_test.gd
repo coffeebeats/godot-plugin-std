@@ -285,12 +285,12 @@ func test_handler_emits_signal_on_control_event(
 		(
 			ParameterFactory
 			. named_parameters(
-				["trigger_signal", "expected_signal"],
+				["prior_signal", "trigger_signal", "expected_signal"],
 				[
-					["focus_entered", "focused"],
-					["focus_exited", "unfocused"],
-					["mouse_entered", "hovered"],
-					["mouse_exited", "unhovered"],
+					["", "focus_entered", "focused"],
+					["focus_entered", "focus_exited", "unfocused"],
+					["", "mouse_entered", "hovered"],
+					["mouse_entered", "mouse_exited", "unhovered"],
 				]
 			)
 		)
@@ -307,6 +307,10 @@ func test_handler_emits_signal_on_control_event(
 	var handler := StdInputCursorFocusHandler.new()
 	handler.control = NodePath("..")
 	button.add_child(handler)
+
+	# Given: The control first emits the signal the trigger follows, if any.
+	if params.prior_signal:
+		button.get(params.prior_signal).emit()
 
 	# Given: The handler signals are being watched.
 	watch_signals(handler)
@@ -711,6 +715,28 @@ func test_disabled_button_takes_no_hover() -> void:
 	assert_null(cursor.get_hovered())
 
 
+func test_disabled_button_mouse_exit_emits_no_unhovered() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A disabled button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.disabled = true
+	add_child_autofree(button)
+	var handler := _add_handler(button)
+
+	# Given: The mouse entered the button.
+	button.mouse_entered.emit()
+	watch_signals(handler)
+
+	# When: The mouse exits the button.
+	button.mouse_exited.emit()
+
+	# Then: No hover is reported as ending.
+	assert_signal_not_emitted(handler, "unhovered")
+
+
 func test_button_disabled_while_hovered_is_unhovered() -> void:
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
@@ -734,6 +760,31 @@ func test_button_disabled_while_hovered_is_unhovered() -> void:
 	assert_false(handler.is_hovered())
 	assert_signal_emitted(handler, "unhovered")
 	assert_null(cursor.get_hovered())
+
+
+func test_button_disabled_while_hovered_emits_no_unhovered_on_exit() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A hovered button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+	button.mouse_entered.emit()
+
+	# Given: The button becomes disabled, which ends its hover.
+	button.disabled = true
+	button.queue_redraw()
+	await get_tree().process_frame
+	watch_signals(handler)
+
+	# When: The mouse exits the button.
+	button.mouse_exited.emit()
+
+	# Then: The ended hover isn't reported again.
+	assert_signal_not_emitted(handler, "unhovered")
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
