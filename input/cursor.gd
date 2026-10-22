@@ -55,6 +55,8 @@ static var _logger := StdLogger.create("std/input/cursor")
 var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = false
+var _deferred_focus: Control = null
+var _deferred_focus_id: int = 0
 var _focus_before_reveal: Control = null
 var _focus_root: Control = null
 var _focus_version: int = 0
@@ -340,6 +342,23 @@ func _clear_reveal_motion() -> void:
 	_reveal_motion_times = PackedInt64Array()
 
 
+func _deferred_grab_focus(id: int, trigger: StringName, make_focusable: bool) -> void:
+	if id != _deferred_focus_id:
+		return
+
+	var target := _deferred_focus
+	_deferred_focus = null
+
+	if not is_instance_valid(target) or not target.is_inside_tree():
+		return
+
+	if make_focusable:
+		target.focus_mode = Control.FOCUS_ALL
+
+	about_to_grab_focus.emit(target, trigger)
+	target.grab_focus()
+
+
 func _deferred_update_focus(version: int) -> void:
 	if version != _focus_version:
 		return
@@ -362,24 +381,18 @@ func _grab_focus(target: Control, trigger: StringName) -> void:
 	target.grab_focus()
 
 
-## _grab_focus_deferred focuses `target` at the end of the frame, once the event which
-## hid the cursor has finished propagating, so a hide action which also navigates focus
-## can't move it off the control it was just given. With `make_focusable`, the control's
-## focus mode is set first; otherwise its focus handler is expected to restore it.
+## _grab_focus_deferred focuses `target` at the end of the frame, after the event which
+## hid the cursor has propagated, so a hide action which also navigates can't move focus
+## off it. Until then `target` counts as focused, and a newer grab or focus change
+## cancels this one.
+##
+## NOTE: Without `make_focusable`, the target's focus handler must restore its mode.
 func _grab_focus_deferred(
 	target: Control, trigger: StringName, make_focusable: bool
 ) -> void:
-	var grab := func() -> void:
-		if not is_instance_valid(target) or not target.is_inside_tree():
-			return
-
-		if make_focusable:
-			target.focus_mode = Control.FOCUS_ALL
-
-		about_to_grab_focus.emit(target, trigger)
-		target.grab_focus()
-
-	grab.call_deferred()
+	_deferred_focus = target
+	_deferred_focus_id += 1
+	_deferred_grab_focus.call_deferred(_deferred_focus_id, trigger, make_focusable)
 
 
 ## _is_significant_motion returns whether `relative`, a mouse motion in screen pixels,
@@ -445,9 +458,24 @@ func _update_focus(trigger: StringName = &"") -> void:
 		previous = _focus_before_reveal
 		_focus_before_reveal = null
 
+	var deferred := _deferred_focus
+	_deferred_focus = null
+
 	# Keep current focus if it's valid and under the focus root.
 	var current_focus := get_viewport().gui_get_focus_owner()
 	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
+		_pending_focus = null
+		return
+
+	# NOTE: A control whose grab is deferred to the end of the frame is kept as if it
+	# had focus, since the resolution which picked it consumed the other candidates.
+	if (
+		not _cursor_visible
+		and is_instance_valid(deferred)
+		and deferred.is_visible_in_tree()
+		and (not _focus_root or _focus_root.is_ancestor_of(deferred))
+	):
+		_deferred_focus = deferred
 		_pending_focus = null
 		return
 
@@ -518,6 +546,8 @@ func _update_focus(trigger: StringName = &"") -> void:
 func _on_gui_focus_changed(control: Control) -> void:
 	_logger.debug("GUI focus changed.", {&"path": control.get_path()})
 
+	_deferred_focus = null
+
 	control.focus_exited.connect(
 		func(): _deferred_update_focus.call_deferred(_focus_version),
 		CONNECT_ONE_SHOT,
@@ -551,7 +581,8 @@ func _on_properties_changed(
 	# Release stale focus on hidden-to-visible transitions, remembering it so the next
 	# hide can return to it.
 	if _cursor_visible and not _was_cursor_visible:
-		_focus_before_reveal = get_viewport().gui_get_focus_owner()
+		var focused := get_viewport().gui_get_focus_owner()
+		_focus_before_reveal = focused if focused else _deferred_focus
 		get_viewport().gui_release_focus()
 	_was_cursor_visible = _cursor_visible
 
