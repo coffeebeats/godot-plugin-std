@@ -69,8 +69,7 @@ func test_input_slot_swap_forwards_the_next_components_bindings_changed() -> voi
 
 
 func test_input_slot_shared_actions_component_forwards_bindings_changed_once() -> void:
-	# Given: An input slot whose keyboard and joypads share one actions component, as
-	# a Godot-backed scene does.
+	# Given: An input slot whose keyboard and joypads share one actions component.
 	slot.actions_joy = slot.actions_kbm
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
@@ -82,13 +81,14 @@ func test_input_slot_shared_actions_component_forwards_bindings_changed_once() -
 	# Then: The slot reports a changed action configuration once.
 	assert_signal_emit_count(slot, "action_configuration_changed", 1)
 
-	# When: The joypad components are swapped back to the shared component and it
-	# reports changed bindings again.
+	# Given: The joypad components are swapped back to the shared component.
 	var joypad_monitor := JoypadMonitor.new()
 	add_child_autofree(joypad_monitor)
 	slot.swap_joypad_components(
 		joypad_monitor, slot.actions_kbm, slot.glyphs_joy, slot.haptics_joy
 	)
+
+	# When: The shared component reports changed bindings again.
 	slot.actions_kbm.bindings_changed.emit()
 
 	# Then: The slot reports it once more.
@@ -125,8 +125,7 @@ func test_input_slot_swap_from_shared_actions_forwards_kbm_bindings_changed() ->
 
 
 func test_input_slot_ignores_bindings_changed_before_ready() -> void:
-	# Given: An input slot whose actions component reports changed bindings as soon as
-	# the slot enters the tree, before it's ready.
+	# Given: The keyboard actions report a bindings change as the slot enters the tree.
 	watch_signals(slot)
 	slot.tree_entered.connect(func(): slot.actions_kbm.bindings_changed.emit())
 
