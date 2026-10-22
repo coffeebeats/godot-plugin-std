@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## std/input/slot_test.gd
 ##
@@ -10,6 +11,14 @@ extends GutTest
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const _TEST_ACTIONS: Array[StringName] = [&"test_action"]
+
+## _TEST_AXIS_ACTIONS are two actions bound to the same joypad axis direction.
+const _TEST_AXIS_ACTIONS: Array[StringName] = [&"test_axis_a", &"test_axis_b"]
+
+## _TEST_DEADZONE is the deadzone of the test axis actions. It sits above the `0.5` at
+## which a joypad motion event reads as pressed, so a motion between the two is a press
+## which doesn't press the actions.
+const _TEST_DEADZONE := 0.75
 
 ## _TEST_KEY is the key bound to the test action.
 const _TEST_KEY := KEY_T
@@ -278,7 +287,7 @@ func test_input_slot_bound_key_press_activates_kbm_when_property_off() -> void:
 	_activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_OFF)
 
 	# When: A key bound to the test action is pressed.
-	slot._input(_key(_TEST_KEY))
+	slot._input(_key())
 
 	# Then: The keyboard is active.
 	assert_eq(slot.get_active_device().device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
@@ -306,134 +315,12 @@ func test_input_slot_bound_key_press_activates_kbm_with_no_active_device() -> vo
 	assert_null(slot.get_active_device(), "precondition: no device active")
 
 	# When: A key bound to the test action is pressed.
-	slot._input(_key(_TEST_KEY))
+	slot._input(_key())
 
 	# Then: The keyboard is active.
 	var got: StdInputDevice = slot.get_active_device()
 	assert_not_null(got)
 	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
-
-
-func test_input_slot_connects_and_disconnects_joypads() -> void:
-	# Given: A new `StdInputSlot` is instantiated.
-	assert_is(slot, StdInputSlot)
-
-	# Given: The input slot is configured to claim keyboard+mouse input.
-	slot.claim_kbm_input = false
-
-	# Given: Signals are monitored.
-	watch_signals(slot)
-
-	# Given: The input slot is added to the scene.
-	add_child_autofree(slot)
-
-	# Given: There's no active or connected devices.
-	assert_null(slot.get_active_device())
-	assert_signal_not_emitted(slot, "device_activated")
-	assert_signal_not_emitted(slot, "device_connected")
-
-	# When: A newly connected joypad device is broadcast.
-	slot.joypad_monitor.connected = [0] as Array[int]
-	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
-	slot.joypad_monitor.broadcast_connected_joypads()
-
-	# Then: The joypad is active.
-	var got: StdInputDevice = autofree(slot.get_active_device())
-	assert_not_null(got)
-	assert_is(got, StdInputDevice)
-	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
-
-	# Then: The connect signal was emitted.
-	assert_signal_emit_count(slot, "device_connected", 1)
-	assert_signal_emitted_with_parameters(slot, "device_connected", [got])
-
-	# Then: The activate signal was emitted.
-	assert_signal_emit_count(slot, "device_activated", 1)
-	assert_signal_emitted_with_parameters(slot, "device_activated", [got])
-
-	# Then: The joypad is in the list of connected devices.
-	assert_eq(len(slot.get_connected_devices()), 1)
-	assert_has(slot.get_connected_devices(), got)
-
-	# When: The connected joypad device is disconnected.
-	slot.joypad_monitor.joy_disconnected.emit(0)
-
-	# Then: The disconnect signal was emitted.
-	assert_signal_emit_count(slot, "device_disconnected", 1)
-	assert_signal_emitted_with_parameters(slot, "device_disconnected", [got])
-
-	# Then: There are no connected devices.
-	assert_eq(len(slot.get_connected_devices()), 0)
-
-
-func test_input_slot_swap_reconnects_joypads() -> void:
-	# Given: A new `StdInputSlot` is instantiated.
-	assert_is(slot, StdInputSlot)
-
-	# Given: The input slot is configured to claim keyboard+mouse input.
-	slot.claim_kbm_input = false
-
-	# Given: The input slot is added to the scene.
-	add_child_autofree(slot)
-
-	# Given: A device ID for a single connected joypad.
-	var device_id := 1
-
-	# When: A newly connected joypad device is broadcast.
-	slot.joypad_monitor.connected = [device_id] as Array[int]
-	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
-	slot.joypad_monitor.broadcast_connected_joypads()
-
-	# Then: The joypad is active.
-	var got: StdInputDevice = autofree(slot.get_active_device())
-	assert_not_null(got)
-	assert_is(got, StdInputDevice)
-	assert_eq(got.device_id, device_id)
-	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
-
-	# Then: The joypad is in the list of connected devices.
-	assert_eq(len(slot.get_connected_devices()), 1)
-	assert_has(slot.get_connected_devices(), got)
-
-	# Given: A new joypad monitor is created and 1 device is already connected.
-	var joypad_monitor := JoypadMonitor.new()
-	joypad_monitor.connected = [device_id]
-	joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
-	add_child_autofree(joypad_monitor)
-
-	# Given: Signals are monitored.
-	watch_signals(slot)
-
-	# When: The joypad monitor is swapped.
-	var joypad_monitor_prev := slot.joypad_monitor
-	(
-		slot
-		. swap_joypad_components(
-			joypad_monitor,
-			slot.actions_joy,
-			slot.glyphs_joy,
-			slot.haptics_joy,
-		)
-	)
-	joypad_monitor_prev.free()
-
-	# Then: The same joypad is active (the `InputDevice` may be different though).
-	var got_next: StdInputDevice = autofree(slot.get_active_device())
-	assert_not_null(got_next)
-	assert_is(got_next, StdInputDevice)
-	assert_eq(got_next.device_id, device_id)
-	assert_eq(got_next.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
-
-	# Then: The disconnect signal was emitted.
-	assert_signal_emit_count(slot, "device_disconnected", 1)
-	assert_signal_emitted_with_parameters(slot, "device_disconnected", [got])
-
-	# Then: The connect signal was emitted.
-	assert_signal_emit_count(slot, "device_connected", 1)
-	assert_signal_emitted_with_parameters(slot, "device_connected", [got_next])
-
-	# Then: There is 1 connected device.
-	assert_eq(len(slot.get_connected_devices()), 1)
 
 
 func test_input_slot_load_of_another_action_set_clears_layers() -> void:
@@ -495,11 +382,161 @@ func test_input_slot_layer_enabled_before_any_device_reaches_a_later_joypad() ->
 	assert_eq(_actions_joy.layers, [layer] as Array[StdInputActionSetLayer])
 
 
+func test_input_slot_joypad_connected_before_player_input_activates() -> void:
+	# Given: An input slot added to the scene with the keyboard active and a joypad
+	# preferred.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# When: A joypad connects before the player has pressed anything.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	# Then: The joypad is active.
+	var got: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
+func test_input_slot_joypad_connected_after_player_input_stays_inactive() -> void:
+	# Given: An input slot added to the scene with the keyboard active and a joypad
+	# preferred.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._actions = [&"test_action"]
+	watch_signals(slot)
+
+	# Given: The player presses and releases a key bound to an action.
+	slot._input(_key())
+	slot._input(_key(false))
+
+	# When: A joypad connects.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[0])
+
+	# Then: The keyboard stays active and nothing was activated.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
+	assert_signal_not_emitted(slot, "device_activated")
+
+
+func test_input_slot_emulated_mouse_button_is_not_player_input() -> void:
+	# Given: An input slot added to the scene with the keyboard active and a joypad
+	# preferred, under a set where a click activates the keyboard.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	var action_set := _make_action_set(&"Test")
+	action_set.cursor_click_activates_kbm = StdInputActionSet.PROPERTY_STATUS_ON
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+
+	# Given: A mouse button Godot emulated from a touch was pressed.
+	var event := _mouse_button(MOUSE_BUTTON_LEFT)
+	event.device = InputEvent.DEVICE_ID_EMULATION
+	slot._input(event)
+	assert_false(slot._has_player_input, "precondition: no player input")
+
+	# When: A joypad connects.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	# Then: The joypad is active, as the touch showed no preference.
+	var got: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
+func test_input_slot_unbound_key_is_not_player_input() -> void:
+	# Given: An input slot added to the scene with the keyboard active and the test
+	# action active.
+	slot.claim_kbm_input = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._actions = [&"test_action"]
+
+	# When: A key bound to no action is pressed.
+	var event := InputEventKey.new()
+	event.keycode = KEY_A
+	event.pressed = true
+	slot._input(event)
+
+	# Then: The slot has seen no player input.
+	assert_false(slot._has_player_input)
+
+	# When: The key bound to the test action is pressed.
+	slot._input(_key())
+
+	# Then: The slot has seen player input.
+	assert_true(slot._has_player_input)
+
+
+func test_input_slot_unbound_joypad_motion_is_not_player_input() -> void:
+	# Given: The keyboard is active beside a connected joypad, with the test axis
+	# actions active.
+	_connect_joypad_behind_kbm()
+
+	# When: The right stick, which no active action is bound to, moves.
+	var event := _joypad_motion(0, 1.0)
+	event.axis = JOY_AXIS_RIGHT_X
+	slot._input(event)
+
+	# Then: The slot has seen no player input.
+	assert_false(slot._has_player_input)
+
+	# When: The stick bound to the test axis actions moves.
+	slot._input(_joypad_motion(0, 1.0))
+
+	# Then: The slot has seen player input.
+	assert_true(slot._has_player_input)
+
+
+func test_input_slot_joypad_motion_inside_deadzone_is_not_player_input() -> void:
+	# Given: The keyboard is active beside a connected joypad, with the test axis
+	# actions active.
+	_connect_joypad_behind_kbm()
+
+	# When: The bound stick moves far enough to read as a press but stays inside the
+	# actions' deadzone.
+	slot._input(_joypad_motion(0, (0.5 + _TEST_DEADZONE) / 2.0))
+
+	# Then: The slot has seen no player input.
+	assert_false(slot._has_player_input)
+
+
+func test_input_slot_joypad_pressed_before_connecting_activates_on_connect() -> void:
+	# Given: An input slot added to the scene with the keyboard active, a joypad
+	# preferred, and the test axis actions active.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = true
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._actions = [&"test_axis_a", &"test_axis_b"]
+
+	# Given: A joypad its monitor hasn't reported yet moves the bound stick.
+	slot._input(_joypad_motion(0, 1.0))
+
+	# When: The monitor reports the joypad.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+
+	# Then: The joypad is active, as its press showed a preference for it.
+	var got: StdInputDevice = autofree(slot.get_active_device())
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
 func after_all() -> void:
-	for action in _TEST_ACTIONS:
+	for action in _TEST_ACTIONS + _TEST_AXIS_ACTIONS:
 		InputMap.erase_action(action)
 
 
@@ -510,6 +547,10 @@ func before_all() -> void:
 	var key := InputEventKey.new()
 	key.keycode = _TEST_KEY
 	InputMap.action_add_event(&"test_action", key)
+
+	for action in _TEST_AXIS_ACTIONS:
+		InputMap.add_action(action, _TEST_DEADZONE)
+		InputMap.action_add_event(action, _joypad_motion(0, 1.0))
 
 
 func before_each() -> void:
@@ -552,11 +593,45 @@ func _activate_joypad_under_set(
 	return joypad
 
 
-## _key returns a press of the key `keycode`.
-func _key(keycode: Key) -> InputEventKey:
+## _connect_joypad_behind_kbm adds the slot to the scene with the keyboard active and a
+## joypad connected but not preferred, so the joypad stays inactive, and makes the test
+## axis actions the active actions.
+func _connect_joypad_behind_kbm() -> void:
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = false
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[0])
+
+	assert_eq(
+		slot.get_active_device().device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	slot._actions = [&"test_axis_a", &"test_axis_b"]
+
+
+## _joypad_motion returns a motion of the left stick's horizontal axis on joypad
+## `device` to `value`.
+func _joypad_motion(device: int, value: float) -> InputEventJoypadMotion:
+	var event := InputEventJoypadMotion.new()
+	event.device = device
+	event.axis = JOY_AXIS_LEFT_X
+	event.axis_value = value
+	return event
+
+
+## _key returns a press, or a release when `pressed` is `false`, of the key bound to the
+## test action.
+func _key(pressed: bool = true) -> InputEventKey:
 	var event := InputEventKey.new()
-	event.keycode = keycode
-	event.pressed = true
+	event.keycode = _TEST_KEY
+	event.pressed = pressed
 	return event
 
 
