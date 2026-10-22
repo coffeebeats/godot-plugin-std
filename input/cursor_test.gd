@@ -118,8 +118,7 @@ func test_get_is_confined_false_while_captured() -> void:
 
 
 func test_get_is_confined_follows_confined_property_once_its_scope_loads() -> void:
-	# Given: A cursor added to the scene whose confinement property defaults to off
-	# under a scope not yet loaded.
+	# Given: A cursor added to the scene whose confinement property's scope is unloaded.
 	var property := _make_confined_property(false)
 	cursor.confined_property = property
 	add_child_autofree(cursor)
@@ -1351,7 +1350,7 @@ func _make_anchor_handler() -> StdInputCursorFocusHandler:
 
 
 ## _make_confined_property returns a cursor confinement property whose value defaults
-## to `value`.
+## to `value`, in a new scope which isn't loaded yet.
 func _make_confined_property(value: bool) -> StdSettingsPropertyBool:
 	var property := StdSettingsPropertyBool.new()
 	property.scope = StdSettingsScope.new()

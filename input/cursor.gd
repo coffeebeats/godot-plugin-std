@@ -50,9 +50,8 @@ const GROUP_INPUT_CURSOR := &"std/input:cursor"
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## confined_property is an optional settings property which, when set, decides whether
-## the cursor is confined to the window in place of the active action sets' choice, so
-## a game can offer the player a "mouse lock" toggle. A captured cursor stays captured
-## either way.
+## the cursor is confined to the window in place of the active action sets' choice. A
+## captured cursor stays captured either way.
 @export var confined_property: StdSettingsPropertyBool = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -283,7 +282,7 @@ func _enter_tree() -> void:
 
 	Signals.connect_safe(confined_property.value_changed, _on_confined_property_changed)
 
-	# NOTE: A loaded scope emits no value change, so a saved value is read on load.
+	# NOTE: A scope emits no value change as it loads, so the value is read on `loaded`.
 	if not confined_property.scope.is_loaded:
 		Signals.connect_safe(
 			confined_property.scope.loaded, _on_confined_property_changed
