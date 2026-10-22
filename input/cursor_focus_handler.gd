@@ -108,10 +108,8 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 			continue
 
 		var target := anchor._control
-		var is_button := target is BaseButton
 
-		# Skip disabled buttons if configured.
-		if anchor.block_focus_and_hover_on_disable and is_button and target.disabled:
+		if anchor._is_blocked():
 			continue
 
 		if not target.is_visible_in_tree():
