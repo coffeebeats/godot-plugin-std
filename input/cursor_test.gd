@@ -484,6 +484,36 @@ func test_hide_cursor_consumes_focus_from_before_reveal_once() -> void:
 	assert_ne(cursor.get_viewport().gui_get_focus_owner(), button)
 
 
+func test_hide_cursor_keeping_focus_consumes_focus_from_before_reveal() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: Another button takes focus, as a click would without a focus handler.
+	var other := _make_focusable_button()
+	other.grab_focus()
+
+	# Given: The cursor hides, which keeps the other button's focus.
+	cursor.hide_cursor()
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), other, "precondition")
+
+	# When: The other button loses focus.
+	other.release_focus()
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The button from before the reveal doesn't regain focus.
+	assert_ne(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
 func test_hide_cursor_clears_summed_motion() -> void:
 	# Given: A hidden cursor whose action set sums motion over a second against (4, 4).
 	_hide_with_reveal_minimum(Vector2(4, 4), 1.0)

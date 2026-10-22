@@ -438,19 +438,18 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if _focus_root and not is_instance_valid(_focus_root):
 		set_focus_root(null)
 
+	# NOTE: The first hidden resolution consumes the control focused before the last
+	# reveal, even one which keeps the current focus, so a stale one can't resurface.
+	var previous: Control = null
+	if not _cursor_visible:
+		previous = _focus_before_reveal
+		_focus_before_reveal = null
+
 	# Keep current focus if it's valid and under the focus root.
 	var current_focus := get_viewport().gui_get_focus_owner()
 	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
 		_pending_focus = null
 		return
-
-	# NOTE: The control focused before the last reveal is consumed by the first hidden
-	# resolution, whichever target that resolution picks, so a stale one can't take
-	# focus from a later resolution, such as one after the picked control closes.
-	var previous: Control = null
-	if not _cursor_visible:
-		previous = _focus_before_reveal
-		_focus_before_reveal = null
 
 	# Consume the pending focus target.
 	var pending := _pending_focus
