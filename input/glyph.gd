@@ -126,6 +126,11 @@ func _ready() -> void:
 	Signals.connect_safe(_slot.cursor_visibility_changed, _on_cursor_visibility_changed)
 	Signals.connect_safe(_slot.device_activated, _on_device_activated)
 
+	# NOTE: A controller glyph locked by a `DEVICE_TYPE_GENERIC` override follows the
+	# connected joypads, so a connect or disconnect can change its family.
+	Signals.connect_safe(_slot.device_connected, _on_device_connection_changed)
+	Signals.connect_safe(_slot.device_disconnected, _on_device_connection_changed)
+
 	if device_type_override is StdSettingsPropertyInt:
 		(
 			Signals
@@ -228,6 +233,10 @@ func _on_cursor_visibility_changed(cursor_visible: bool) -> void:
 func _on_device_activated(device: StdInputDevice) -> void:
 	set_process(device.device_type == DeviceType.KEYBOARD)
 	_device_activated(device)
+	_handle_update()
+
+
+func _on_device_connection_changed(_device: StdInputDevice) -> void:
 	_handle_update()
 
 
