@@ -1,4 +1,5 @@
 # gdlint:disable=max-public-methods
+# gdlint:disable=max-file-lines
 
 ##
 ## Tests pertaining to the `StdInputCursorFocusHandler` class.
@@ -787,6 +788,179 @@ func test_button_disabled_while_hovered_emits_no_unhovered_on_exit() -> void:
 	assert_signal_not_emitted(handler, "unhovered")
 
 
+func test_button_enabled_under_mouse_is_hovered() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A disabled button in a SubViewport.
+	var setup := _setup_button_in_viewport(true)
+	var sv: SubViewport = setup[0]
+	var button: Button = setup[1]
+
+	# Given: The button's draw modes are recorded as it draws.
+	var drawn: Array[int] = []
+	button.draw.connect(func() -> void: drawn.append(button.get_draw_mode()))
+
+	# Given: A focus handler on the button.
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The mouse rests over the button.
+	_move_mouse(sv, Vector2(50, 20))
+	await get_tree().process_frame
+	watch_signals(handler)
+
+	# When: The button becomes enabled.
+	button.disabled = false
+	await get_tree().process_frame
+
+	# Then: The hover is registered once by the frame's end.
+	assert_true(handler.is_hovered())
+	assert_signal_emit_count(handler, "hovered", 1)
+	assert_eq(cursor.get_hovered(), button)
+
+	# Then: The button was last drawn as hovered.
+	assert_eq(drawn.back(), BaseButton.DRAW_HOVER)
+
+	button.remove_child(handler)
+	handler.free()
+
+
+func test_button_reenabled_under_mouse_is_hovered() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: An enabled button with a focus handler in a SubViewport.
+	var setup := _setup_button_in_viewport(false)
+	var sv: SubViewport = setup[0]
+	var button: Button = setup[1]
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The mouse hovers the button.
+	_move_mouse(sv, Vector2(50, 20))
+	await get_tree().process_frame
+
+	# Given: The button becomes disabled under the mouse.
+	button.disabled = true
+	await get_tree().process_frame
+	assert_false(handler.is_hovered(), "precondition: button should be unhovered")
+	watch_signals(handler)
+
+	# When: The button becomes enabled again.
+	button.disabled = false
+	await get_tree().process_frame
+
+	# Then: The hover is registered again.
+	assert_true(handler.is_hovered())
+	assert_signal_emit_count(handler, "hovered", 1)
+	assert_eq(cursor.get_hovered(), button)
+
+	button.remove_child(handler)
+	handler.free()
+
+
+func test_button_enabled_after_mouse_leaves_stays_unhovered() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A disabled button with a focus handler in a SubViewport.
+	var setup := _setup_button_in_viewport(true)
+	var sv: SubViewport = setup[0]
+	var button: Button = setup[1]
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The mouse moves over the button.
+	_move_mouse(sv, Vector2(50, 20))
+
+	# Given: The mouse moves off the button.
+	_move_mouse(sv, Vector2(300, 200))
+	await get_tree().process_frame
+	watch_signals(handler)
+
+	# When: The button becomes enabled.
+	button.disabled = false
+	await get_tree().process_frame
+
+	# Then: Nothing registers the hover.
+	assert_false(handler.is_hovered())
+	assert_signal_not_emitted(handler, "hovered")
+	assert_null(cursor.get_hovered())
+
+	button.remove_child(handler)
+	handler.free()
+
+
+func test_button_enabled_behind_new_overlay_stays_unhovered() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A disabled button with a focus handler in a SubViewport.
+	var setup := _setup_button_in_viewport(true)
+	var sv: SubViewport = setup[0]
+	var button: Button = setup[1]
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The mouse rests over the button.
+	_move_mouse(sv, Vector2(50, 20))
+
+	# Given: An overlay opens over the button as the focus root.
+	_open_overlay(sv)
+	await get_tree().process_frame
+	watch_signals(handler)
+
+	# When: The button becomes enabled.
+	button.disabled = false
+	await get_tree().process_frame
+
+	# Then: Nothing registers the hover.
+	assert_false(handler.is_hovered())
+	assert_signal_not_emitted(handler, "hovered")
+	assert_null(cursor.get_hovered())
+
+	button.remove_child(handler)
+	handler.free()
+
+
+func test_button_enabled_behind_overlay_is_hovered_once_overlay_closes() -> void:
+	# Given: A cursor in the scene (starts visible).
+	add_child_autofree(cursor)
+
+	# Given: A disabled button with a focus handler in a SubViewport.
+	var setup := _setup_button_in_viewport(true)
+	var sv: SubViewport = setup[0]
+	var button: Button = setup[1]
+	var handler := _add_handler(button)
+	await get_tree().process_frame
+
+	# Given: The mouse rests over the button.
+	_move_mouse(sv, Vector2(50, 20))
+
+	# Given: An overlay opens over the button as the focus root.
+	var overlay := _open_overlay(sv)
+	await get_tree().process_frame
+
+	# Given: The button becomes enabled behind the overlay.
+	button.disabled = false
+	await get_tree().process_frame
+	watch_signals(handler)
+
+	# When: The overlay closes.
+	cursor.set_focus_root(null)
+	overlay.free()
+	await get_tree().process_frame
+
+	# Then: The hover is registered.
+	assert_true(handler.is_hovered())
+	assert_signal_emit_count(handler, "hovered", 1)
+	assert_eq(cursor.get_hovered(), button)
+
+	button.remove_child(handler)
+	handler.free()
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -817,6 +991,23 @@ func _add_handler(control: Control) -> StdInputCursorFocusHandler:
 	return handler
 
 
+## _move_mouse pushes mouse motion to `position` into `viewport`.
+func _move_mouse(viewport: SubViewport, position: Vector2) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = position
+	viewport.push_input(event)
+
+
+## _open_overlay adds a mouse-stopping overlay covering `viewport`, makes it the focus
+## root, and returns it.
+func _open_overlay(viewport: SubViewport) -> Control:
+	var overlay := Control.new()
+	overlay.size = Vector2(viewport.size)
+	viewport.add_child(overlay)
+	cursor.set_focus_root(overlay)
+	return overlay
+
+
 ## _press_mouse pushes a left mouse press at the test button's position into `viewport`.
 func _press_mouse(viewport: SubViewport) -> void:
 	var event := InputEventMouseButton.new()
@@ -824,6 +1015,24 @@ func _press_mouse(viewport: SubViewport) -> void:
 	event.pressed = true
 	event.position = Vector2(50, 20)
 	viewport.push_input(event)
+
+
+## _setup_button_in_viewport adds a SubViewport holding a button with the given
+## `disabled` state, and returns them as `[viewport, button]`.
+##
+## NOTE: The root viewport doesn't dispatch GUI input in headless mode; see
+## https://github.com/godotengine/godot/issues/73557.
+func _setup_button_in_viewport(disabled: bool) -> Array:
+	var sv := SubViewport.new()
+	sv.size = Vector2i(400, 300)
+	add_child_autofree(sv)
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.disabled = disabled
+	button.size = Vector2(100, 40)
+	sv.add_child(button)
+	return [sv, button]
 
 
 func _setup_outside_focus_root() -> Array:

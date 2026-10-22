@@ -21,7 +21,7 @@ signal focused
 ## unfocused is emitted when the target `Control` node loses focus.
 signal unfocused
 
-## hovered is emitted when the mouse cursor enters the target `Control` node.
+## hovered is emitted when the target `Control` node becomes hovered by the cursor.
 signal hovered
 
 ## unhovered is emitted when the target `Control` node stops being hovered, once after
@@ -71,6 +71,7 @@ var _control_mouse_filter: MouseFilter = MOUSE_FILTER_IGNORE
 var _cursor: StdInputCursor = null
 var _focused: bool = false
 var _hovered: bool = false
+var _is_mouse_over: bool = false
 var _is_outside_focus_root: bool = false
 
 @onready var _control: Control = get_node(control)
@@ -224,6 +225,19 @@ func _register_hover() -> void:
 	hovered.emit()
 
 
+## _restore_hover restores the hover of the target `Control` node if the mouse is still
+## over it, sending a synthetic mouse-enter notification to restore its visuals.
+##
+## NOTE: The viewport keeps the mouse over a control that a new overlay covers until
+## the mouse moves, so no hover is restored outside the focus root.
+func _restore_hover() -> void:
+	if _hovered or not _is_mouse_over or _is_blocked() or _is_outside_focus_root:
+		return
+
+	_control.notification(Control.NOTIFICATION_MOUSE_ENTER)
+	_register_hover()
+
+
 ## _unregister_hover ends the hover of the target `Control` node, if it's hovered.
 func _unregister_hover() -> void:
 	if not _hovered:
@@ -259,6 +273,11 @@ func _update_input_state(is_cursor_visible: bool) -> void:
 			_control.mouse_filter = MOUSE_FILTER_IGNORE
 		return
 
+	# NOTE: No mouse enter follows a button unblocking under the mouse, and a redraw
+	# can't be queued while drawing, so the hover is restored deferred.
+	if _is_mouse_over and not _hovered:
+		_restore_hover.call_deferred()
+
 	if not is_cursor_visible:
 		# NOTE: When cursor is hidden, disable mouse filter to prevent hovering; see
 		# https://github.com/godotengine/godot/issues/56783.
@@ -288,11 +307,13 @@ func _on_control_focus_exited() -> void:
 
 func _on_control_mouse_entered() -> void:
 	# NOTE: A blocked disabled button still receives the mouse, so that clicks stop at
-	# it, but registers no hover.
+	# it, but registers no hover until it unblocks.
+	_is_mouse_over = true
 	_register_hover()
 
 
 func _on_control_mouse_exited() -> void:
+	_is_mouse_over = false
 	_unregister_hover()
 
 
