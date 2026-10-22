@@ -91,6 +91,17 @@ func test_get_is_confined_true_when_property_on_over_unconfined_set() -> void:
 	assert_true(cursor.get_is_confined())
 
 
+func test_get_is_confined_true_on_ready_when_property_on() -> void:
+	# Given: A cursor whose confinement property is on.
+	cursor.confined_property = _make_confined_property(true)
+
+	# When: The cursor is added to the scene before any action set is applied.
+	add_child_autofree(cursor)
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+
 func test_get_is_confined_false_while_captured() -> void:
 	# Given: A cursor added to the scene whose confinement property is on.
 	cursor.confined_property = _make_confined_property(true)
@@ -121,6 +132,25 @@ func test_get_is_confined_follows_confined_property_once_its_scope_loads() -> vo
 
 	# Then: The cursor is confined.
 	assert_true(cursor.get_is_confined())
+
+
+func test_confined_property_change_does_not_emit_visibility_changed() -> void:
+	# Given: A cursor added to the scene whose confinement property is off.
+	var property := _make_confined_property(false)
+	cursor.confined_property = property
+	add_child_autofree(cursor)
+
+	# Given: The cursor's signals are watched.
+	watch_signals(cursor)
+
+	# When: The property is turned on.
+	property.set_value(true)
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+	# Then: The cursor's visibility isn't reported as changed.
+	assert_signal_not_emitted(cursor, "cursor_visibility_changed")
 
 
 func test_get_is_visible_returns_true_by_default() -> void:
