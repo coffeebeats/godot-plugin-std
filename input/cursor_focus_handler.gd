@@ -6,9 +6,8 @@
 ## release focus depending on whether the UI navigation mode is cursor or focus-based.
 ##
 ## A handler also makes its control ignore the mouse while the cursor is hidden. Godot
-## keeps delivering mouse events to a hidden cursor, so a control without a handler
-## still hovers and clicks under the invisible pointer; give every interactive control
-## one.
+## still delivers mouse events to a hidden cursor, so give every interactive control a
+## handler, or it hovers and clicks under the invisible pointer.
 ##
 
 class_name StdInputCursorFocusHandler

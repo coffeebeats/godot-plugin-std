@@ -8,15 +8,13 @@
 ##
 ## Cursor visibility is tracked apart from the active input device; showing or hiding
 ## the cursor never activates a device, though the `StdInputSlot` may activate one from
-## the same press. When the cursor hides, focus goes to the hovered control, else to the
-## control focused before the cursor was revealed, else to the highest-priority anchor,
-## so a visible focus is never dropped for nothing.
+## the same press. When the cursor hides with no control focused, focus goes to the
+## pending target, else the hovered control, else the control focused before the cursor
+## was revealed, else the highest-priority anchor.
 ##
-## While hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse, so
-## the pointer can neither hover nor click them. Godot keeps delivering mouse events to
-## a hidden cursor, so a control without a handler still hovers and clicks under the
-## invisible pointer; consuming those events here would starve `_unhandled_input` of
-## mouse-look too, so every interactive control should have a handler instead.
+## While hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse.
+## The cursor doesn't consume mouse events itself, which would starve `_unhandled_input`
+## of mouse-look, so a control without a handler still hovers and clicks while hidden.
 ##
 
 class_name StdInputCursor
@@ -518,8 +516,7 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if _hovered:
 		unset_hovered(_hovered)
 
-	# Return to the control focused before the cursor was revealed, if it's still
-	# eligible.
+	# Return to the control focused before the cursor was revealed, if still eligible.
 	if (
 		previous
 		and is_instance_valid(previous)
@@ -530,9 +527,8 @@ func _update_focus(trigger: StringName = &"") -> void:
 		_grab_focus_deferred(previous, trigger, true)
 		return
 
-	# Fall back to the highest-priority anchor. Its focus mode is left to its focus
-	# handler, which restores it on the cursor visibility signal before the deferred
-	# grab runs.
+	# Fall back to the highest-priority anchor, whose focus handler restores its focus
+	# mode on the cursor visibility signal before the deferred grab runs.
 	var anchor := StdInputCursorFocusHandler.get_focus_target(root)
 	if anchor:
 		_grab_focus_deferred(anchor, trigger, false)

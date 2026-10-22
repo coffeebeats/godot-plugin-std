@@ -390,8 +390,10 @@ func test_hide_cursor_restores_focus_from_before_reveal() -> void:
 	cursor.show_cursor()
 	assert_null(cursor.get_viewport().gui_get_focus_owner(), "precondition")
 
-	# When: The cursor hides with nothing hovered and the frame ends.
+	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
+
+	# When: The frame ends.
 	await wait_process_frames(1)
 
 	# Then: The button has focus again.
@@ -403,17 +405,21 @@ func test_hide_cursor_prefers_hovered_over_focus_from_before_reveal() -> void:
 	add_child_autofree(cursor)
 	cursor.hide_cursor()
 
-	# Given: A focusable button that has focus, then a reveal.
+	# Given: A focusable button that has focus.
 	var button := _make_focusable_button()
 	button.grab_focus()
+
+	# Given: The cursor is revealed.
 	cursor.show_cursor()
 
 	# Given: Another button is hovered.
 	var hovered := _make_focusable_button()
 	cursor.set_hovered(hovered)
 
-	# When: The cursor hides and the frame ends.
+	# When: The cursor hides.
 	cursor.hide_cursor()
+
+	# When: The frame ends.
 	await wait_process_frames(1)
 
 	# Then: The hovered button has focus.
@@ -425,9 +431,11 @@ func test_hide_cursor_skips_focus_from_before_reveal_outside_focus_root() -> voi
 	add_child_autofree(cursor)
 	cursor.hide_cursor()
 
-	# Given: A focusable button that has focus, then a reveal.
+	# Given: A focusable button that has focus.
 	var button := _make_focusable_button()
 	button.grab_focus()
+
+	# Given: The cursor is revealed.
 	cursor.show_cursor()
 
 	# Given: A focus root which doesn't contain the button.
@@ -435,8 +443,10 @@ func test_hide_cursor_skips_focus_from_before_reveal_outside_focus_root() -> voi
 	add_child_autofree(root)
 	cursor.set_focus_root(root)
 
-	# When: The cursor hides and the frame ends.
+	# When: The cursor hides.
 	cursor.hide_cursor()
+
+	# When: The frame ends.
 	await wait_process_frames(1)
 
 	# Then: The button doesn't have focus.
@@ -479,20 +489,28 @@ func test_hide_cursor_consumes_focus_from_before_reveal_once() -> void:
 	add_child_autofree(cursor)
 	cursor.hide_cursor()
 
-	# Given: A focusable button that has focus, then a reveal.
+	# Given: A focusable button that has focus.
 	var button := _make_focusable_button()
 	button.grab_focus()
+
+	# Given: The cursor is revealed.
 	cursor.show_cursor()
 
-	# Given: The cursor hides with a pending focus target, which takes focus.
+	# Given: A pending focus target.
 	var target := _make_focusable_button()
 	cursor.set_pending_focus(target)
+
+	# Given: The cursor hides, which focuses the pending target.
 	cursor.hide_cursor()
 	assert_eq(cursor.get_viewport().gui_get_focus_owner(), target, "precondition")
 
-	# When: The pending target loses focus and focus is resolved again.
+	# When: The pending target loses focus.
 	target.release_focus()
+
+	# When: Focus is resolved again.
 	cursor._update_focus()
+
+	# When: The frame ends.
 	await wait_process_frames(1)
 
 	# Then: The button from before the reveal doesn't regain focus.
