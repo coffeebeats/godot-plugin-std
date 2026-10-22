@@ -15,13 +15,15 @@ const SlotTest := preload("slot_test.gd")
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 
-## Glyph records the binding index it's asked to draw on each update.
+## Glyph records the binding index and device type it's asked to draw on each update.
 class Glyph:
 	extends StdInputGlyph
 
+	var device_types: Array[DeviceType] = []
 	var drawn: Array[int] = []
 
-	func _update_glyph(_device_type: DeviceType) -> bool:
+	func _update_glyph(device_type: DeviceType) -> bool:
+		device_types.append(device_type)
 		drawn.append(binding_index)
 		return true
 
@@ -51,6 +53,28 @@ var slot: StdInputSlot = null
 var glyphs: Glyphs = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
+
+
+func test_glyph_generic_override_draws_the_connected_joypad_family() -> void:
+	# Given: The keyboard stays active when a joypad connects.
+	slot.prefer_activate_joypad_on_ready = false
+
+	# Given: A glyph locked to generic controller prompts.
+	var glyph := _make_glyph(0)
+	glyph.device_type_override = _make_override(StdInputDevice.DEVICE_TYPE_GENERIC)
+	glyph.update()
+
+	# Then: The glyph draws generic prompts while no joypad is connected.
+	assert_eq(glyph.device_types.back(), StdInputDevice.DEVICE_TYPE_GENERIC)
+
+	# When: A PlayStation 5 joypad connects without becoming active.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_PS_5
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[0])
+
+	# Then: The glyph draws the connected joypad's family.
+	assert_eq(glyph.device_types.back(), StdInputDevice.DEVICE_TYPE_PS_5)
 
 
 func test_glyph_refreshes_when_a_joypad_connects_and_disconnects() -> void:
@@ -128,3 +152,14 @@ func _make_glyph(index: int) -> Glyph:
 	add_child_autofree(glyph)
 
 	return glyph
+
+
+## _make_override returns a glyph type override property whose value defaults to
+## `value`, in a new scope which isn't loaded yet.
+func _make_override(value: StdInputDevice.DeviceType) -> StdSettingsPropertyInt:
+	var property := StdSettingsPropertyInt.new()
+	property.scope = StdSettingsScope.new()
+	property.category = &"test"
+	property.name = &"device_type"
+	property.default = value
+	return property
