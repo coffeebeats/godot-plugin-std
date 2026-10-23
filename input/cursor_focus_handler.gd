@@ -321,7 +321,7 @@ func _on_control_gui_input(event: InputEvent) -> void:
 		return
 
 	# NOTE: A click is a press of one of the cursor's reveal buttons, as for
-	# `cursor_click_activates_kbm`, so a scroll of the wheel over the control isn't one.
+	# `cursor_click_activates_kbm`, so a wheel scroll over the control isn't one.
 	if event.button_index not in _cursor.get_reveal_mouse_buttons():
 		return
 

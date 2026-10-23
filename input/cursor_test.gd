@@ -571,8 +571,10 @@ func test_report_clicked_while_hidden_is_ignored() -> void:
 	# When: The button is reported clicked while the cursor is hidden.
 	cursor.report_clicked(button)
 
-	# When: Focus is resolved again, and the frame ends.
+	# When: Focus is resolved again.
 	cursor.report_focus_handler_visible(null)
+
+	# When: The frame ends.
 	await wait_process_frames(1)
 
 	# Then: The button doesn't take focus.

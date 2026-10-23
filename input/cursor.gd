@@ -122,7 +122,7 @@ func hide_cursor() -> void:
 
 
 ## report_clicked notifies the `StdInputCursor` that `control` was clicked. While the
-## cursor is visible, the next hide then returns focus to it rather than to the control
+## cursor is visible, the next hide returns focus to it rather than to the control
 ## focused before the cursor was revealed; while hidden, the click is ignored.
 func report_clicked(control: Control) -> void:
 	assert(control is Control, "missing argument")
@@ -528,8 +528,7 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if _hovered:
 		unset_hovered(_hovered)
 
-	# Return to the control last clicked, or else focused before the cursor was revealed,
-	# if still eligible.
+	# Return to the control to restore, if still eligible.
 	if (
 		previous
 		and is_instance_valid(previous)

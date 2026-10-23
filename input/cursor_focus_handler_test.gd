@@ -1046,12 +1046,16 @@ func test_click_while_cursor_visible_restores_focus_to_clicked_button() -> void:
 	var first: Button = setup[1]
 	var second: Button = setup[2]
 
-	# When: The second button is clicked, and the mouse then leaves it.
+	# When: The second button is clicked.
 	_click_mouse(sv, second.position + Vector2(50, 20))
+
+	# When: The mouse leaves the button.
 	_move_mouse(sv, Vector2(300, 250))
 
-	# When: The cursor hides with nothing hovered, and the frame ends.
+	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
+
+	# When: The frame ends.
 	await get_tree().process_frame
 
 	# Then: The clicked button has focus rather than the one from before the reveal.
@@ -1071,14 +1075,20 @@ func test_click_which_reveals_cursor_restores_focus_to_clicked_button() -> void:
 	await get_tree().process_frame
 	assert_true(first.has_focus(), "precondition: first button focused")
 
-	# When: The second button is clicked while the cursor is hidden, which reveals it.
+	# When: The mouse moves over the second button while the cursor is hidden.
 	_move_mouse(sv, second.position + Vector2(50, 20))
+
+	# When: The second button is clicked, which reveals the cursor.
 	_click_mouse(sv, second.position + Vector2(50, 20))
 	assert_true(cursor.get_is_visible(), "precondition: click revealed the cursor")
 
-	# When: The mouse leaves it, the cursor hides with nothing hovered, and the frame ends.
+	# When: The mouse leaves the button.
 	_move_mouse(sv, Vector2(300, 250))
+
+	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
+
+	# When: The frame ends.
 	await get_tree().process_frame
 
 	# Then: The clicked button has focus rather than the one from before the reveal.
@@ -1093,12 +1103,16 @@ func test_wheel_over_button_keeps_focus_from_before_reveal() -> void:
 	var first: Button = setup[1]
 	var second: Button = setup[2]
 
-	# When: The wheel scrolls over the second button, and the mouse then leaves it.
+	# When: The wheel scrolls over the second button.
 	_click_mouse(sv, second.position + Vector2(50, 20), MOUSE_BUTTON_WHEEL_DOWN)
+
+	# When: The mouse leaves the button.
 	_move_mouse(sv, Vector2(300, 250))
 
-	# When: The cursor hides with nothing hovered, and the frame ends.
+	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
+
+	# When: The frame ends.
 	await get_tree().process_frame
 
 	# Then: The button from before the reveal has focus again.
@@ -1116,12 +1130,16 @@ func test_click_on_disabled_button_keeps_focus_from_before_reveal() -> void:
 	second.disabled = true
 	await get_tree().process_frame
 
-	# When: The disabled button is clicked, and the mouse then leaves it.
+	# When: The disabled button is clicked.
 	_click_mouse(sv, second.position + Vector2(50, 20))
+
+	# When: The mouse leaves the button.
 	_move_mouse(sv, Vector2(300, 250))
 
-	# When: The cursor hides with nothing hovered, and the frame ends.
+	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
+
+	# When: The frame ends.
 	await get_tree().process_frame
 
 	# Then: The button from before the reveal has focus again.
