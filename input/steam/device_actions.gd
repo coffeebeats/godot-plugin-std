@@ -22,7 +22,8 @@ const DEVICE_ID_ALL := Steam.INPUT_HANDLE_ALL_CONTROLLERS
 ## _STICK_DEADZONE is the `InputMap` deadzone of a stick's directions while Steam Input
 ## drives the stick, since Steam reports it past the deadzone its configurator sets.
 ##
-## NOTE: It stays above `0`, at which Godot reads a native axis at rest as pressed.
+## NOTE: It's Godot's `CMP_EPSILON`, above `0`, at which a native axis at rest reads
+## pressed, and below a 16-bit axis's step of `1 / 32767`, so it filters no reading.
 const _STICK_DEADZONE := 0.00001
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
