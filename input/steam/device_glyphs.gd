@@ -66,6 +66,15 @@ func _get_action_glyph(
 	return null
 
 
+func _get_action_origin_count(
+	slot: int,
+	device_type: StdInputDevice.DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
+) -> int:
+	return _list_all_action_origins(slot, device_type, action_set, action).size()
+
+
 func _get_action_origin_label(
 	slot: int,
 	device_type: StdInputDevice.DeviceType,
@@ -90,12 +99,29 @@ func _get_action_origin_label(
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _list_action_origins returns the origin bound to the action at binding `index`, as a
+## list which is empty when nothing is bound there.
 func _list_action_origins(
 	slot: int,
 	device_type: StdInputDevice.DeviceType,
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,
+) -> PackedInt64Array:
+	var origins := _list_all_action_origins(slot, device_type, action_set, action)
+	if index < 0 or index >= origins.size():
+		return PackedInt64Array()
+
+	return PackedInt64Array([origins[index]])
+
+
+## _list_all_action_origins returns every origin bound to the action, in binding order
+## and translated to the device type's glyphs.
+func _list_all_action_origins(
+	slot: int,
+	device_type: StdInputDevice.DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
 ) -> PackedInt64Array:
 	assert(
 		device_type != StdInputDevice.DEVICE_TYPE_KEYBOARD,
@@ -104,10 +130,17 @@ func _list_action_origins(
 
 	var origins := PackedInt64Array()
 
+	# NOTE: A glyph can ask about a slot no joypad occupies, such as a controller glyph
+	# while none is connected, which has no origins.
 	var device: int = joypad_monitor.get_device_id_for_slot(slot)
 	if device == -1:
-		assert(false, "invalid argument; failed to find device for slot")
 		return origins
+
+	# NOTE: A stick's directional actions have no Steam action of their own, so each
+	# shows the stick which drives it.
+	var stick := action_set.get_analog_2d_action(action)
+	if stick:
+		action = stick
 
 	var action_set_handle := SteamDeviceActions.get_action_set_handle(
 		SteamDeviceActions.resolve_action_set_name(action_set, device)
@@ -115,38 +148,36 @@ func _list_action_origins(
 	if not action_set_handle:
 		return origins
 
-	# TODO: Find some means of specifying ahead of time which action type this is.
+	# NOTE: Steam numbers digital and analog action handles separately, so the action's
+	# kind picks both the handle and the origins queried for it.
+	var raw_origins: Array = []
+	if action in action_set.actions_digital:
+		raw_origins = (
+			Steam
+			. getDigitalActionOrigins(
+				device,
+				action_set_handle,
+				SteamDeviceActions.get_digital_action_handle(action),
+			)
+		)
+	else:
+		raw_origins = (
+			Steam
+			. getAnalogActionOrigins(
+				device,
+				action_set_handle,
+				SteamDeviceActions.get_analog_action_handle(action),
+			)
+		)
 
-	# First, consider digital actions.
-	var i: int = 0
-	var action_handle: int = SteamDeviceActions.get_digital_action_handle(action)
-	for origin in Steam.getDigitalActionOrigins(
-		device, action_set_handle, action_handle
-	):
-		if i != index:
-			continue
-
+	# NOTE: Two bindings can translate to one origin on the target device type, which
+	# is listed once so a cycling glyph doesn't show it twice.
+	for origin in raw_origins:
 		var translated_origin := _translate_origin(origin, device_type)
 		if translated_origin:
 			origin = translated_origin
 
-		if origin:
-			origins.append(origin)
-
-	# Next, consider analog actions.
-	i = 0
-	action_handle = SteamDeviceActions.get_analog_action_handle(action)
-	for origin in Steam.getAnalogActionOrigins(
-		device, action_set_handle, action_handle
-	):
-		if i != index:
-			continue
-
-		var translated_origin := _translate_origin(origin, device_type)
-		if translated_origin:
-			origin = translated_origin
-
-		if origin:
+		if origin and origin not in origins:
 			origins.append(origin)
 
 	return origins

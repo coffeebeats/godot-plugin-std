@@ -53,9 +53,7 @@ func _get_action_glyph(
 			)
 
 		_:
-			var device := (
-				slot._last_active_joypad.device_id if slot._last_active_joypad else -1
-			)
+			var device := _get_joypad_device_id()
 
 			assert(
 				slot.glyphs_joy is StdInputDeviceGlyphs,
@@ -72,6 +70,51 @@ func _get_action_glyph(
 					action,
 					index,
 					target_size,
+				)
+			)
+
+
+func _get_action_origin_count(
+	_device: int,  # Active device ID
+	device_type: StdInputDevice.DeviceType,  # Active or overridden device type
+	action_set: StdInputActionSet,
+	action: StringName,
+) -> int:
+	if not slot:
+		assert(false, "invalid state; missing input slot")
+		return 0
+
+	match device_type:
+		DEVICE_TYPE_KEYBOARD:
+			var device := slot._kbm_device.device_id if slot._kbm_device else -1
+			assert(
+				slot.glyphs_kbm is StdInputDeviceGlyphs,
+				"invalid state; missing component",
+			)
+			return (
+				slot
+				. glyphs_kbm
+				. get_action_origin_count(
+					device,
+					DEVICE_TYPE_KEYBOARD,
+					action_set,
+					action,
+				)
+			)
+		_:
+			var device := _get_joypad_device_id()
+			assert(
+				slot.glyphs_joy is StdInputDeviceGlyphs,
+				"invalid state; missing component",
+			)
+			return (
+				slot
+				. glyphs_joy
+				. get_action_origin_count(
+					device,
+					device_type,
+					action_set,
+					action,
 				)
 			)
 
@@ -109,9 +152,7 @@ func _get_action_origin_label(
 			)
 
 		_:
-			var device := (
-				slot._last_active_joypad.device_id if slot._last_active_joypad else -1
-			)
+			var device := _get_joypad_device_id()
 
 			assert(
 				slot.glyphs_joy is StdInputDeviceGlyphs,
@@ -129,3 +170,18 @@ func _get_action_origin_label(
 					index,
 				)
 			)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _get_joypad_device_id returns the device ID a joypad query is made for: the last
+## active joypad's, else the first connected joypad's, else `-1`, matching the joypad
+## whose type `StdInputSlot.get_joypad_device_type` reports.
+func _get_joypad_device_id() -> int:
+	var joypad := slot.get_last_active_joypad_device()
+	if not joypad:
+		var joypads := slot.get_connected_devices(false)
+		joypad = joypads[0] if joypads else null
+
+	return joypad.device_id if joypad else -1

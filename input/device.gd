@@ -297,6 +297,23 @@ func get_action_glyph(
 	)
 
 
+## get_action_origin_count returns how many origins are bound to the specified action,
+## counted from the primary binding up to the first unbound index.
+func get_action_origin_count(
+	action_set: StdInputActionSet,
+	action: StringName,
+	device_type_override: DeviceType = DEVICE_TYPE_UNKNOWN,
+) -> int:
+	assert(glyphs is StdInputDeviceGlyphs, "invalid state; missing component")
+
+	if device_type_override == DEVICE_TYPE_UNKNOWN:
+		device_type_override = device_type
+
+	return glyphs.get_action_origin_count(
+		device_id, device_type_override, action_set, action
+	)
+
+
 ## get_action_origin_label returns a localized display name for the first origin bound
 ## to the specified action.
 func get_action_origin_label(

@@ -5,6 +5,10 @@
 ## `Control` node. It will work with a `StdInputCursor` singleton node to grab or
 ## release focus depending on whether the UI navigation mode is cursor or focus-based.
 ##
+## A handler also makes its control ignore the mouse while the cursor is hidden. Godot
+## still delivers mouse events to a hidden cursor, so give every interactive control a
+## handler, or it hovers and clicks under the invisible pointer.
+##
 
 class_name StdInputCursorFocusHandler
 extends Control
@@ -17,10 +21,11 @@ signal focused
 ## unfocused is emitted when the target `Control` node loses focus.
 signal unfocused
 
-## hovered is emitted when the mouse cursor enters the target `Control` node.
+## hovered is emitted when the target `Control` node becomes hovered by the cursor.
 signal hovered
 
-## unhovered is emitted when the mouse cursor exits the target `Control` node.
+## unhovered is emitted when the target `Control` node stops being hovered, once after
+## each `hovered` signal.
 signal unhovered
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
@@ -66,6 +71,7 @@ var _control_mouse_filter: MouseFilter = MOUSE_FILTER_IGNORE
 var _cursor: StdInputCursor = null
 var _focused: bool = false
 var _hovered: bool = false
+var _is_mouse_over: bool = false
 var _is_outside_focus_root: bool = false
 
 @onready var _control: Control = get_node(control)
@@ -103,10 +109,8 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 			continue
 
 		var target := anchor._control
-		var is_button := target is BaseButton
 
-		# Skip disabled buttons if configured.
-		if anchor.block_focus_and_hover_on_disable and is_button and target.disabled:
+		if anchor._is_blocked():
 			continue
 
 		if not target.is_visible_in_tree():
@@ -199,21 +203,73 @@ func _clear_stale_button_visuals() -> void:
 		_control.notification(Control.NOTIFICATION_MOUSE_EXIT)
 
 
-func _update_input_state(is_cursor_visible: bool) -> void:
-	# Blocked disabled buttons take no focus or hover, but stop clicks while the cursor
-	# shows. With the cursor hidden they ignore the mouse, as every control does below.
-	if (
+## _is_blocked returns whether the target `Control` node is a disabled button that takes
+## no focus or hover; see `block_focus_and_hover_on_disable`.
+func _is_blocked() -> bool:
+	return (
 		block_focus_and_hover_on_disable
 		and _control is BaseButton
 		and _control.disabled
-	):
+	)
+
+
+## _is_hover_lost returns whether the mouse is over the target `Control` node while its
+## hover is unregistered or, for a `BaseButton`, not drawn.
+func _is_hover_lost() -> bool:
+	return (
+		_is_mouse_over
+		and (not _hovered or (_control is BaseButton and not _control.is_hovered()))
+	)
+
+
+## _register_hover marks the target `Control` node as hovered, unless it's blocked.
+func _register_hover() -> void:
+	if _is_blocked():
+		return
+
+	if _control_focus_mode != FOCUS_NONE:
+		_cursor.set_hovered(_control)
+
+	_hovered = true
+	hovered.emit()
+
+
+## _restore_hover restores the hover of the target `Control` node if the mouse is still
+## over it, sending a synthetic mouse-enter notification to restore its visuals.
+##
+## NOTE: The viewport keeps the mouse over a control that a new overlay covers until
+## the mouse moves, so no hover is restored outside the focus root.
+func _restore_hover() -> void:
+	if not _is_hover_lost() or _is_blocked() or _is_outside_focus_root:
+		return
+
+	_control.notification(Control.NOTIFICATION_MOUSE_ENTER)
+	if not _hovered:
+		_register_hover()
+
+
+## _unregister_hover ends the hover of the target `Control` node, if it's hovered.
+func _unregister_hover() -> void:
+	if not _hovered:
+		return
+
+	if _control_focus_mode != FOCUS_NONE:
+		_cursor.unset_hovered(_control)
+
+	_hovered = false
+	unhovered.emit()
+
+
+func _update_input_state(is_cursor_visible: bool) -> void:
+	# Blocked disabled buttons take no focus or hover, but stop clicks while the cursor
+	# shows. With the cursor hidden they ignore the mouse, as every control does below.
+	if _is_blocked():
 		_control.focus_mode = FOCUS_NONE
 		_control.mouse_filter = (
 			_control_mouse_filter if is_cursor_visible else MOUSE_FILTER_IGNORE
 		)
 		_clear_stale_button_visuals()
-		if _hovered:
-			_on_control_mouse_exited()
+		_unregister_hover()
 		if _control.has_focus():
 			_control.release_focus()
 		return
@@ -226,6 +282,11 @@ func _update_input_state(is_cursor_visible: bool) -> void:
 		if not is_cursor_visible:
 			_control.mouse_filter = MOUSE_FILTER_IGNORE
 		return
+
+	# NOTE: No mouse enter follows a button unblocking or an overlay closing, and a
+	# redraw can't be queued while drawing, so the hover is restored deferred.
+	if _is_hover_lost():
+		_restore_hover.call_deferred()
 
 	if not is_cursor_visible:
 		# NOTE: When cursor is hidden, disable mouse filter to prevent hovering; see
@@ -256,27 +317,14 @@ func _on_control_focus_exited() -> void:
 
 func _on_control_mouse_entered() -> void:
 	# NOTE: A blocked disabled button still receives the mouse, so that clicks stop at
-	# it, but registers no hover.
-	if (
-		block_focus_and_hover_on_disable
-		and _control is BaseButton
-		and _control.disabled
-	):
-		return
-
-	if _control_focus_mode != FOCUS_NONE:
-		_cursor.set_hovered(_control)
-
-	_hovered = true
-	hovered.emit()
+	# it, but registers no hover until it unblocks.
+	_is_mouse_over = true
+	_register_hover()
 
 
 func _on_control_mouse_exited() -> void:
-	if _control_focus_mode != FOCUS_NONE:
-		_cursor.unset_hovered(_control)
-
-	_hovered = false
-	unhovered.emit()
+	_is_mouse_over = false
+	_unregister_hover()
 
 
 func _on_cursor_visibility_changed(is_cursor_visible: bool) -> void:

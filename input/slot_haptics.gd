@@ -23,11 +23,12 @@ func _start_vibrate_strong(device: int, duration: float, strength: float) -> voi
 		assert(false, "invalid state; missing input slot")
 		return
 
-	if not slot.active:
+	var active := slot.get_active_device()
+	if not active:
 		return
 
-	assert(device == slot.active.device_id, "invalid argument; wrong device ID")
-	slot.active.start_vibrate_strong(duration, strength)
+	assert(device == active.device_id, "invalid argument; wrong device ID")
+	active.start_vibrate_strong(duration, strength)
 
 
 func _start_vibrate_weak(device: int, duration: float, strength: float) -> void:
@@ -35,11 +36,12 @@ func _start_vibrate_weak(device: int, duration: float, strength: float) -> void:
 		assert(false, "invalid state; missing input slot")
 		return
 
-	if not slot.active:
+	var active := slot.get_active_device()
+	if not active:
 		return
 
-	assert(device == slot.active.device_id, "invalid argument; wrong device ID")
-	slot.active.start_vibrate_weak(duration, strength)
+	assert(device == active.device_id, "invalid argument; wrong device ID")
+	active.start_vibrate_weak(duration, strength)
 
 
 func _stop_vibrate(device: int) -> void:
@@ -47,8 +49,9 @@ func _stop_vibrate(device: int) -> void:
 		assert(false, "invalid state; missing input slot")
 		return
 
-	if not slot.active:
+	var active := slot.get_active_device()
+	if not active:
 		return
 
-	assert(device == slot.active.device_id, "invalid argument; wrong device ID")
-	slot.active.stop_vibrate()
+	assert(device == active.device_id, "invalid argument; wrong device ID")
+	active.stop_vibrate()

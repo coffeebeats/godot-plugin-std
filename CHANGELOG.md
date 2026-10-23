@@ -1,5 +1,28 @@
 # Changelog
 
+## 7.0.0 (2026-10-23)
+
+## What's Changed
+* feat(input)!: replace `cursor_activates_kbm` with click-only `cursor_click_activates_kbm` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/496
+* fix(input): prefer a connected joypad over the keyboard only until the player's first input by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/507
+* feat(input): sum mouse motion over a window before revealing the cursor by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/498
+* fix(input): track a held action from its own press until its own release by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/508
+* feat(input): restore the control focused before a reveal when the cursor hides by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/499
+* fix(input): restore the hover of a button that becomes interactive under a still mouse by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/525
+* feat(input): let a settings property override cursor confinement by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/500
+* feat(input): refresh glyphs after a rebind by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/501
+* feat(input): let a generic glyph override mean controller prompts of any family by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/502
+* fix(input): honor the binding index when listing Steam action origins by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/503
+* feat(input)!: cycle a glyph through every origin bound to its action by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/504
+* feat(input): deliver Steam absolute mouse actions as pointer motion and joypad activity by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/505
+* fix(input): drive a 2D analog action's four directional actions from a Steam stick by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/509
+* fix(input): keep Steam digital and analog action handles apart by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/522
+* fix(input): report a connected Steam joypad's family when a slot asks for it by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/523
+* chore: add a Steam Input harness skill by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/521
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v6.3.2...v7.0.0
+
 ## 6.3.2 (2026-10-17)
 
 ## What's Changed

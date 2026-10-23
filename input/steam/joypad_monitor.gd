@@ -25,6 +25,8 @@ const Signals := preload("../../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+## _connected holds the device handle in each slot, or `0` for a slot whose device
+## disconnected; it never ends in `0`.
 var _connected := PackedInt64Array()
 
 var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_frame()
@@ -32,14 +34,55 @@ var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_f
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_device_id_for_slot returns the input device handle at the specified "slot" index.
+## get_device_id_for_slot returns the input device handle at the specified "slot" index,
+## or `-1` when no connected device occupies it.
 func get_device_id_for_slot(slot: int) -> int:
-	return _connected[slot] if (slot >= 0 and slot < _connected.size()) else 0
+	if slot < 0 or slot >= _connected.size() or not _connected[slot]:
+		return -1
+
+	return _connected[slot]
 
 
-## get_slot_for_device_id returns the "slot" index of the specified input device handle.
+## get_device_type maps a Steam Input device type to the `StdInputDevice` family it
+## belongs to; types without a family of their own are generic.
+static func get_device_type(input_type: int) -> StdInputDevice.DeviceType:
+	match input_type:
+		Steam.INPUT_TYPE_STEAM_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
+		Steam.INPUT_TYPE_STEAM_DECK_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_STEAM_DECK
+
+		Steam.INPUT_TYPE_PS3_CONTROLLER, Steam.INPUT_TYPE_PS4_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_PS_4
+		Steam.INPUT_TYPE_PS5_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_PS_5
+
+		Steam.INPUT_TYPE_SWITCH_JOYCON_PAIR:
+			return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR
+		Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE:
+			return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE
+		Steam.INPUT_TYPE_SWITCH_PRO_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_SWITCH_PRO
+
+		Steam.INPUT_TYPE_MOBILE_TOUCH:
+			return StdInputDevice.DEVICE_TYPE_TOUCH
+
+		Steam.INPUT_TYPE_XBOX360_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_XBOX_360
+		Steam.INPUT_TYPE_XBOXONE_CONTROLLER:
+			return StdInputDevice.DEVICE_TYPE_XBOX_ONE
+
+	return StdInputDevice.DEVICE_TYPE_GENERIC
+
+
+## get_slot_for_device_id returns the "slot" index of the specified input device handle,
+## or `-1` when the device isn't connected.
+##
+## NOTE: A device keeps its slot until it disconnects, and the next device to connect
+## takes the lowest free slot, as Godot numbers joypads; so a slot maps back to the same
+## device it was reported with.
 func get_slot_for_device_id(device: int) -> int:
-	return Steam.getConnectedControllers().find(device)
+	return _connected.find(device) if device else -1
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -90,16 +133,29 @@ func _input(event: InputEvent) -> void:
 
 
 func _broadcast_connected_joypads() -> void:
-	for device in _connected:
-		var slot: int = get_slot_for_device_id(device)
-		if slot == -1:
-			assert(false, "invalid argument; failed to find slot for device")
+	for slot in _connected.size():
+		var device := _connected[slot]
+		if not device:
 			continue
 
-		joy_connected.emit(slot)
+		# NOTE: The type is reported here too, so a pad connected before a slot listened
+		# gets its family's glyphs rather than generic ones.
+		joy_connected.emit(slot, get_device_type(Steam.getInputTypeForHandle(device)))
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _claim_slot places `device` in the lowest free slot and returns that slot.
+func _claim_slot(device: int) -> int:
+	var slot := _connected.find(0)
+	if slot == -1:
+		slot = _connected.size()
+		_connected.append(device)
+	else:
+		_connected[slot] = device
+
+	return slot
 
 
 func _connect_device(device: int) -> void:
@@ -108,47 +164,15 @@ func _connect_device(device: int) -> void:
 		assert(false, "invalid argument: duplicate device")
 		return
 
-	var device_type := StdInputDevice.DEVICE_TYPE_GENERIC
-
-	match Steam.getInputTypeForHandle(device):
-		Steam.INPUT_TYPE_STEAM_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER
-		Steam.INPUT_TYPE_STEAM_DECK_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_STEAM_DECK
-
-		Steam.INPUT_TYPE_PS3_CONTROLLER, Steam.INPUT_TYPE_PS4_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_PS_4
-		Steam.INPUT_TYPE_PS5_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_PS_5
-
-		Steam.INPUT_TYPE_SWITCH_JOYCON_PAIR:
-			device_type = StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR
-		Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE:
-			device_type = StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE
-		Steam.INPUT_TYPE_SWITCH_PRO_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_SWITCH_PRO
-
-		Steam.INPUT_TYPE_MOBILE_TOUCH:
-			device_type = StdInputDevice.DEVICE_TYPE_TOUCH
-
-		Steam.INPUT_TYPE_XBOX360_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_XBOX_360
-		Steam.INPUT_TYPE_XBOXONE_CONTROLLER:
-			device_type = StdInputDevice.DEVICE_TYPE_XBOX_ONE
+	var device_type := get_device_type(Steam.getInputTypeForHandle(device))
 
 	_logger.info("Joypad connected.", {&"device": device, &"type": device_type})
-
-	var slot: int = get_slot_for_device_id(device)
-	if slot == -1:
-		assert(false, "invalid argument; failed to find slot for device")
-		return
 
 	# Update this property first so that subsequent notifications are handled by Steam-
 	# backed components.
 	steam_input_enabled_property.set_value(true)
 
-	_connected.append(device)
-	joy_connected.emit(slot, device_type)
+	joy_connected.emit(_claim_slot(device), device_type)
 
 
 func _disconnect_device(device: int) -> void:
@@ -159,15 +183,14 @@ func _disconnect_device(device: int) -> void:
 
 	_logger.info("Joypad disconnected.", {&"device": device})
 
-	var index := _connected.find(device)
-	assert(index >= 0, "invalid state; missing device")
+	# NOTE: The slot is emptied rather than removed, so no other device's slot changes
+	# under the components which keep state per slot.
+	var slot := _connected.find(device)
+	_connected[slot] = 0
 
-	var slot: int = _connected.find(device)
-	if slot == -1:
-		assert(false, "invalid argument; failed to find slot for device")
-		return
+	while _connected and not _connected[_connected.size() - 1]:
+		_connected.resize(_connected.size() - 1)
 
-	_connected.remove_at(index)
 	joy_disconnected.emit(slot)
 
 	if not _connected:

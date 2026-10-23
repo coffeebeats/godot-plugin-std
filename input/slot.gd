@@ -10,6 +10,16 @@
 ## aren't tied to one player). Single player games should have a single `StdInputSlot`
 ## which defines how to swap between various connected `StdInputDevice`s.
 ##
+## The slot accepts input from every connected device at all times; the active device
+## only decides which glyphs are shown and which device haptics target. A press bound to
+## an active action activates its device, as does a reveal-button click while
+## `StdInputActionSet.cursor_click_activates_kbm` is on. A joypad connected before the
+## player's first input is activated over the keyboard when preferred; one connected
+## after that is only connected, so a hot-plug leaves the prompts alone while another
+## device is active. Mouse motion never activates a device, since Steam Input emits it
+## for gyro and trackpad input; see
+## https://partner.steamgames.com/doc/steamhardware/recommendations.
+##
 ## TODO: For now, this class only supports single player because there's no way to
 ## filter out device indices. Given that Godot has limited-at-best support for local
 ## multiplayer, this is not a priority.
@@ -91,9 +101,12 @@ class JoypadMonitor:
 ## NOTE: If `true`, the keyboard and mouse device will be activated initially.
 @export var claim_kbm_input: bool = true
 
-## prefer_activate_joypad_on_ready defines whether a connected controller should be
-## activated upon this `StdInputSlot` first loading (overriding an active keyboard).
-## Note that the first joypad will always be selected at first.
+## prefer_activate_joypad_on_ready defines whether a joypad connected before the
+## player's first input is activated over the keyboard, which the slot activates when it
+## loads. That input is a bound key press, a click which activates the keyboard, or a
+## bound press on a connected joypad. Joypad monitors can report controllers a few
+## frames after `_ready`, so the preference lasts until that input rather than until the
+## slot is ready. A joypad connected later is only connected.
 @export var prefer_activate_joypad_on_ready: bool = true
 
 @export_group("Properties")
@@ -142,11 +155,15 @@ class JoypadMonitor:
 
 var _actions: Array[String] = []
 var _active: StdInputDevice = null
-var _cursor_activates_kbm: bool = false
+var _cursor_click_activates_kbm: bool = false
+var _has_player_input: bool = false
 var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
 var _last_active_joypad: StdInputDevice = null
-var _pressed: Array[String] = []
+
+## _pressed maps each joypad's device ID to the active actions it holds, so a hold can't
+## activate that joypad again and ends only with that joypad's own release.
+var _pressed: Dictionary[int, Array] = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -210,6 +227,19 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[StdInputDevic
 	return devices
 
 
+## get_joypad_device_type returns the type of joypad whose glyphs should stand for "a
+## controller": the last active joypad's, else the first connected joypad's, else
+## `DEVICE_TYPE_GENERIC` when none is connected.
+func get_joypad_device_type() -> DeviceType:
+	if _last_active_joypad:
+		return _last_active_joypad.device_type
+
+	if _joypad_devices:
+		return _joypad_devices[0].device_type
+
+	return DEVICE_TYPE_GENERIC
+
+
 ## swap_joypad_components swaps the joypad monitor and device component implementations
 ## to the ones provided. This will cause all connected joypads to disconnect, at which
 ## point they should be once the new joypad monitor is ready.
@@ -232,14 +262,19 @@ func swap_joypad_components(
 	var action_sets := _list_action_sets()
 
 	if joypad_monitor:
-		for joypad in _joypad_devices:
-			if joypad == _active:
-				_active = null
-
+		# NOTE: Disconnecting removes from the list, so a copy is iterated.
+		for joypad in _joypad_devices.duplicate():
 			_disconnect_joy_device(joypad.device_id)
 
 		Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 		Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+
+	# NOTE: The keyboard may share the joypad's actions component, in which case its
+	# connection must survive the swap.
+	if actions_joy and actions_joy != actions_kbm:
+		Signals.disconnect_safe(
+			actions_joy.bindings_changed, _on_component_bindings_changed
+		)
 
 	actions_joy = next_device_actions
 	glyphs_joy = next_device_glyphs
@@ -248,6 +283,9 @@ func swap_joypad_components(
 
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+	Signals.ensure_connected(
+		actions_joy.bindings_changed, _on_component_bindings_changed
+	)
 
 	joypad_monitor.broadcast_connected_joypads()
 
@@ -366,6 +404,14 @@ func _enter_tree() -> void:
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
+	# NOTE: The keyboard and joypads may share one actions component, which is then
+	# connected once.
+	for component in [actions_kbm, actions_joy]:
+		if component is StdInputDeviceActions:
+			Signals.ensure_connected(
+				component.bindings_changed, _on_component_bindings_changed
+			)
+
 	Signals.connect_safe(
 		action_configuration_changed, _on_Self_action_configuration_changed
 	)
@@ -395,6 +441,12 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
+	for component in [actions_kbm, actions_joy]:
+		if component is StdInputDeviceActions:
+			Signals.disconnect_safe(
+				component.bindings_changed, _on_component_bindings_changed
+			)
+
 	_active = null
 
 	if _kbm_device:
@@ -406,7 +458,8 @@ func _exit_tree() -> void:
 		remove_child(kbm)
 		kbm.queue_free()
 
-	for joypad in _joypad_devices:
+	# NOTE: Disconnecting removes from the list, so a copy is iterated.
+	for joypad in _joypad_devices.duplicate():
 		_disconnect_joy_device(joypad.device_id)
 
 	_joypad_devices = []
@@ -416,62 +469,20 @@ func _input(event: InputEvent) -> void:
 	if not event.is_action_type():
 		return
 
-	if not event.is_pressed():
-		for action in _pressed:
-			if not event.is_action_pressed(action):
-				_pressed.erase(action)
+	# NOTE: A pressed event can release a tracked action too, as a stick flicked from
+	# one side to the other releases the first direction without a centered event.
+	var held: Array = _pressed.get(event.device, [])
+	for action in held.duplicate():
+		if _is_action_released(event, action):
+			held.erase(action)
 
+	if not event.is_pressed():
 		return
 
-	# Swap to controller
-	if (
-		_active == null
-		or (
-			(
-				_active.device_type == DEVICE_TYPE_KEYBOARD
-				or _active.device_id != event.device
-			)
-			and (
-				event is InputEventJoypadButton
-				or event is InputEventJoypadMotion
-				or event is InputEventAction
-			)
-		)
-	):
-		var is_match := false
-		for action in _actions:
-			if not event.is_action_pressed(action):
-				continue
+	if _try_activate_joypad(event):
+		return
 
-			if action not in _pressed:
-				_pressed.append(action)
-				is_match = true
-				break
-
-		if not is_match:
-			return
-
-		for joypad in _joypad_devices:
-			if not joypad:
-				assert(false, "invalid state; missing device")
-				continue
-
-			if event.device != joypad.device_id:
-				continue
-
-			_activate_device(joypad)
-			break
-
-	# Swap to keyboard + mouse
-	elif (
-		claim_kbm_input
-		and (_active == null or _active.device_type != DEVICE_TYPE_KEYBOARD)
-		# NOTE: Do not swap based on mouse motion as that might be emulated from a gyro
-		# sensor.
-		and (event is InputEventKey or event is InputEventMouseButton)
-		and (_actions.any(func(a): return Input.is_action_just_pressed(a)))
-	):
-		_activate_device(_kbm_device)
+	_try_activate_kbm(event)
 
 
 func _ready() -> void:
@@ -601,7 +612,14 @@ func _connect_joy_device(
 	add_child(joypad, false, INTERNAL_MODE_BACK)
 	device_connected.emit(joypad)
 
-	if not _active or (_active == _kbm_device and prefer_activate_joypad_on_ready):
+	if (
+		not _active
+		or (
+			_active == _kbm_device
+			and prefer_activate_joypad_on_ready
+			and not _has_player_input
+		)
+	):
 		_activate_device(joypad)
 		cursor.call_deferred(&"hide_cursor")
 
@@ -619,14 +637,45 @@ func _disconnect_joy_device(device: int) -> bool:
 			continue
 
 		_joypad_devices.remove_at(i)
+
+		# NOTE: The slot's device ID and type keep depicting the removed joypad until
+		# the next deliberate input, but a glyph refreshed meanwhile is looked up with
+		# no joypad, which leaves one from a per-device component like Steam's empty.
+		if _active == joypad:
+			_active = null
+		if _last_active_joypad == joypad:
+			_last_active_joypad = null
+
 		device_disconnected.emit(joypad)
 
 		remove_child(joypad)
 		joypad.queue_free()
 
+		# NOTE: An action held on the removed joypad would never be released.
+		_pressed.erase(device)
+
 		return true
 
 	return false
+
+
+## _is_action_pressed returns whether `event` is a press of `action`. An injected action
+## is matched by name, and a key, button, or motion only against an action the
+## `InputMap` knows, since Steam publishes actions the map needn't define.
+func _is_action_pressed(event: InputEvent, action: StringName) -> bool:
+	if event is InputEventAction:
+		return event.action == action and event.pressed
+
+	return InputMap.has_action(action) and event.is_action_pressed(action)
+
+
+## _is_action_released returns whether `event` is a release of `action`, matched as
+## `_is_action_pressed` does.
+func _is_action_released(event: InputEvent, action: StringName) -> bool:
+	if event is InputEventAction:
+		return event.action == action and not event.pressed
+
+	return InputMap.has_action(action) and event.is_action_released(action)
 
 
 func _list_action_sets(
@@ -684,14 +733,119 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 	return kbm
 
 
+## _try_activate_joypad activates the joypad which just pressed one of the active
+## actions and returns whether it did. Key and mouse button events are ignored.
+func _try_activate_joypad(event: InputEvent) -> bool:
+	if not (
+		event is InputEventJoypadButton
+		or event is InputEventJoypadMotion
+		or event is InputEventAction
+	):
+		return false
+
+	# NOTE: Every action an event presses is tracked, even on the active joypad, so an
+	# input held across a switch to the keyboard can't switch back until released.
+	var held: Array = _pressed.get_or_add(event.device, [])
+	var is_held := false
+	var is_match := false
+	for action in _actions:
+		if not _is_action_pressed(event, action):
+			continue
+
+		if action in held:
+			is_held = true
+			continue
+
+		held.append(action)
+		is_match = true
+
+	# NOTE: A held or new press counts as player input only from a reported joypad, so
+	# one pressed before its monitor reports it still activates once it connects.
+	var is_reported := _joypad_devices.any(func(d): return d.device_id == event.device)
+	if (is_held or is_match) and is_reported:
+		_has_player_input = true
+
+	if is_held or not is_match:
+		return false
+
+	if (
+		_active
+		and _active.device_type != DEVICE_TYPE_KEYBOARD
+		and _active.device_id == event.device
+	):
+		return false
+
+	for joypad in _joypad_devices:
+		if not joypad:
+			assert(false, "invalid state; missing device")
+			continue
+
+		if event.device != joypad.device_id:
+			continue
+
+		return _activate_device(joypad)
+
+	return false
+
+
+## _try_activate_kbm activates the keyboard and mouse device on a key or mouse button
+## press of an active action, or on a reveal-button click while
+## `cursor_click_activates_kbm` is on, and returns whether it did.
+##
+## NOTE: A mouse button which Godot emulates from a touch is skipped, since a touch
+## comes from a touchscreen rather than a mouse.
+func _try_activate_kbm(event: InputEvent) -> bool:
+	if not claim_kbm_input:
+		return false
+
+	if not (event is InputEventKey or event is InputEventMouseButton):
+		return false
+
+	if (
+		event is InputEventMouseButton
+		and event.device == InputEvent.DEVICE_ID_EMULATION
+	):
+		return false
+
+	var is_match: bool = (
+		_cursor_click_activates_kbm
+		and event is InputEventMouseButton
+		and event.button_index in cursor.get_reveal_mouse_buttons()
+	)
+
+	if not is_match:
+		for action in _actions:
+			if _is_action_pressed(event, action):
+				is_match = true
+				break
+
+	if not is_match:
+		return false
+
+	# NOTE: A bound press counts as the player's first input even while the keyboard is
+	# already active, so a joypad connected afterwards is only connected.
+	_has_player_input = true
+
+	if _active and _active.device_type == DEVICE_TYPE_KEYBOARD:
+		return false
+
+	return _activate_device(_kbm_device)
+
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_cursor_visibility_changed(visible: bool) -> void:
-	if visible and claim_kbm_input and _cursor_activates_kbm:
-		assert(_kbm_device, "invalid state; missing input device")
-		_activate_device(_kbm_device)
+func _on_component_bindings_changed() -> void:
+	# NOTE: A component can reload before the slot is ready, such as when a scene change
+	# creates a new component while the active set survives in its static state, and
+	# the slot has no configuration to recompute until it loads a set itself.
+	if not is_node_ready():
+		return
 
+	action_configuration_changed.emit()
+
+
+func _on_cursor_visibility_changed(visible: bool) -> void:
 	cursor_visibility_changed.emit(visible)
 
 
@@ -699,46 +853,38 @@ func _on_Self_action_configuration_changed() -> void:
 	var action_sets := _list_action_sets(device_id, false)
 
 	_actions = []
-	_cursor_activates_kbm = false
+	_cursor_click_activates_kbm = false
 
 	# NOTE: These must be iterated in forward order so that later action set layers can
 	# override properties set in earlier action sets.
 	for action_set in action_sets:
 		# Update cursor properties.
-		_cursor_activates_kbm = (
+		_cursor_click_activates_kbm = (
 			false
-			if action_set.cursor_activates_kbm == PROPERTY_STATUS_OFF
+			if action_set.cursor_click_activates_kbm == PROPERTY_STATUS_OFF
 			else (
-				_cursor_activates_kbm
-				or action_set.cursor_activates_kbm == PROPERTY_STATUS_ON
+				_cursor_click_activates_kbm
+				or action_set.cursor_click_activates_kbm == PROPERTY_STATUS_ON
 			)
 		)
 
 		# Update active actions.
 
-		for action in action_set.actions_analog_1d:
+		# NOTE: Steam publishes the absolute mouse action as joypad activity, so a
+		# trackpad or gyro in use counts as the joypad being used.
+		for action in action_set.list_action_names(true):
 			assert(action not in _actions, "found duplicate action")
 			_actions.append(action)
-		for action in action_set.actions_analog_2d:
-			assert(action not in _actions, "found duplicate action")
-			_actions.append(action)
-		for action in action_set.actions_digital:
-			assert(action not in _actions, "found duplicate action")
-			_actions.append(action)
+
+	# NOTE: A set change can erase the origins of a held action, so its release could
+	# never match; an action the active sets no longer bind is dropped instead.
+	for held in _pressed.values():
+		for action in held.duplicate():
+			if action not in _actions:
+				held.erase(action)
 
 	if cursor is StdInputCursor:
 		cursor.update_configuration(action_sets)
-
-	# NOTE: It's possible that removed action set layers had changed the cursor/keyboard
-	# activation state; reconcile that now.
-	if (
-		# The cursor is visible despite the keyboard not being active; a layer was
-		# removed that previously disabled 'cursor_activates_kbm'.
-		_cursor_activates_kbm
-		and device_type != DEVICE_TYPE_KEYBOARD
-		and cursor.get_is_visible()
-	):
-		cursor.call_deferred(&"hide_cursor")
 
 
 func _on_Self_device_activated(device: StdInputDevice) -> void:

@@ -6,6 +6,17 @@
 ## transition between "digital"/focus-based navigation and cursor navigation by keeping
 ## track of recently hovered UI elements and grabbing focus during mode transitions.
 ##
+## Cursor visibility is tracked apart from the active input device; showing or hiding
+## the cursor never activates a device, though the `StdInputSlot` may activate one from
+## the same press. When the cursor hides with no control focused, focus goes to the
+## pending target, else the hovered control, else the control focused before the cursor
+## was revealed, else the highest-priority anchor. The first two take focus at once, so
+## the press which hid the cursor acts on them; the others wait for the frame to end.
+##
+## While hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse.
+## The cursor doesn't consume mouse events itself, which would starve `_unhandled_input`
+## of mouse-look, so a control without a handler still hovers and clicks while hidden.
+##
 
 class_name StdInputCursor
 extends Node
@@ -30,19 +41,31 @@ signal focus_root_changed(root: Control)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const MotionFilter := preload("motion_filter.gd")
 const Signals := preload("../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+## confined_property is an optional settings property which, when set, decides whether
+## the cursor is confined to the window in place of the active action sets' choice. A
+## captured cursor stays captured either way.
+@export var confined_property: StdSettingsPropertyBool = null
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+# gdlint:ignore=class-definitions-order
 static var _logger := StdLogger.create("std/input/cursor")
 
 var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = false
+var _deferred_focus: Control = null
+var _deferred_focus_id: int = 0
+var _focus_before_reveal: Control = null
 var _focus_root: Control = null
 var _focus_version: int = 0
 var _hide_actions := PackedStringArray()
@@ -51,8 +74,9 @@ var _hide_delay: float = 0.0
 var _hovered: Control = null
 var _pending_focus: Control = null
 var _pressed: Array[String] = []
-var _reveal_distance_minimum: Vector2 = Vector2.ZERO
+var _reveal_motion := MotionFilter.new()
 var _reveal_mouse_buttons: Array[MouseButton] = []
+var _sets_confined: bool = false
 var _time_since_mouse_motion: float = 0.0
 var _was_cursor_visible: bool = false
 
@@ -64,9 +88,21 @@ func get_hovered() -> Control:
 	return _hovered
 
 
+## get_is_confined returns whether the cursor is currently confined to the window. A
+## captured cursor isn't confined.
+func get_is_confined() -> bool:
+	return _cursor_confined and not _cursor_captured
+
+
 ## get_is_visible returns whether the cursor is currently visible.
 func get_is_visible() -> bool:
 	return _cursor_visible
+
+
+## get_reveal_mouse_buttons returns the mouse buttons which reveal the cursor under the
+## current configuration.
+func get_reveal_mouse_buttons() -> Array[MouseButton]:
+	return _reveal_mouse_buttons.duplicate()
 
 
 ## hide_cursor hides the cursor and transitions to focus-based navigation. If the cursor
@@ -80,6 +116,7 @@ func hide_cursor() -> void:
 
 	_cursor_visible = false
 	_time_since_mouse_motion = 0.0
+	_reveal_motion.clear()
 	_on_properties_changed()
 
 
@@ -152,6 +189,7 @@ func show_cursor() -> void:
 
 	_cursor_visible = true
 	_time_since_mouse_motion = 0.0
+	_reveal_motion.clear()
 	_on_properties_changed()
 
 
@@ -195,9 +233,7 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 			if action not in _hide_actions_if_hovered:
 				_hide_actions_if_hovered.append(action)
 
-	_reveal_distance_minimum = action_sets.reduce(
-		func(v, s): return v.max(s.cursor_reveal_distance_minimum), Vector2.ZERO
-	)
+	_reveal_motion.configure(action_sets)
 
 	_reveal_mouse_buttons = []
 	for action_set in action_sets:
@@ -214,7 +250,8 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 	has_changed = has_changed or captured != _cursor_captured
 	_cursor_captured = captured
 
-	var confined := action_sets.any(func(s): return s.cursor_confined)
+	_sets_confined = action_sets.any(func(s): return s.cursor_confined)
+	var confined := _resolve_confined()
 	has_changed = has_changed or confined != _cursor_confined
 	_cursor_confined = confined
 
@@ -225,73 +262,88 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _enter_tree() -> void:
+	if not confined_property:
+		return
+
+	assert(
+		confined_property.scope is StdSettingsScope,
+		"invalid config; missing scope for property",
+	)
+
+	Signals.connect_safe(confined_property.value_changed, _on_confined_property_changed)
+
+	# NOTE: A scope emits no value change as it loads, so the value is read on `loaded`.
+	if not confined_property.scope.is_loaded:
+		Signals.connect_safe(
+			confined_property.scope.loaded, _on_confined_property_changed
+		)
+
+
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_INPUT_CURSOR).remove_member(self)
 
+	if confined_property:
+		Signals.disconnect_safe(
+			confined_property.value_changed, _on_confined_property_changed
+		)
+		Signals.disconnect_safe(
+			confined_property.scope.loaded, _on_confined_property_changed
+		)
+
 
 func _input(event: InputEvent) -> void:
+	# NOTE: A hide action is tracked from its press whatever the cursor's state, so one
+	# held across a reveal or the hide delay can't hide the cursor on its next event.
+	var hide_action := _track_hide_actions(event)
+
 	if not _cursor_visible:
-		# NOTE: Each axis is compared on its own, since `Vector2`'s `>` compares the y
-		# components only when the x components are equal.
+		# NOTE: A captured cursor can't be revealed, and `_on_properties_changed`
+		# would hide it again and re-emit its visibility, so reveal input is ignored.
+		if _cursor_captured:
+			return
+
 		if (
 			(
 				event is InputEventMouseMotion
-				and (
-					absf(event.relative.x) > _reveal_distance_minimum.x
-					or absf(event.relative.y) > _reveal_distance_minimum.y
-				)
+				and _reveal_motion.push(event.screen_relative)
 			)
 			or (
 				event is InputEventMouseButton
+				and event.pressed
 				and event.button_index in _reveal_mouse_buttons
 			)
 		):
 			_cursor_visible = true
 			_time_since_mouse_motion = 0.0
+			_reveal_motion.clear()
 			_on_properties_changed()
 
 		return
 
-	# Mouse is currently visible - no need to check mouse motion.
+	# Mouse is currently visible, so motion past the minimum restarts the hide delay.
 	if event is InputEventMouseMotion:
-		_time_since_mouse_motion = 0.0
+		if _reveal_motion.push(event.screen_relative):
+			_time_since_mouse_motion = 0.0
+
 		return
 
 	# The cursor is not eligible to be hidden yet.
 	if _time_since_mouse_motion < _hide_delay:
 		return
 
-	# Finally, check if any of the hide actions have just been pressed.
-
-	if _hovered:
-		for action in _hide_actions_if_hovered:
-			if not event.is_action_pressed(action):
-				_pressed.erase(action)
-				continue
-
-			if action not in _pressed:
-				_pressed.append(action)
-				_cursor_visible = false
-				_on_properties_changed(action)
-				break
-
-	for action in _hide_actions:
-		if not event.is_action_pressed(action):
-			_pressed.erase(action)
-			continue
-
-		if action not in _pressed:
-			_pressed.append(action)
-			_cursor_visible = false
-			_on_properties_changed(action)
-			break
+	# Finally, hide the cursor if a hide action was just pressed.
+	if hide_action:
+		_cursor_visible = false
+		_reveal_motion.clear()
+		_on_properties_changed(hide_action)
 
 
 func _process(delta: float) -> void:
 	if _cursor_visible:
 		_time_since_mouse_motion += delta
 
-	for action in _pressed:
+	for action in _pressed.duplicate():
 		if not Input.is_action_pressed(action):
 			_pressed.erase(action)
 
@@ -302,6 +354,9 @@ func _ready() -> void:
 
 	assert(StdGroup.is_empty(GROUP_INPUT_CURSOR), "invalid state; duplicate node found")
 	StdGroup.with_id(GROUP_INPUT_CURSOR).add_member(self)
+
+	if confined_property:
+		_cursor_confined = _resolve_confined()
 
 	_cursor_visible = (
 		DisplayServer.mouse_get_mode()
@@ -317,6 +372,23 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+func _deferred_grab_focus(id: int, trigger: StringName, make_focusable: bool) -> void:
+	if id != _deferred_focus_id:
+		return
+
+	var target := _deferred_focus
+	_deferred_focus = null
+
+	if not is_instance_valid(target) or not target.is_inside_tree():
+		return
+
+	if make_focusable:
+		target.focus_mode = Control.FOCUS_ALL
+
+	about_to_grab_focus.emit(target, trigger)
+	target.grab_focus()
+
+
 func _deferred_update_focus(version: int) -> void:
 	if version != _focus_version:
 		return
@@ -330,6 +402,44 @@ func _grab_focus(target: Control, trigger: StringName) -> void:
 	target.grab_focus()
 
 
+## _grab_focus_deferred focuses `target` at the end of the frame, after the event which
+## hid the cursor has propagated, so a hide action which also navigates can't move focus
+## off it. Until then `target` counts as focused, and a newer grab or focus change
+## cancels this one.
+##
+## NOTE: Without `make_focusable`, the target's focus handler must restore its mode.
+func _grab_focus_deferred(
+	target: Control, trigger: StringName, make_focusable: bool
+) -> void:
+	_deferred_focus = target
+	_deferred_focus_id += 1
+	_deferred_grab_focus.call_deferred(_deferred_focus_id, trigger, make_focusable)
+
+
+func _resolve_confined() -> bool:
+	if confined_property:
+		return confined_property.get_value()
+
+	return _sets_confined
+
+
+## _track_hide_actions records every hide action `event` newly presses and returns the
+## first which may hide the cursor now, checking the hovered-only actions first.
+func _track_hide_actions(event: InputEvent) -> StringName:
+	var trigger := &""
+
+	for action in _hide_actions_if_hovered + _hide_actions:
+		if not event.is_action_pressed(action) or action in _pressed:
+			continue
+
+		_pressed.append(action)
+
+		if not trigger and (_hovered or action in _hide_actions):
+			trigger = action
+
+	return trigger
+
+
 func _update_focus(trigger: StringName = &"") -> void:
 	_focus_version += 1
 
@@ -337,9 +447,31 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if _focus_root and not is_instance_valid(_focus_root):
 		set_focus_root(null)
 
+	# NOTE: The first hidden resolution consumes the control focused before the last
+	# reveal, even one which keeps the current focus, so a stale one can't resurface.
+	var previous: Control = null
+	if not _cursor_visible:
+		previous = _focus_before_reveal
+		_focus_before_reveal = null
+
+	var deferred := _deferred_focus
+	_deferred_focus = null
+
 	# Keep current focus if it's valid and under the focus root.
 	var current_focus := get_viewport().gui_get_focus_owner()
 	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
+		_pending_focus = null
+		return
+
+	# NOTE: A control whose grab is deferred to the end of the frame is kept as if it
+	# had focus, since the resolution which picked it consumed the other candidates.
+	if (
+		not _cursor_visible
+		and is_instance_valid(deferred)
+		and deferred.is_visible_in_tree()
+		and (not _focus_root or _focus_root.is_ancestor_of(deferred))
+	):
+		_deferred_focus = deferred
 		_pending_focus = null
 		return
 
@@ -375,6 +507,7 @@ func _update_focus(trigger: StringName = &"") -> void:
 	# root). This handles the case where a modal opens over a hovered element —
 	# the element remains hovered but shouldn't receive focus (Godot bug).
 	if _hovered and (not root or root.is_ancestor_of(_hovered)):
+		# NOTE: Focus is grabbed at once, so the press which hid the cursor acts on it.
 		_grab_focus(_hovered, trigger)
 		unset_hovered(_hovered)
 		return
@@ -382,13 +515,22 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if _hovered:
 		unset_hovered(_hovered)
 
-	# Fall back to the highest-priority anchor. Use deferred calls so that the
-	# cursor visibility signal is processed first, allowing focus handlers to
-	# restore focus_mode before grab_focus runs.
+	# Return to the control focused before the cursor was revealed, if still eligible.
+	if (
+		previous
+		and is_instance_valid(previous)
+		and previous.is_visible_in_tree()
+		and (not root or root.is_ancestor_of(previous))
+		and not (previous is BaseButton and previous.disabled)
+	):
+		_grab_focus_deferred(previous, trigger, true)
+		return
+
+	# Fall back to the highest-priority anchor, whose focus handler restores its focus
+	# mode on the cursor visibility signal before the deferred grab runs.
 	var anchor := StdInputCursorFocusHandler.get_focus_target(root)
 	if anchor:
-		about_to_grab_focus.emit.call_deferred(anchor, trigger)
-		anchor.grab_focus.call_deferred()
+		_grab_focus_deferred(anchor, trigger, false)
 	elif current_focus:
 		current_focus.release_focus()
 
@@ -396,8 +538,19 @@ func _update_focus(trigger: StringName = &"") -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
+func _on_confined_property_changed(_value: Variant = null) -> void:
+	var confined := _resolve_confined()
+	if confined == _cursor_confined:
+		return
+
+	_cursor_confined = confined
+	_on_properties_changed(&"", false)
+
+
 func _on_gui_focus_changed(control: Control) -> void:
 	_logger.debug("GUI focus changed.", {&"path": control.get_path()})
+
+	_deferred_focus = null
 
 	control.focus_exited.connect(
 		func(): _deferred_update_focus.call_deferred(_focus_version),
@@ -429,8 +582,11 @@ func _on_properties_changed(
 		else:
 			DisplayServer.mouse_set_mode(DisplayServer.MOUSE_MODE_CONFINED_HIDDEN)
 
-	# Release stale focus on hidden-to-visible transitions.
+	# Release stale focus on hidden-to-visible transitions, remembering it so the next
+	# hide can return to it.
 	if _cursor_visible and not _was_cursor_visible:
+		var focused := get_viewport().gui_get_focus_owner()
+		_focus_before_reveal = focused if focused else _deferred_focus
 		get_viewport().gui_release_focus()
 	_was_cursor_visible = _cursor_visible
 

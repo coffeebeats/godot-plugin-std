@@ -281,6 +281,14 @@ static func _descendants(
 	return found
 
 
+## _list_button_actions returns the digital actions Steam defines as buttons: every one
+## no stick drives, since a 2D analog action publishes its directional actions itself.
+static func _list_button_actions(action_set: StdInputActionSet) -> Array[StringName]:
+	return action_set.actions_digital.filter(
+		func(action): return not action_set.get_analog_2d_action(action)
+	)
+
+
 ## _match_steam_language returns the Steam language name whose locale is closest to
 ## `locale`, or an empty string when no language shares its language code.
 static func _match_steam_language(locale: String) -> String:
@@ -368,11 +376,6 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 				_write_open_bracket()
 
 				for action in action_set.actions_analog_2d:
-					assert(
-						action.ends_with("_x") or action.ends_with("_y"),
-						"invalid action; 2D analog action must specify axis"
-					)
-
 					_write_string(action)
 					_write_open_bracket()
 
@@ -426,13 +429,14 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 
 				_write_close_bracket()
 			"Button":
-				if not action_set.actions_digital:
+				var buttons := _list_button_actions(action_set)
+				if not buttons:
 					continue
 
 				_write_string(section)
 				_write_open_bracket()
 
-				for action in action_set.actions_digital:
+				for action in buttons:
 					_write_string(action, true, false)
 					_write_space()
 					_write_string("#action_%s" % action, false)
@@ -487,7 +491,7 @@ func _write_locale_actions_in_action_set(
 	for action in (
 		action_set.actions_analog_1d
 		+ action_set.actions_analog_2d
-		+ action_set.actions_digital
+		+ _list_button_actions(action_set)
 		+ (
 			[action_set.action_absolute_mouse]
 			if action_set.action_absolute_mouse

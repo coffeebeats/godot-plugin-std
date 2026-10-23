@@ -23,6 +23,10 @@ const PROPERTY_STATUS_INHERIT := PropertyStatus.INHERIT
 const PROPERTY_STATUS_ON := PropertyStatus.ON
 const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
+## ANALOG_2D_DIRECTIONS are the suffixes of the four digital actions a 2D analog
+## action's stick drives, in the order `Input.get_vector` takes them.
+const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"down"]
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## name is the name of the identifier for the action set. It must be unique among all
@@ -38,8 +42,20 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
 @export_subgroup("2D ")
 
-## actions_analog_2d is a list of input actions names which can be bound to 2D analog
-## input origins (e.g. left/right joysticks).
+## actions_analog_2d is a list of 2D analog actions, each naming a stick which drives
+## the four digital actions `<action>_left`, `<action>_right`, `<action>_up`, and
+## `<action>_down`, which must also be listed in `actions_digital`. Godot binds,
+## rebinds, and shows glyphs for those four as it does any digital action, and the game
+## reads them with `Input.get_vector`. Steam defines the 2D action as one
+## `joystick_move` action in their place: the four leave the manifest, the Steam actions
+## component publishes them from the stick's axes, and a glyph for any of them shows
+## the stick.
+##
+## NOTE: A name must not end in `_x` or `_y`; an axis is a pair of directions, not an
+## action, since Godot clamps an action's strength to `[0, 1]`.
+##
+## NOTE: While Steam Input drives the stick, the four directions' `InputMap` deadzones
+## are all but `0`, since Steam reports the stick past its configurator's deadzone.
 @export var actions_analog_2d: Array[StringName] = []
 
 @export_group("Digital actions ")
@@ -54,8 +70,8 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
 ## cursor_confined defines whether the cursor is confined to the game window.
 ##
-## NOTE: This property will be true if the current action set or any activated action
-## set layer enables it.
+## NOTE: The cursor is confined if the current action set or any activated action set
+## layer enables it, unless `StdInputCursor.confined_property` is set.
 @export var cursor_confined: bool = false
 
 ## cursor_captured defines whether the cursor is captured.
@@ -64,20 +80,11 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## set layer enables it.
 @export var cursor_captured: bool = false
 
-## cursor_activates_kbm defines whether revealing the cursor will activate the keyboard
-## and mouse input device (defaults to "off" / not enabled). This is likely desired for
-## menu-based action sets, but should probably be disabled during gameplay due to the
-## prevalence of gyro controls (which are simulated as mouse input).
-##
-## NOTE: This property will be true if the current action set or any activated action
-## set layer enables it.
-@export var cursor_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
-
 @export_subgroup("Hide")
 
-## cursor_hide_actions is a list of actions which, when "just" triggered by a non-KBM
-## device, will request the cursor to be hidden. Note that this doesn't guarantee that
-## the cursor will be hidden, as the visibility is dependent on a number of factors.
+## cursor_hide_actions is a list of actions which, when "just" triggered by any device,
+## request the cursor to be hidden, as a desktop hides the pointer while typing. Other
+## factors, such as `cursor_hide_delay`, can still keep the cursor visible.
 ##
 ## NOTE: Actions defined in layers will add to the total set of actions which will hide
 ## the cursor. As such, there's no need to include actions from parent layers.
@@ -96,10 +103,9 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 ## NOTE: This property will be ignored if `cursor_captured` is `true`.
 @export var cursor_hide_actions_if_hovered: Array[StringName] = []
 
-## cursor_hide_delay is a delay (in seconds) before the hiding the cursor after a
-## request to hide it. During this delay, further mouse motion will cancel the hide
-## effect. This can be used to limit rapid/distracting visibility changes when both
-## mouse motion and the `cursor_hide_actions` are anticipated to be used together.
+## cursor_hide_delay is how long (in seconds) hide actions are ignored after the cursor
+## is revealed or the mouse moves past `cursor_reveal_distance_minimum`. This limits
+## rapid visibility changes when the mouse and the hide actions are used together.
 ##
 ## NOTE: The maximum delay value across all active action sets and layers will be used.
 @export var cursor_hide_delay: float = 0.0
@@ -119,16 +125,38 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 	MOUSE_BUTTON_RIGHT,
 ]
 
-## cursor_reveal_distance_minimum defines, per axis, how much relative motion a mouse
-## motion event must exceed on at least one axis to reveal the cursor. This is used to
-## filter out slight bumps to the cursor which should otherwise not reveal it.
+## cursor_reveal_distance_minimum defines the distance, per axis in screen pixels, which
+## mouse motion must exceed on at least one axis to reveal the cursor or, while it's
+## visible, to restart `cursor_hide_delay`. The same threshold decides when
+## `action_absolute_mouse` motion counts as joypad activity.
 ##
-## NOTE: No running total is kept across events, so a slow drift whose events each stay
-## within the minimum doesn't reveal the cursor.
+## NOTE: Godot merges each frame's motion into one event, so a per-event minimum scales
+## with the frame rate. Pair a nonzero minimum with a `cursor_reveal_window`.
 ##
 ## NOTE: The maximum reveal distance threshold value across all active action sets and
 ## layers will be used.
 @export var cursor_reveal_distance_minimum: Vector2 = Vector2.ZERO
+
+## cursor_reveal_window is the duration (in seconds) over which signed mouse motion is
+## summed before it's compared to `cursor_reveal_distance_minimum`, so the minimum acts
+## as a speed of `minimum / window` pixels per second and back-and-forth jitter cancels.
+##
+## NOTE: Events arrive once per frame, so the window is quantized to whole frames. Use
+## several frames at the lowest target frame rate (`0.1` or more).
+##
+## NOTE: The maximum window across all active action sets and layers will be used.
+@export var cursor_reveal_window: float = 0.0
+
+## cursor_click_activates_kbm defines whether a press of one of
+## `cursor_reveal_mouse_buttons` activates the keyboard and mouse device even when no
+## action binds that button (defaults to off). Mouse motion never activates the device.
+##
+## NOTE: Steam legacy bindings, and a Deck layout without touchscreen native support,
+## send controller clicks as real mouse clicks; bind those clicks to actions instead.
+##
+## NOTE: The last of the action set and its active layers to set this property decides
+## its value.
+@export var cursor_click_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
 
 # NOTE: Unfortunately, due to Steam Input offering a far richer API for defining action
 # sets, this abstraction must leak some Steam-related details.
@@ -138,8 +166,15 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 @export_subgroup("Actions ")
 
 ## action_absolute_mouse is the name of an "absolute mouse"-typed action which will be
-## defined via the Steam Input API. That action should be converted into normal mouse
-## mouse input via `Input.parse_input_event`.
+## defined via the Steam Input API, so a trackpad or gyro drives the pointer. The Steam
+## actions component moves the cursor by the action's deltas, or delivers them as mouse
+## motion while the cursor is captured, and publishes the action as joypad activity for
+## the `StdInputSlot` once its motion passes `cursor_reveal_distance_minimum`, summed
+## over `cursor_reveal_window`.
+##
+## NOTE: A captured set which reads these deltas for aiming should set a non-zero
+## `cursor_reveal_distance_minimum` too; otherwise an always-on gyro at rest switches
+## glyphs to the controller while a mouse aims.
 ##
 ## NOTE: This action must *not* be present in the `actions_analog_2d` array.
 @export var action_absolute_mouse: StringName = ""
@@ -157,6 +192,16 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## get_analog_2d_action returns the 2D analog action whose stick drives the digital
+## `action`, or an empty name when no stick does.
+func get_analog_2d_action(action: StringName) -> StringName:
+	for stick in actions_analog_2d:
+		if action in list_analog_2d_actions(stick):
+			return stick
+
+	return &""
+
+
 ## list_action_names returns a list of all actions included in the action set. There is
 ## no guarantee on the order of returned items.
 func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArray:
@@ -167,6 +212,15 @@ func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArra
 		names.append(action)
 	for action in actions_analog_2d:
 		assert(action not in names, "invalid config; duplicate action")
+		assert(
+			not (action.ends_with("_x") or action.ends_with("_y")),
+			"invalid config; a 2D analog action names its stick, not an axis",
+		)
+		for direction in list_analog_2d_actions(action):
+			assert(
+				direction in actions_digital or _is_parent_action(direction),
+				"invalid config; missing a stick's directional action",
+			)
 		names.append(action)
 	for action in actions_digital:
 		assert(action not in names, "invalid config; duplicate action")
@@ -174,6 +228,17 @@ func list_action_names(include_absolute_mouse: bool = false) -> PackedStringArra
 	if include_absolute_mouse and action_absolute_mouse:
 		assert(action_absolute_mouse not in names, "invalid config; duplicate action")
 		names.append(action_absolute_mouse)
+
+	return names
+
+
+## list_analog_2d_actions returns the four digital actions the 2D analog `action`'s
+## stick drives, in `ANALOG_2D_DIRECTIONS` order.
+static func list_analog_2d_actions(action: StringName) -> Array[StringName]:
+	var names: Array[StringName] = []
+
+	for direction in ANALOG_2D_DIRECTIONS:
+		names.append(StringName("%s_%s" % [action, direction]))
 
 	return names
 
@@ -202,3 +267,15 @@ func is_matching_event_origin(action: StringName, event: InputEvent) -> bool:
 		return action in actions_digital
 
 	return false
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _is_parent_action returns whether `action` is a digital action of the set this one is
+## a layer of, so a layer can declare a stick whose directions its parent binds.
+func _is_parent_action(action: StringName) -> bool:
+	if not self is StdInputActionSetLayer or not self.parent:
+		return false
+
+	return action in self.parent.actions_digital

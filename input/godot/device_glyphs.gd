@@ -10,6 +10,7 @@ extends StdInputDeviceGlyphs
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Bindings := preload("binding.gd")
+const Origin := preload("origin.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -57,6 +58,33 @@ func _get_action_glyph(
 			return texture
 
 	return null
+
+
+func _get_action_origin_count(
+	_device: int,
+	device_type: StdInputDevice.DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
+) -> int:
+	var category := StdInputDevice.get_device_category(device_type)
+
+	# NOTE: A binding repeated at a later index is not another origin, so it ends the
+	# count as an unbound index does; otherwise a cycling glyph would show it twice.
+	var origins := PackedInt64Array()
+	for index in StdInputDeviceActions.BindingIndex.values():
+		var event := Bindings.get_action_binding(
+			scope, action_set, action, category, index
+		)
+		if not event:
+			break
+
+		var origin := Origin.encode(event)
+		if origin in origins:
+			break
+
+		origins.append(origin)
+
+	return origins.size()
 
 
 func _get_action_origin_label(
