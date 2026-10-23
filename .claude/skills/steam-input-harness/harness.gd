@@ -1,14 +1,11 @@
 ##
-## zz_harness/harness.gd
+## harness.gd
 ##
 ## A Steam Input harness: starts Steam, mounts std's Steam joypad monitor, actions and
 ## glyph components under a real `StdInputSlot`, and walks a person through scripted
 ## steps on screen while logging what the hardware reports to `results.log` beside this
-## script. The `steam-input-harness` skill explains how to run it.
-##
-## Run from the project root, with `steam_appid.txt` beside `project.godot`:
-##
-##   godot --path . res://zz_harness/harness.tscn [-- --appid=<id>]
+## script. It is launched through `run.gd` beside it; the `steam-input-harness` skill
+## explains how to run it and which arguments it takes.
 ##
 
 @tool
@@ -250,6 +247,14 @@ func _ready() -> void:
 		_scripts[key] = load(_std_input.path_join(key))
 
 	_build_ui()
+
+	# NOTE: An unknown `--from` step would skip every step, so the run stops instead.
+	var step_names := STEPS.map(func(s): return s[0])
+	if _from_step and _from_step not in step_names:
+		_instruction.text = "Unknown --from step '%s'; see results.log." % _from_step
+		_log("unknown --from step %s; steps: %s" % [_from_step, step_names])
+		return
+
 	_register_actions()
 	_build_action_set()
 
@@ -531,20 +536,21 @@ func _next_step() -> void:
 		return
 
 	# NOTE: `--from=<step>` skips every step before the named one, except the two which
-	# establish the pad and its bindings.
+	# establish the pad and its bindings. The named step runs even when confirmed, while
+	# the confirmed steps after it are still skipped without `--all`.
 	var step_name: String = STEPS[_step][0]
-	if step_name in CONFIRMED and not _run_all:
-		_log("--- step %s (skipped: confirmed on hardware; run with --all)" % step_name)
+	var is_from_target := _from_step != "" and step_name == _from_step
+	if _from_step and not is_from_target and step_name not in ["connect", "bindings"]:
+		_log("--- step %s (skipped by --from)" % step_name)
 		_next_step.call_deferred()
 		return
 
-	if _from_step:
-		if step_name == _from_step:
-			_from_step = ""
-		elif step_name not in ["connect", "bindings"]:
-			_log("--- step %s (skipped by --from)" % step_name)
-			_next_step.call_deferred()
-			return
+	if is_from_target:
+		_from_step = ""
+	elif step_name in CONFIRMED and not _run_all:
+		_log("--- step %s (skipped: confirmed on hardware; run with --all)" % step_name)
+		_next_step.call_deferred()
+		return
 
 	_instruction.text = "[%d/%d] %s" % [_step + 1, STEPS.size(), STEPS[_step][1]]
 	_log("--- step %s" % step_name)
