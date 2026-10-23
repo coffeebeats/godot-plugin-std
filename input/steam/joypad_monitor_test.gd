@@ -73,6 +73,20 @@ func test_joypad_monitor_disconnect_keeps_every_other_device_in_its_slot() -> vo
 	assert_eq(monitor.get_slot_for_device_id(11), 0)
 
 
+func test_joypad_monitor_broadcast_skips_empty_slots() -> void:
+	# Given: A joypad monitor whose slot 0 emptied when its device disconnected.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor._connected = PackedInt64Array([0, 9])
+	watch_signals(monitor)
+
+	# When: The connected joypads are broadcast.
+	monitor.broadcast_connected_joypads()
+
+	# Then: Only the occupied slot is reported.
+	assert_signal_emit_count(monitor, "joy_connected", 1)
+	assert_signal_emitted_with_parameters(monitor, "joy_connected", [1])
+
+
 func test_joypad_monitor_disconnect_drops_trailing_empty_slots() -> void:
 	# Given: A joypad monitor which connected two devices while Steam Input is in use.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
