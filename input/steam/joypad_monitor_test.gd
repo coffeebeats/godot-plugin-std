@@ -44,6 +44,58 @@ func test_joypad_monitor_reports_a_missing_slot_or_device_as_negative() -> void:
 	assert_eq(monitor.get_slot_for_device_id(9), -1)
 
 
+func test_joypad_monitor_disconnect_keeps_every_other_device_in_its_slot() -> void:
+	# Given: A joypad monitor which connected two devices.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	monitor._connected = PackedInt64Array([7, 9])
+	watch_signals(monitor)
+
+	# When: The device in slot 0 disconnects.
+	monitor._disconnect_device(7)
+
+	# Then: Slot 0 is reported disconnected and is left empty.
+	assert_signal_emitted_with_parameters(monitor, "joy_disconnected", [0])
+	assert_eq(monitor.get_device_id_for_slot(0), -1)
+	assert_eq(monitor.get_slot_for_device_id(7), -1)
+	assert_eq(monitor.get_slot_for_device_id(0), -1)
+
+	# Then: The other device keeps its slot.
+	assert_eq(monitor.get_device_id_for_slot(1), 9)
+	assert_eq(monitor.get_slot_for_device_id(9), 1)
+
+	# When: Another device takes a slot.
+	var got: int = monitor._claim_slot(11)
+
+	# Then: It takes the empty slot.
+	assert_eq(got, 0)
+	assert_eq(monitor.get_device_id_for_slot(0), 11)
+	assert_eq(monitor.get_slot_for_device_id(11), 0)
+
+
+func test_joypad_monitor_disconnect_drops_trailing_empty_slots() -> void:
+	# Given: A joypad monitor which connected two devices while Steam Input is in use.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	monitor.steam_input_enabled_property.set_value(true)
+	monitor._connected = PackedInt64Array([7, 9])
+
+	# When: The device in slot 1 disconnects.
+	monitor._disconnect_device(9)
+
+	# Then: Its slot is dropped, so the next device appends after slot 0.
+	assert_eq(monitor._connected, PackedInt64Array([7]))
+	assert_eq(monitor._claim_slot(11), 1)
+
+	# When: Every device disconnects.
+	monitor._disconnect_device(7)
+	monitor._disconnect_device(11)
+
+	# Then: No slot is kept and Steam Input is no longer in use.
+	assert_eq(monitor._connected, PackedInt64Array())
+	assert_false(monitor.steam_input_enabled_property.get_value())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -59,3 +111,16 @@ func should_skip_script():
 		return "the GodotSteam extension isn't available on this platform"
 
 	return false
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _make_steam_input_enabled_property returns a property for the monitor to toggle, in a
+## new scope which isn't loaded yet.
+func _make_steam_input_enabled_property() -> StdSettingsPropertyBool:
+	var property := StdSettingsPropertyBool.new()
+	property.scope = StdSettingsScope.new()
+	property.category = &"test"
+	property.name = &"steam_input_enabled"
+	return property

@@ -25,6 +25,8 @@ const Signals := preload("../../event/signal.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+## _connected holds the device handle in each slot, or `0` for a slot whose device
+## disconnected; it never ends in `0`.
 var _connected := PackedInt64Array()
 
 var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_frame()
@@ -35,16 +37,20 @@ var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_f
 ## get_device_id_for_slot returns the input device handle at the specified "slot" index,
 ## or `-1` when no connected device occupies it.
 func get_device_id_for_slot(slot: int) -> int:
-	return _connected[slot] if (slot >= 0 and slot < _connected.size()) else -1
+	if slot < 0 or slot >= _connected.size() or not _connected[slot]:
+		return -1
+
+	return _connected[slot]
 
 
 ## get_slot_for_device_id returns the "slot" index of the specified input device handle,
 ## or `-1` when the device isn't connected.
 ##
-## NOTE: Slots index the devices this monitor has connected, in that order, so a slot
-## maps back to the same device it was reported with.
+## NOTE: A device keeps its slot until it disconnects, and the next device to connect
+## takes the lowest free slot, as Godot numbers joypads; so a slot maps back to the same
+## device it was reported with.
 func get_slot_for_device_id(device: int) -> int:
-	return _connected.find(device)
+	return _connected.find(device) if device else -1
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -95,16 +101,24 @@ func _input(event: InputEvent) -> void:
 
 
 func _broadcast_connected_joypads() -> void:
-	for device in _connected:
-		var slot: int = get_slot_for_device_id(device)
-		if slot == -1:
-			assert(false, "invalid argument; failed to find slot for device")
-			continue
-
-		joy_connected.emit(slot)
+	for slot in _connected.size():
+		if _connected[slot]:
+			joy_connected.emit(slot)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _claim_slot places `device` in the lowest free slot and returns that slot.
+func _claim_slot(device: int) -> int:
+	var slot := _connected.find(0)
+	if slot == -1:
+		slot = _connected.size()
+		_connected.append(device)
+	else:
+		_connected[slot] = device
+
+	return slot
 
 
 func _connect_device(device: int) -> void:
@@ -147,8 +161,7 @@ func _connect_device(device: int) -> void:
 	# backed components.
 	steam_input_enabled_property.set_value(true)
 
-	_connected.append(device)
-	joy_connected.emit(_connected.size() - 1, device_type)
+	joy_connected.emit(_claim_slot(device), device_type)
 
 
 func _disconnect_device(device: int) -> void:
@@ -159,15 +172,14 @@ func _disconnect_device(device: int) -> void:
 
 	_logger.info("Joypad disconnected.", {&"device": device})
 
-	var index := _connected.find(device)
-	assert(index >= 0, "invalid state; missing device")
+	# NOTE: The slot is emptied rather than removed, so no other device's slot changes
+	# under the components which keep state per slot.
+	var slot := _connected.find(device)
+	_connected[slot] = 0
 
-	var slot: int = _connected.find(device)
-	if slot == -1:
-		assert(false, "invalid argument; failed to find slot for device")
-		return
+	while _connected and not _connected[_connected.size() - 1]:
+		_connected.resize(_connected.size() - 1)
 
-	_connected.remove_at(index)
 	joy_disconnected.emit(slot)
 
 	if not _connected:
