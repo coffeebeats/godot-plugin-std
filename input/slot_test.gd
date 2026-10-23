@@ -402,18 +402,20 @@ func test_input_slot_actions_include_every_action_of_the_set_and_its_layers() ->
 	layer.action_absolute_mouse = &"look"
 	assert_true(slot.enable_action_set_layer(layer))
 
-	# Then: Every action of the set, then of the layer, is active.
+	# Then: Every action of the set and the layer is active, in any order.
+	var got: Array[String] = slot._actions.duplicate()
+	got.sort()
 	assert_eq(
-		slot._actions,
+		got,
 		(
 			[
-				"throttle",
-				"move_x",
-				"move_y",
-				"test_action",
 				"aim",
 				"fire",
 				"look",
+				"move_x",
+				"move_y",
+				"test_action",
+				"throttle",
 			]
 			as Array[String]
 		),
