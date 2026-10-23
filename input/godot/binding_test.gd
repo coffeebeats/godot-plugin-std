@@ -370,6 +370,185 @@ class TestBindAction:
 			),
 		)
 
+	func test_rebinding_default_origin_back_leaves_no_user_override(
+		params = use_parameters(
+			[
+				[StdInputDevice.DEVICE_TYPE_GENERIC],
+				[StdInputDevice.DEVICE_TYPE_KEYBOARD],
+			]
+		),
+	) -> void:
+		# Given: A device type.
+		var device_type: StdInputDevice.DeviceType = params[0]
+
+		# Given: An action set with one digital action.
+		var action := &"test-action"
+		action_set.actions_digital.append(action)
+
+		# Given: The primary index defaults to an origin, and the secondary to none.
+		var event := (
+			_create_kbm_event(KEY_A)
+			if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
+			else _create_joypad_event(JOY_BUTTON_A)
+		)
+		_set_events_as_default(action, [event])
+
+		# Given: The default origin is moved to the secondary index.
+		assert_true(
+			(
+				Bindings
+				. bind_action(
+					scope,
+					action_set,
+					action,
+					event,
+					device_type,
+					BINDING_INDEX_SECONDARY,
+				)
+			)
+		)
+
+		# Given: The primary index gave up its default and reads as an empty override.
+		assert_null(
+			(
+				Bindings
+				. get_action_binding(
+					scope,
+					action_set,
+					action,
+					device_type,
+					BINDING_INDEX_PRIMARY,
+				)
+			),
+		)
+		assert_true(
+			(
+				Bindings
+				. action_has_user_override(
+					scope,
+					action_set,
+					action,
+					device_type,
+					BINDING_INDEX_PRIMARY,
+				)
+			)
+		)
+
+		# When: The default origin is bound back to the primary index.
+		var changed := (
+			Bindings
+			. bind_action(
+				scope,
+				action_set,
+				action,
+				event,
+				device_type,
+				BINDING_INDEX_PRIMARY,
+			)
+		)
+
+		# Then: The bindings changed back to their defaults.
+		assert_true(changed)
+		_assert_events_eq(
+			(
+				Bindings
+				. get_action_binding(
+					scope,
+					action_set,
+					action,
+					device_type,
+					BINDING_INDEX_PRIMARY,
+				)
+			),
+			event,
+		)
+		assert_null(
+			(
+				Bindings
+				. get_action_binding(
+					scope,
+					action_set,
+					action,
+					device_type,
+					BINDING_INDEX_SECONDARY,
+				)
+			),
+		)
+
+		# Then: No index reads as a user override.
+		assert_false(
+			Bindings.category_has_user_override(scope, action_set, device_type)
+		)
+
+	func test_keeps_user_origin_of_other_action_whose_default_is_bound(
+		params = use_parameters(_parameters),
+	) -> void:
+		# Given: A device type.
+		var device_type: StdInputDevice.DeviceType = params[0]
+
+		# Given: A binding index.
+		var index: BindingIndex = params[1]
+
+		# Given: An action set with two digital actions.
+		var action1 := &"test-action1"
+		var action2 := &"test-action2"
+		action_set.actions_digital.append(action1)
+		action_set.actions_digital.append(action2)
+
+		# Given: Default events for each of the first action's binding indices.
+		var events_default := BindingIndex.values().map(
+			func(i):
+				return (
+					_create_kbm_event(KEY_A + i)
+					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
+					else _create_joypad_event(JOY_BUTTON_A + i)
+				)
+		)
+		_set_events_as_default(action1, events_default)
+
+		# Given: The second action has no default events.
+		_set_events_as_default(action2, [])
+
+		# Given: The user bound the first action to a different origin.
+		var event_user := (
+			_create_kbm_event(KEY_Z)
+			if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
+			else _create_joypad_event(JOY_BUTTON_Y)
+		)
+		assert_true(
+			(
+				Bindings
+				. bind_action(
+					scope,
+					action_set,
+					action1,
+					event_user,
+					device_type,
+					index,
+				)
+			)
+		)
+
+		# When: The second action is bound to the first action's default origin.
+		var changed := (
+			Bindings
+			. bind_action(
+				scope,
+				action_set,
+				action2,
+				events_default[index],
+				device_type,
+				index,
+			)
+		)
+		assert_true(changed)
+
+		# Then: The first action keeps the user's origin.
+		_assert_events_eq(
+			Bindings.get_action_binding(scope, action_set, action1, device_type, index),
+			event_user,
+		)
+
 
 class TestResetAction:
 	extends TestBindingBase
