@@ -21,8 +21,6 @@ godot.exe
 
 # Testing-related ignores
 /steam_appid.txt
-/.claude/skills/steam-input-harness/*.log
-/.claude/skills/steam-input-harness/game_actions_*.vdf
 
 # IDE-related files
 .claude/settings.local.json
