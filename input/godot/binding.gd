@@ -112,8 +112,8 @@ static func bind_action(
 
 				continue
 
-			# NOTE: A slot gives up the origin only while bound to it, by a stored origin
-			# or by its default, so a different origin the user bound there is kept.
+			# NOTE: A slot gives up the origin only while bound to it, by a stored
+			# origin or its default, so another origin the user bound there is kept.
 			var origin_bound := (
 				origin_default if origin_current == UNSET else origin_current
 			)

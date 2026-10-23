@@ -385,7 +385,7 @@ class TestBindAction:
 		var action := &"test-action"
 		action_set.actions_digital.append(action)
 
-		# Given: The action's primary index defaults to an origin; its secondary is unbound.
+		# Given: The primary index defaults to an origin, and the secondary to none.
 		var event := (
 			_create_kbm_event(KEY_A)
 			if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
@@ -408,7 +408,7 @@ class TestBindAction:
 			)
 		)
 
-		# Given: The primary index gave up its default, so it reads unbound as an override.
+		# Given: The primary index gave up its default and reads as an empty override.
 		assert_null(
 			(
 				Bindings
@@ -505,6 +505,8 @@ class TestBindAction:
 				)
 		)
 		_set_events_as_default(action1, events_default)
+
+		# Given: The second action has no default events.
 		_set_events_as_default(action2, [])
 
 		# Given: The user bound the first action to a different origin.
