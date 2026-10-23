@@ -1039,6 +1039,113 @@ func test_button_left_behind_overlay_stays_unhovered_once_overlay_closes() -> vo
 	handler.free()
 
 
+func test_click_while_cursor_visible_restores_focus_to_clicked_button() -> void:
+	# Given: Two buttons with focus handlers, the first focused before a reveal.
+	var setup := await _setup_reveal_from_first_button()
+	var sv: SubViewport = setup[0]
+	var first: Button = setup[1]
+	var second: Button = setup[2]
+
+	# When: The second button is clicked.
+	_click_mouse(sv, second.position + Vector2(50, 20))
+
+	# When: The mouse leaves the button.
+	_move_mouse(sv, Vector2(300, 250))
+
+	# When: The cursor hides with nothing hovered.
+	cursor.hide_cursor()
+
+	# When: The frame ends.
+	await get_tree().process_frame
+
+	# Then: The clicked button has focus rather than the one from before the reveal.
+	assert_true(second.has_focus())
+	assert_false(first.has_focus())
+
+
+func test_click_which_reveals_cursor_restores_focus_to_clicked_button() -> void:
+	# Given: Two buttons with focus handlers, the first focused before a reveal.
+	var setup := await _setup_reveal_from_first_button()
+	var sv: SubViewport = setup[0]
+	var first: Button = setup[1]
+	var second: Button = setup[2]
+
+	# Given: The cursor hides, which returns focus to the first button.
+	cursor.hide_cursor()
+	await get_tree().process_frame
+	assert_true(first.has_focus(), "precondition: first button focused")
+
+	# When: The mouse moves over the second button while the cursor is hidden.
+	_move_mouse(sv, second.position + Vector2(50, 20))
+
+	# When: The second button is clicked, which reveals the cursor.
+	_click_mouse(sv, second.position + Vector2(50, 20))
+	assert_true(cursor.get_is_visible(), "precondition: click revealed the cursor")
+
+	# When: The mouse leaves the button.
+	_move_mouse(sv, Vector2(300, 250))
+
+	# When: The cursor hides with nothing hovered.
+	cursor.hide_cursor()
+
+	# When: The frame ends.
+	await get_tree().process_frame
+
+	# Then: The clicked button has focus rather than the one from before the reveal.
+	assert_true(second.has_focus())
+	assert_false(first.has_focus())
+
+
+func test_wheel_over_button_keeps_focus_from_before_reveal() -> void:
+	# Given: Two buttons with focus handlers, the first focused before a reveal.
+	var setup := await _setup_reveal_from_first_button()
+	var sv: SubViewport = setup[0]
+	var first: Button = setup[1]
+	var second: Button = setup[2]
+
+	# When: The wheel scrolls over the second button.
+	_click_mouse(sv, second.position + Vector2(50, 20), MOUSE_BUTTON_WHEEL_DOWN)
+
+	# When: The mouse leaves the button.
+	_move_mouse(sv, Vector2(300, 250))
+
+	# When: The cursor hides with nothing hovered.
+	cursor.hide_cursor()
+
+	# When: The frame ends.
+	await get_tree().process_frame
+
+	# Then: The button from before the reveal has focus again.
+	assert_true(first.has_focus())
+
+
+func test_click_on_disabled_button_keeps_focus_from_before_reveal() -> void:
+	# Given: Two buttons with focus handlers, the first focused before a reveal.
+	var setup := await _setup_reveal_from_first_button()
+	var sv: SubViewport = setup[0]
+	var first: Button = setup[1]
+	var second: Button = setup[2]
+
+	# Given: The second button is disabled.
+	second.disabled = true
+	await get_tree().process_frame
+
+	# When: The disabled button is clicked.
+	_click_mouse(sv, second.position + Vector2(50, 20))
+
+	# When: The mouse leaves the button.
+	_move_mouse(sv, Vector2(300, 250))
+
+	# When: The cursor hides with nothing hovered.
+	cursor.hide_cursor()
+
+	# When: The frame ends.
+	await get_tree().process_frame
+
+	# Then: The button from before the reveal has focus again.
+	assert_true(first.has_focus())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -1067,6 +1174,21 @@ func _add_handler(control: Control) -> StdInputCursorFocusHandler:
 	handler.control = NodePath("..")
 	control.add_child(handler)
 	return handler
+
+
+## _click_mouse pushes a press and then a release of `button_index` at `position` into
+## `viewport`.
+func _click_mouse(
+	viewport: SubViewport,
+	position: Vector2,
+	button_index: MouseButton = MOUSE_BUTTON_LEFT,
+) -> void:
+	for pressed in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = button_index
+		event.pressed = pressed
+		event.position = position
+		viewport.push_input(event)
 
 
 ## _move_mouse pushes mouse motion to `position` into `viewport`.
@@ -1123,3 +1245,35 @@ func _setup_outside_focus_root() -> Array:
 	add_child_autofree(button)
 	var handler := _add_handler(button)
 	return [button, handler, modal]
+
+
+## _setup_reveal_from_first_button adds a SubViewport holding the cursor and two buttons
+## with focus handlers, focuses the first, and reveals the cursor, returning them as
+## `[viewport, first, second]`.
+##
+## NOTE: The cursor sits in the SubViewport, since it records and restores the focus of
+## its own viewport.
+func _setup_reveal_from_first_button() -> Array:
+	var sv := SubViewport.new()
+	sv.size = Vector2i(400, 300)
+	add_child_autofree(sv)
+	sv.add_child(cursor)
+	cursor.update_configuration([StdInputActionSet.new()])
+
+	var buttons: Array[Button] = []
+	for i in 2:
+		var button := Button.new()
+		button.size = Vector2(100, 40)
+		button.position = Vector2(0, 100 * i)
+		sv.add_child(button)
+		_add_handler(button)
+		buttons.append(button)
+
+	await get_tree().process_frame
+
+	cursor.hide_cursor()
+	buttons[0].grab_focus()
+	cursor.show_cursor()
+	assert_false(buttons[0].has_focus(), "precondition: focus released on reveal")
+
+	return [sv, buttons[0], buttons[1]]

@@ -9,9 +9,10 @@
 ## Cursor visibility is tracked apart from the active input device; showing or hiding
 ## the cursor never activates a device, though the `StdInputSlot` may activate one from
 ## the same press. When the cursor hides with no control focused, focus goes to the
-## pending target, else the hovered control, else the control focused before the cursor
-## was revealed, else the highest-priority anchor. The first two take focus at once, so
-## the press which hid the cursor acts on them; the others wait for the frame to end.
+## pending target, else the hovered control, else the control last clicked while the
+## cursor was visible, else the control focused before the cursor was revealed, else the
+## highest-priority anchor. The first two take focus at once, so the press which hid the
+## cursor acts on them; the others wait for the frame to end.
 ##
 ## While hidden, controls managed by a `StdInputCursorFocusHandler` ignore the mouse.
 ## The cursor doesn't consume mouse events itself, which would starve `_unhandled_input`
@@ -65,8 +66,8 @@ var _cursor_confined: bool = false
 var _cursor_visible: bool = false
 var _deferred_focus: Control = null
 var _deferred_focus_id: int = 0
-var _focus_before_reveal: Control = null
 var _focus_root: Control = null
+var _focus_to_restore: Control = null
 var _focus_version: int = 0
 var _hide_actions := PackedStringArray()
 var _hide_actions_if_hovered := PackedStringArray()
@@ -118,6 +119,18 @@ func hide_cursor() -> void:
 	_time_since_mouse_motion = 0.0
 	_reveal_motion.clear()
 	_on_properties_changed()
+
+
+## report_clicked notifies the `StdInputCursor` that `control` was clicked. While the
+## cursor is visible, the next hide returns focus to it rather than to the control
+## focused before the cursor was revealed; while hidden, the click is ignored.
+func report_clicked(control: Control) -> void:
+	assert(control is Control, "missing argument")
+
+	if not _cursor_visible:
+		return
+
+	_focus_to_restore = control
 
 
 ## report_focus_handler_visible is used to notify the `StdInputCursor` that a previously
@@ -447,12 +460,12 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if _focus_root and not is_instance_valid(_focus_root):
 		set_focus_root(null)
 
-	# NOTE: The first hidden resolution consumes the control focused before the last
-	# reveal, even one which keeps the current focus, so a stale one can't resurface.
+	# NOTE: The first hidden resolution consumes the control to restore, even when it
+	# keeps the current focus, so a stale one can't resurface.
 	var previous: Control = null
 	if not _cursor_visible:
-		previous = _focus_before_reveal
-		_focus_before_reveal = null
+		previous = _focus_to_restore
+		_focus_to_restore = null
 
 	var deferred := _deferred_focus
 	_deferred_focus = null
@@ -515,7 +528,7 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if _hovered:
 		unset_hovered(_hovered)
 
-	# Return to the control focused before the cursor was revealed, if still eligible.
+	# Return to the control to restore, if still eligible.
 	if (
 		previous
 		and is_instance_valid(previous)
@@ -586,7 +599,7 @@ func _on_properties_changed(
 	# hide can return to it.
 	if _cursor_visible and not _was_cursor_visible:
 		var focused := get_viewport().gui_get_focus_owner()
-		_focus_before_reveal = focused if focused else _deferred_focus
+		_focus_to_restore = focused if focused else _deferred_focus
 		get_viewport().gui_release_focus()
 	_was_cursor_visible = _cursor_visible
 
