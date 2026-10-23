@@ -162,7 +162,39 @@ func test_joypad_disconnect_releases_the_actions_it_held() -> void:
 
 	# Then: The direction is released and the slot's state is forgotten.
 	assert_false(Input.is_action_pressed(&"move_left"))
-	assert_false(_actions._published.has(0))
+	assert_false(_actions._held.has(0))
+
+
+func test_publish_input_event_holds_an_action_at_its_strongest_source() -> void:
+	# Given: A stick holds a direction at half strength.
+	_publish(_action(&"move_left", 0.5, true), &"move")
+
+	# When: A button bound to the same direction is pressed.
+	_publish(_action(&"move_left", 1.0, true), &"move_left")
+
+	# Then: The action is pressed at the button's strength.
+	assert_eq(Input.get_action_strength(&"move_left"), 1.0)
+
+	# When: The stick returns to rest.
+	_publish(_action(&"move_left", 0.0, false), &"move")
+
+	# Then: The action is still pressed by the button.
+	assert_true(Input.is_action_pressed(&"move_left"))
+	assert_eq(Input.get_action_strength(&"move_left"), 1.0)
+
+	# When: The stick is deflected again and the button is released.
+	_publish(_action(&"move_left", 0.25, true), &"move")
+	_publish(_action(&"move_left", 0.0, false), &"move_left")
+
+	# Then: The action is pressed at the stick's strength.
+	assert_true(Input.is_action_pressed(&"move_left"))
+	assert_eq(Input.get_action_strength(&"move_left"), 0.25)
+
+	# When: The stick returns to rest.
+	_publish(_action(&"move_left", 0.0, false), &"move")
+
+	# Then: The action is released.
+	assert_false(Input.is_action_pressed(&"move_left"))
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
@@ -231,8 +263,8 @@ func _make_stick_action_set() -> StdInputActionSet:
 	return action_set
 
 
-## _publish publishes `event` through the component and flushes `Input`, which buffers
-## parsed events until the next frame.
-func _publish(event: InputEventAction) -> void:
-	_actions._publish_input_event(event)
+## _publish publishes `event` through the component as pressed by the Steam action
+## `source`, and flushes `Input`, which buffers parsed events until the next frame.
+func _publish(event: InputEventAction, source: StringName = &"move") -> void:
+	_actions._publish_input_event(event, source)
 	Input.flush_buffered_events()

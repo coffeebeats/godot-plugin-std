@@ -68,6 +68,10 @@ static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-orde
 ## the `InputMap` deadzone it had before, which is restored once Steam Input stops.
 static var _stick_deadzones: Dictionary = {}  # gdlint:ignore=class-definitions-order
 
+## _held maps slots to the actions Steam holds pressed on them; each action maps the
+## name of every Steam action pressing it to the strength it presses at.
+var _held: Dictionary = {}
+
 ## _is_listening tracks whether this instance receives Steam Input events; the caches
 ## above are shared, but each instance connects to the signals itself.
 var _is_listening: bool = false
@@ -77,10 +81,6 @@ var _logger := StdLogger.create("std/input/steam/device-actions")
 ## _pointer_motion maps slots to the filter which decides when that slot's "absolute
 ## mouse" motion counts as joypad activity.
 var _pointer_motion: Dictionary = {}
-
-## _published maps slots to the pressed state and strength last published for each of
-## that slot's actions.
-var _published: Dictionary = {}
 
 ## _warp_remainder is the sub-pixel pointer motion not yet applied by a warp, which the
 ## window system only accepts in whole pixels.
@@ -434,24 +434,39 @@ func _get_pointer_motion_filter(slot: int) -> MotionFilter:
 	return filter
 
 
-## _publish_input_event parses an injected action event once its state differs from the
-## one last published for its slot and action. Parsing presses the action on `Input` at
-## the event's strength, so no explicit press or release is needed; an explicit release
-## would also release the action for every other device, such as a key held for it.
+## _publish_input_event records `event` as the press of its action by the Steam action
+## `source`, then parses the action's combined state once it differs from the one last
+## published for its slot: pressed while any source presses it, at the strongest one's
+## strength, as Godot combines an action's bound events. Parsing presses the action on
+## `Input` at that strength, so no explicit press or release is needed; an explicit
+## release would also release the action for every other device, such as a key held for
+## it.
 ##
 ## NOTE: Steam reports a stick on every change, so a direction it keeps reporting as
-## released would otherwise read as just released on every event.
-func _publish_input_event(event: InputEventAction) -> void:
-	var published: Dictionary = _published.get_or_add(event.device, {})
-	var previous: Array = published.get(event.action, [false, 0.0])
+## released would otherwise read as just released on every event. A layer's stick can
+## also drive a direction its parent set binds as a button, so neither source may
+## release the other's press.
+func _publish_input_event(event: InputEventAction, source: StringName) -> void:
+	var sources: Dictionary = _held.get_or_add(event.device, {}).get_or_add(
+		event.action, {}
+	)
+
+	var was_pressed := not sources.is_empty()
+	var previous: float = sources.values().max() if was_pressed else 0.0
+
+	if event.pressed:
+		sources[source] = event.strength
+	else:
+		sources.erase(source)
+
+	event.pressed = not sources.is_empty()
+	event.strength = sources.values().max() if event.pressed else 0.0
 
 	if (
-		event.pressed == previous[0]
-		and (not event.pressed or is_equal_approx(event.strength, previous[1]))
+		event.pressed == was_pressed
+		and (not event.pressed or is_equal_approx(event.strength, previous))
 	):
 		return
-
-	published[event.action] = [event.pressed, event.strength]
 
 	Input.parse_input_event(event)
 
@@ -600,7 +615,7 @@ func _on_input_action_event(
 					# sets, so any strength is a press.
 					event.pressed = event.strength > 0.0
 
-					_publish_input_event(event)
+					_publish_input_event(event, action)
 
 				Steam.INPUT_SOURCE_MODE_ABSOLUTE_MOUSE, Steam.INPUT_SOURCE_MODE_RELATIVE_MOUSE:
 					_publish_pointer_motion(motion)
@@ -620,7 +635,7 @@ func _on_input_action_event(
 
 				_:
 					for event in split_analog_2d(action, motion, slot):
-						_publish_input_event(event)
+						_publish_input_event(event, action)
 
 		Steam.INPUT_ACTION_EVENT_TYPE_DIGITAL_ACTION:
 			var event := InputEventAction.new()
@@ -630,7 +645,7 @@ func _on_input_action_event(
 			event.pressed = action_data["state"]
 			event.strength = 1.0 if event.pressed else 0.0
 
-			_publish_input_event(event)
+			_publish_input_event(event, action)
 
 
 func _on_input_configuration_loaded(
@@ -644,22 +659,23 @@ func _on_input_configuration_loaded(
 
 
 ## _on_joypad_disconnected releases every action the joypad in `slot` was holding, since
-## Steam reports nothing further for it, and forgets the slot's published state.
+## Steam reports nothing further for it, and forgets the slot's held actions.
 func _on_joypad_disconnected(slot: int) -> void:
-	var published: Dictionary = _published.get(slot, {})
+	var held: Dictionary = _held.get(slot, {})
 
-	for action in published.keys():
-		if not published[action][0]:
+	for action in held:
+		if held[action].is_empty():
 			continue
 
 		var event := InputEventAction.new()
 		event.action = action
 		event.device = slot
 		event.pressed = false
+		event.strength = 0.0
 
-		_publish_input_event(event)
+		Input.parse_input_event(event)
 
-	_published.erase(slot)
+	_held.erase(slot)
 	_pointer_motion.erase(slot)
 
 
