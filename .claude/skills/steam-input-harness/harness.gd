@@ -165,8 +165,8 @@ class CycleGlyph:
 	extends StdInputGlyph
 	var seen: Array[int] = []
 
-	func _update_glyph(_device_type: DeviceType) -> bool:
-		seen.append(get_binding_index())
+	func _update_glyph(_device_type: DeviceType, index: int) -> bool:
+		seen.append(index)
 		return true
 
 
@@ -176,9 +176,9 @@ class GenericGlyph:
 	extends StdInputGlyph
 	var drawn: Array[String] = []
 
-	func _update_glyph(device_type: DeviceType) -> bool:
+	func _update_glyph(device_type: DeviceType, index: int) -> bool:
 		var texture := _slot.get_action_glyph(
-			action_set, action, binding_index, Vector2(64, 64), device_type
+			action_set, action, index, Vector2(64, 64), device_type
 		)
 		var values: Array = StdInputDevice.DeviceType.values()
 		var family := str(StdInputDevice.DeviceType.keys()[values.find(device_type)])
