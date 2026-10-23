@@ -53,9 +53,7 @@ func _get_action_glyph(
 			)
 
 		_:
-			var device := (
-				slot._last_active_joypad.device_id if slot._last_active_joypad else -1
-			)
+			var device := _get_joypad_device_id()
 
 			assert(
 				slot.glyphs_joy is StdInputDeviceGlyphs,
@@ -109,9 +107,7 @@ func _get_action_origin_label(
 			)
 
 		_:
-			var device := (
-				slot._last_active_joypad.device_id if slot._last_active_joypad else -1
-			)
+			var device := _get_joypad_device_id()
 
 			assert(
 				slot.glyphs_joy is StdInputDeviceGlyphs,
@@ -129,3 +125,18 @@ func _get_action_origin_label(
 					index,
 				)
 			)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _get_joypad_device_id returns the device ID a joypad query is made for: the last
+## active joypad's, else the first connected joypad's, else `-1`, matching the joypad
+## whose type `StdInputSlot.get_joypad_device_type` reports.
+func _get_joypad_device_id() -> int:
+	var joypad := slot.get_last_active_joypad_device()
+	if not joypad:
+		var joypads := slot.get_connected_devices(false)
+		joypad = joypads[0] if joypads else null
+
+	return joypad.device_id if joypad else -1

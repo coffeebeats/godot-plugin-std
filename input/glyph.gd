@@ -52,7 +52,11 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 @export_subgroup("Device")
 
 ## device_type_override is an optional settings property which specifies an override for
-## the device type when determining which glyph set to display for an origin.
+## the device type when determining which glyph set to display for an origin. The value
+## only changes what's displayed; every device stays accepted. `DEVICE_TYPE_UNKNOWN`
+## follows the active device, `DEVICE_TYPE_KEYBOARD` locks the keyboard and mouse,
+## `DEVICE_TYPE_GENERIC` locks a controller with the family detected from the connected
+## joypads, and any other value locks that family.
 @export var device_type_override: StdSettingsPropertyInt = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -122,6 +126,11 @@ func _ready() -> void:
 	Signals.connect_safe(_slot.cursor_visibility_changed, _on_cursor_visibility_changed)
 	Signals.connect_safe(_slot.device_activated, _on_device_activated)
 
+	# NOTE: A controller glyph locked by a `DEVICE_TYPE_GENERIC` override follows the
+	# connected joypads, so a connect or disconnect can change its family.
+	Signals.connect_safe(_slot.device_connected, _on_device_connection_changed)
+	Signals.connect_safe(_slot.device_disconnected, _on_device_connection_changed)
+
 	if device_type_override is StdSettingsPropertyInt:
 		(
 			Signals
@@ -181,6 +190,8 @@ func _device_activated(_device: StdInputDevice) -> void:
 func _get_device_type() -> DeviceType:
 	if device_type_override is StdSettingsPropertyInt:
 		var property_value: DeviceType = device_type_override.get_value()
+		if property_value == DEVICE_TYPE_GENERIC:
+			return _slot.get_joypad_device_type()
 		if property_value != DEVICE_TYPE_UNKNOWN:
 			return property_value
 
@@ -222,6 +233,10 @@ func _on_cursor_visibility_changed(cursor_visible: bool) -> void:
 func _on_device_activated(device: StdInputDevice) -> void:
 	set_process(device.device_type == DeviceType.KEYBOARD)
 	_device_activated(device)
+	_handle_update()
+
+
+func _on_device_connection_changed(_device: StdInputDevice) -> void:
 	_handle_update()
 
 
