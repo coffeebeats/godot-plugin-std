@@ -383,6 +383,62 @@ func test_input_slot_get_joypad_device_type_prefers_last_active_joypad() -> void
 	assert_eq(slot.get_joypad_device_type(), StdInputDevice.DEVICE_TYPE_STEAM_DECK)
 
 
+func test_input_slot_actions_include_every_action_of_the_set_and_its_layers() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: An action set declaring an action of every kind is loaded.
+	var action_set := _make_action_set(&"Test")
+	action_set.actions_analog_1d = [&"throttle"]
+	action_set.actions_analog_2d = [&"move_x", &"move_y"]
+	action_set.actions_digital = [&"test_action"]
+	action_set.action_absolute_mouse = &"aim"
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+
+	# When: A layer declaring its own digital and absolute mouse actions is enabled.
+	var layer := _make_layer(&"TestLayer", action_set)
+	layer.actions_digital = [&"fire"]
+	layer.action_absolute_mouse = &"look"
+	assert_true(slot.enable_action_set_layer(layer))
+
+	# Then: Every action of the set and the layer is active, in any order.
+	var got: Array[String] = slot._actions.duplicate()
+	got.sort()
+	assert_eq(
+		got,
+		(
+			[
+				"aim",
+				"fire",
+				"look",
+				"move_x",
+				"move_y",
+				"test_action",
+				"throttle",
+			]
+			as Array[String]
+		),
+	)
+
+
+func test_input_slot_absolute_mouse_action_activates_joypad() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	_activate_kbm_with_joypad_connected()
+
+	# Given: An action set declaring an absolute mouse action is loaded.
+	var action_set := _make_action_set(&"Test")
+	action_set.action_absolute_mouse = &"aim"
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+
+	# When: The joypad's absolute mouse action is published as pressed.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Then: The joypad is active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+
 func test_input_slot_load_of_another_action_set_clears_layers() -> void:
 	# Given: An input slot with a loaded action set.
 	add_child_autofree(slot)

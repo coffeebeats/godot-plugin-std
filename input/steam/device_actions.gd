@@ -11,6 +11,7 @@ extends StdInputDeviceActions
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const MotionFilter := preload("../motion_filter.gd")
 const Signals := preload("../../event/signal.gd")
 const SteamJoypadMonitor := preload("joypad_monitor.gd")
 
@@ -58,6 +59,14 @@ static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ig
 static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-order
 
 var _logger := StdLogger.create("std/input/steam/device-actions")
+
+## _pointer_motion maps slots to the filter which decides when that slot's "absolute
+## mouse" motion counts as joypad activity.
+var _pointer_motion: Dictionary = {}
+
+## _warp_remainder is the sub-pixel pointer motion not yet applied by a warp, which the
+## window system only accepts in whole pixels.
+var _warp_remainder := Vector2.ZERO
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -312,6 +321,30 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _get_pointer_motion_filter returns the slot's pointer motion filter, configured from
+## the action sets Steam currently reports active for it.
+##
+## NOTE: The threshold is read on each event rather than when sets change, since Steam
+## only reflects a set or layer change once the next input arrives.
+func _get_pointer_motion_filter(slot: int) -> MotionFilter:
+	var filter: MotionFilter = _pointer_motion.get(slot)
+	if not filter:
+		filter = MotionFilter.new()
+		_pointer_motion[slot] = filter
+
+	var action_sets: Array[StdInputActionSet] = []
+
+	var action_set := get_action_set(slot)
+	if action_set:
+		action_sets.append(action_set)
+
+	action_sets.append_array(list_action_set_layers(slot))
+
+	filter.configure(action_sets)
+
+	return filter
+
+
 func _publish_input_event(event: InputEvent) -> void:
 	if not event is InputEventAction:
 		return
@@ -322,6 +355,52 @@ func _publish_input_event(event: InputEvent) -> void:
 		Input.action_release(event.action)
 
 	Input.parse_input_event(event)
+
+
+## _publish_pointer_motion moves the pointer by `motion`, in pixels, for a Steam analog
+## action in a mouse mode. A captured cursor can't move, so the motion is delivered as a
+## mouse motion event for mouse-look; otherwise the cursor is warped, and the window
+## system echoes a positioned mouse motion event which hover and the cursor's reveal
+## logic handle like a real mouse.
+##
+## NOTE: Godot's Wayland backend can't warp a free pointer, so a Linux export must use
+## the X11 driver (Godot's default, and what gamescope presents on Steam Deck), and
+## macOS may not echo warps. A set which reads pointer deltas for mouse-look must
+## capture the cursor, or the pointer stops at the window edge, as a real mouse does.
+func _publish_pointer_motion(motion: Vector2) -> void:
+	if DisplayServer.mouse_get_mode() == DisplayServer.MOUSE_MODE_CAPTURED:
+		# NOTE: The viewport resolves hover from the event's position and `Input` stores
+		# it as the pointer's, so the current position is carried; a zero position would
+		# hover whatever control sits at the window origin on every delta. An event's
+		# position is in window pixels, which the window's own transform maps back to
+		# from the viewport's coordinates under content scaling.
+		var window := get_window()
+		var pointer := window.get_final_transform() * window.get_mouse_position()
+
+		var event := InputEventMouseMotion.new()
+		event.device = InputEvent.DEVICE_ID_EMULATION
+		event.position = pointer
+		event.global_position = pointer
+		event.relative = motion
+		event.screen_relative = motion
+
+		Input.parse_input_event(event)
+		return
+
+	var position := Vector2(
+		DisplayServer.mouse_get_position() - DisplayServer.window_get_position()
+	)
+	var size := Vector2(DisplayServer.window_get_size())
+
+	# NOTE: A warp lands on a whole pixel, so the fraction it drops is carried to the
+	# next motion; otherwise slow motion never moves the pointer and jitter drifts it.
+	# The remainder is dropped at a window edge, so it can't build up there.
+	var target := position + motion + _warp_remainder
+	var warped := target.round()
+	var clamped := warped.clamp(Vector2.ZERO, size - Vector2.ONE)
+	_warp_remainder = target - warped if clamped == warped else Vector2.ZERO
+
+	Input.warp_mouse(clamped)
 
 
 func _store_action_handles(action_set: StdInputActionSet) -> void:
@@ -415,11 +494,21 @@ func _on_input_action_event(
 					_publish_input_event(event)
 
 				Steam.INPUT_SOURCE_MODE_ABSOLUTE_MOUSE, Steam.INPUT_SOURCE_MODE_RELATIVE_MOUSE:
-					var event := InputEventMouseMotion.new()
-					event.device = -1  # FIXME: Should this be `0` or `device`?
-					event.relative = motion
+					_publish_pointer_motion(motion)
 
-					_publish_input_event(event)
+					# NOTE: The action is parsed without pressing it on `Input`, since it
+					# needn't exist in the `InputMap`; it only marks joypad activity. It's
+					# pressed once motion passes the active sets' cursor reveal threshold,
+					# the same filter `StdInputCursor` applies, so gyro wobble from a
+					# controller at rest can't switch glyphs away from a mouse in use.
+					var event := InputEventAction.new()
+					event.action = action
+					event.device = slot
+					event.event_index = action_handle
+					event.strength = 1.0
+					event.pressed = _get_pointer_motion_filter(slot).push(motion)
+
+					Input.parse_input_event(event)
 
 				_:
 					var event_x := InputEventAction.new()

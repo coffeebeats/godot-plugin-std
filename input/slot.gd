@@ -870,13 +870,9 @@ func _on_Self_action_configuration_changed() -> void:
 
 		# Update active actions.
 
-		for action in action_set.actions_analog_1d:
-			assert(action not in _actions, "found duplicate action")
-			_actions.append(action)
-		for action in action_set.actions_analog_2d:
-			assert(action not in _actions, "found duplicate action")
-			_actions.append(action)
-		for action in action_set.actions_digital:
+		# NOTE: Steam publishes the absolute mouse action as joypad activity, so a
+		# trackpad or gyro in use counts as the joypad being used.
+		for action in action_set.list_action_names(true):
 			assert(action not in _actions, "found duplicate action")
 			_actions.append(action)
 
