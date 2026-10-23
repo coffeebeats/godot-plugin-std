@@ -22,9 +22,9 @@ class Glyph:
 	var device_types: Array[DeviceType] = []
 	var drawn: Array[int] = []
 
-	func _update_glyph(device_type: DeviceType) -> bool:
+	func _update_glyph(device_type: DeviceType, index: int) -> bool:
 		device_types.append(device_type)
-		drawn.append(get_binding_index())
+		drawn.append(index)
 		return true
 
 

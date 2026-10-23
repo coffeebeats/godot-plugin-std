@@ -211,7 +211,7 @@ func _handle_update() -> void:
 	if _cycle_offset >= maxi(_get_cycle_length(), 1):
 		_cycle_offset = 0
 
-	var has_contents: bool = _update_glyph(device_type)
+	var has_contents: bool = _update_glyph(device_type, get_binding_index())
 
 	glyph_updated.emit(has_contents)
 
@@ -257,12 +257,14 @@ func _get_device_type() -> DeviceType:
 
 
 ## _update_glyph should be overridden by a subclass to actually enact the content
-## changes required. The return value should indicate whether the contents are populated
-## so that consumers can react to changes.
+## changes required, drawing the origin bound at `index` for `device_type`. The index is
+## `binding_index` as moved along by cycling, so it should be used in place of the
+## property. The return value should indicate whether the contents are populated so that
+## consumers can react to changes.
 ##
 ## NOTE: The `glyph_updated` signal will automatically be emitted after this method is
 ## called.
-func _update_glyph(_device_type: DeviceType) -> bool:
+func _update_glyph(_device_type: DeviceType, _index: int) -> bool:
 	assert(false, "unimplemented")
 	return false
 
