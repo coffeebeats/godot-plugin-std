@@ -148,18 +148,27 @@ func _list_all_action_origins(
 	if not action_set_handle:
 		return origins
 
-	# TODO: Find some means of specifying ahead of time which action type this is.
-
-	# NOTE: An action is digital or analog, so at most one of these lists has entries.
-	var action_handle: int = SteamDeviceActions.get_digital_action_handle(action)
-	var raw_origins := Steam.getDigitalActionOrigins(
-		device, action_set_handle, action_handle
-	)
-
-	action_handle = SteamDeviceActions.get_analog_action_handle(action)
-	raw_origins.append_array(
-		Steam.getAnalogActionOrigins(device, action_set_handle, action_handle)
-	)
+	# NOTE: Steam numbers digital and analog action handles separately, so the action's
+	# kind picks both the handle and the origins queried for it.
+	var raw_origins: Array = []
+	if action in action_set.actions_digital:
+		raw_origins = (
+			Steam
+			. getDigitalActionOrigins(
+				device,
+				action_set_handle,
+				SteamDeviceActions.get_digital_action_handle(action),
+			)
+		)
+	else:
+		raw_origins = (
+			Steam
+			. getAnalogActionOrigins(
+				device,
+				action_set_handle,
+				SteamDeviceActions.get_analog_action_handle(action),
+			)
+		)
 
 	# NOTE: Two bindings can translate to one origin on the target device type, which
 	# is listed once so a cycling glyph doesn't show it twice.

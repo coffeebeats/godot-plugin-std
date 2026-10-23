@@ -49,11 +49,20 @@ static var _action_set_handles: Dictionary = {}  # gdlint:ignore=class-definitio
 ## includes action set layers too.
 static var _action_sets: Dictionary = {}  # gdlint:ignore=class-definitions-order
 
-## _actions is a mapping from action handles to action names.
-static var _actions: Dictionary = {}  # gdlint:ignore=class-definitions-order
+## _analog_actions is a mapping from analog action handles to action names.
+##
+## NOTE: Steam numbers digital and analog action handles separately, so a digital action
+## and an analog action can share a handle; each kind keeps its own maps.
+static var _analog_actions: Dictionary = {}  # gdlint:ignore=class-definitions-order
 
-## _action_handles is a reverse mapping from action names to action handles.
-static var _action_handles: Dictionary = {}  # gdlint:ignore=class-definitions-order
+## _analog_action_handles is a reverse mapping from analog action names to handles.
+static var _analog_action_handles: Dictionary = {}  # gdlint:ignore=class-definitions-order,max-line-length
+
+## _digital_actions is a mapping from digital action handles to action names.
+static var _digital_actions: Dictionary = {}  # gdlint:ignore=class-definitions-order
+
+## _digital_action_handles is a reverse mapping from digital action names to handles.
+static var _digital_action_handles: Dictionary = {}  # gdlint:ignore=class-definitions-order,max-line-length
 
 ## _actions_seen_action_sets is the list of action sets which already have their action
 ## handles populated. This is used to skip duplicate work.
@@ -90,6 +99,20 @@ var _warp_remainder := Vector2.ZERO
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## get_action_for_event returns the name of the action behind an action event's handle,
+## or an empty name when no loaded set registered it.
+static func get_action_for_event(
+	event_type: Steam.InputActionEventType, action_handle: int
+) -> StringName:
+	match event_type:
+		Steam.INPUT_ACTION_EVENT_TYPE_DIGITAL_ACTION:
+			return _digital_actions.get(action_handle, &"")
+		Steam.INPUT_ACTION_EVENT_TYPE_ANALOG_ACTION:
+			return _analog_actions.get(action_handle, &"")
+
+	return &""
+
+
 ## get_action_set_handle returns the handle for the specified action set, fetching it
 ## from the Steam Input API if it hasn't yet been loaded.
 static func get_action_set_handle(id: StringName) -> int:
@@ -112,15 +135,15 @@ static func get_action_set_handle(id: StringName) -> int:
 static func get_analog_action_handle(action: StringName) -> int:
 	assert(_is_initialized, "invalid state; Steam Input not initialized")
 
-	var handle: int = _action_handles.get(action, 0)
+	var handle: int = _analog_action_handles.get(action, 0)
 	if not handle:
 		handle = Steam.getAnalogActionHandle(action)
 
 	if not handle:
 		return 0
 
-	_actions[handle] = action
-	_action_handles[action] = handle
+	_analog_actions[handle] = action
+	_analog_action_handles[action] = handle
 
 	return handle
 
@@ -130,15 +153,15 @@ static func get_analog_action_handle(action: StringName) -> int:
 static func get_digital_action_handle(action: StringName) -> int:
 	assert(_is_initialized, "invalid state; Steam Input not initialized")
 
-	var handle: int = _action_handles.get(action, 0)
+	var handle: int = _digital_action_handles.get(action, 0)
 	if not handle:
 		handle = Steam.getDigitalActionHandle(action)
 
 	if not handle:
 		return 0
 
-	_actions[handle] = action
-	_action_handles[action] = handle
+	_digital_actions[handle] = action
+	_digital_action_handles[action] = handle
 
 	return handle
 
@@ -543,20 +566,12 @@ func _store_action_handles(action_set: StdInputActionSet) -> void:
 		if action_set.get_analog_2d_action(action):
 			continue
 
-		var handle := get_digital_action_handle(action)
-		if not handle:
+		if not get_digital_action_handle(action):
 			assert(false, "failed to fetch action handle")
-			continue
-
-		_actions[handle] = action
 
 	for action in action_set.actions_analog_1d:
-		var handle := get_analog_action_handle(action)
-		if not handle:
+		if not get_analog_action_handle(action):
 			assert(false, "failed to fetch action handle")
-			continue
-
-		_actions[handle] = action
 
 	for action in action_set.actions_analog_2d:
 		assert(
@@ -564,18 +579,12 @@ func _store_action_handles(action_set: StdInputActionSet) -> void:
 			"invalid config; conflicting action type"
 		)
 
-		var handle := get_analog_action_handle(action)
-		if not handle:
+		if not get_analog_action_handle(action):
 			assert(false, "failed to fetch action handle")
-			continue
-
-		_actions[handle] = action
 
 	if action_set.action_absolute_mouse:
-		var handle := get_analog_action_handle(action_set.action_absolute_mouse)
-		assert(handle, "failed to fetch action handle")
-		if handle:
-			_actions[handle] = action_set.action_absolute_mouse
+		if not get_analog_action_handle(action_set.action_absolute_mouse):
+			assert(false, "failed to fetch action handle")
 
 	_actions_seen_action_sets.append(action_set)
 
@@ -594,15 +603,15 @@ func _on_input_action_event(
 	if not is_active:
 		return
 
-	if not action_handle in _actions:
-		assert(false, "missing action handle: %d: %s" % [action_handle, action_data])
+	# NOTE: Steam can report a handle no loaded set registered (observed for digital
+	# actions on a configuration load), which has no name to publish under.
+	var action := get_action_for_event(event_type, action_handle)
+	if not action:
 		return
 
 	var slot: int = joypad_monitor.get_slot_for_device_id(device)
 	if slot == -1:
 		return
-
-	var action: StringName = _actions[action_handle]
 
 	match event_type:
 		Steam.INPUT_ACTION_EVENT_TYPE_ANALOG_ACTION:
