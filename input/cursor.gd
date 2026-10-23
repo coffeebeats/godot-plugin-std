@@ -47,8 +47,16 @@ const Signals := preload("../event/signal.gd")
 
 const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+## confined_property is an optional settings property which, when set, decides whether
+## the cursor is confined to the window in place of the active action sets' choice. A
+## captured cursor stays captured either way.
+@export var confined_property: StdSettingsPropertyBool = null
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+# gdlint:ignore=class-definitions-order
 static var _logger := StdLogger.create("std/input/cursor")
 
 var _cursor_captured: bool = false
@@ -70,6 +78,7 @@ var _reveal_motion_deltas := PackedVector2Array()
 var _reveal_motion_times := PackedInt64Array()
 var _reveal_mouse_buttons: Array[MouseButton] = []
 var _reveal_window: float = 0.0
+var _sets_confined: bool = false
 var _time_since_mouse_motion: float = 0.0
 var _was_cursor_visible: bool = false
 
@@ -79,6 +88,12 @@ var _was_cursor_visible: bool = false
 ## get_hovered returns the control currently tracked as hovered, or null.
 func get_hovered() -> Control:
 	return _hovered
+
+
+## get_is_confined returns whether the cursor is currently confined to the window. A
+## captured cursor isn't confined.
+func get_is_confined() -> bool:
+	return _cursor_confined and not _cursor_captured
 
 
 ## get_is_visible returns whether the cursor is currently visible.
@@ -244,7 +259,8 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 	has_changed = has_changed or captured != _cursor_captured
 	_cursor_captured = captured
 
-	var confined := action_sets.any(func(s): return s.cursor_confined)
+	_sets_confined = action_sets.any(func(s): return s.cursor_confined)
+	var confined := _resolve_confined()
 	has_changed = has_changed or confined != _cursor_confined
 	_cursor_confined = confined
 
@@ -255,8 +271,34 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _enter_tree() -> void:
+	if not confined_property:
+		return
+
+	assert(
+		confined_property.scope is StdSettingsScope,
+		"invalid config; missing scope for property",
+	)
+
+	Signals.connect_safe(confined_property.value_changed, _on_confined_property_changed)
+
+	# NOTE: A scope emits no value change as it loads, so the value is read on `loaded`.
+	if not confined_property.scope.is_loaded:
+		Signals.connect_safe(
+			confined_property.scope.loaded, _on_confined_property_changed
+		)
+
+
 func _exit_tree() -> void:
 	StdGroup.with_id(GROUP_INPUT_CURSOR).remove_member(self)
+
+	if confined_property:
+		Signals.disconnect_safe(
+			confined_property.value_changed, _on_confined_property_changed
+		)
+		Signals.disconnect_safe(
+			confined_property.scope.loaded, _on_confined_property_changed
+		)
 
 
 func _input(event: InputEvent) -> void:
@@ -321,6 +363,9 @@ func _ready() -> void:
 
 	assert(StdGroup.is_empty(GROUP_INPUT_CURSOR), "invalid state; duplicate node found")
 	StdGroup.with_id(GROUP_INPUT_CURSOR).add_member(self)
+
+	if confined_property:
+		_cursor_confined = _resolve_confined()
 
 	_cursor_visible = (
 		DisplayServer.mouse_get_mode()
@@ -424,6 +469,13 @@ func _is_significant_motion(relative: Vector2) -> bool:
 		total += delta
 
 	return _exceeds_reveal_minimum(total)
+
+
+func _resolve_confined() -> bool:
+	if confined_property:
+		return confined_property.get_value()
+
+	return _sets_confined
 
 
 ## _track_hide_actions records every hide action `event` newly presses and returns the
@@ -539,6 +591,15 @@ func _update_focus(trigger: StringName = &"") -> void:
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_confined_property_changed(_value: Variant = null) -> void:
+	var confined := _resolve_confined()
+	if confined == _cursor_confined:
+		return
+
+	_cursor_confined = confined
+	_on_properties_changed(&"", false)
 
 
 func _on_gui_focus_changed(control: Control) -> void:

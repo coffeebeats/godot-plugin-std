@@ -44,6 +44,114 @@ func test_get_hovered_returns_hovered_control() -> void:
 	assert_null(cursor.get_hovered())
 
 
+func test_get_is_confined_follows_action_sets_without_confined_property() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+	assert_false(cursor.get_is_confined(), "precondition: not confined")
+
+	# When: An action set which confines the cursor is applied.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_confined = true
+	cursor.update_configuration([action_set])
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+
+func test_get_is_confined_follows_confined_property_over_action_sets() -> void:
+	# Given: A cursor added to the scene whose confinement property is off.
+	var property := _make_confined_property(false)
+	cursor.confined_property = property
+	add_child_autofree(cursor)
+
+	# When: An action set which confines the cursor is applied.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_confined = true
+	cursor.update_configuration([action_set])
+
+	# Then: The cursor isn't confined.
+	assert_false(cursor.get_is_confined())
+
+	# When: The property is turned on.
+	property.set_value(true)
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+
+func test_get_is_confined_true_when_property_on_over_unconfined_set() -> void:
+	# Given: A cursor added to the scene whose confinement property is on.
+	cursor.confined_property = _make_confined_property(true)
+	add_child_autofree(cursor)
+
+	# When: An action set which doesn't confine the cursor is applied.
+	cursor.update_configuration([StdInputActionSet.new()])
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+
+func test_get_is_confined_true_on_ready_when_property_on() -> void:
+	# Given: A cursor whose confinement property is on.
+	cursor.confined_property = _make_confined_property(true)
+
+	# When: The cursor is added to the scene before any action set is applied.
+	add_child_autofree(cursor)
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+
+func test_get_is_confined_false_while_captured() -> void:
+	# Given: A cursor added to the scene whose confinement property is on.
+	cursor.confined_property = _make_confined_property(true)
+	add_child_autofree(cursor)
+	assert_true(cursor.get_is_confined(), "precondition: confined")
+
+	# When: An action set which captures the cursor is applied.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_captured = true
+	cursor.update_configuration([action_set])
+
+	# Then: The cursor isn't confined.
+	assert_false(cursor.get_is_confined())
+
+
+func test_get_is_confined_follows_confined_property_once_its_scope_loads() -> void:
+	# Given: A cursor added to the scene whose confinement property's scope is unloaded.
+	var property := _make_confined_property(false)
+	cursor.confined_property = property
+	add_child_autofree(cursor)
+	assert_false(cursor.get_is_confined(), "precondition: not confined")
+
+	# When: The scope loads a saved value turning the property on.
+	property.scope.config.set_bool(property.category, property.name, true)
+	property.scope.is_loaded = true
+	property.scope.loaded.emit()
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+
+func test_confined_property_change_does_not_emit_visibility_changed() -> void:
+	# Given: A cursor added to the scene whose confinement property is off.
+	var property := _make_confined_property(false)
+	cursor.confined_property = property
+	add_child_autofree(cursor)
+
+	# Given: The cursor's signals are watched.
+	watch_signals(cursor)
+
+	# When: The property is turned on.
+	property.set_value(true)
+
+	# Then: The cursor is confined.
+	assert_true(cursor.get_is_confined())
+
+	# Then: The cursor's visibility isn't reported as changed.
+	assert_signal_not_emitted(cursor, "cursor_visibility_changed")
+
+
 func test_get_is_visible_returns_true_by_default() -> void:
 	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
@@ -1239,6 +1347,17 @@ func _make_anchor_handler() -> StdInputCursorFocusHandler:
 	handler.use_as_anchor = true
 	_make_focusable_button().add_child(handler)
 	return handler
+
+
+## _make_confined_property returns a cursor confinement property whose value defaults
+## to `value`, in a new scope which isn't loaded yet.
+func _make_confined_property(value: bool) -> StdSettingsPropertyBool:
+	var property := StdSettingsPropertyBool.new()
+	property.scope = StdSettingsScope.new()
+	property.category = &"test"
+	property.name = &"confined"
+	property.default = value
+	return property
 
 
 ## _make_focusable_button adds a focusable button to the scene and returns it.

@@ -54,8 +54,8 @@ const PROPERTY_STATUS_OFF := PropertyStatus.OFF
 
 ## cursor_confined defines whether the cursor is confined to the game window.
 ##
-## NOTE: This property will be true if the current action set or any activated action
-## set layer enables it.
+## NOTE: The cursor is confined if the current action set or any activated action set
+## layer enables it, unless `StdInputCursor.confined_property` is set.
 @export var cursor_confined: bool = false
 
 ## cursor_captured defines whether the cursor is captured.
