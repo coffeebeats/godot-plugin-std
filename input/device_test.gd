@@ -73,6 +73,37 @@ func test_is_matching_event_origin_matches_keyboard_events() -> void:
 	assert_false(device.is_matching_event_origin(joy_event))
 
 
+func test_is_matching_event_origin_matches_engine_keyboard_and_mouse_ids() -> void:
+	# Given: A keyboard device, under the ID its slot gives it.
+	var device := _create_device(StdInputDevice.DEVICE_TYPE_KEYBOARD, 0)
+	add_child_autofree(device)
+
+	# Given: A key and a mouse event, under the IDs the engine reports them with.
+	var key_event := InputEventKey.new()
+	key_event.device = InputEvent.DEVICE_ID_KEYBOARD
+
+	var mouse_event := InputEventMouseButton.new()
+	mouse_event.device = InputEvent.DEVICE_ID_MOUSE
+
+	# When/Then: Both events match.
+	assert_true(device.is_matching_event_origin(key_event))
+	assert_true(device.is_matching_event_origin(mouse_event))
+
+	# Given: A mouse event the engine emulated from a touch.
+	var emulated_event := InputEventMouseButton.new()
+	emulated_event.device = InputEvent.DEVICE_ID_EMULATION
+
+	# When/Then: The emulated event does not match.
+	assert_false(device.is_matching_event_origin(emulated_event))
+
+	# Given: A joypad event from a second joypad.
+	var joy_event := InputEventJoypadButton.new()
+	joy_event.device = 1
+
+	# When/Then: The joypad event does not match.
+	assert_false(device.is_matching_event_origin(joy_event))
+
+
 func test_is_matching_event_origin_matches_joypad_events() -> void:
 	# Given: A joypad device.
 	var device := _create_device(StdInputDevice.DEVICE_TYPE_GENERIC, 1)
@@ -118,6 +149,13 @@ func test_is_matching_event_origin_matches_touch_events() -> void:
 
 	# When/Then: The drag event matches.
 	assert_true(device.is_matching_event_origin(drag_event))
+
+	# Given: A key event, under the ID the engine reports it with.
+	var key_event := InputEventKey.new()
+	key_event.device = InputEvent.DEVICE_ID_KEYBOARD
+
+	# When/Then: The key event does not match.
+	assert_false(device.is_matching_event_origin(key_event))
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #

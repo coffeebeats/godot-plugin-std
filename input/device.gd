@@ -150,18 +150,26 @@ static func get_device_category(
 
 ## is_matching_event_origin returns whether the provided input event originated from
 ## this input device.
+##
+## NOTE: The keyboard and touch devices match an event by its type, not its device ID.
+## The keyboard device stands for every keyboard and mouse, which Godot reports as
+## `InputEvent.DEVICE_ID_KEYBOARD` and `InputEvent.DEVICE_ID_MOUSE` rather than as this
+## device's ID. A mouse event Godot emulates from a touch is left out, since a touch
+## rather than a mouse produced it.
 func is_matching_event_origin(event: InputEvent) -> bool:
 	match device_type:
 		DEVICE_TYPE_UNKNOWN:
 			assert(false, "invalid state; missing device type")
 			return false
 		DEVICE_TYPE_KEYBOARD:
-			assert(event.device == device_id, "invalid state; conflicting device ID")
-
-			return event is InputEventKey or event is InputEventMouse
+			return (
+				event is InputEventKey
+				or (
+					event is InputEventMouse
+					and event.device != InputEvent.DEVICE_ID_EMULATION
+				)
+			)
 		DEVICE_TYPE_TOUCH:
-			assert(event.device == device_id, "invalid state; conflicting device ID")
-
 			return (
 				event is InputEventScreenTouch
 				or event is InputEventScreenDrag
