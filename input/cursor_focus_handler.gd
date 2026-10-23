@@ -151,6 +151,7 @@ func _ready() -> void:
 
 	Signals.connect_safe(_control.focus_entered, _on_control_focus_entered)
 	Signals.connect_safe(_control.focus_exited, _on_control_focus_exited)
+	Signals.connect_safe(_control.gui_input, _on_control_gui_input)
 	Signals.connect_safe(_control.mouse_entered, _on_control_mouse_entered)
 	Signals.connect_safe(_control.mouse_exited, _on_control_mouse_exited)
 
@@ -313,6 +314,23 @@ func _on_control_focus_entered() -> void:
 func _on_control_focus_exited() -> void:
 	_focused = false
 	unfocused.emit()
+
+
+func _on_control_gui_input(event: InputEvent) -> void:
+	if not event is InputEventMouseButton or not event.pressed:
+		return
+
+	# NOTE: A click is a press of one of the cursor's reveal buttons, as for
+	# `cursor_click_activates_kbm`, so a wheel scroll over the control isn't one.
+	if event.button_index not in _cursor.get_reveal_mouse_buttons():
+		return
+
+	# NOTE: Only a control which could take a hover is remembered, so a click never
+	# returns focus to a control the cursor wouldn't otherwise focus.
+	if _control_focus_mode == FOCUS_NONE or _is_blocked() or _is_outside_focus_root:
+		return
+
+	_cursor.report_clicked(_control)
 
 
 func _on_control_mouse_entered() -> void:
