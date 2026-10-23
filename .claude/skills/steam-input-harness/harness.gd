@@ -120,6 +120,10 @@ const STEPS := [
 		"disconnect",
 		"HOLD JUMP and, while holding, unplug the controller. Then plug it back in and press JUMP once."
 	],
+	[
+		"generic_override",
+		"Hands off: the harness presses SPACE itself. UNPLUG the controller, wait a second, then plug it back in WITHOUT pressing anything on it. The step ends 2 s after it reconnects."
+	],
 ]
 
 
@@ -166,6 +170,22 @@ class CycleGlyph:
 		return true
 
 
+## GenericGlyph records the family and the Steam texture size of each redraw, for a glyph
+## locked to controller prompts by a `DEVICE_TYPE_GENERIC` override.
+class GenericGlyph:
+	extends StdInputGlyph
+	var drawn: Array[String] = []
+
+	func _update_glyph(device_type: DeviceType) -> bool:
+		var texture := _slot.get_action_glyph(
+			action_set, action, binding_index, Vector2(64, 64), device_type
+		)
+		var values: Array = StdInputDevice.DeviceType.values()
+		var family := str(StdInputDevice.DeviceType.keys()[values.find(device_type)])
+		drawn.append("%s:%s" % [family, str(texture.get_size()) if texture else "null"])
+		return texture != null
+
+
 var _app_id: int = DEFAULT_APP_ID
 var _std_input: String = ""
 var _scripts: Dictionary = {}
@@ -179,6 +199,7 @@ var _monitor: StdInputSlot.JoypadMonitor
 var _steam_actions: StdInputDeviceActions
 var _steam_glyphs: StdInputDeviceGlyphs
 var _glyph: CycleGlyph
+var _generic_glyph: GenericGlyph
 var _origin_button: Button
 
 var _instruction: Label
@@ -1048,6 +1069,71 @@ func _s_disconnect_exit() -> void:
 		(
 			"disconnect: jump still pressed right after disconnect=%s (expect false); activations=%s"
 			% [_state["jump_after_disc"], _activations]
+		)
+	)
+
+
+func _s_generic_override_enter() -> void:
+	_activations.clear()
+	_state = {"unplugged": false, "replugged_at": -1.0, "last_active": "unchecked"}
+
+	if not _generic_glyph:
+		var override := StdSettingsPropertyInt.new()
+		override.category = &"harness"
+		override.name = &"glyph_override"
+		override.scope = _scope
+		override.default = StdInputDevice.DEVICE_TYPE_GENERIC
+
+		_generic_glyph = GenericGlyph.new()
+		_generic_glyph.action_set = _set
+		_generic_glyph.action = &"jump"
+		_generic_glyph.player_id = 1
+		_generic_glyph.device_type_override = override
+		add_child(_generic_glyph)
+
+	# NOTE: The harness types SPACE itself, so the keyboard is active when the pad
+	# reconnects and the slot, having seen player input, leaves the pad inactive.
+	for pressed in [true, false]:
+		var key := InputEventKey.new()
+		key.keycode = KEY_SPACE
+		key.pressed = pressed
+		Input.parse_input_event(key)
+
+	_generic_glyph.drawn.clear()
+	_generic_glyph.update()
+
+
+func _s_generic_override_tick(_delta: float) -> void:
+	var joypads := _slot.get_connected_devices(false)
+	if joypads.is_empty() and not _state["unplugged"]:
+		_state["unplugged"] = true
+		_log("generic_override: unplugged; drawn=%s" % [_generic_glyph.drawn])
+	if _state["unplugged"] and joypads.size() > 0 and _state["replugged_at"] < 0.0:
+		_state["replugged_at"] = _step_time
+		var last := _slot.get_last_active_joypad_device()
+		_state["last_active"] = _type_name(last.device_type) if last else "none"
+
+
+func _s_generic_override_check() -> bool:
+	return _state["replugged_at"] >= 0.0 and _step_time - _state["replugged_at"] >= 2.0
+
+
+func _s_generic_override_exit() -> void:
+	var device_type := _slot.get_joypad_device_type()
+	var texture := _slot.get_action_glyph(
+		_set, &"jump", 0, Vector2(64, 64), device_type
+	)
+	_log(
+		(
+			"generic_override: active=%s last active joypad at replug=%s (expect KEYBOARD, none); joypad type=%s glyph=%s; drawn=%s (expect a GENERIC redraw at unplug, then the pad's family with a size after replug); activations=%s"
+			% [
+				_active_name(),
+				_state["last_active"],
+				_type_name(device_type),
+				str(texture.get_size()) if texture else "null",
+				_generic_glyph.drawn,
+				_activations,
+			]
 		)
 	)
 
