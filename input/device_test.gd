@@ -78,10 +78,11 @@ func test_is_matching_event_origin_matches_engine_keyboard_and_mouse_ids() -> vo
 	var device := _create_device(StdInputDevice.DEVICE_TYPE_KEYBOARD, 0)
 	add_child_autofree(device)
 
-	# Given: A key and a mouse event, under the IDs the engine reports them with.
+	# Given: A key event, under the ID the engine reports keys with.
 	var key_event := InputEventKey.new()
 	key_event.device = InputEvent.DEVICE_ID_KEYBOARD
 
+	# Given: A mouse event, under the ID the engine reports mice with.
 	var mouse_event := InputEventMouseButton.new()
 	mouse_event.device = InputEvent.DEVICE_ID_MOUSE
 
