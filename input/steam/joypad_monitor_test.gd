@@ -82,9 +82,13 @@ func test_joypad_monitor_broadcast_skips_empty_slots() -> void:
 	# When: The connected joypads are broadcast.
 	monitor.broadcast_connected_joypads()
 
-	# Then: Only the occupied slot is reported.
+	# Then: Only the occupied slot is reported, as a generic joypad, since Steam Input
+	# isn't running to name the device's family.
+	assert_engine_error("SteamAPI_SteamInput() == nullptr")
 	assert_signal_emit_count(monitor, "joy_connected", 1)
-	assert_signal_emitted_with_parameters(monitor, "joy_connected", [1])
+	assert_signal_emitted_with_parameters(
+		monitor, "joy_connected", [1, StdInputDevice.DEVICE_TYPE_GENERIC]
+	)
 
 
 func test_joypad_monitor_disconnect_drops_trailing_empty_slots() -> void:
@@ -108,6 +112,26 @@ func test_joypad_monitor_disconnect_drops_trailing_empty_slots() -> void:
 	# Then: No slot is kept and Steam Input is no longer in use.
 	assert_eq(monitor._connected, PackedInt64Array())
 	assert_false(monitor.steam_input_enabled_property.get_value())
+
+
+func test_joypad_monitor_maps_steam_input_types_to_device_families() -> void:
+	# When/Then: Known Steam Input types map to their family, and the rest are generic.
+	assert_eq(
+		_joypad_monitor.get_device_type(Steam.INPUT_TYPE_PS4_CONTROLLER),
+		StdInputDevice.DEVICE_TYPE_PS_4,
+	)
+	assert_eq(
+		_joypad_monitor.get_device_type(Steam.INPUT_TYPE_XBOXONE_CONTROLLER),
+		StdInputDevice.DEVICE_TYPE_XBOX_ONE,
+	)
+	assert_eq(
+		_joypad_monitor.get_device_type(Steam.INPUT_TYPE_STEAM_DECK_CONTROLLER),
+		StdInputDevice.DEVICE_TYPE_STEAM_DECK,
+	)
+	assert_eq(
+		_joypad_monitor.get_device_type(Steam.INPUT_TYPE_UNKNOWN),
+		StdInputDevice.DEVICE_TYPE_GENERIC,
+	)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
