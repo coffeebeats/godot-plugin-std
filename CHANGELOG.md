@@ -1,5 +1,15 @@
 # Changelog
 
+## 7.1.0 (2026-10-23)
+
+## What's Changed
+* fix(input): match keyboard and mouse events under Godot 4.7's device IDs by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/527
+* fix(input): leave no binding override when an origin moves back to its default by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/528
+* feat(input): return focus to the control last clicked when the cursor hides by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/529
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v7.0.0...v7.1.0
+
 ## 7.0.0 (2026-10-23)
 
 ## What's Changed
