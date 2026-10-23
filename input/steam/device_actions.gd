@@ -456,6 +456,16 @@ func _on_input_action_event(
 			_publish_input_event(event)
 
 
+func _on_input_configuration_loaded(
+	_app_id: int,
+	_device_handle: int,
+	_config_data: Dictionary,
+) -> void:
+	# NOTE: Steam loads a configuration once per controller per focus change, which
+	# covers a rebind in its configurator.
+	bindings_changed.emit()
+
+
 func _on_steam_input_state_changed(enabled: bool) -> void:
 	if not enabled or _is_initialized:
 		return
@@ -463,3 +473,6 @@ func _on_steam_input_state_changed(enabled: bool) -> void:
 	_is_initialized = true
 
 	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
+	Signals.connect_safe(
+		Steam.input_configuration_loaded, _on_input_configuration_loaded
+	)

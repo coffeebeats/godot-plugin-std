@@ -20,6 +20,123 @@ var slot: StdInputSlot = null
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
+func test_input_slot_forwards_component_bindings_changed() -> void:
+	# Given: An input slot added to the scene, with its signals watched.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	watch_signals(slot)
+
+	# When: The keyboard's actions component reports changed bindings.
+	slot.actions_kbm.bindings_changed.emit()
+
+	# Then: The slot reports a changed action configuration.
+	assert_signal_emit_count(slot, "action_configuration_changed", 1)
+
+	# When: The joypad's actions component reports changed bindings.
+	slot.actions_joy.bindings_changed.emit()
+
+	# Then: The slot reports it again.
+	assert_signal_emit_count(slot, "action_configuration_changed", 2)
+
+
+func test_input_slot_swap_forwards_the_next_components_bindings_changed() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	var actions_prev := slot.actions_joy
+
+	# Given: The joypad components are swapped for new ones.
+	var joypad_monitor := JoypadMonitor.new()
+	add_child_autofree(joypad_monitor)
+	var actions_next := DeviceActions.new()
+	add_child_autofree(actions_next)
+	slot.swap_joypad_components(
+		joypad_monitor, actions_next, slot.glyphs_joy, slot.haptics_joy
+	)
+	watch_signals(slot)
+
+	# When: The previous actions component reports changed bindings.
+	actions_prev.bindings_changed.emit()
+
+	# Then: The slot ignores it.
+	assert_signal_not_emitted(slot, "action_configuration_changed")
+
+	# When: The next actions component reports changed bindings.
+	actions_next.bindings_changed.emit()
+
+	# Then: The slot reports a changed action configuration.
+	assert_signal_emit_count(slot, "action_configuration_changed", 1)
+
+
+func test_input_slot_shared_actions_component_forwards_bindings_changed_once() -> void:
+	# Given: An input slot whose keyboard and joypads share one actions component.
+	slot.actions_joy = slot.actions_kbm
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	watch_signals(slot)
+
+	# When: The shared component reports changed bindings.
+	slot.actions_kbm.bindings_changed.emit()
+
+	# Then: The slot reports a changed action configuration once.
+	assert_signal_emit_count(slot, "action_configuration_changed", 1)
+
+	# Given: The joypad components are swapped back to the shared component.
+	var joypad_monitor := JoypadMonitor.new()
+	add_child_autofree(joypad_monitor)
+	slot.swap_joypad_components(
+		joypad_monitor, slot.actions_kbm, slot.glyphs_joy, slot.haptics_joy
+	)
+
+	# When: The shared component reports changed bindings again.
+	slot.actions_kbm.bindings_changed.emit()
+
+	# Then: The slot reports it once more.
+	assert_signal_emit_count(slot, "action_configuration_changed", 2)
+
+
+func test_input_slot_swap_from_shared_actions_forwards_kbm_bindings_changed() -> void:
+	# Given: An input slot whose keyboard and joypads share one actions component.
+	slot.actions_joy = slot.actions_kbm
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: The joypad components are swapped for a separate actions component.
+	var joypad_monitor := JoypadMonitor.new()
+	add_child_autofree(joypad_monitor)
+	var actions_next := DeviceActions.new()
+	add_child_autofree(actions_next)
+	slot.swap_joypad_components(
+		joypad_monitor, actions_next, slot.glyphs_joy, slot.haptics_joy
+	)
+	watch_signals(slot)
+
+	# When: The keyboard's actions component reports changed bindings.
+	slot.actions_kbm.bindings_changed.emit()
+
+	# Then: The slot reports a changed action configuration.
+	assert_signal_emit_count(slot, "action_configuration_changed", 1)
+
+	# When: The joypad's new actions component reports changed bindings.
+	actions_next.bindings_changed.emit()
+
+	# Then: The slot reports it again.
+	assert_signal_emit_count(slot, "action_configuration_changed", 2)
+
+
+func test_input_slot_ignores_bindings_changed_before_ready() -> void:
+	# Given: The keyboard actions report a bindings change as the slot enters the tree.
+	watch_signals(slot)
+	slot.tree_entered.connect(func(): slot.actions_kbm.bindings_changed.emit())
+
+	# When: The slot is added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Then: No action configuration change was reported.
+	assert_signal_not_emitted(slot, "action_configuration_changed")
+
+
 func test_input_slot_connects_and_disconnects_joypads() -> void:
 	# Given: A new `StdInputSlot` is instantiated.
 	assert_is(slot, StdInputSlot)
