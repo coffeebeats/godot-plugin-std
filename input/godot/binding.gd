@@ -74,14 +74,10 @@ static func bind_action(
 			var category := get_action_set_category(action_set, device_type)
 			var key := get_action_key(a, i)
 
-			if a == action and i == index:
-				var origin_current := scope.config.get_int(category, key, UNSET)
-				var origin_default := _get_origin_from_project_settings(
-					a,
-					device_type,
-					i,
-				)
+			var origin_current := scope.config.get_int(category, key, UNSET)
+			var origin_default := _get_origin_from_project_settings(a, device_type, i)
 
+			if a == action and i == index:
 				if value_encoded == origin_default:
 					if origin_current == UNSET:
 						continue
@@ -116,28 +112,28 @@ static func bind_action(
 
 				continue
 
-			var action_changed := _compare_and_swap(
-				scope, category, key, value_encoded, EMPTY
+			# NOTE: A slot gives up the origin only while bound to it, by a stored origin
+			# or by its default, so a different origin the user bound there is kept.
+			var origin_bound := (
+				origin_default if origin_current == UNSET else origin_current
 			)
-			if (
-				not action_changed
-				and (
-					value_encoded
-					== _get_origin_from_project_settings(
-						a,
-						device_type,
-						i,
-					)
-				)
-			):
-				action_changed = scope.config.set_int(category, key, EMPTY)
+			if origin_bound != value_encoded:
+				continue
+
+			# NOTE: A slot whose default is unbound is erased rather than emptied, so it
+			# matches its default again instead of reading as a user override.
+			var action_changed := (
+				scope.config.erase(category, key)
+				if origin_default == UNSET
+				else scope.config.set_int(category, key, EMPTY)
+			)
 
 			if action_changed:
 				(
 					_logger
 					. debug(
 						"Unbound action.",
-						{&"set": action_set.name, &"action": action},
+						{&"set": action_set.name, &"action": a},
 					)
 				)
 
@@ -358,26 +354,6 @@ func _init() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-static func _compare_and_swap(
-	scope: StdSettingsScope,
-	category: StringName,
-	key: StringName,
-	old: int,
-	new: int,
-) -> bool:
-	assert(old >= 0, "invalid argument: unsupported index")
-	assert(new >= 0, "invalid argument: unsupported index")
-
-	var current: int = scope.config.get_int(category, key, UNSET)
-	if current != old:
-		return false
-
-	var changed := scope.config.set_int(category, key, new)
-	assert(changed, "invalid state; expected value update")
-
-	return changed
 
 
 static func _get_event_from_project_settings(
