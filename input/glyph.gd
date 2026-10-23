@@ -42,6 +42,26 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 ## binding_index is the index/rank (e.g. primary or secondary) of the action binding.
 @export var binding_index: int = 0
 
+## cycle_interval is the time (in seconds) each origin bound to the action is shown
+## before the glyph advances to the next one, starting over from `binding_index`, so a
+## player sees every binding. `0` shows `binding_index` alone.
+@export var cycle_interval: float = 0.0:
+	set(value):
+		if value == cycle_interval:
+			return
+
+		cycle_interval = value
+
+		if Engine.is_editor_hint() or not is_node_ready():
+			return
+
+		# NOTE: A change restarts the cycle, since the origin count is only fetched while
+		# cycling, and starts or stops the processing which drives it.
+		_cycle_offset = 0
+		_cycle_time = 0.0
+		set_process(_slot.device_type == DeviceType.KEYBOARD or cycle_interval > 0.0)
+		_handle_update()
+
 @export_subgroup("Player")
 
 ## player_id is a player identifier which will be used to look up the action's input
@@ -61,15 +81,26 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var _cycle_offset: int = 0
+var _cycle_time: float = 0.0
 var _keyboard_language: String = _get_keyboard_language()
+var _origin_count: int = 0
 var _slot: StdInputSlot = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## update forces the glyph icon to update itself; this should be called after changing
-## the action configuration.
+## get_binding_index returns the index of the origin to display: `binding_index`, moved
+## along by cycling.
+func get_binding_index() -> int:
+	return binding_index + _cycle_offset
+
+
+## update forces the glyph icon to update itself, restarting its cycle from
+## `binding_index`; this should be called after changing the action configuration.
 func update() -> void:
+	_cycle_offset = 0
+	_cycle_time = 0.0
 	_handle_update()
 
 
@@ -107,12 +138,26 @@ func _get_configuration_warnings() -> PackedStringArray:
 	return warnings
 
 
-func _process(_delta: float) -> void:
-	var keyboard_language := _get_keyboard_language()
+func _process(delta: float) -> void:
+	if _slot.device_type == DeviceType.KEYBOARD:
+		var keyboard_language := _get_keyboard_language()
 
-	if keyboard_language != _keyboard_language:
-		_keyboard_language = keyboard_language
-		_handle_update()
+		if keyboard_language != _keyboard_language:
+			_keyboard_language = keyboard_language
+			_handle_update()
+
+	if cycle_interval <= 0.0 or _get_cycle_length() < 2:
+		return
+
+	_cycle_time += delta
+	if _cycle_time < cycle_interval:
+		return
+
+	# NOTE: A frame longer than the interval advances the glyph once and drops the
+	# surplus, rather than catching up a step per frame afterwards.
+	_cycle_time = fmod(_cycle_time, cycle_interval)
+	_cycle_offset = (_cycle_offset + 1) % _get_cycle_length()
+	_handle_update()
 
 
 func _ready() -> void:
@@ -120,7 +165,7 @@ func _ready() -> void:
 		set_process(false)
 		return
 
-	set_process(_slot.device_type == DeviceType.KEYBOARD)
+	set_process(_slot.device_type == DeviceType.KEYBOARD or cycle_interval > 0.0)
 
 	Signals.connect_safe(_slot.action_configuration_changed, _on_actions_changed)
 	Signals.connect_safe(_slot.cursor_visibility_changed, _on_cursor_visibility_changed)
@@ -148,12 +193,25 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+func _get_cycle_length() -> int:
+	return _origin_count - binding_index
+
+
 func _handle_update() -> void:
 	assert(action, "invalid config; missing action")
 	assert(action_set is StdInputActionSet, "invalid config; missing action set")
 
 	var device_type := _get_device_type()
-	var has_contents: bool = _update_glyph(device_type)
+
+	_origin_count = (
+		_slot.get_action_origin_count(action_set, action, device_type)
+		if cycle_interval > 0.0
+		else 0
+	)
+	if _cycle_offset >= maxi(_get_cycle_length(), 1):
+		_cycle_offset = 0
+
+	var has_contents: bool = _update_glyph(device_type, get_binding_index())
 
 	glyph_updated.emit(has_contents)
 
@@ -199,12 +257,14 @@ func _get_device_type() -> DeviceType:
 
 
 ## _update_glyph should be overridden by a subclass to actually enact the content
-## changes required. The return value should indicate whether the contents are populated
-## so that consumers can react to changes.
+## changes required, drawing the origin bound at `index` for `device_type`. The index is
+## `binding_index` as moved along by cycling, so it should be used in place of the
+## property. The return value should indicate whether the contents are populated so that
+## consumers can react to changes.
 ##
 ## NOTE: The `glyph_updated` signal will automatically be emitted after this method is
 ## called.
-func _update_glyph(_device_type: DeviceType) -> bool:
+func _update_glyph(_device_type: DeviceType, _index: int) -> bool:
 	assert(false, "unimplemented")
 	return false
 
@@ -221,6 +281,8 @@ static func _get_keyboard_language() -> String:
 
 
 func _on_actions_changed() -> void:
+	_cycle_offset = 0
+	_cycle_time = 0.0
 	_action_configuration_changed()
 	_handle_update()
 
@@ -231,7 +293,9 @@ func _on_cursor_visibility_changed(cursor_visible: bool) -> void:
 
 
 func _on_device_activated(device: StdInputDevice) -> void:
-	set_process(device.device_type == DeviceType.KEYBOARD)
+	set_process(device.device_type == DeviceType.KEYBOARD or cycle_interval > 0.0)
+	_cycle_offset = 0
+	_cycle_time = 0.0
 	_device_activated(device)
 	_handle_update()
 
