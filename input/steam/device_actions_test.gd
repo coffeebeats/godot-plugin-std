@@ -13,6 +13,9 @@ extends GutTest
 ## extension registers and `should_skip_script` skips this script without it.
 const _DEVICE_ACTIONS_PATH := "device_actions.gd"
 
+## _JOYPAD_MONITOR_PATH is the joypad monitor script, loaded as `_DEVICE_ACTIONS_PATH`.
+const _JOYPAD_MONITOR_PATH := "joypad_monitor.gd"
+
 ## _TEST_ACTIONS are the directional actions of the `move` stick, registered in the
 ## `InputMap` with `_TEST_DEADZONE`.
 const _TEST_ACTIONS: Array[StringName] = [
@@ -29,6 +32,7 @@ const _TEST_KEY := KEY_D
 
 var _actions: StdInputDeviceActions = null
 var _device_actions: Variant = null
+var _joypad_monitor: Variant = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -197,6 +201,32 @@ func test_publish_input_event_holds_an_action_at_its_strongest_source() -> void:
 	assert_false(Input.is_action_pressed(&"move_left"))
 
 
+func test_exit_tree_releases_every_held_action() -> void:
+	# Given: The component's dependencies, which it disconnects from on exit.
+	_actions.joypad_monitor = autofree(_joypad_monitor.new())
+	_actions.steam_input_enabled_property = StdSettingsPropertyBool.new()
+	_actions.steam_input_enabled_property.scope = StdSettingsScope.new()
+
+	# Given: Joypads in slots 0 and 1 each hold a direction.
+	_publish(_action(&"move_left", 1.0, true))
+
+	var event := _action(&"move_right", 1.0, true)
+	event.device = 1
+	_publish(event)
+
+	assert_true(Input.is_action_pressed(&"move_left"), "precondition: pressed")
+	assert_true(Input.is_action_pressed(&"move_right"), "precondition: pressed")
+
+	# When: The component leaves the scene, after which Steam reports nothing to it.
+	_actions._exit_tree()
+	Input.flush_buffered_events()
+
+	# Then: Every direction is released and no slot's state is kept.
+	assert_false(Input.is_action_pressed(&"move_left"))
+	assert_false(Input.is_action_pressed(&"move_right"))
+	assert_true(_actions._held.is_empty())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -219,6 +249,7 @@ func before_all() -> void:
 		_DEVICE_ACTIONS_PATH
 	)
 	_device_actions = load(path)
+	_joypad_monitor = load(path.get_base_dir().path_join(_JOYPAD_MONITOR_PATH))
 
 	for action in _TEST_ACTIONS:
 		InputMap.add_action(action, _TEST_DEADZONE)

@@ -213,24 +213,7 @@ func is_action_set_enabled(slot: int, action_set_name: String) -> bool:
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _exit_tree() -> void:
-	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
-	Signals.disconnect_safe(
-		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
-	)
-
-	if not _is_listening:
-		return
-
-	_is_listening = false
-
-	Signals.disconnect_safe(Steam.input_action_event, _on_input_action_event)
-	Signals.disconnect_safe(
-		Steam.input_configuration_loaded, _on_input_configuration_loaded
-	)
-
-
-func _ready() -> void:
+func _enter_tree() -> void:
 	assert(joypad_monitor is SteamJoypadMonitor, "invalid state; missing node")
 	assert(
 		steam_input_enabled_property is StdSettingsPropertyBool,
@@ -244,6 +227,28 @@ func _ready() -> void:
 
 	Signals.connect_safe(
 		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
+	)
+
+
+func _exit_tree() -> void:
+	# NOTE: No release arrives once this stops listening, so every action a joypad holds
+	# is released now.
+	for slot in _held.keys():
+		_on_joypad_disconnected(slot)
+
+	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
+	Signals.disconnect_safe(
+		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
+	)
+
+	if not _is_listening:
+		return
+
+	_is_listening = false
+
+	Signals.disconnect_safe(Steam.input_action_event, _on_input_action_event)
+	Signals.disconnect_safe(
+		Steam.input_configuration_loaded, _on_input_configuration_loaded
 	)
 
 
