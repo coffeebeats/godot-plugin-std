@@ -391,8 +391,10 @@ func test_input_slot_actions_include_every_action_of_the_set_and_its_layers() ->
 	# Given: An action set declaring an action of every kind is loaded.
 	var action_set := _make_action_set(&"Test")
 	action_set.actions_analog_1d = [&"throttle"]
-	action_set.actions_analog_2d = [&"move_x", &"move_y"]
-	action_set.actions_digital = [&"test_action"]
+	action_set.actions_analog_2d = [&"move"]
+	action_set.actions_digital = [
+		&"test_action", &"move_left", &"move_right", &"move_up", &"move_down"
+	]
 	action_set.action_absolute_mouse = &"aim"
 	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
 
@@ -412,8 +414,11 @@ func test_input_slot_actions_include_every_action_of_the_set_and_its_layers() ->
 				"aim",
 				"fire",
 				"look",
-				"move_x",
-				"move_y",
+				"move",
+				"move_down",
+				"move_left",
+				"move_right",
+				"move_up",
 				"test_action",
 				"throttle",
 			]
