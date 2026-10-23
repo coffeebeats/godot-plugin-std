@@ -205,11 +205,9 @@ func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
 func _apply_action_set(
 	device: int, device_type: DeviceType, action_set: StdInputActionSet
 ) -> void:
-	for actions in [
-		action_set.actions_analog_1d,
-		action_set.actions_analog_2d,
-		action_set.actions_digital,
-	]:
+	# NOTE: A 2D analog action names a Steam stick which drives four digital actions;
+	# Godot binds those four directional actions instead, so the stick is skipped.
+	for actions in [action_set.actions_analog_1d, action_set.actions_digital]:
 		for action in actions:
 			if not InputMap.has_action(action):
 				assert(false, "invalid state; unknown action")
