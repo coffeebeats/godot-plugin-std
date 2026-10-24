@@ -307,8 +307,18 @@ func _process(_delta: float) -> void:
 		var action_set := Steam.getCurrentActionSet(device)
 		var layers := Steam.getActiveActionSetLayers(device)
 
-		if not _is_applied(slot, action_set, layers):
-			_apply(slot)
+		if _is_applied(slot, action_set, layers):
+			continue
+
+		(
+			_logger
+			. debug(
+				"Steam dropped a joypad's action sets; applying them again.",
+				{&"slot": slot, &"set": action_set, &"layers": str(layers)},
+			)
+		)
+
+		_apply(slot)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
