@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## std/input/steam/device_actions_test.gd
 ##
@@ -15,6 +16,22 @@ const _DEVICE_ACTIONS_PATH := "device_actions.gd"
 
 ## _JOYPAD_MONITOR_PATH is the joypad monitor script, loaded as `_DEVICE_ACTIONS_PATH`.
 const _JOYPAD_MONITOR_PATH := "joypad_monitor.gd"
+
+## _STEAM_ERROR is the condition GodotSteam reports when it rejects a call because
+## Steam Input isn't running, as under test.
+const _STEAM_ERROR := "SteamAPI_SteamInput() == nullptr"
+
+## _TEST_HANDLE is the Steam handle of the controller connected in slot 0.
+const _TEST_HANDLE := 7
+
+## _TEST_SET_HANDLES are the handles of the test sets and layers in the manifest.
+const _TEST_SET_HANDLES := {
+	&"Menu": 1,
+	&"Gameplay": 2,
+	&"Tabs": 3,
+	&"Options_Menu": 4,
+	&"Options_Gameplay": 5,
+}
 
 ## _TEST_ACTIONS are the directional actions of the `move` stick, registered in the
 ## `InputMap` with `_TEST_DEADZONE`.
@@ -271,6 +288,219 @@ func test_exit_tree_releases_every_held_action() -> void:
 	assert_true(_actions._held.is_empty())
 
 
+func test_load_action_set_reports_the_recorded_set_at_once() -> void:
+	# Given: A controller connected in slot 0.
+	_connect_joypad()
+	var menu := _make_action_set(&"Menu")
+
+	# When: An action set is loaded.
+	var got: bool = _actions.load_action_set(0, menu)
+
+	# Then: The load reports a change and the set reads back in the same frame.
+	assert_true(got)
+	assert_eq(_actions.get_action_set(0), menu)
+
+	# Then: Steam drops every layer and activates the set.
+	assert_eq(
+		_list_steam_calls(), ["deactivateAllActionSetLayers", "activateActionSet"]
+	)
+
+	# When: The same action set is loaded again.
+	got = _actions.load_action_set(0, menu)
+
+	# Then: No change is reported and Steam isn't called.
+	assert_false(got)
+	assert_eq(_list_steam_calls(), [])
+
+
+func test_enable_action_set_layer_reports_the_recorded_layer_at_once() -> void:
+	# Given: A controller connected in slot 0 with an action set loaded.
+	_connect_joypad()
+	var menu := _make_action_set(&"Menu")
+	_actions.load_action_set(0, menu)
+	_list_steam_calls()
+
+	# When: A layer is enabled.
+	var tabs := _make_layer(&"Tabs", menu)
+	var got: bool = _actions.enable_action_set_layer(0, tabs)
+
+	# Then: The enable reports a change and the layer reads back in the same frame.
+	assert_true(got)
+	assert_eq(
+		_actions.list_action_set_layers(0), [tabs] as Array[StdInputActionSetLayer]
+	)
+
+	# Then: Steam is given the set and its layers afresh.
+	assert_eq(
+		_list_steam_calls(),
+		["deactivateAllActionSetLayers", "activateActionSet", "activateActionSetLayer"],
+	)
+
+	# When: The same layer is enabled again.
+	got = _actions.enable_action_set_layer(0, tabs)
+
+	# Then: No change is reported and Steam isn't called.
+	assert_false(got)
+	assert_eq(_list_steam_calls(), [])
+
+
+func test_layer_disabled_and_enabled_in_one_frame_stays_enabled() -> void:
+	# Given: A controller connected in slot 0 with an action set and a layer enabled.
+	_connect_joypad()
+	var menu := _make_action_set(&"Menu")
+	var tabs := _make_layer(&"Tabs", menu)
+	_actions.load_action_set(0, menu)
+	_actions.enable_action_set_layer(0, tabs)
+	_list_steam_calls()
+
+	# When: The layer is disabled and enabled again in the same frame.
+	assert_true(_actions.disable_action_set_layer(0, tabs))
+	assert_true(_actions.enable_action_set_layer(0, tabs))
+
+	# Then: The layer is enabled, and the last stack Steam was given holds it.
+	assert_eq(
+		_actions.list_action_set_layers(0), [tabs] as Array[StdInputActionSetLayer]
+	)
+	assert_eq(_list_steam_calls().back(), "activateActionSetLayer")
+
+
+func test_load_action_set_drops_the_recorded_layers() -> void:
+	# Given: A controller connected in slot 0 with an action set and a layer enabled.
+	_connect_joypad()
+	var menu := _make_action_set(&"Menu")
+	_actions.load_action_set(0, menu)
+	_actions.enable_action_set_layer(0, _make_layer(&"Tabs", menu))
+	_list_steam_calls()
+
+	# When: Another action set is loaded.
+	var gameplay := _make_action_set(&"Gameplay")
+	assert_true(_actions.load_action_set(0, gameplay))
+
+	# Then: The new set is recorded with no layers, and Steam is given no layers.
+	assert_eq(_actions.get_action_set(0), gameplay)
+	assert_eq(_actions.list_action_set_layers(0), [] as Array[StdInputActionSetLayer])
+	assert_eq(
+		_list_steam_calls(), ["deactivateAllActionSetLayers", "activateActionSet"]
+	)
+
+
+func test_resolve_action_set_name_reads_the_recorded_set() -> void:
+	# Given: A controller connected in slot 0 with the `Gameplay` set loaded.
+	_connect_joypad()
+	_actions.load_action_set(0, _make_action_set(&"Gameplay"))
+	_list_steam_calls()
+
+	# When/Then: A layer with no parent resolves to its copy under `Gameplay`.
+	var options := _make_layer(&"Options", null)
+	assert_eq(_device_actions.resolve_action_set_name(options, 0), &"Options_Gameplay")
+
+	# When/Then: A slot with nothing recorded keeps the layer's own name.
+	assert_eq(_device_actions.resolve_action_set_name(options, 1), &"Options")
+
+	# When/Then: A layer with a parent keeps its own name.
+	var tabs := _make_layer(&"Tabs", _make_action_set(&"Menu"))
+	assert_eq(_device_actions.resolve_action_set_name(tabs, 0), &"Tabs")
+
+
+func test_is_applied_compares_the_reported_stack_in_order() -> void:
+	# Given: A controller connected in slot 0 with the `Menu` set and two layers.
+	_connect_joypad()
+	var menu := _make_action_set(&"Menu")
+	_actions.load_action_set(0, menu)
+	_actions.enable_action_set_layer(0, _make_layer(&"Options", null))
+	_actions.enable_action_set_layer(0, _make_layer(&"Tabs", menu))
+	_list_steam_calls()
+
+	# When/Then: The recorded set with its layers in stack order is applied.
+	assert_true(_device_actions._is_applied(0, 1, [4, 3]))
+
+	# When/Then: A set with no layers, as a configuration load leaves, isn't.
+	assert_false(_device_actions._is_applied(0, 1, []))
+
+	# When/Then: Another set isn't, nor the layers out of order.
+	assert_false(_device_actions._is_applied(0, 2, [4, 3]))
+	assert_false(_device_actions._is_applied(0, 1, [3, 4]))
+
+	# When/Then: A slot with nothing recorded holds anything.
+	assert_true(_device_actions._is_applied(1, 0, []))
+
+
+func test_process_applies_the_stack_again_once_steam_drops_it() -> void:
+	# Given: A controller connected in slot 0 with an action set and a layer enabled.
+	_connect_joypad()
+	var menu := _make_action_set(&"Menu")
+	_actions.load_action_set(0, menu)
+	_actions.enable_action_set_layer(0, _make_layer(&"Tabs", menu))
+	_list_steam_calls()
+
+	# When: A frame is processed right after the stack was applied.
+	_actions._process(0.0)
+
+	# Then: Steam isn't read back, since it reports a change a frame late.
+	assert_eq(_list_steam_calls(), [])
+
+	# When: Two frames pass, and Steam reports no set or layers.
+	await wait_process_frames(2)
+	_actions._process(0.0)
+
+	# Then: Steam is read back, then given the set and its layers afresh.
+	assert_eq(
+		_list_steam_calls(),
+		[
+			"getCurrentActionSet",
+			"getActiveActionSetLayers",
+			"deactivateAllActionSetLayers",
+			"activateActionSet",
+			"activateActionSetLayer",
+		],
+	)
+
+	# When: The next frame is processed.
+	_actions._process(0.0)
+
+	# Then: Steam isn't read back yet.
+	assert_eq(_list_steam_calls(), [])
+
+
+func test_configuration_load_applies_the_stack_at_once() -> void:
+	# Given: A controller connected in slot 0 with an action set just loaded.
+	_connect_joypad()
+	_actions.load_action_set(0, _make_action_set(&"Menu"))
+	_list_steam_calls()
+	watch_signals(_actions)
+
+	# When: Steam loads the controller's configuration in the same frame.
+	_actions._on_input_configuration_loaded(480, _TEST_HANDLE, {})
+
+	# Then: Steam is given the set again, and the bindings are reported changed.
+	assert_eq(
+		_list_steam_calls(), ["deactivateAllActionSetLayers", "activateActionSet"]
+	)
+	assert_signal_emitted(_actions, "bindings_changed")
+
+	# When: Steam loads another controller's configuration.
+	_actions._on_input_configuration_loaded(480, _TEST_HANDLE + 1, {})
+
+	# Then: Steam isn't given anything.
+	assert_eq(_list_steam_calls(), [])
+
+
+func test_joypad_disconnect_forgets_the_recorded_stack() -> void:
+	# Given: A controller connected in slot 0 with an action set loaded.
+	_connect_joypad()
+	_actions.load_action_set(0, _make_action_set(&"Menu"))
+	_list_steam_calls()
+
+	# When: The controller disconnects.
+	_actions._on_joypad_disconnected(0)
+
+	# Then: Nothing is recorded for the slot, so later frames leave Steam alone.
+	assert_null(_actions.get_action_set(0))
+	await wait_process_frames(2)
+	_actions._process(0.0)
+	assert_eq(_list_steam_calls(), [])
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -287,12 +517,15 @@ func after_each() -> void:
 
 	_device_actions._restore_stick_deadzones()
 
-	# NOTE: The handle maps are static, so a test's entries are dropped here.
+	# NOTE: The handle maps and stacks are static, so a test's entries are dropped here.
 	_device_actions._is_initialized = false
+	_device_actions._action_set_handles.clear()
+	_device_actions._actions_seen_action_sets.clear()
 	_device_actions._analog_actions.clear()
 	_device_actions._analog_action_handles.clear()
 	_device_actions._digital_actions.clear()
 	_device_actions._digital_action_handles.clear()
+	_device_actions._stacks.clear()
 
 
 func before_all() -> void:
@@ -334,6 +567,48 @@ func _action(action: StringName, strength: float, pressed: bool) -> InputEventAc
 	event.strength = strength
 	event.pressed = pressed
 	return event
+
+
+## _connect_joypad gives the component a joypad monitor with the controller
+## `_TEST_HANDLE` connected in slot 0, and a manifest holding `_TEST_SET_HANDLES`.
+func _connect_joypad() -> void:
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor._connected = PackedInt64Array([_TEST_HANDLE])
+	_actions.joypad_monitor = monitor
+
+	_device_actions._is_initialized = true
+	_device_actions._action_set_handles.merge(_TEST_SET_HANDLES)
+
+
+## _list_steam_calls returns the name of each Steam Input call made since it was last
+## called, in order. GodotSteam rejects each call while Steam Input isn't running, with
+## an error naming it, which this marks as expected.
+func _list_steam_calls() -> Array[String]:
+	var calls: Array[String] = []
+
+	for error in get_errors():
+		if error.handled or not error.contains_text(_STEAM_ERROR):
+			continue
+
+		error.handled = true
+		calls.append(error.rationale.get_slice(": ", 1))
+
+	return calls
+
+
+## _make_action_set returns an action set called `id` declaring no actions.
+func _make_action_set(id: StringName) -> StdInputActionSet:
+	var action_set := StdInputActionSet.new()
+	action_set.name = id
+	return action_set
+
+
+## _make_layer returns a layer called `id` under `parent`, declaring no actions.
+func _make_layer(id: StringName, parent: StdInputActionSet) -> StdInputActionSetLayer:
+	var layer := StdInputActionSetLayer.new()
+	layer.name = id
+	layer.parent = parent
+	return layer
 
 
 ## _make_stick_action_set returns an action set whose `move` stick drives the test

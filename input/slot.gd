@@ -897,8 +897,9 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 	if not action_set:
 		return
 
-	if not device.load_action_set(action_set):
-		return
+	# NOTE: The layers are enabled even when the set reports no change, since a
+	# component which already holds the set needn't hold its layers.
+	device.load_action_set(action_set)
 
 	for layer in actions.list_action_set_layers(device_id):
 		device.enable_action_set_layer(layer)

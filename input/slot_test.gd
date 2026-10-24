@@ -503,6 +503,30 @@ func test_input_slot_layer_enabled_before_any_device_reaches_a_later_joypad() ->
 	assert_eq(_actions_joy.layers, [layer] as Array[StdInputActionSetLayer])
 
 
+func test_input_slot_connected_joypad_gets_layers_when_its_set_is_unchanged() -> void:
+	# Given: An input slot claiming no keyboard, with an action set loaded and a layer
+	# enabled before any joypad connected.
+	slot.claim_kbm_input = false
+	add_child_autofree(slot)
+	var action_set := _make_action_set(&"Test")
+	var layer := _make_layer(&"TestLayer", action_set)
+	assert_true(slot.load_action_set(action_set))
+	assert_true(slot.enable_action_set_layer(layer))
+
+	# Given: The joypad component already holds the action set, so loading it again
+	# reports no change.
+	_actions_joy.action_set = action_set
+
+	# When: A joypad connects.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_active_device())
+
+	# Then: The joypad holds the layer too.
+	assert_eq(_actions_joy.layers, [layer] as Array[StdInputActionSetLayer])
+
+
 func test_input_slot_joypad_connected_before_player_input_activates() -> void:
 	# Given: An input slot added to the scene with the keyboard active and a joypad
 	# preferred.
