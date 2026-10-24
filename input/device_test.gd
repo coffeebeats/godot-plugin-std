@@ -4,6 +4,10 @@
 
 extends GutTest
 
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const SlotTest := preload("slot_test.gd")
+
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
@@ -132,6 +136,30 @@ func test_is_matching_event_origin_matches_joypad_events() -> void:
 	assert_false(device.is_matching_event_origin(other_event))
 
 
+func test_is_matching_event_origin_matches_a_joypad_as_its_component_does() -> void:
+	# Given: A joypad whose actions component receives only injected actions, as when
+	# Steam Input drives it.
+	var actions := SlotTest.DeviceActions.new()
+	actions.matches_actions = true
+	var device := _create_device(StdInputDevice.DEVICE_TYPE_GENERIC, 0, actions)
+	add_child_autofree(device)
+
+	# Given: A raw button event under the joypad's index, as from Steam's virtual
+	# gamepad.
+	var button_event := InputEventJoypadButton.new()
+	button_event.device = 0
+
+	# When/Then: The raw event does not match.
+	assert_false(device.is_matching_event_origin(button_event))
+
+	# Given: An action injected for the joypad.
+	var action_event := InputEventAction.new()
+	action_event.device = 0
+
+	# When/Then: The injected action matches.
+	assert_true(device.is_matching_event_origin(action_event))
+
+
 func test_is_matching_event_origin_matches_touch_events() -> void:
 	# Given: A touch device.
 	var device := _create_device(StdInputDevice.DEVICE_TYPE_TOUCH, 0)
@@ -170,16 +198,19 @@ func before_all() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _create_device returns a device of `device_type` and `device_id` with minimal
+## components, using `actions` as its actions component when given.
 func _create_device(
 	device_type: StdInputDevice.DeviceType,
 	device_id: int,
+	actions: StdInputDeviceActions = null,
 ) -> StdInputDevice:
 	var device := StdInputDevice.new()
 	device.device_type = device_type
 	device.device_id = device_id
 
 	# Add minimal required components.
-	device.actions = StdInputDeviceActions.new()
+	device.actions = actions if actions else StdInputDeviceActions.new()
 	device.add_child(device.actions)
 
 	device.glyphs = StdInputDeviceGlyphs.new()

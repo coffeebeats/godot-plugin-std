@@ -126,13 +126,13 @@ func _exit_tree() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	var is_joy_button: bool = event is InputEventJoypadButton
-	var is_joy_motion: bool = event is InputEventJoypadMotion
-
-	if not (is_joy_motion or is_joy_button) or _connected.is_empty():
+	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion):
 		return
 
-	if event.device >= 0 and event.device < _connected.size():
+	# NOTE: Steam runs a virtual gamepad for a controller whose layout binds a gamepad
+	# button, and Godot opens it as a joypad. The controller's input already arrives as
+	# Steam actions, so the virtual gamepad's raw events are dropped.
+	if _is_virtual_gamepad(event.device):
 		get_viewport().set_input_as_handled()
 
 
@@ -202,6 +202,29 @@ func _disconnect_device(device: int) -> void:
 
 	if not _connected:
 		steam_input_enabled_property.set_value(false)
+
+
+## _get_steam_handle returns the Steam handle of the controller behind a joypad whose
+## info Godot reports as `info`, or `0` for a joypad Steam doesn't drive. Godot's SDL
+## driver records the handle, as a string, for each virtual gamepad Steam runs.
+static func _get_steam_handle(info: Dictionary) -> int:
+	return String(info.get("steam_input_index", "")).to_int()
+
+
+## _is_virtual_gamepad returns whether Godot's joypad `device` is the virtual gamepad
+## Steam runs for a controller this monitor connected. It's matched by Steam handle,
+## since SDL reports the physical controller's vendor and product IDs for it, and its
+## joypad index is unrelated to any slot.
+func _is_virtual_gamepad(device: int) -> bool:
+	# NOTE: An injected event can name a joypad Godot hasn't opened, whose info would
+	# raise an error.
+	if device not in Input.get_connected_joypads():
+		return false
+
+	var handle := _get_steam_handle(Input.get_joy_info(device))
+
+	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
+	return handle != 0 and _connected.has(handle)
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #

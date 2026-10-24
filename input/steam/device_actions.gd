@@ -428,6 +428,16 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 	return stack.layers.duplicate()
 
 
+# Events
+
+
+## is_matching_event_origin returns whether `event` is a Steam action published for the
+## joypad in `slot`. No raw joypad event matches: Steam keeps the controller from Godot,
+## and its virtual gamepad's raw events would otherwise match the slot's index.
+func _is_matching_event_origin(slot: int, event: InputEvent) -> bool:
+	return event is InputEventAction and event.device == slot
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
