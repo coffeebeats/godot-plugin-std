@@ -324,8 +324,10 @@ func test_is_matching_event_origin_matches_only_steam_actions() -> void:
 	# When/Then: The raw event does not match the joypad in slot 0.
 	assert_false(_actions.is_matching_event_origin(0, button))
 
-	# When/Then: A Steam action for slot 0 matches it, and not the joypad in slot 1.
+	# When/Then: A Steam action for slot 0 matches the joypad in slot 0.
 	assert_true(_actions.is_matching_event_origin(0, _action(&"move_up", 1.0, true)))
+
+	# When/Then: It doesn't match the joypad in slot 1.
 	assert_false(_actions.is_matching_event_origin(1, _action(&"move_up", 1.0, true)))
 
 

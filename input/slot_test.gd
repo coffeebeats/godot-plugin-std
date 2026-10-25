@@ -568,14 +568,16 @@ func test_input_slot_connected_joypad_gets_no_layers_when_its_set_is_refused() -
 
 
 func test_input_slot_matches_events_as_its_active_joypads_component_does() -> void:
-	# Given: An input slot with a joypad active whose component receives only injected
-	# actions, as Steam's does.
+	# Given: A joypad component which matches only injected actions, as Steam's does.
 	_actions_joy.matches_actions = true
+
+	# Given: An input slot with that joypad active.
 	_activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_INHERIT)
 
-	# When/Then: A raw button from the joypad's index doesn't match, as from Steam's
-	# virtual gamepad, but an injected action for the joypad does.
+	# When/Then: A virtual gamepad's raw button under the joypad's index doesn't match.
 	assert_false(slot.is_matching_event_origin(_joypad_button(0)))
+
+	# When/Then: An injected action for the joypad matches.
 	assert_true(slot.is_matching_event_origin(_injected_action(0, 1.0)))
 
 

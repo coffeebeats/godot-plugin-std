@@ -134,9 +134,8 @@ func _input(event: InputEvent) -> void:
 	if _connected.is_empty():
 		return
 
-	# NOTE: Steam runs a virtual gamepad for a controller whose layout binds a gamepad
-	# button, and Godot opens it as a joypad. The controller's input already arrives as
-	# Steam actions, so the virtual gamepad's raw events are dropped.
+	# NOTE: Godot opens the virtual gamepad Steam runs for a layout binding a gamepad
+	# button; its controller's input arrives as Steam actions, so its events are dropped.
 	if _is_virtual_gamepad(event.device):
 		get_viewport().set_input_as_handled()
 

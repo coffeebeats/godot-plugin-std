@@ -137,15 +137,13 @@ func test_is_matching_event_origin_matches_joypad_events() -> void:
 
 
 func test_is_matching_event_origin_matches_a_joypad_as_its_component_does() -> void:
-	# Given: A joypad whose actions component receives only injected actions, as when
-	# Steam Input drives it.
+	# Given: A joypad whose actions component matches only injected actions.
 	var actions := SlotTest.DeviceActions.new()
 	actions.matches_actions = true
 	var device := _create_device(StdInputDevice.DEVICE_TYPE_GENERIC, 0, actions)
 	add_child_autofree(device)
 
-	# Given: A raw button event under the joypad's index, as from Steam's virtual
-	# gamepad.
+	# Given: A raw button event under the joypad's index, as from a virtual gamepad.
 	var button_event := InputEventJoypadButton.new()
 	button_event.device = 0
 
