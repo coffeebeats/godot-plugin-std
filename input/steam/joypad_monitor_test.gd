@@ -161,6 +161,31 @@ func test_joypad_monitor_connects_a_replugged_device_again() -> void:
 	assert_true(monitor.steam_input_enabled_property.get_value())
 
 
+func test_joypad_monitor_skips_a_device_whose_configuration_opted_out_first() -> void:
+	# Given: A joypad monitor with no device connected.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	watch_signals(monitor)
+
+	# When: Steam loads a controller's configuration, which doesn't use the Steam Input
+	# API, and only then reports the controller connected, as on a replug.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+	monitor._on_device_connected(7)
+
+	# Then: The controller isn't connected.
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_eq(monitor.get_slot_for_device_id(7), -1)
+
+	# When: The controller is unplugged and plugged in again, its configuration not yet
+	# loaded.
+	monitor._on_device_disconnected(7)
+	monitor._on_device_connected(7)
+
+	# Then: It's connected, since its old configuration no longer applies.
+	assert_engine_error(_STEAM_ERROR)
+	assert_eq(monitor.get_slot_for_device_id(7), 0)
+
+
 func test_joypad_monitor_ignores_a_disconnect_of_a_device_it_dropped() -> void:
 	# Given: A joypad monitor with no device connected.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())

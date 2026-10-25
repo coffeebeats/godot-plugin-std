@@ -31,6 +31,10 @@ var _connected := PackedInt64Array()
 
 var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_frame()
 
+## _opted_out holds the handle of each device whose configuration doesn't use the Steam
+## Input API, so a later connect report doesn't connect it.
+var _opted_out := PackedInt64Array()
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -215,6 +219,12 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 	var uses_steam_input_api: bool = cfg.get("uses_steam_input_api", true)
 	var device_in_connected := _connected.has(device)
 
+	var opted_out_index := _opted_out.find(device)
+	if uses_steam_input_api and opted_out_index != -1:
+		_opted_out.remove_at(opted_out_index)
+	elif not uses_steam_input_api and opted_out_index == -1:
+		_opted_out.append(device)
+
 	if not uses_steam_input_api and device_in_connected:
 		_disconnect_device(device)
 	elif uses_steam_input_api and not device_in_connected:
@@ -222,13 +232,19 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 
 
 func _on_device_connected(device: int) -> void:
-	# NOTE: A configuration load can connect the device first.
+	# NOTE: A configuration load can connect the device first, or report first that
+	# the device doesn't use the Steam Input API, as on a replug.
 	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-	if not _connected.has(device):
+	if not _connected.has(device) and not _opted_out.has(device):
 		_connect_device(device)
 
 
 func _on_device_disconnected(device: int) -> void:
+	# NOTE: The device's configuration is loaded again when it reconnects.
+	var opted_out_index := _opted_out.find(device)
+	if opted_out_index != -1:
+		_opted_out.remove_at(opted_out_index)
+
 	# NOTE: A configuration which doesn't use the Steam Input API can disconnect the
 	# device first.
 	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
