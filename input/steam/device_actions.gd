@@ -1,11 +1,13 @@
 ##
 ## std/input/steam/device_actions.gd
 ##
-## StdInputSteamDeviceActions is an implemention of `StdInputDeviceActions` which uses
+## StdInputSteamDeviceActions is an implementation of `StdInputDeviceActions` which uses
 ## the Steam Input API to manage action sets.
 ##
-## NOTE: This implementation requires that all action sets/bindings apply to all input
-## devices. Changing action sets for one device thus changes them for all devices.
+## NOTE: Steam resets a controller's action set and layers on every focus change and
+## reports a change a frame late, so the stack is recorded per joypad and reapplied
+## whenever Steam disagrees; see
+## https://partner.steamgames.com/doc/api/ISteamInput#ActivateActionSet.
 
 extends StdInputDeviceActions
 
@@ -17,8 +19,6 @@ const SteamJoypadMonitor := preload("joypad_monitor.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-const DEVICE_ID_ALL := Steam.INPUT_HANDLE_ALL_CONTROLLERS
-
 ## _STICK_DEADZONE is the `InputMap` deadzone of a stick's directions while Steam Input
 ## drives the stick, since Steam reports it past the deadzone its configurator sets.
 ##
@@ -26,28 +26,35 @@ const DEVICE_ID_ALL := Steam.INPUT_HANDLE_ALL_CONTROLLERS
 ## pressed, and below a 16-bit axis's step of `1 / 32767`, so it filters no reading.
 const _STICK_DEADZONE := 0.00001
 
+
+## _ActionSetStack is the action set and layer stack recorded for one joypad.
+class _ActionSetStack:
+	extends RefCounted
+
+	## action_set is the stack's base action set.
+	var action_set: StdInputActionSet = null
+
+	## layers is the stack's enabled layers, in the order they were enabled.
+	var layers: Array[StdInputActionSetLayer] = []
+
+	## written is the process frame in which the stack was last applied to Steam.
+	var written: int = 0
+
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## joypad_monitor is a Steam-specific joypad monitor, used to look up slot-to-device ID
 ## translations.
 @export var joypad_monitor: StdInputSlot.JoypadMonitor = null
 
-## steam_input_enabled_property is a settings property that the joypad monitor will
-## toggle based on connected controller activity.
-##
-## NOTE: It unfortunately seems that the only way to check for whether Steam Input is in
-## use is by the presence of a connected joypad. As such, this property will be enabled
-## when devices are connected and disabled otherwise.
+## steam_input_enabled_property is the settings property the joypad monitor enables
+## while a Steam joypad is connected.
 @export var steam_input_enabled_property: StdSettingsPropertyBool = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _action_set_handles is a reverse mapping from action set names to action set handles.
 static var _action_set_handles: Dictionary = {}  # gdlint:ignore=class-definitions-order
-
-## _actions_sets is a mapping from action set handles to `StdInputActionSet`; this
-## includes action set layers too.
-static var _action_sets: Dictionary = {}  # gdlint:ignore=class-definitions-order
 
 ## _analog_actions is a mapping from analog action handles to action names.
 ##
@@ -64,8 +71,7 @@ static var _digital_actions: Dictionary = {}  # gdlint:ignore=class-definitions-
 ## _digital_action_handles is a reverse mapping from digital action names to handles.
 static var _digital_action_handles: Dictionary = {}  # gdlint:ignore=class-definitions-order,max-line-length
 
-## _actions_seen_action_sets is the list of action sets which already have their action
-## handles populated. This is used to skip duplicate work.
+## _actions_seen_action_sets lists the action sets whose action handles are stored.
 ##
 ## NOTE: Because the number of action sets should be small, an array is preferred.
 static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ignore=class-definitions-order,max-line-length
@@ -73,6 +79,9 @@ static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ig
 ## _is_initialized tracks whether this component has been initialized. This needs to
 ## occur once *after the first joypad has been connected*.
 static var _is_initialized: bool = false  # gdlint:ignore=class-definitions-order
+
+## _stacks maps each joypad's slot to the action set and layer stack recorded for it.
+static var _stacks: Dictionary[int, _ActionSetStack] = {}  # gdlint:ignore=class-definitions-order,max-line-length
 
 ## _stick_deadzones maps each stick direction whose deadzone Steam Input took over to
 ## the `InputMap` deadzone it had before, which is restored once Steam Input stops.
@@ -167,25 +176,27 @@ static func get_digital_action_handle(action: StringName) -> int:
 
 
 ## resolve_action_set_name returns the name the Steam Input manifest knows `action_set`
-## by on `device`. A layer with no parent resolves to its `<Layer>_<Set>` copy under the
-## device's current set; anything else keeps its own name.
+## by for the joypad in `slot`. A layer with no parent resolves to its `<Layer>_<Set>`
+## copy under the set recorded for the joypad; anything else keeps its own name.
 static func resolve_action_set_name(
-	action_set: StdInputActionSet, device: int
+	action_set: StdInputActionSet, slot: int
 ) -> StringName:
 	if not action_set is StdInputActionSetLayer or action_set.parent:
 		return action_set.name
 
-	var current: StdInputActionSet = _action_sets.get(Steam.getCurrentActionSet(device))
-	if not current:
+	var stack: _ActionSetStack = _stacks.get(slot)
+	if not stack:
 		return action_set.name
 
-	return StringName("%s_%s" % [action_set.name, current.name])
+	return StringName("%s_%s" % [action_set.name, stack.action_set.name])
 
 
 ## split_analog_2d returns the four directional action events a stick's `motion` drives
 ## for the 2D analog `action`, in `StdInputActionSet.ANALOG_2D_DIRECTIONS` order, each
-## at the strength of its half of the axis and pressed at any strength. Godot clamps an
-## action's strength to `[0, 1]`, so a signed axis can't travel on one action.
+## at the strength of its half of the axis and pressed at any strength.
+##
+## NOTE: Godot clamps an action's strength to `[0, 1]`, so a signed axis can't travel on
+## one action.
 ##
 ## NOTE: Steam reports a stick's `y` as positive upward, so `+y` drives `_up`.
 static func split_analog_2d(
@@ -244,6 +255,10 @@ func _enter_tree() -> void:
 		"invalid state; missing property",
 	)
 
+	# NOTE: Steam resets a controller's sets on a focus change even while the game is
+	# paused, so the record is applied again regardless.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
 
 	if steam_input_enabled_property.get_value():
@@ -256,9 +271,9 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	# NOTE: No release arrives once this stops listening, so every action a joypad holds
-	# is released now.
+	# is released now. Each stack is kept, since its joypad is still connected.
 	for slot in _held.keys():
-		_on_joypad_disconnected(slot)
+		_release_held_actions(slot)
 
 	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
 	Signals.disconnect_safe(
@@ -276,27 +291,47 @@ func _exit_tree() -> void:
 	)
 
 
+func _process(_delta: float) -> void:
+	for slot in _stacks:
+		# NOTE: Steam reports a change a frame after it's made, so a stack applied this
+		# frame or the last isn't compared yet.
+		if Engine.get_process_frames() - _stacks[slot].written < 2:
+			continue
+
+		var device: int = joypad_monitor.get_device_id_for_slot(slot)
+		if device == -1:
+			continue
+
+		var action_set := Steam.getCurrentActionSet(device)
+		var layers := Steam.getActiveActionSetLayers(device)
+
+		if _is_applied(slot, action_set, layers):
+			continue
+
+		(
+			_logger
+			. debug(
+				"Steam dropped a joypad's action sets; applying them again.",
+				{&"slot": slot, &"set": action_set, &"layers": str(layers)},
+			)
+		)
+
+		_apply(slot)
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-## get_action_set returns the currently active `InputActionSet` *for the specified
-## device*.
+## get_action_set returns the action set recorded for the joypad in `slot`.
 func _get_action_set(slot: int) -> StdInputActionSet:
-	var device: int = joypad_monitor.get_device_id_for_slot(slot)
-	if device == -1:
-		assert(false, "invalid argument; failed to find device for slot")
-		return null
-
-	var handle := Steam.getCurrentActionSet(device)
-	return _action_sets.get(handle) as StdInputActionSet
+	var stack: _ActionSetStack = _stacks.get(slot)
+	return stack.action_set if stack else null
 
 
-## load_action_set unloads the currently active `StdInputActionSet`, if any, and then
-## activates the provided action set *for the specified device*. If the action set
-## is already active for the device then no change occurs.
+## load_action_set records `action_set` for the joypad in `slot`, with no layers, and
+## applies it to Steam. If the action set is already recorded then no change occurs.
 func _load_action_set(slot: int, action_set: StdInputActionSet) -> bool:
-	var device: int = joypad_monitor.get_device_id_for_slot(slot)
-	if device == -1:
+	if joypad_monitor.get_device_id_for_slot(slot) == -1:
 		assert(false, "invalid argument; failed to find device for slot")
 		return false
 
@@ -305,121 +340,118 @@ func _load_action_set(slot: int, action_set: StdInputActionSet) -> bool:
 		not action_set is StdInputActionSetLayer, "invalid argument: cannot use a layer"
 	)
 
-	# FIXME: This lookup is required because of the need to return whether the action
-	# set was changed. This may be a performance issue, so consider removing.
 	if action_set == _get_action_set(slot):
 		return false
 
-	var handle := get_action_set_handle(action_set.name)
-	if not handle:
+	if not get_action_set_handle(action_set.name):
 		_logger.warn("Steam Input has no such action set.", {&"name": action_set.name})
 		return false
 
-	_action_sets[handle] = action_set
-	Steam.activateActionSet(DEVICE_ID_ALL, handle)
+	var stack := _ActionSetStack.new()
+	stack.action_set = action_set
+	_stacks[slot] = stack
 
 	# NOTE: Incoming action events only contain the action's handle. In order to look
 	# up the corresponding action name, populate the action handles now.
 	_store_action_handles(action_set)
 	_clear_stick_deadzones(action_set)
 
-	# FIXME: Need to await first input.
-	return handle == Steam.getCurrentActionSet(device)
+	_apply(slot)
+
+	return true
 
 
 # Action set layers
 
 
-## enable_action_set_layer pushes the provided action set layer onto the stack of
-## active layers *for the specified device*. If the action set layer is already
-## active then no change occurs.
+## enable_action_set_layer pushes `layer` onto the stack recorded for the joypad in
+## `slot` and applies the stack to Steam. If the layer is already recorded then no
+## change occurs.
 func _enable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
-	var device: int = joypad_monitor.get_device_id_for_slot(slot)
-	if device == -1:
+	if joypad_monitor.get_device_id_for_slot(slot) == -1:
 		assert(false, "invalid argument; failed to find device for slot")
 		return false
 
 	assert(layer is StdInputActionSetLayer, "missing argument: layer")
+
+	var stack: _ActionSetStack = _stacks.get(slot)
+	if not stack:
+		assert(false, "invalid state: missing action set")
+		return false
+
 	assert(
-		_get_action_set(slot) is StdInputActionSet,
-		"invalid state: missing action set",
-	)
-	assert(
-		layer.parent == null or layer.parent == _get_action_set(slot),
+		layer.parent == null or layer.parent == stack.action_set,
 		"invalid argument: wrong parent action set",
 	)
 
-	var layer_name := resolve_action_set_name(layer, device)
-	var handle := get_action_set_handle(layer_name)
-	if not handle:
+	if layer in stack.layers:
+		return false
+
+	var layer_name := resolve_action_set_name(layer, slot)
+	if not get_action_set_handle(layer_name):
 		_logger.warn("Steam Input has no such action set layer.", {&"name": layer_name})
 		return false
 
-	# FIXME: This lookup is required because of the need to return whether the action
-	# set layer was changed. This may be a performance issue, so consider removing.
-	if handle in Steam.getActiveActionSetLayers(device):
-		return false
-
-	_action_sets[handle] = layer
-	Steam.activateActionSetLayer(DEVICE_ID_ALL, handle)
+	stack.layers.append(layer)
 	_store_action_handles(layer)
 	_clear_stick_deadzones(layer)
 
-	# NOTE: This won't organically return `true` until the next player action input is
-	# received by the game. This is an unfortunate discrepancy between the Godot
-	# architecture and the Steam one.
+	_apply(slot)
+
 	return true
 
 
-## disable_action_set_layer removes the provided action set layer from the set of
-## active layers *for the specified device*. If the action set layer is not active
-## then no change occurs.
+## disable_action_set_layer removes `layer` from the stack recorded for the joypad in
+## `slot` and applies the stack to Steam. If the layer isn't recorded then no change
+## occurs.
 func _disable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
-	var device: int = joypad_monitor.get_device_id_for_slot(slot)
-	if device == -1:
+	if joypad_monitor.get_device_id_for_slot(slot) == -1:
 		assert(false, "invalid argument; failed to find device for slot")
 		return false
 
 	assert(layer is StdInputActionSetLayer, "missing argument: layer")
 
-	var handle := get_action_set_handle(resolve_action_set_name(layer, device))
-	if not handle:
+	var stack: _ActionSetStack = _stacks.get(slot)
+	if not stack or layer not in stack.layers:
 		return false
 
-	# FIXME: This lookup is required because of the need to return whether the action
-	# set layer was changed. This may be a performance issue, so consider removing.
-	if handle not in Steam.getActiveActionSetLayers(device):
-		return false
+	stack.layers.erase(layer)
 
-	_action_sets[handle] = layer
-	Steam.deactivateActionSetLayer(device, handle)
+	_apply(slot)
 
-	# NOTE: This won't organically return `true` until the next player action input is
-	# received by the game. This is an unfortunate discrepancy between the Godot
-	# architecture and the Steam one.
 	return true
 
 
-## list_action_set_layers returns the stack of currently active action set layers
-## *for the specified device*.
+## list_action_set_layers returns the layer stack recorded for the joypad in `slot`.
 func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
-	var device: int = joypad_monitor.get_device_id_for_slot(slot)
-	if device == -1:
-		assert(false, "invalid argument; failed to find device for slot")
+	var stack: _ActionSetStack = _stacks.get(slot)
+	if not stack:
 		return []
 
-	var layers: Array[StdInputActionSetLayer] = []
-
-	for handle in Steam.getActiveActionSetLayers(device):
-		var layer: StdInputActionSetLayer = _action_sets.get(handle)
-		assert(layer is StdInputActionSetLayer, "invalid state; missing layer")
-
-		layers.append(layer)
-
-	return layers
+	return stack.layers.duplicate()
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _apply makes Steam hold the stack recorded for the joypad in `slot`, rebuilding its
+## layers in stack order.
+func _apply(slot: int) -> void:
+	var stack: _ActionSetStack = _stacks.get(slot)
+	if not stack:
+		return
+
+	var device: int = joypad_monitor.get_device_id_for_slot(slot)
+	if device == -1:
+		return
+
+	Steam.deactivateAllActionSetLayers(device)
+	Steam.activateActionSet(device, get_action_set_handle(stack.action_set.name))
+
+	for handle in _list_layer_handles(slot):
+		Steam.activateActionSetLayer(device, handle)
+
+	stack.written = Engine.get_process_frames()
 
 
 ## _clear_stick_deadzones sets the `InputMap` deadzone of each of `action_set`'s stick
@@ -440,10 +472,7 @@ static func _clear_stick_deadzones(action_set: StdInputActionSet) -> void:
 
 
 ## _get_pointer_motion_filter returns the slot's pointer motion filter, configured from
-## the action sets Steam currently reports active for it.
-##
-## NOTE: The threshold is read on each event rather than when sets change, since Steam
-## only reflects a set or layer change once the next input arrives.
+## the action set and layers recorded for it.
 func _get_pointer_motion_filter(slot: int) -> MotionFilter:
 	var filter: MotionFilter = _pointer_motion.get(slot)
 	if not filter:
@@ -463,18 +492,46 @@ func _get_pointer_motion_filter(slot: int) -> MotionFilter:
 	return filter
 
 
-## _publish_input_event records `event` as the press of its action by the Steam action
-## `source`, then parses the action's combined state once it differs from the one last
-## published for its slot: pressed while any source presses it, at the strongest one's
-## strength, as Godot combines an action's bound events. Parsing presses the action on
-## `Input` at that strength, so no explicit press or release is needed; an explicit
-## release would also release the action for every other device, such as a key held for
-## it.
+## _is_applied returns whether Steam holds the stack recorded for the joypad in `slot`,
+## given the set handle `action_set` and layer handles `layers` Steam reports for it.
+## Layers must match in stack order; a joypad with no record holds anything.
+static func _is_applied(slot: int, action_set: int, layers: Array) -> bool:
+	var stack: _ActionSetStack = _stacks.get(slot)
+	if not stack:
+		return true
+
+	if action_set != get_action_set_handle(stack.action_set.name):
+		return false
+
+	return layers == _list_layer_handles(slot)
+
+
+## _list_layer_handles returns the handle of each layer recorded for the joypad in
+## `slot`, in stack order, skipping any layer the Steam Input manifest lacks.
+static func _list_layer_handles(slot: int) -> Array:
+	var handles := []
+
+	var stack: _ActionSetStack = _stacks.get(slot)
+	if not stack:
+		return handles
+
+	for layer in stack.layers:
+		var handle := get_action_set_handle(resolve_action_set_name(layer, slot))
+		if handle:
+			handles.append(handle)
+
+	return handles
+
+
+## _publish_input_event records `event` as the Steam action `source`'s press of its
+## action, then parses the action, pressed while any source presses it, only when its
+## state or strength changes, since Steam repeats a stick's report on every motion.
 ##
-## NOTE: Steam reports a stick on every change, so a direction it keeps reporting as
-## released would otherwise read as just released on every event. A layer's stick can
-## also drive a direction its parent set binds as a button, so neither source may
-## release the other's press.
+## NOTE: Parsing sets the action on `Input`, so it's never released explicitly; that
+## would release it for every other device too, such as a key held for it.
+##
+## NOTE: A layer's stick can drive a direction its parent set binds as a button, so
+## neither source may release the other's press.
 func _publish_input_event(event: InputEventAction, source: StringName) -> void:
 	var sources: Dictionary = _held.get_or_add(event.device, {}).get_or_add(
 		event.action, {}
@@ -501,22 +558,18 @@ func _publish_input_event(event: InputEventAction, source: StringName) -> void:
 
 
 ## _publish_pointer_motion moves the pointer by `motion`, in pixels, for a Steam analog
-## action in a mouse mode. A captured cursor can't move, so the motion is delivered as a
-## mouse motion event for mouse-look; otherwise the cursor is warped, and the window
-## system echoes a positioned mouse motion event which hover and the cursor's reveal
-## logic handle like a real mouse.
+## action in a mouse mode. A captured cursor gets a mouse motion event for mouse-look,
+## and a free one is warped, which the window system echoes as a real mouse's motion.
 ##
 ## NOTE: Godot's Wayland backend can't warp a free pointer, so a Linux export must use
-## the X11 driver (Godot's default, and what gamescope presents on Steam Deck), and
-## macOS may not echo warps. A set which reads pointer deltas for mouse-look must
-## capture the cursor, or the pointer stops at the window edge, as a real mouse does.
+## X11, Godot's default and gamescope's on Steam Deck; macOS may not echo a warp.
+##
+## NOTE: A set read for mouse-look must capture the cursor, or the pointer stops at the
+## window edge, as a real mouse does.
 func _publish_pointer_motion(motion: Vector2) -> void:
 	if DisplayServer.mouse_get_mode() == DisplayServer.MOUSE_MODE_CAPTURED:
-		# NOTE: The viewport resolves hover from the event's position and `Input` stores
-		# it as the pointer's, so the current position is carried; a zero position would
-		# hover whatever control sits at the window origin on every delta. An event's
-		# position is in window pixels, which the window's own transform maps back to
-		# from the viewport's coordinates under content scaling.
+		# NOTE: Hover reads the event's position, so the pointer's is carried, in window
+		# pixels under content scaling; a zero would hover the window origin's control.
 		var window := get_window()
 		var pointer := window.get_final_transform() * window.get_mouse_position()
 
@@ -535,15 +588,35 @@ func _publish_pointer_motion(motion: Vector2) -> void:
 	)
 	var size := Vector2(DisplayServer.window_get_size())
 
-	# NOTE: A warp lands on a whole pixel, so the fraction it drops is carried to the
-	# next motion; otherwise slow motion never moves the pointer and jitter drifts it.
-	# The remainder is dropped at a window edge, so it can't build up there.
+	# NOTE: A warp lands on a whole pixel, so the fraction is carried or slow motion
+	# never moves the pointer; a window edge drops it, so it can't build up there.
 	var target := position + motion + _warp_remainder
 	var warped := target.round()
 	var clamped := warped.clamp(Vector2.ZERO, size - Vector2.ONE)
 	_warp_remainder = target - warped if clamped == warped else Vector2.ZERO
 
 	Input.warp_mouse(clamped)
+
+
+## _release_held_actions releases every action the joypad in `slot` was holding and
+## forgets the slot's held actions.
+func _release_held_actions(slot: int) -> void:
+	var held: Dictionary = _held.get(slot, {})
+
+	for action in held:
+		if held[action].is_empty():
+			continue
+
+		var event := InputEventAction.new()
+		event.action = action
+		event.device = slot
+		event.pressed = false
+		event.strength = 0.0
+
+		Input.parse_input_event(event)
+
+	_held.erase(slot)
+	_pointer_motion.erase(slot)
 
 
 ## _restore_stick_deadzones restores the `InputMap` deadzone of each stick direction
@@ -556,6 +629,8 @@ static func _restore_stick_deadzones() -> void:
 	_stick_deadzones.clear()
 
 
+## _store_action_handles stores the handle of each of `action_set`'s actions, so its
+## action events can be named.
 func _store_action_handles(action_set: StdInputActionSet) -> void:
 	if action_set in _actions_seen_action_sets:
 		return
@@ -599,7 +674,7 @@ func _on_input_action_event(
 	is_active: bool,
 	action_data: Dictionary,
 ) -> void:
-	# Don't emit action events for actions which aren't loaded.
+	# NOTE: Steam marks an action outside the active sets inactive; it isn't published.
 	if not is_active:
 		return
 
@@ -635,11 +710,9 @@ func _on_input_action_event(
 				Steam.INPUT_SOURCE_MODE_ABSOLUTE_MOUSE, Steam.INPUT_SOURCE_MODE_RELATIVE_MOUSE:
 					_publish_pointer_motion(motion)
 
-					# NOTE: The action is parsed on every motion, since it needn't exist in
-					# the `InputMap`; it only marks joypad activity for the slot. It's
-					# pressed once motion passes the active sets' cursor reveal threshold,
-					# the same filter `StdInputCursor` applies, so gyro wobble from a
-					# controller at rest can't switch glyphs away from a mouse in use.
+					# NOTE: The action only marks joypad activity, so it needn't be in the
+					# `InputMap`. It's pressed past `StdInputCursor`'s reveal threshold, so
+					# gyro wobble at rest can't switch glyphs away from a mouse in use.
 					var event := InputEventAction.new()
 					event.action = action
 					event.device = slot
@@ -665,33 +738,24 @@ func _on_input_action_event(
 
 func _on_input_configuration_loaded(
 	_app_id: int,
-	_device_handle: int,
+	device_handle: int,
 	_config_data: Dictionary,
 ) -> void:
+	# NOTE: A configuration load resets the controller's sets, so the stack is reapplied.
+	var slot: int = joypad_monitor.get_slot_for_device_id(device_handle)
+	if slot != -1:
+		_apply(slot)
+
 	# NOTE: Steam loads a configuration once per controller per focus change, which
 	# covers a rebind in its configurator.
 	bindings_changed.emit()
 
 
 ## _on_joypad_disconnected releases every action the joypad in `slot` was holding, since
-## Steam reports nothing further for it, and forgets the slot's held actions.
+## Steam reports nothing further for it, and forgets the slot's held actions and stack.
 func _on_joypad_disconnected(slot: int) -> void:
-	var held: Dictionary = _held.get(slot, {})
-
-	for action in held:
-		if held[action].is_empty():
-			continue
-
-		var event := InputEventAction.new()
-		event.action = action
-		event.device = slot
-		event.pressed = false
-		event.strength = 0.0
-
-		Input.parse_input_event(event)
-
-	_held.erase(slot)
-	_pointer_motion.erase(slot)
+	_release_held_actions(slot)
+	_stacks.erase(slot)
 
 
 func _on_steam_input_state_changed(enabled: bool) -> void:

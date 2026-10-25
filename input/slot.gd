@@ -897,7 +897,13 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 	if not action_set:
 		return
 
-	if not device.load_action_set(action_set):
+	# NOTE: The layers are enabled even when the set reports no change, since a
+	# component which already holds the set needn't hold its layers.
+	device.load_action_set(action_set)
+
+	# NOTE: A component can refuse the set, as Steam's does for one missing from its
+	# manifest, which leaves no set for the layers to go on.
+	if device.actions.get_action_set(device.device_id) != action_set:
 		return
 
 	for layer in actions.list_action_set_layers(device_id):
