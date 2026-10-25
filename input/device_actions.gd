@@ -81,6 +81,16 @@ func list_action_set_layers(device: int) -> Array[StdInputActionSetLayer]:
 	return _list_action_set_layers(device)
 
 
+# Events
+
+
+## is_matching_event_origin returns whether `event` is input from the joypad `device`,
+## in the form this component receives that joypad's input. By default that's a raw
+## joypad button or motion event from the joypad.
+func is_matching_event_origin(device: int, event: InputEvent) -> bool:
+	return _is_matching_event_origin(device, event)
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 # Action sets
@@ -112,3 +122,13 @@ func _enable_action_set_layer(_device: int, _layer: StdInputActionSetLayer) -> b
 func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
 	assert(false, "unimplemented")
 	return []
+
+
+# Events
+
+
+func _is_matching_event_origin(device: int, event: InputEvent) -> bool:
+	return (
+		event.device == device
+		and (event is InputEventJoypadButton or event is InputEventJoypadMotion)
+	)

@@ -49,6 +49,15 @@ class DeviceActions:
 	## its manifest.
 	var refuses_action_sets: bool = false
 
+	## matches_actions makes a joypad match only injected actions, as when Steam Input
+	## drives it.
+	var matches_actions: bool = false
+
+	func _is_matching_event_origin(device: int, event: InputEvent) -> bool:
+		if matches_actions:
+			return event is InputEventAction and event.device == device
+		return super(device, event)
+
 	func _get_action_set(_device: int) -> StdInputActionSet:
 		return action_set
 
@@ -556,6 +565,20 @@ func test_input_slot_connected_joypad_gets_no_layers_when_its_set_is_refused() -
 
 	# Then: The joypad holds no layer without its set.
 	assert_eq(_actions_joy.layers, [] as Array[StdInputActionSetLayer])
+
+
+func test_input_slot_matches_events_as_its_active_joypads_component_does() -> void:
+	# Given: A joypad component which matches only injected actions, as Steam's does.
+	_actions_joy.matches_actions = true
+
+	# Given: An input slot with that joypad active.
+	_activate_joypad_under_set(StdInputActionSet.PROPERTY_STATUS_INHERIT)
+
+	# When/Then: A virtual gamepad's raw button under the joypad's index doesn't match.
+	assert_false(slot.is_matching_event_origin(_joypad_button(0)))
+
+	# When/Then: An injected action for the joypad matches.
+	assert_true(slot.is_matching_event_origin(_injected_action(0, 1.0)))
 
 
 func test_input_slot_joypad_connected_before_player_input_activates() -> void:
@@ -1077,6 +1100,15 @@ func _injected_action(
 	event.device = device
 	event.pressed = true
 	event.strength = strength
+	return event
+
+
+## _joypad_button returns a press of the south face button on joypad `device`.
+func _joypad_button(device: int) -> InputEventJoypadButton:
+	var event := InputEventJoypadButton.new()
+	event.device = device
+	event.button_index = JOY_BUTTON_A
+	event.pressed = true
 	return event
 
 

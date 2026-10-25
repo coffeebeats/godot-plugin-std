@@ -155,6 +155,9 @@ static func get_device_category(
 ## as `InputEvent.DEVICE_ID_KEYBOARD` and mice as `InputEvent.DEVICE_ID_MOUSE`.
 ##
 ## NOTE: A mouse event emulated from a touch doesn't match the keyboard device.
+##
+## NOTE: A joypad matches the events its actions component receives its input as, so a
+## joypad Steam Input drives matches only the actions Steam publishes for it.
 func is_matching_event_origin(event: InputEvent) -> bool:
 	match device_type:
 		DEVICE_TYPE_UNKNOWN:
@@ -175,10 +178,8 @@ func is_matching_event_origin(event: InputEvent) -> bool:
 				or event is InputEventGesture
 			)
 		_:
-			return (
-				event.device == device_id
-				and (event is InputEventJoypadButton or event is InputEventJoypadMotion)
-			)
+			assert(actions is StdInputDeviceActions, "invalid state; missing component")
+			return actions.is_matching_event_origin(device_id, event)
 
 
 # Action sets

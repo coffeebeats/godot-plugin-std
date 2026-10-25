@@ -315,6 +315,22 @@ func test_exit_tree_keeps_the_recorded_stack_of_a_connected_joypad() -> void:
 	assert_eq(_actions.get_action_set(0), menu)
 
 
+func test_is_matching_event_origin_matches_only_steam_actions() -> void:
+	# Given: A raw button event under slot 0's index, as from Steam's virtual gamepad.
+	var button := InputEventJoypadButton.new()
+	button.device = 0
+	button.button_index = JOY_BUTTON_A
+
+	# When/Then: The raw event does not match the joypad in slot 0.
+	assert_false(_actions.is_matching_event_origin(0, button))
+
+	# When/Then: A Steam action for slot 0 matches the joypad in slot 0.
+	assert_true(_actions.is_matching_event_origin(0, _action(&"move_up", 1.0, true)))
+
+	# When/Then: It doesn't match the joypad in slot 1.
+	assert_false(_actions.is_matching_event_origin(1, _action(&"move_up", 1.0, true)))
+
+
 func test_enter_tree_listens_to_steam_before_a_controller_connects() -> void:
 	# Given: The component's dependencies, with no controller connected.
 	_actions.joypad_monitor = autofree(_joypad_monitor.new())

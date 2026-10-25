@@ -201,6 +201,28 @@ func test_joypad_monitor_ignores_a_disconnect_of_a_device_it_dropped() -> void:
 	assert_signal_not_emitted(monitor, "joy_disconnected")
 
 
+func test_joypad_monitor_reads_a_virtual_gamepads_steam_handle() -> void:
+	# When/Then: The Steam handle SDL records for a virtual gamepad is read back.
+	#
+	# NOTE: The joypad info is as hardware reported it on 2026-10-24.
+	assert_eq(
+		_joypad_monitor._get_steam_handle({"steam_input_index": "176657670040285"}),
+		176657670040285,
+	)
+
+	# When/Then: A joypad Steam doesn't drive has no handle.
+	assert_eq(_joypad_monitor._get_steam_handle({"vendor_id": "1356"}), 0)
+
+
+func test_joypad_monitor_does_not_match_a_virtual_gamepad_by_index() -> void:
+	# Given: A joypad monitor which connected one device.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor._connected = PackedInt64Array([7])
+
+	# When/Then: Godot's joypad 0 isn't a virtual gamepad, though slot 0 is connected.
+	assert_false(monitor._is_virtual_gamepad(0))
+
+
 func test_joypad_monitor_maps_steam_input_types_to_device_families() -> void:
 	# When/Then: Known Steam Input types map to their family, and the rest are generic.
 	assert_eq(
