@@ -30,3 +30,17 @@ updates:
       submodules:
         patterns:
           - "*"
+
+  # Update Python tooling dependencies
+  - package-ecosystem: "uv"
+    directory: "/"
+    reviewers:
+      - coffeebeats
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 30
+    groups:
+      python:
+        patterns:
+          - "*"
