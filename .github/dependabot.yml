@@ -14,6 +14,10 @@ updates:
       interval: "monthly"
     cooldown:
       default-days: 30
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   # Update Git submodule dependencies
   - package-ecosystem: "gitsubmodule"
@@ -22,3 +26,7 @@ updates:
       - coffeebeats
     schedule:
       interval: "monthly"
+    groups:
+      submodules:
+        patterns:
+          - "*"
