@@ -45,11 +45,15 @@ class DeviceActions:
 	var action_set: StdInputActionSet = null
 	var layers: Array[StdInputActionSetLayer] = []
 
+	## refuses_action_sets makes every load fail, as Steam's does for a set missing from
+	## its manifest.
+	var refuses_action_sets: bool = false
+
 	func _get_action_set(_device: int) -> StdInputActionSet:
 		return action_set
 
 	func _load_action_set(_device: int, next: StdInputActionSet) -> bool:
-		if next == action_set:
+		if refuses_action_sets or next == action_set:
 			return false
 		action_set = next
 		layers = []
@@ -525,6 +529,30 @@ func test_input_slot_connected_joypad_gets_layers_when_its_set_is_unchanged() ->
 
 	# Then: The joypad holds the layer too.
 	assert_eq(_actions_joy.layers, [layer] as Array[StdInputActionSetLayer])
+
+
+func test_input_slot_connected_joypad_gets_no_layers_when_its_set_is_refused() -> void:
+	# Given: An input slot claiming no keyboard, with an action set loaded and a layer
+	# enabled before any joypad connected.
+	slot.claim_kbm_input = false
+	add_child_autofree(slot)
+	var action_set := _make_action_set(&"Test")
+	var layer := _make_layer(&"TestLayer", action_set)
+	assert_true(slot.load_action_set(action_set))
+	assert_true(slot.enable_action_set_layer(layer))
+
+	# Given: The joypad component refuses the action set.
+	_actions_joy.refuses_action_sets = true
+
+	# When: A joypad connects.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_active_device())
+
+	# Then: No layer is enabled without its set.
+	assert_null(_actions_joy.action_set)
+	assert_eq(_actions_joy.layers, [] as Array[StdInputActionSetLayer])
 
 
 func test_input_slot_joypad_connected_before_player_input_activates() -> void:
