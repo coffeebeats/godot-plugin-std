@@ -257,9 +257,8 @@ func _enter_tree() -> void:
 
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
 
-	# NOTE: Steam's signals are connected before any controller is reported, since the
-	# monitor reports the first one while Steam emits them, and a connection made during
-	# an emission misses it.
+	# NOTE: Steam's signals are connected before any controller is reported, since a
+	# connection made during the monitor's first-controller emission would miss it.
 	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
 	Signals.connect_safe(
 		Steam.input_configuration_loaded, _on_input_configuration_loaded
