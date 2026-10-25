@@ -129,6 +129,11 @@ func _input(event: InputEvent) -> void:
 	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion):
 		return
 
+	# NOTE: Raw joypad events arrive many times a frame, so the joypad's info isn't
+	# looked up while no Steam controller is connected.
+	if _connected.is_empty():
+		return
+
 	# NOTE: Steam runs a virtual gamepad for a controller whose layout binds a gamepad
 	# button, and Godot opens it as a joypad. The controller's input already arrives as
 	# Steam actions, so the virtual gamepad's raw events are dropped.
