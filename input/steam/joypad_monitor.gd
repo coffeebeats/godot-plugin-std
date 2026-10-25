@@ -170,8 +170,7 @@ func _claim_slot(device: int) -> int:
 
 
 func _connect_device(device: int) -> void:
-	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-	if _connected.has(device):
+	if device in _connected:
 		assert(false, "invalid argument: duplicate device")
 		return
 
@@ -187,8 +186,7 @@ func _connect_device(device: int) -> void:
 
 
 func _disconnect_device(device: int) -> void:
-	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-	if not _connected.has(device):
+	if device not in _connected:
 		assert(false, "invalid argument: missing device")
 		return
 
@@ -227,8 +225,7 @@ func _is_virtual_gamepad(device: int) -> bool:
 
 	var handle := _get_steam_handle(Input.get_joy_info(device))
 
-	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-	return handle != 0 and _connected.has(handle)
+	return handle != 0 and handle in _connected
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
@@ -261,8 +258,7 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 func _on_device_connected(device: int) -> void:
 	# NOTE: A configuration load can connect the device first, or report first that
 	# the device doesn't use the Steam Input API, as on a replug.
-	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-	if not _connected.has(device) and not _opted_out.has(device):
+	if device not in _connected and device not in _opted_out:
 		_connect_device(device)
 
 
@@ -274,8 +270,7 @@ func _on_device_disconnected(device: int) -> void:
 
 	# NOTE: A configuration which doesn't use the Steam Input API can disconnect the
 	# device first.
-	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-	if _connected.has(device):
+	if device in _connected:
 		_disconnect_device(device)
 
 
@@ -286,8 +281,7 @@ func _on_gamepad_slot_change(
 	slot_prev: int,
 	slot_next: int,
 ) -> void:
-	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-	if not _connected.has(device):
+	if device not in _connected:
 		assert(false, "invalid argument: unknown device")
 		return
 
