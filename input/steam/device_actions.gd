@@ -292,7 +292,6 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(
 		Steam.input_configuration_loaded, _on_input_configuration_loaded
 	)
-	Signals.disconnect_safe(Steam.input_device_connected, _on_input_device_connected)
 
 
 func _process(_delta: float) -> void:
@@ -765,12 +764,6 @@ func _on_input_configuration_loaded(
 	bindings_changed.emit()
 
 
-func _on_input_device_connected(device_handle: int) -> void:
-	var slot: int = joypad_monitor.get_slot_for_device_id(device_handle)
-	if slot != -1:
-		_apply(slot)
-
-
 ## _on_joypad_disconnected releases every action the joypad in `slot` was holding, since
 ## Steam reports nothing further for it, and forgets the slot's held actions and stack.
 func _on_joypad_disconnected(slot: int) -> void:
@@ -796,4 +789,3 @@ func _on_steam_input_state_changed(enabled: bool) -> void:
 	Signals.connect_safe(
 		Steam.input_configuration_loaded, _on_input_configuration_loaded
 	)
-	Signals.connect_safe(Steam.input_device_connected, _on_input_device_connected)
