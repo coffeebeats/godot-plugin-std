@@ -315,6 +315,37 @@ func test_exit_tree_keeps_the_recorded_stack_of_a_connected_joypad() -> void:
 	assert_eq(_actions.get_action_set(0), menu)
 
 
+func test_enter_tree_listens_to_steam_before_a_controller_connects() -> void:
+	# Given: The component's dependencies, with no controller connected.
+	_actions.joypad_monitor = autofree(_joypad_monitor.new())
+	_actions.steam_input_enabled_property = StdSettingsPropertyBool.new()
+	_actions.steam_input_enabled_property.scope = StdSettingsScope.new()
+	_actions.steam_input_enabled_property.category = &"test"
+	_actions.steam_input_enabled_property.name = &"steam_input_enabled"
+
+	# When: The component enters the scene.
+	_actions._enter_tree()
+
+	# Then: It already receives the Steam signals which report the first controller.
+	assert_true(Steam.input_action_event.is_connected(_actions._on_input_action_event))
+	assert_true(
+		Steam.input_configuration_loaded.is_connected(
+			_actions._on_input_configuration_loaded
+		)
+	)
+
+	# When: The component leaves the scene.
+	_actions._exit_tree()
+
+	# Then: It no longer receives them.
+	assert_false(Steam.input_action_event.is_connected(_actions._on_input_action_event))
+	assert_false(
+		Steam.input_configuration_loaded.is_connected(
+			_actions._on_input_configuration_loaded
+		)
+	)
+
+
 func test_load_action_set_reports_the_recorded_set_at_once() -> void:
 	# Given: A controller connected in slot 0.
 	_connect_joypad()

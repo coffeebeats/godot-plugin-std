@@ -31,6 +31,10 @@ var _connected := PackedInt64Array()
 
 var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_frame()
 
+## _opted_out holds the handle of each device whose configuration doesn't use the Steam
+## Input API, so a later connect report doesn't connect it.
+var _opted_out := PackedInt64Array()
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
@@ -92,8 +96,8 @@ func _enter_tree() -> void:
 	# NOTE: Ensure this node can always process callbacks.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-	Signals.connect_safe(Steam.input_action_event, _on_action_event)
 	Signals.connect_safe(Steam.input_gamepad_slot_change, _on_gamepad_slot_change)
+	Signals.connect_safe(Steam.input_device_connected, _on_device_connected)
 	Signals.connect_safe(Steam.input_device_disconnected, _on_device_disconnected)
 	Signals.connect_safe(Steam.input_configuration_loaded, _on_configuration_loaded)
 
@@ -102,6 +106,9 @@ func _enter_tree() -> void:
 		return
 
 	Steam.enableActionEventCallbacks()
+
+	# NOTE: Enabling device callbacks reports each controller already connected, so a
+	# controller plugged in at launch connects without waiting for input.
 	Steam.enableDeviceCallbacks()
 
 	_logger.info("Initialized Steam Input API.")
@@ -110,8 +117,8 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	Steam.inputShutdown()
 
-	Signals.disconnect_safe(Steam.input_action_event, _on_action_event)
 	Signals.disconnect_safe(Steam.input_configuration_loaded, _on_configuration_loaded)
+	Signals.disconnect_safe(Steam.input_device_connected, _on_device_connected)
 	Signals.disconnect_safe(Steam.input_device_disconnected, _on_device_disconnected)
 	Signals.disconnect_safe(Steam.input_gamepad_slot_change, _on_gamepad_slot_change)
 
@@ -200,27 +207,6 @@ func _disconnect_device(device: int) -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_action_event(
-	device: int,
-	event_type: Steam.InputActionEventType,
-	_action_handle: int,
-	_is_active: bool,
-	action_data: Dictionary,
-) -> void:
-	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
-	if not _connected.has(device):
-		match event_type:
-			Steam.INPUT_ACTION_EVENT_TYPE_ANALOG_ACTION:
-				if not action_data["x"] and not action_data["y"]:
-					return
-			Steam.INPUT_ACTION_EVENT_TYPE_DIGITAL_ACTION:
-				if not action_data["state"]:
-					return
-
-		_connect_device(device)
-		return
-
-
 func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 	(
 		_logger
@@ -233,14 +219,37 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 	var uses_steam_input_api: bool = cfg.get("uses_steam_input_api", true)
 	var device_in_connected := _connected.has(device)
 
+	var opted_out_index := _opted_out.find(device)
+	if uses_steam_input_api and opted_out_index != -1:
+		_opted_out.remove_at(opted_out_index)
+	elif not uses_steam_input_api and opted_out_index == -1:
+		_opted_out.append(device)
+
 	if not uses_steam_input_api and device_in_connected:
 		_disconnect_device(device)
 	elif uses_steam_input_api and not device_in_connected:
 		_connect_device(device)
 
 
+func _on_device_connected(device: int) -> void:
+	# NOTE: A configuration load can connect the device first, or report first that
+	# the device doesn't use the Steam Input API, as on a replug.
+	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
+	if not _connected.has(device) and not _opted_out.has(device):
+		_connect_device(device)
+
+
 func _on_device_disconnected(device: int) -> void:
-	_disconnect_device(device)
+	# NOTE: The device's configuration is loaded again when it reconnects.
+	var opted_out_index := _opted_out.find(device)
+	if opted_out_index != -1:
+		_opted_out.remove_at(opted_out_index)
+
+	# NOTE: A configuration which doesn't use the Steam Input API can disconnect the
+	# device first.
+	# FIXME(https://github.com/godotengine/godot/issues/100580): Revert to `in`.
+	if _connected.has(device):
+		_disconnect_device(device)
 
 
 func _on_gamepad_slot_change(

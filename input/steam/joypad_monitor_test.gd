@@ -13,6 +13,10 @@ extends GutTest
 ## extension registers and `should_skip_script` skips this script without it.
 const _JOYPAD_MONITOR_PATH := "joypad_monitor.gd"
 
+## _STEAM_ERROR is the condition GodotSteam reports when it rejects a call because
+## Steam Input isn't running, as under test.
+const _STEAM_ERROR := "SteamAPI_SteamInput() == nullptr"
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _joypad_monitor: Variant = null
@@ -112,6 +116,89 @@ func test_joypad_monitor_disconnect_drops_trailing_empty_slots() -> void:
 	# Then: No slot is kept and Steam Input is no longer in use.
 	assert_eq(monitor._connected, PackedInt64Array())
 	assert_false(monitor.steam_input_enabled_property.get_value())
+
+
+func test_joypad_monitor_connects_a_device_steam_reports_connected() -> void:
+	# Given: A joypad monitor with no device connected.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	watch_signals(monitor)
+
+	# When: Steam reports a controller connected.
+	monitor._on_device_connected(7)
+
+	# Then: The device takes slot 0 as a generic joypad.
+	#
+	# NOTE: Steam Input isn't running under test to name the joypad's family.
+	assert_engine_error(_STEAM_ERROR)
+	assert_signal_emitted_with_parameters(
+		monitor, "joy_connected", [0, StdInputDevice.DEVICE_TYPE_GENERIC]
+	)
+	assert_eq(monitor.get_device_id_for_slot(0), 7)
+
+	# Then: Steam Input is in use.
+	assert_true(monitor.steam_input_enabled_property.get_value())
+
+	# When: Steam reports the controller connected again.
+	monitor._on_device_connected(7)
+
+	# Then: It isn't connected twice.
+	assert_signal_emit_count(monitor, "joy_connected", 1)
+
+
+func test_joypad_monitor_connects_a_replugged_device_again() -> void:
+	# Given: A joypad monitor with a device connected in slot 0.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	monitor._on_device_connected(7)
+	assert_engine_error(_STEAM_ERROR)
+
+	# When: The controller is unplugged and plugged in again under a new handle.
+	monitor._on_device_disconnected(7)
+	monitor._on_device_connected(9)
+
+	# Then: The controller is connected in slot 0 again.
+	assert_engine_error(_STEAM_ERROR)
+	assert_eq(monitor.get_device_id_for_slot(0), 9)
+	assert_true(monitor.steam_input_enabled_property.get_value())
+
+
+func test_joypad_monitor_skips_a_device_whose_configuration_opted_out_first() -> void:
+	# Given: A joypad monitor with no device connected.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	watch_signals(monitor)
+
+	# When: A controller's configuration loads without using the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+
+	# When: Steam then reports the controller connected, as on a replug.
+	monitor._on_device_connected(7)
+
+	# Then: The controller isn't connected.
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_eq(monitor.get_slot_for_device_id(7), -1)
+
+	# When: The controller is replugged before its configuration loads again.
+	monitor._on_device_disconnected(7)
+	monitor._on_device_connected(7)
+
+	# Then: It's connected, since its old configuration no longer applies.
+	assert_engine_error(_STEAM_ERROR)
+	assert_eq(monitor.get_slot_for_device_id(7), 0)
+
+
+func test_joypad_monitor_ignores_a_disconnect_of_a_device_it_dropped() -> void:
+	# Given: A joypad monitor with no device connected.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	watch_signals(monitor)
+
+	# When: Steam reports a disconnect of a controller the monitor never connected.
+	monitor._on_device_disconnected(7)
+
+	# Then: No slot is reported disconnected.
+	assert_signal_not_emitted(monitor, "joy_disconnected")
 
 
 func test_joypad_monitor_maps_steam_input_types_to_device_families() -> void:

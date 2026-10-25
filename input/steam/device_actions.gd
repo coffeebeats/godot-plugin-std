@@ -91,10 +91,6 @@ static var _stick_deadzones: Dictionary = {}  # gdlint:ignore=class-definitions-
 ## name of every Steam action pressing it to the strength it presses at.
 var _held: Dictionary = {}
 
-## _is_listening tracks whether this instance receives Steam Input events; the caches
-## above are shared, but each instance connects to the signals itself.
-var _is_listening: bool = false
-
 var _logger := StdLogger.create("std/input/steam/device-actions")
 
 ## _pointer_motion maps slots to the filter which decides when that slot's "absolute
@@ -261,6 +257,13 @@ func _enter_tree() -> void:
 
 	Signals.connect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
 
+	# NOTE: Steam's signals are connected before any controller is reported, since a
+	# connection made during the monitor's first-controller emission would miss it.
+	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
+	Signals.connect_safe(
+		Steam.input_configuration_loaded, _on_input_configuration_loaded
+	)
+
 	if steam_input_enabled_property.get_value():
 		_on_steam_input_state_changed(true)
 
@@ -279,12 +282,6 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(
 		steam_input_enabled_property.value_changed, _on_steam_input_state_changed
 	)
-
-	if not _is_listening:
-		return
-
-	_is_listening = false
-
 	Signals.disconnect_safe(Steam.input_action_event, _on_input_action_event)
 	Signals.disconnect_safe(
 		Steam.input_configuration_loaded, _on_input_configuration_loaded
@@ -763,16 +760,7 @@ func _on_steam_input_state_changed(enabled: bool) -> void:
 		_restore_stick_deadzones()
 		return
 
+	_is_initialized = true
+
 	for action_set in _actions_seen_action_sets:
 		_clear_stick_deadzones(action_set)
-
-	if _is_listening:
-		return
-
-	_is_initialized = true
-	_is_listening = true
-
-	Signals.connect_safe(Steam.input_action_event, _on_input_action_event)
-	Signals.connect_safe(
-		Steam.input_configuration_loaded, _on_input_configuration_loaded
-	)
