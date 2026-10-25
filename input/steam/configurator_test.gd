@@ -27,6 +27,9 @@ const _STEAM_ERROR := "SteamAPI_SteamInput() == nullptr"
 ## _TEST_HANDLE is the Steam handle of the controller connected in slot 0.
 const _TEST_HANDLE := 7
 
+## _TEST_HANDLE_OTHER is the Steam handle of a second controller, connected in slot 1.
+const _TEST_HANDLE_OTHER := 9
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _configurator: Variant = null
@@ -38,13 +41,17 @@ var _slot: StdInputSlot = null
 
 
 func test_configurator_uses_the_last_active_joypads_steam_handle() -> void:
-	# Given: A slot whose controller connected before any player input, so it's active.
+	# Given: A slot whose first controller connected before any player input, so it's
+	# active.
 	_slot.prefer_activate_joypad_on_ready = true
 	_add_slot()
-	_connect_joypad()
+	_connect_joypads([_TEST_HANDLE, _TEST_HANDLE_OTHER])
 
-	# When/Then: The handle is the controller's, not its slot index.
-	assert_eq(_configurator._get_controller_handle(_slot), _TEST_HANDLE)
+	# Given: The second controller is used, so it's the last active one.
+	_slot._activate_device(_slot.get_connected_devices(false)[1])
+
+	# When/Then: The handle is the second controller's, not the first connected one's.
+	assert_eq(_configurator._get_controller_handle(_slot), _TEST_HANDLE_OTHER)
 
 
 func test_configurator_uses_a_connected_joypad_once_none_was_active() -> void:
@@ -52,7 +59,7 @@ func test_configurator_uses_a_connected_joypad_once_none_was_active() -> void:
 	# component swap clears the last active joypad.
 	_slot.prefer_activate_joypad_on_ready = false
 	_add_slot()
-	_connect_joypad()
+	_connect_joypads()
 	assert_null(_slot.get_last_active_joypad_device(), "precondition: none active")
 
 	# When/Then: The handle is the connected controller's.
@@ -70,7 +77,7 @@ func test_configurator_has_no_handle_without_a_steam_controller() -> void:
 func test_configurator_button_opens_the_panel_for_the_controller() -> void:
 	# Given: A slot with a controller connected, and a configurator for its player.
 	_add_slot()
-	_connect_joypad()
+	_connect_joypads()
 
 	var configurator: Node = autofree(_configurator.new())
 	configurator.player_id = _slot.player_id
@@ -123,9 +130,10 @@ func _add_slot() -> void:
 	autofree(_slot.get_connected_devices()[0])
 
 
-## _connect_joypad connects the controller `_TEST_HANDLE` in slot 0, as the Steam
-## monitor reports one.
-func _connect_joypad() -> void:
-	_monitor._connected = PackedInt64Array([_TEST_HANDLE])
-	_monitor.joy_connected.emit(0, StdInputDevice.DEVICE_TYPE_GENERIC)
-	autofree(_slot.get_connected_devices(false)[0])
+## _connect_joypads connects a controller for each Steam handle in `handles`, in the
+## slot of its index, as the Steam monitor reports them.
+func _connect_joypads(handles: Array[int] = [_TEST_HANDLE]) -> void:
+	_monitor._connected = PackedInt64Array(handles)
+	for slot in handles.size():
+		_monitor.joy_connected.emit(slot, StdInputDevice.DEVICE_TYPE_GENERIC)
+		autofree(_slot.get_connected_devices(false)[slot])
