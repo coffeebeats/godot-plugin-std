@@ -79,7 +79,7 @@ func test_configurator_button_opens_the_panel_for_the_controller() -> void:
 	configurator._on_button_pressed()
 
 	# Then: Steam is asked to open the panel, which it rejects since Steam Input isn't
-	# running, and the rejection is logged rather than reported as opened.
+	# running.
 	assert_engine_error(_STEAM_ERROR)
 
 
@@ -114,9 +114,9 @@ func should_skip_script():
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _add_slot adds the slot to the scene, freeing the Steam monitor after it, since the
-## slot disconnects from its monitor as it leaves, and its keyboard device, which it
-## only queues for freeing.
+## _add_slot adds the slot to the scene and frees its Steam monitor afterward, since
+## the slot disconnects from the monitor as it leaves. The slot's keyboard device is
+## also freed, since the slot only queues it for freeing.
 func _add_slot() -> void:
 	add_child_autofree(_slot)
 	autofree(_monitor)
