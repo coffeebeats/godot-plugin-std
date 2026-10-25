@@ -288,6 +288,26 @@ func test_exit_tree_releases_every_held_action() -> void:
 	assert_true(_actions._held.is_empty())
 
 
+func test_exit_tree_keeps_the_recorded_stack_of_a_connected_joypad() -> void:
+	# Given: A controller connected in slot 0 with an action set loaded, holding a
+	# direction.
+	_connect_joypad()
+	_actions.steam_input_enabled_property = StdSettingsPropertyBool.new()
+	_actions.steam_input_enabled_property.scope = StdSettingsScope.new()
+	var menu := _make_action_set(&"Menu")
+	_actions.load_action_set(0, menu)
+	_list_steam_calls()
+	_publish(_action(&"move_left", 1.0, true))
+
+	# When: The component leaves the scene while the controller stays connected.
+	_actions._exit_tree()
+	Input.flush_buffered_events()
+
+	# Then: The direction is released, but the controller's set is still recorded.
+	assert_false(Input.is_action_pressed(&"move_left"))
+	assert_eq(_actions.get_action_set(0), menu)
+
+
 func test_load_action_set_reports_the_recorded_set_at_once() -> void:
 	# Given: A controller connected in slot 0.
 	_connect_joypad()

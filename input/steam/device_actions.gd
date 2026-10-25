@@ -272,9 +272,9 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	# NOTE: No release arrives once this stops listening, so every action a joypad holds
-	# is released now.
+	# is released now. Each stack is kept, since its joypad is still connected.
 	for slot in _held.keys():
-		_on_joypad_disconnected(slot)
+		_release_held_actions(slot)
 
 	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _on_joypad_disconnected)
 	Signals.disconnect_safe(
@@ -609,6 +609,27 @@ func _publish_pointer_motion(motion: Vector2) -> void:
 	Input.warp_mouse(clamped)
 
 
+## _release_held_actions releases every action the joypad in `slot` was holding and
+## forgets the slot's held actions.
+func _release_held_actions(slot: int) -> void:
+	var held: Dictionary = _held.get(slot, {})
+
+	for action in held:
+		if held[action].is_empty():
+			continue
+
+		var event := InputEventAction.new()
+		event.action = action
+		event.device = slot
+		event.pressed = false
+		event.strength = 0.0
+
+		Input.parse_input_event(event)
+
+	_held.erase(slot)
+	_pointer_motion.erase(slot)
+
+
 ## _restore_stick_deadzones restores the `InputMap` deadzone of each stick direction
 ## `_clear_stick_deadzones` changed, so a native joypad's stick is filtered again.
 static func _restore_stick_deadzones() -> void:
@@ -749,22 +770,7 @@ func _on_input_device_connected(device_handle: int) -> void:
 ## _on_joypad_disconnected releases every action the joypad in `slot` was holding, since
 ## Steam reports nothing further for it, and forgets the slot's held actions and stack.
 func _on_joypad_disconnected(slot: int) -> void:
-	var held: Dictionary = _held.get(slot, {})
-
-	for action in held:
-		if held[action].is_empty():
-			continue
-
-		var event := InputEventAction.new()
-		event.action = action
-		event.device = slot
-		event.pressed = false
-		event.strength = 0.0
-
-		Input.parse_input_event(event)
-
-	_held.erase(slot)
-	_pointer_motion.erase(slot)
+	_release_held_actions(slot)
 	_stacks.erase(slot)
 
 
