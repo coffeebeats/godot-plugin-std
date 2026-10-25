@@ -90,7 +90,6 @@ func get_slot_for_device_id(device: int) -> int:
 func _enter_tree() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-	Signals.connect_safe(Steam.input_gamepad_slot_change, _on_gamepad_slot_change)
 	Signals.connect_safe(Steam.input_device_connected, _on_device_connected)
 	Signals.connect_safe(Steam.input_device_disconnected, _on_device_disconnected)
 	Signals.connect_safe(Steam.input_configuration_loaded, _on_configuration_loaded)
@@ -114,7 +113,6 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(Steam.input_configuration_loaded, _on_configuration_loaded)
 	Signals.disconnect_safe(Steam.input_device_connected, _on_device_connected)
 	Signals.disconnect_safe(Steam.input_device_disconnected, _on_device_disconnected)
-	Signals.disconnect_safe(Steam.input_gamepad_slot_change, _on_gamepad_slot_change)
 
 	_logger.info("Shut down Steam Input API.")
 
@@ -265,31 +263,3 @@ func _on_device_disconnected(device: int) -> void:
 	# device first.
 	if device in _connected:
 		_disconnect_device(device)
-
-
-func _on_gamepad_slot_change(
-	_app: int,
-	device: int,
-	_device_type: int,
-	slot_prev: int,
-	slot_next: int,
-) -> void:
-	if device not in _connected:
-		assert(false, "invalid argument: unknown device")
-		return
-
-	if slot_prev >= _connected.size():
-		assert(false, "invalid argument: unknown slot index")
-		return
-
-	if slot_next >= _connected.size():
-		assert(false, "invalid argument: unknown slot index")
-		return
-
-	_connected[slot_prev] = _connected[slot_next]
-	_connected[slot_next] = device
-
-	var connected_godot := Input.get_connected_joypads()
-	if slot_prev >= connected_godot.size() or slot_next >= connected_godot.size():
-		assert(false, "invalid argument: unknown slot index")
-		return
