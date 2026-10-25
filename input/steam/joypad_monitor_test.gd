@@ -124,17 +124,19 @@ func test_joypad_monitor_connects_a_device_steam_reports_connected() -> void:
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	watch_signals(monitor)
 
-	# When: Steam reports a controller connected, as it does for each controller
-	# already connected once device callbacks are enabled.
+	# When: Steam reports a controller connected.
 	monitor._on_device_connected(7)
 
-	# Then: The device takes slot 0 and Steam Input is in use, as a generic joypad,
-	# since Steam Input isn't running to name its family.
+	# Then: The device takes slot 0 as a generic joypad.
+	#
+	# NOTE: Steam Input isn't running under test to name the joypad's family.
 	assert_engine_error(_STEAM_ERROR)
 	assert_signal_emitted_with_parameters(
 		monitor, "joy_connected", [0, StdInputDevice.DEVICE_TYPE_GENERIC]
 	)
 	assert_eq(monitor.get_device_id_for_slot(0), 7)
+
+	# Then: Steam Input is in use.
 	assert_true(monitor.steam_input_enabled_property.get_value())
 
 	# When: Steam reports the controller connected again.
@@ -167,17 +169,17 @@ func test_joypad_monitor_skips_a_device_whose_configuration_opted_out_first() ->
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	watch_signals(monitor)
 
-	# When: Steam loads a controller's configuration, which doesn't use the Steam Input
-	# API, and only then reports the controller connected, as on a replug.
+	# When: A controller's configuration loads without using the Steam Input API.
 	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+
+	# When: Steam then reports the controller connected, as on a replug.
 	monitor._on_device_connected(7)
 
 	# Then: The controller isn't connected.
 	assert_signal_not_emitted(monitor, "joy_connected")
 	assert_eq(monitor.get_slot_for_device_id(7), -1)
 
-	# When: The controller is unplugged and plugged in again, its configuration not yet
-	# loaded.
+	# When: The controller is replugged before its configuration loads again.
 	monitor._on_device_disconnected(7)
 	monitor._on_device_connected(7)
 
@@ -192,8 +194,7 @@ func test_joypad_monitor_ignores_a_disconnect_of_a_device_it_dropped() -> void:
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	watch_signals(monitor)
 
-	# When: Steam reports a controller disconnected which the monitor never connected,
-	# as for one whose configuration doesn't use the Steam Input API.
+	# When: Steam reports a disconnect of a controller the monitor never connected.
 	monitor._on_device_disconnected(7)
 
 	# Then: No slot is reported disconnected.
