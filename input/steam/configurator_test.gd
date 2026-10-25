@@ -41,8 +41,7 @@ var _slot: StdInputSlot = null
 
 
 func test_configurator_uses_the_last_active_joypads_steam_handle() -> void:
-	# Given: A slot whose first controller connected before any player input, so it's
-	# active.
+	# Given: A slot whose first controller became active on connecting.
 	_slot.prefer_activate_joypad_on_ready = true
 	_add_slot()
 	_connect_joypads([_TEST_HANDLE, _TEST_HANDLE_OTHER])
@@ -55,8 +54,7 @@ func test_configurator_uses_the_last_active_joypads_steam_handle() -> void:
 
 
 func test_configurator_uses_a_connected_joypad_once_none_was_active() -> void:
-	# Given: A slot whose controller connected but never became active, as after a
-	# component swap clears the last active joypad.
+	# Given: A slot whose controller connected but never became active.
 	_slot.prefer_activate_joypad_on_ready = false
 	_add_slot()
 	_connect_joypads()
@@ -85,8 +83,7 @@ func test_configurator_button_opens_the_panel_for_the_controller() -> void:
 	# When: The button is pressed.
 	configurator._on_button_pressed()
 
-	# Then: Steam is asked to open the panel, which it rejects since Steam Input isn't
-	# running.
+	# Then: The panel is requested from Steam, which rejects it with Steam Input off.
 	assert_engine_error(_STEAM_ERROR)
 
 
