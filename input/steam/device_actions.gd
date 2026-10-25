@@ -1,7 +1,7 @@
 ##
 ## std/input/steam/device_actions.gd
 ##
-## StdInputSteamDeviceActions is an implemention of `StdInputDeviceActions` which uses
+## StdInputSteamDeviceActions is an implementation of `StdInputDeviceActions` which uses
 ## the Steam Input API to manage action sets.
 ##
 ## NOTE: Steam resets a controller's action set and layers on every focus change and
@@ -47,12 +47,8 @@ class _ActionSetStack:
 ## translations.
 @export var joypad_monitor: StdInputSlot.JoypadMonitor = null
 
-## steam_input_enabled_property is a settings property that the joypad monitor will
-## toggle based on connected controller activity.
-##
-## NOTE: It unfortunately seems that the only way to check for whether Steam Input is in
-## use is by the presence of a connected joypad. As such, this property will be enabled
-## when devices are connected and disabled otherwise.
+## steam_input_enabled_property is the settings property the joypad monitor enables
+## while a Steam joypad is connected.
 @export var steam_input_enabled_property: StdSettingsPropertyBool = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -75,8 +71,7 @@ static var _digital_actions: Dictionary = {}  # gdlint:ignore=class-definitions-
 ## _digital_action_handles is a reverse mapping from digital action names to handles.
 static var _digital_action_handles: Dictionary = {}  # gdlint:ignore=class-definitions-order,max-line-length
 
-## _actions_seen_action_sets is the list of action sets which already have their action
-## handles populated. This is used to skip duplicate work.
+## _actions_seen_action_sets lists the action sets whose action handles are stored.
 ##
 ## NOTE: Because the number of action sets should be small, an array is preferred.
 static var _actions_seen_action_sets: Array[StdInputActionSet] = []  # gdlint:ignore=class-definitions-order,max-line-length
@@ -198,8 +193,10 @@ static func resolve_action_set_name(
 
 ## split_analog_2d returns the four directional action events a stick's `motion` drives
 ## for the 2D analog `action`, in `StdInputActionSet.ANALOG_2D_DIRECTIONS` order, each
-## at the strength of its half of the axis and pressed at any strength. Godot clamps an
-## action's strength to `[0, 1]`, so a signed axis can't travel on one action.
+## at the strength of its half of the axis and pressed at any strength.
+##
+## NOTE: Godot clamps an action's strength to `[0, 1]`, so a signed axis can't travel on
+## one action.
 ##
 ## NOTE: Steam reports a stick's `y` as positive upward, so `+y` drives `_up`.
 static func split_analog_2d(
@@ -437,9 +434,8 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _apply makes Steam hold the stack recorded for the joypad in `slot`. It deactivates
-## every layer, activates the set, then activates each layer in stack order, so the
-## layers stack as recorded.
+## _apply makes Steam hold the stack recorded for the joypad in `slot`, rebuilding its
+## layers in stack order.
 func _apply(slot: int) -> void:
 	var stack: _ActionSetStack = _stacks.get(slot)
 	if not stack:
@@ -527,18 +523,15 @@ static func _list_layer_handles(slot: int) -> Array:
 	return handles
 
 
-## _publish_input_event records `event` as the press of its action by the Steam action
-## `source`, then parses the action's combined state once it differs from the one last
-## published for its slot: pressed while any source presses it, at the strongest one's
-## strength, as Godot combines an action's bound events. Parsing presses the action on
-## `Input` at that strength, so no explicit press or release is needed; an explicit
-## release would also release the action for every other device, such as a key held for
-## it.
+## _publish_input_event records `event` as the Steam action `source`'s press of its
+## action, then parses the action, pressed while any source presses it, only when its
+## state or strength changes, since Steam repeats a stick's report on every motion.
 ##
-## NOTE: Steam reports a stick on every change, so a direction it keeps reporting as
-## released would otherwise read as just released on every event. A layer's stick can
-## also drive a direction its parent set binds as a button, so neither source may
-## release the other's press.
+## NOTE: Parsing sets the action on `Input`, so it's never released explicitly; that
+## would release it for every other device too, such as a key held for it.
+##
+## NOTE: A layer's stick can drive a direction its parent set binds as a button, so
+## neither source may release the other's press.
 func _publish_input_event(event: InputEventAction, source: StringName) -> void:
 	var sources: Dictionary = _held.get_or_add(event.device, {}).get_or_add(
 		event.action, {}
@@ -565,22 +558,18 @@ func _publish_input_event(event: InputEventAction, source: StringName) -> void:
 
 
 ## _publish_pointer_motion moves the pointer by `motion`, in pixels, for a Steam analog
-## action in a mouse mode. A captured cursor can't move, so the motion is delivered as a
-## mouse motion event for mouse-look; otherwise the cursor is warped, and the window
-## system echoes a positioned mouse motion event which hover and the cursor's reveal
-## logic handle like a real mouse.
+## action in a mouse mode. A captured cursor gets a mouse motion event for mouse-look,
+## and a free one is warped, which the window system echoes as a real mouse's motion.
 ##
 ## NOTE: Godot's Wayland backend can't warp a free pointer, so a Linux export must use
-## the X11 driver (Godot's default, and what gamescope presents on Steam Deck), and
-## macOS may not echo warps. A set which reads pointer deltas for mouse-look must
-## capture the cursor, or the pointer stops at the window edge, as a real mouse does.
+## X11, Godot's default and gamescope's on Steam Deck; macOS may not echo a warp.
+##
+## NOTE: A set read for mouse-look must capture the cursor, or the pointer stops at the
+## window edge, as a real mouse does.
 func _publish_pointer_motion(motion: Vector2) -> void:
 	if DisplayServer.mouse_get_mode() == DisplayServer.MOUSE_MODE_CAPTURED:
-		# NOTE: The viewport resolves hover from the event's position and `Input` stores
-		# it as the pointer's, so the current position is carried; a zero position would
-		# hover whatever control sits at the window origin on every delta. An event's
-		# position is in window pixels, which the window's own transform maps back to
-		# from the viewport's coordinates under content scaling.
+		# NOTE: Hover reads the event's position, so the pointer's is carried, in window
+		# pixels under content scaling; a zero would hover the window origin's control.
 		var window := get_window()
 		var pointer := window.get_final_transform() * window.get_mouse_position()
 
@@ -599,9 +588,8 @@ func _publish_pointer_motion(motion: Vector2) -> void:
 	)
 	var size := Vector2(DisplayServer.window_get_size())
 
-	# NOTE: A warp lands on a whole pixel, so the fraction it drops is carried to the
-	# next motion; otherwise slow motion never moves the pointer and jitter drifts it.
-	# The remainder is dropped at a window edge, so it can't build up there.
+	# NOTE: A warp lands on a whole pixel, so the fraction is carried or slow motion
+	# never moves the pointer; a window edge drops it, so it can't build up there.
 	var target := position + motion + _warp_remainder
 	var warped := target.round()
 	var clamped := warped.clamp(Vector2.ZERO, size - Vector2.ONE)
@@ -641,6 +629,8 @@ static func _restore_stick_deadzones() -> void:
 	_stick_deadzones.clear()
 
 
+## _store_action_handles stores the handle of each of `action_set`'s actions, so its
+## action events can be named.
 func _store_action_handles(action_set: StdInputActionSet) -> void:
 	if action_set in _actions_seen_action_sets:
 		return
@@ -684,7 +674,7 @@ func _on_input_action_event(
 	is_active: bool,
 	action_data: Dictionary,
 ) -> void:
-	# Don't emit action events for actions which aren't loaded.
+	# NOTE: Steam marks an action outside the active sets inactive; it isn't published.
 	if not is_active:
 		return
 
@@ -720,11 +710,9 @@ func _on_input_action_event(
 				Steam.INPUT_SOURCE_MODE_ABSOLUTE_MOUSE, Steam.INPUT_SOURCE_MODE_RELATIVE_MOUSE:
 					_publish_pointer_motion(motion)
 
-					# NOTE: The action is parsed on every motion, since it needn't exist in
-					# the `InputMap`; it only marks joypad activity for the slot. It's
-					# pressed once motion passes the active sets' cursor reveal threshold,
-					# the same filter `StdInputCursor` applies, so gyro wobble from a
-					# controller at rest can't switch glyphs away from a mouse in use.
+					# NOTE: The action only marks joypad activity, so it needn't be in the
+					# `InputMap`. It's pressed past `StdInputCursor`'s reveal threshold, so
+					# gyro wobble at rest can't switch glyphs away from a mouse in use.
 					var event := InputEventAction.new()
 					event.action = action
 					event.device = slot
