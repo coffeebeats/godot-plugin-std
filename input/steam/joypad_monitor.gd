@@ -241,7 +241,7 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 	)
 
 	var uses_steam_input_api: bool = cfg.get("uses_steam_input_api", true)
-	var device_in_connected := _connected.has(device)
+	var device_in_connected := device in _connected
 
 	var opted_out_index := _opted_out.find(device)
 	if uses_steam_input_api and opted_out_index != -1:
