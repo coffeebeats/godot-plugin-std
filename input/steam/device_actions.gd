@@ -4,10 +4,9 @@
 ## StdInputSteamDeviceActions is an implemention of `StdInputDeviceActions` which uses
 ## the Steam Input API to manage action sets.
 ##
-## NOTE: Steam resets a controller's action set and layers on every focus change, and
-## reports a change a frame after it's made. The set and layer stack are thus recorded
-## per joypad, answer every query, and are applied to Steam again whenever it reports
-## something else, as Valve advises; see
+## NOTE: Steam resets a controller's action set and layers on every focus change and
+## reports a change a frame late, so the stack is recorded per joypad and reapplied
+## whenever Steam disagrees; see
 ## https://partner.steamgames.com/doc/api/ISteamInput#ActivateActionSet.
 
 extends StdInputDeviceActions
@@ -32,7 +31,10 @@ const _STICK_DEADZONE := 0.00001
 class _ActionSetStack:
 	extends RefCounted
 
+	## action_set is the stack's base action set.
 	var action_set: StdInputActionSet = null
+
+	## layers is the stack's enabled layers, in the order they were enabled.
 	var layers: Array[StdInputActionSetLayer] = []
 
 	## written is the process frame in which the stack was last applied to Steam.
@@ -436,7 +438,7 @@ func _list_action_set_layers(slot: int) -> Array[StdInputActionSetLayer]:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _apply makes Steam hold the stack recorded for the joypad in `slot`: it deactivates
+## _apply makes Steam hold the stack recorded for the joypad in `slot`. It deactivates
 ## every layer, activates the set, then activates each layer in stack order, so the
 ## layers stack as recorded.
 func _apply(slot: int) -> void:
@@ -752,12 +754,14 @@ func _on_input_configuration_loaded(
 	device_handle: int,
 	_config_data: Dictionary,
 ) -> void:
-	# NOTE: Steam loads a configuration once per controller per focus change, which
-	# covers a rebind in its configurator, and the load resets the controller's sets.
+	# NOTE: A configuration load resets the controller's sets, so the stack is applied
+	# again.
 	var slot: int = joypad_monitor.get_slot_for_device_id(device_handle)
 	if slot != -1:
 		_apply(slot)
 
+	# NOTE: Steam loads a configuration once per controller per focus change, which
+	# covers a rebind in its configurator.
 	bindings_changed.emit()
 
 
