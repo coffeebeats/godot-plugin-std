@@ -80,3 +80,11 @@ func _enable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bo
 
 func _list_action_set_layers(_device: int) -> Array[StdInputActionSetLayer]:
 	return _action_set_layers.duplicate()
+
+
+func _is_matching_event_origin(device: int, event: InputEvent) -> bool:
+	if not slot or not slot.actions_joy:
+		assert(slot, "invalid state; missing input slot")
+		return false
+
+	return slot.actions_joy.is_matching_event_origin(device, event)

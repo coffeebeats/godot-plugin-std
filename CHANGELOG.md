@@ -1,5 +1,22 @@
 # Changelog
 
+## 7.1.1 (2026-10-25)
+
+## What's Changed
+* chore(ci): group Dependabot updates by ecosystem by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/538
+* chore(ci): update Python tooling with Dependabot by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/537
+* fix(input): reapply a Steam joypad's action set and layers whenever Steam drops them by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/531
+* fix(input): connect a Steam controller as soon as Steam reports it by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/532
+* fix(input): keep a Steam controller's virtual gamepad out of std's joypad matching by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/533
+* fix(input): open Steam's binding panel for the slot's controller handle by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/534
+* chore(input): revert to `in` now that godot#100580 is fixed by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/536
+* fix(input): keep a Steam controller's slot when Steam reports its gamepad slot by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/540
+* chore(deps-dev): bump ruff from 0.16.7 to 0.16.9 in the python group by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/541
+* chore(deps): bump setuptools from 84.0.0 to 84.1.0 by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/542
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v7.1.0...v7.1.1
+
 ## 7.1.0 (2026-10-23)
 
 ## What's Changed

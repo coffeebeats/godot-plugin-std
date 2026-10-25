@@ -143,7 +143,7 @@ func _list_all_action_origins(
 		action = stick
 
 	var action_set_handle := SteamDeviceActions.get_action_set_handle(
-		SteamDeviceActions.resolve_action_set_name(action_set, device)
+		SteamDeviceActions.resolve_action_set_name(action_set, slot)
 	)
 	if not action_set_handle:
 		return origins
