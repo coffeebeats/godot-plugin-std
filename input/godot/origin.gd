@@ -1,5 +1,5 @@
 ##
-## std/input/origin.gd
+## std/input/godot/origin.gd
 ##
 ## A shared library for encoding and decoding input events, suitable for action
 ## bindings, within a 64-bit integer.
@@ -8,8 +8,8 @@
 ## all of the remaining bits for each type (rather than sequentially arranging chunks
 ## for each event type to use).
 ##
-## NOTE: This 'Object' should *not* be instanced and/or added to the 'SceneTree'. It is
-## a "static" library that can be imported at compile-time using 'preload'.
+## NOTE: This `Object` is a static library, imported with `preload`; it should never be
+## instanced or added to the `SceneTree`.
 ##
 
 extends Object
@@ -32,14 +32,12 @@ const BITMASK_JOY_AXIS_DIRECTION := (1 << 2) - 1
 const BITMASK_JOY_BUTTON := (1 << 8) - 1
 const BITMASK_MOUSE_BUTTON := (1 << 4) - 1
 
-## bitmask_indices_joy defines the set of bitmask indices that match the joypad input
-## paradigm.
+## bitmask_indices_joy holds the bitmask indices of joypad event types.
 static var bitmask_indices_joy := PackedInt64Array(
 	[BITMASK_INDEX_JOY_AXIS, BITMASK_INDEX_JOY_BUTTON]
 )
 
-## bitmask_indices_kbm defines the set of bitmask indices that match the keyboard+mouse
-## input paradigm.
+## bitmask_indices_kbm holds the bitmask indices of keyboard and mouse event types.
 static var bitmask_indices_kbm := PackedInt64Array(
 	[BITMASK_INDEX_KEY, BITMASK_INDEX_MOUSE_BUTTON]
 )
@@ -47,15 +45,13 @@ static var bitmask_indices_kbm := PackedInt64Array(
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## encode stores the provided input event type and the specified key/axis code in an
-## integer.
+## encode packs an input event's type and its key, axis or button code into an integer.
 ##
-## NOTE: No value information (e.g. pressed state or strength) will be retained.
+## NOTE: No value information, such as pressed state or strength, is retained.
 static func encode(event: InputEvent) -> int:
 	if event is InputEventKey:
-		# Normalize the event by ensuring physical keycode is always set. This allows
-		# encoding "keycode" events (e.g. from project settings), but they will always
-		# be decoded as physical - matching what the user generates.
+		# NOTE: A keycode-only event, as from project settings, gets its keycode as its
+		# physical keycode, so it decodes as the physical key a player presses.
 		if event.physical_keycode == KEY_NONE:
 			assert(event.keycode != KEY_NONE, "invalid config; missing keycode")
 			event.physical_keycode = event.keycode
@@ -111,9 +107,9 @@ static func encode(event: InputEvent) -> int:
 	return -1
 
 
-## decode parses the encoded origin integer and returns an 'InputEvent'.
+## decode parses the encoded origin integer and returns an `InputEvent`.
 ##
-## NOTE: No value information (e.g. pressed state or strength) will be retained.
+## NOTE: No value information, such as pressed state or strength, is retained.
 static func decode(value: int) -> InputEvent:
 	assert(value >= 0, "invalid input; value out of range")
 
@@ -188,8 +184,8 @@ static func decode(value: int) -> InputEvent:
 	return null
 
 
-## is_encoded_value_for_device returns whether the provided `int` value is an encoded
-## input event for the specified device type.
+## is_encoded_value_for_device returns whether `value` encodes an input event for a
+## device of `device_type`.
 static func is_encoded_value_for_device(
 	value: int,
 	device_type: StdInputDevice.DeviceType = StdInputDevice.DEVICE_TYPE_UNKNOWN,
@@ -204,9 +200,8 @@ static func is_encoded_value_for_device(
 	return is_encoded_value_type(value, bitmask_indices_joy)
 
 
-## is_encoded_value_type returns whether the provided `int` value is an encoded input
-## event for the specified control input types. Note that `indices` is a list of bitmask
-## index values (e.g. [BITMASK_INDEX_KEY, BITMASK_MOUSE_BUTTON] for KB+M input).
+## is_encoded_value_type returns whether `value` encodes an input event whose type is
+## one of the bitmask indices in `indices`, such as `bitmask_indices_kbm`.
 static func is_encoded_value_type(value: int, indices: PackedInt64Array) -> bool:
 	if value < 0:
 		return false

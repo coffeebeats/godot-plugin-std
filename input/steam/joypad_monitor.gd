@@ -3,8 +3,7 @@
 ##
 ## An implementation of `StdInputSlot.JoypadMonitor` that uses the Steam Input API.
 ##
-## NOTE: This implementation depends on the `GodotSteam` extension being installed as a
-## peer dependency. This script will not work without it.
+## NOTE: This implementation requires the `GodotSteam` extension as a peer dependency.
 ##
 
 extends StdInputSlot.JoypadMonitor
@@ -15,12 +14,9 @@ const Signals := preload("../../event/signal.gd")
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## steam_input_enabled_property is a settings property that the joypad monitor will
-## toggle based on connected controller activity.
-##
-## NOTE: It unfortunately seems that the only way to check for whether Steam Input is in
-## use is by the presence of a connected joypad. As such, this property will be enabled
-## when devices are connected and disabled otherwise.
+## steam_input_enabled_property is a settings property the joypad monitor turns on while
+## a controller whose configuration uses the Steam Input API is connected, and off
+## otherwise.
 @export var steam_input_enabled_property: StdSettingsPropertyBool = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -82,9 +78,8 @@ static func get_device_type(input_type: int) -> StdInputDevice.DeviceType:
 ## get_slot_for_device_id returns the "slot" index of the specified input device handle,
 ## or `-1` when the device isn't connected.
 ##
-## NOTE: A device keeps its slot until it disconnects, and the next device to connect
-## takes the lowest free slot, as Godot numbers joypads; so a slot maps back to the same
-## device it was reported with.
+## NOTE: A device keeps its slot until it disconnects, and a new device takes the lowest
+## free slot, as Godot numbers joypads.
 func get_slot_for_device_id(device: int) -> int:
 	return _connected.find(device) if device else -1
 
@@ -93,7 +88,6 @@ func get_slot_for_device_id(device: int) -> int:
 
 
 func _enter_tree() -> void:
-	# NOTE: Ensure this node can always process callbacks.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 	Signals.connect_safe(Steam.input_gamepad_slot_change, _on_gamepad_slot_change)
@@ -178,8 +172,8 @@ func _connect_device(device: int) -> void:
 
 	_logger.info("Joypad connected.", {&"device": device, &"type": device_type})
 
-	# Update this property first so that subsequent notifications are handled by Steam-
-	# backed components.
+	# NOTE: The property is set first, so Steam-backed components handle the
+	# notifications that follow.
 	steam_input_enabled_property.set_value(true)
 
 	joy_connected.emit(_claim_slot(device), device_type)
@@ -215,8 +209,7 @@ static func _get_steam_handle(info: Dictionary) -> int:
 
 ## _is_virtual_gamepad returns whether Godot's joypad `device` is the virtual gamepad
 ## Steam runs for a controller this monitor connected. It's matched by Steam handle,
-## since SDL reports the physical controller's vendor and product IDs for it, and its
-## joypad index is unrelated to any slot.
+## since SDL reports the physical controller's vendor and product IDs for it.
 func _is_virtual_gamepad(device: int) -> bool:
 	# NOTE: An injected event can name a joypad Godot hasn't opened, whose info would
 	# raise an error.
