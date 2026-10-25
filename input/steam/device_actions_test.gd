@@ -289,22 +289,29 @@ func test_exit_tree_releases_every_held_action() -> void:
 
 
 func test_exit_tree_keeps_the_recorded_stack_of_a_connected_joypad() -> void:
-	# Given: A controller connected in slot 0 with an action set loaded, holding a
-	# direction.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: The settings property the component disconnects from on exit.
 	_actions.steam_input_enabled_property = StdSettingsPropertyBool.new()
 	_actions.steam_input_enabled_property.scope = StdSettingsScope.new()
+
+	# Given: An action set loaded for the controller.
 	var menu := _make_action_set(&"Menu")
 	_actions.load_action_set(0, menu)
 	_list_steam_calls()
+
+	# Given: The controller holds a direction.
 	_publish(_action(&"move_left", 1.0, true))
 
 	# When: The component leaves the scene while the controller stays connected.
 	_actions._exit_tree()
 	Input.flush_buffered_events()
 
-	# Then: The direction is released, but the controller's set is still recorded.
+	# Then: The direction is released.
 	assert_false(Input.is_action_pressed(&"move_left"))
+
+	# Then: The controller's set is still recorded.
 	assert_eq(_actions.get_action_set(0), menu)
 
 
@@ -316,8 +323,10 @@ func test_load_action_set_reports_the_recorded_set_at_once() -> void:
 	# When: An action set is loaded.
 	var got: bool = _actions.load_action_set(0, menu)
 
-	# Then: The load reports a change and the set reads back in the same frame.
+	# Then: The load reports a change.
 	assert_true(got)
+
+	# Then: The set reads back in the same frame.
 	assert_eq(_actions.get_action_set(0), menu)
 
 	# Then: Steam drops every layer and activates the set.
@@ -328,14 +337,18 @@ func test_load_action_set_reports_the_recorded_set_at_once() -> void:
 	# When: The same action set is loaded again.
 	got = _actions.load_action_set(0, menu)
 
-	# Then: No change is reported and Steam isn't called.
+	# Then: No change is reported.
 	assert_false(got)
+
+	# Then: Steam isn't called.
 	assert_eq(_list_steam_calls(), [])
 
 
 func test_enable_action_set_layer_reports_the_recorded_layer_at_once() -> void:
-	# Given: A controller connected in slot 0 with an action set loaded.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: An action set loaded for the controller.
 	var menu := _make_action_set(&"Menu")
 	_actions.load_action_set(0, menu)
 	_list_steam_calls()
@@ -344,8 +357,10 @@ func test_enable_action_set_layer_reports_the_recorded_layer_at_once() -> void:
 	var tabs := _make_layer(&"Tabs", menu)
 	var got: bool = _actions.enable_action_set_layer(0, tabs)
 
-	# Then: The enable reports a change and the layer reads back in the same frame.
+	# Then: The enable reports a change.
 	assert_true(got)
+
+	# Then: The layer reads back in the same frame.
 	assert_eq(
 		_actions.list_action_set_layers(0), [tabs] as Array[StdInputActionSetLayer]
 	)
@@ -359,14 +374,18 @@ func test_enable_action_set_layer_reports_the_recorded_layer_at_once() -> void:
 	# When: The same layer is enabled again.
 	got = _actions.enable_action_set_layer(0, tabs)
 
-	# Then: No change is reported and Steam isn't called.
+	# Then: No change is reported.
 	assert_false(got)
+
+	# Then: Steam isn't called.
 	assert_eq(_list_steam_calls(), [])
 
 
 func test_layer_disabled_and_enabled_in_one_frame_stays_enabled() -> void:
-	# Given: A controller connected in slot 0 with an action set and a layer enabled.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: An action set loaded with a layer enabled.
 	var menu := _make_action_set(&"Menu")
 	var tabs := _make_layer(&"Tabs", menu)
 	_actions.load_action_set(0, menu)
@@ -377,16 +396,20 @@ func test_layer_disabled_and_enabled_in_one_frame_stays_enabled() -> void:
 	assert_true(_actions.disable_action_set_layer(0, tabs))
 	assert_true(_actions.enable_action_set_layer(0, tabs))
 
-	# Then: The layer is enabled, and the last stack Steam was given holds it.
+	# Then: The layer is enabled.
 	assert_eq(
 		_actions.list_action_set_layers(0), [tabs] as Array[StdInputActionSetLayer]
 	)
+
+	# Then: The last stack Steam was given holds the layer.
 	assert_eq(_list_steam_calls().back(), "activateActionSetLayer")
 
 
 func test_load_action_set_drops_the_recorded_layers() -> void:
-	# Given: A controller connected in slot 0 with an action set and a layer enabled.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: An action set loaded with a layer enabled.
 	var menu := _make_action_set(&"Menu")
 	_actions.load_action_set(0, menu)
 	_actions.enable_action_set_layer(0, _make_layer(&"Tabs", menu))
@@ -396,17 +419,21 @@ func test_load_action_set_drops_the_recorded_layers() -> void:
 	var gameplay := _make_action_set(&"Gameplay")
 	assert_true(_actions.load_action_set(0, gameplay))
 
-	# Then: The new set is recorded with no layers, and Steam is given no layers.
+	# Then: The new set is recorded with no layers.
 	assert_eq(_actions.get_action_set(0), gameplay)
 	assert_eq(_actions.list_action_set_layers(0), [] as Array[StdInputActionSetLayer])
+
+	# Then: Steam is given the new set with no layers.
 	assert_eq(
 		_list_steam_calls(), ["deactivateAllActionSetLayers", "activateActionSet"]
 	)
 
 
 func test_resolve_action_set_name_reads_the_recorded_set() -> void:
-	# Given: A controller connected in slot 0 with the `Gameplay` set loaded.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: The `Gameplay` set loaded for the controller.
 	_actions.load_action_set(0, _make_action_set(&"Gameplay"))
 	_list_steam_calls()
 
@@ -423,8 +450,10 @@ func test_resolve_action_set_name_reads_the_recorded_set() -> void:
 
 
 func test_is_applied_compares_the_reported_stack_in_order() -> void:
-	# Given: A controller connected in slot 0 with the `Menu` set and two layers.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: The `Menu` set loaded with two layers enabled.
 	var menu := _make_action_set(&"Menu")
 	_actions.load_action_set(0, menu)
 	_actions.enable_action_set_layer(0, _make_layer(&"Options", null))
@@ -446,8 +475,10 @@ func test_is_applied_compares_the_reported_stack_in_order() -> void:
 
 
 func test_process_applies_the_stack_again_once_steam_drops_it() -> void:
-	# Given: A controller connected in slot 0 with an action set and a layer enabled.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: An action set loaded with a layer enabled.
 	var menu := _make_action_set(&"Menu")
 	_actions.load_action_set(0, menu)
 	_actions.enable_action_set_layer(0, _make_layer(&"Tabs", menu))
@@ -483,19 +514,25 @@ func test_process_applies_the_stack_again_once_steam_drops_it() -> void:
 
 
 func test_configuration_load_applies_the_stack_at_once() -> void:
-	# Given: A controller connected in slot 0 with an action set just loaded.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: An action set loaded for the controller this frame.
 	_actions.load_action_set(0, _make_action_set(&"Menu"))
 	_list_steam_calls()
+
+	# Given: The component's signals are watched.
 	watch_signals(_actions)
 
 	# When: Steam loads the controller's configuration in the same frame.
 	_actions._on_input_configuration_loaded(480, _TEST_HANDLE, {})
 
-	# Then: Steam is given the set again, and the bindings are reported changed.
+	# Then: Steam is given the set again.
 	assert_eq(
 		_list_steam_calls(), ["deactivateAllActionSetLayers", "activateActionSet"]
 	)
+
+	# Then: The bindings are reported changed.
 	assert_signal_emitted(_actions, "bindings_changed")
 
 	# When: Steam loads another controller's configuration.
@@ -506,18 +543,24 @@ func test_configuration_load_applies_the_stack_at_once() -> void:
 
 
 func test_joypad_disconnect_forgets_the_recorded_stack() -> void:
-	# Given: A controller connected in slot 0 with an action set loaded.
+	# Given: A controller connected in slot 0.
 	_connect_joypad()
+
+	# Given: An action set loaded for the controller.
 	_actions.load_action_set(0, _make_action_set(&"Menu"))
 	_list_steam_calls()
 
 	# When: The controller disconnects.
 	_actions._on_joypad_disconnected(0)
 
-	# Then: Nothing is recorded for the slot, so later frames leave Steam alone.
+	# Then: Nothing is recorded for the slot.
 	assert_null(_actions.get_action_set(0))
+
+	# When: Two frames pass, and a frame is processed.
 	await wait_process_frames(2)
 	_actions._process(0.0)
+
+	# Then: Steam isn't called.
 	assert_eq(_list_steam_calls(), [])
 
 

@@ -741,8 +741,7 @@ func _on_input_configuration_loaded(
 	device_handle: int,
 	_config_data: Dictionary,
 ) -> void:
-	# NOTE: A configuration load resets the controller's sets, so the stack is applied
-	# again.
+	# NOTE: A configuration load resets the controller's sets, so the stack is reapplied.
 	var slot: int = joypad_monitor.get_slot_for_device_id(device_handle)
 	if slot != -1:
 		_apply(slot)

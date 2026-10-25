@@ -508,17 +508,17 @@ func test_input_slot_layer_enabled_before_any_device_reaches_a_later_joypad() ->
 
 
 func test_input_slot_connected_joypad_gets_layers_when_its_set_is_unchanged() -> void:
-	# Given: An input slot claiming no keyboard, with an action set loaded and a layer
-	# enabled before any joypad connected.
+	# Given: An input slot claiming no keyboard.
 	slot.claim_kbm_input = false
 	add_child_autofree(slot)
+
+	# Given: An action set loaded with a layer enabled, before any joypad connects.
 	var action_set := _make_action_set(&"Test")
 	var layer := _make_layer(&"TestLayer", action_set)
 	assert_true(slot.load_action_set(action_set))
 	assert_true(slot.enable_action_set_layer(layer))
 
-	# Given: The joypad component already holds the action set, so loading it again
-	# reports no change.
+	# Given: The joypad component already holds the action set.
 	_actions_joy.action_set = action_set
 
 	# When: A joypad connects.
@@ -532,10 +532,11 @@ func test_input_slot_connected_joypad_gets_layers_when_its_set_is_unchanged() ->
 
 
 func test_input_slot_connected_joypad_gets_no_layers_when_its_set_is_refused() -> void:
-	# Given: An input slot claiming no keyboard, with an action set loaded and a layer
-	# enabled before any joypad connected.
+	# Given: An input slot claiming no keyboard.
 	slot.claim_kbm_input = false
 	add_child_autofree(slot)
+
+	# Given: An action set loaded with a layer enabled, before any joypad connects.
 	var action_set := _make_action_set(&"Test")
 	var layer := _make_layer(&"TestLayer", action_set)
 	assert_true(slot.load_action_set(action_set))
@@ -550,8 +551,10 @@ func test_input_slot_connected_joypad_gets_no_layers_when_its_set_is_refused() -
 	slot.joypad_monitor.broadcast_connected_joypads()
 	autofree(slot.get_active_device())
 
-	# Then: No layer is enabled without its set.
+	# Then: The joypad holds no action set.
 	assert_null(_actions_joy.action_set)
+
+	# Then: The joypad holds no layer without its set.
 	assert_eq(_actions_joy.layers, [] as Array[StdInputActionSetLayer])
 
 
