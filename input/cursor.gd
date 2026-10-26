@@ -441,7 +441,7 @@ func _resolve_confined() -> bool:
 func _track_hide_actions(event: InputEvent) -> StringName:
 	var trigger := &""
 
-	# NOTE: No action matches a mouse motion, the most frequent event.
+	# NOTE: A mouse motion never presses an action, and it is the most frequent event.
 	if event is InputEventMouseMotion:
 		return trigger
 
