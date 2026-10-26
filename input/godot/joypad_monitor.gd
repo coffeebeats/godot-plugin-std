@@ -40,7 +40,21 @@ static var _regex_switch_pro := RegEx.create_from_string(
 static var _regex_xbox_360 := RegEx.create_from_string("Xbox 360")
 static var _regex_xbox_one := RegEx.create_from_string("Xbox(?!( 360))")
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+## _held holds each open joypad left unreported as a held Steam virtual gamepad. It's
+## tracked rather than read again from the joypad's info, since Godot clears that info
+## before it reports the joypad disconnected.
+var _held := PackedInt64Array()
+
+## _is_holding is whether `hold_steam_virtual_gamepads` holds Steam's virtual gamepads.
+var _is_holding: bool = false
+
 var _logger := StdLogger.create("std/input/godot/joypad-monitor").with_process_frame()
+
+## _released holds the Steam handle of each controller whose virtual gamepad is reported
+## during the hold.
+var _released := PackedInt64Array()
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -86,6 +100,36 @@ func get_device_type(joypad_name: String) -> StdInputDevice.DeviceType:
 	return StdInputDevice.DEVICE_TYPE_GENERIC  # gdlint:ignore=max-returns
 
 
+## get_steam_handle returns the Steam handle of the controller behind a joypad whose
+## info Godot reports as `info`, or `0` for a joypad Steam doesn't drive. Godot's SDL
+## driver records the handle, as a string, for each virtual gamepad Steam runs.
+static func get_steam_handle(info: Dictionary) -> int:
+	return String(info.get("steam_input_index", "")).to_int()
+
+
+## hold_steam_virtual_gamepads stops reporting the virtual gamepad Steam runs for each
+## controller, except a controller whose Steam handle is in `released`. Each joypad the
+## call holds is reported disconnected, and each one it releases is reported connected.
+## A later call replaces `released`.
+##
+## NOTE: The Steam joypad monitor holds them while Steam Input runs, releasing each
+## controller whose configuration doesn't use the Steam Input API, so each controller
+## reaches a slot through one monitor. A virtual gamepad is held from the moment it
+## opens, so one whose controller's configuration hasn't loaded yet isn't reported.
+func hold_steam_virtual_gamepads(released: PackedInt64Array) -> void:
+	_is_holding = true
+	_released = released.duplicate()
+	_update_held_joypads()
+
+
+## release_steam_virtual_gamepads ends the hold `hold_steam_virtual_gamepads` started,
+## reporting each held joypad connected.
+func release_steam_virtual_gamepads() -> void:
+	_is_holding = false
+	_released = PackedInt64Array()
+	_update_held_joypads()
+
+
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
@@ -97,15 +141,16 @@ func _ready() -> void:
 
 
 func _broadcast_connected_joypads() -> void:
-	for device in Input.get_connected_joypads():
-		_broadcast_connected_joypad(device)
+	for device in _list_joypads():
+		if device not in _held:
+			_broadcast_connected_joypad(device)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
 func _broadcast_connected_joypad(device: int) -> void:
-	var joypad_name := Input.get_joy_name(device)
+	var joypad_name := _get_joy_name(device)
 	var device_type := get_device_type(joypad_name)
 
 	(
@@ -119,14 +164,83 @@ func _broadcast_connected_joypad(device: int) -> void:
 	joy_connected.emit(device, device_type)
 
 
+## _get_joy_info returns the info Godot reports for the open joypad `device`.
+func _get_joy_info(device: int) -> Dictionary:
+	return Input.get_joy_info(device)
+
+
+## _get_joy_name returns the name Godot reports for the open joypad `device`.
+func _get_joy_name(device: int) -> String:
+	return Input.get_joy_name(device)
+
+
+## _hold stops reporting the open joypad `device`.
+func _hold(device: int) -> void:
+	if device in _held:
+		return
+
+	(
+		_logger
+		. info(
+			"Joypad held for Steam Input.",
+			{&"device": device, &"handle": get_steam_handle(_get_joy_info(device))},
+		)
+	)
+
+	_held.append(device)
+
+
+## _list_joypads returns the device ID of each joypad Godot has open.
+func _list_joypads() -> Array[int]:
+	return Input.get_connected_joypads()
+
+
+## _should_hold returns whether the hold covers the open joypad `device`, as the virtual
+## gamepad of a Steam controller which isn't released.
+func _should_hold(device: int) -> bool:
+	if not _is_holding:
+		return false
+
+	var handle := get_steam_handle(_get_joy_info(device))
+
+	return handle != 0 and handle not in _released
+
+
+## _update_held_joypads holds or releases each open joypad as the hold now covers it,
+## reporting each one that changes.
+func _update_held_joypads() -> void:
+	for device in _list_joypads():
+		var should_hold := _should_hold(device)
+		if should_hold == (device in _held):
+			continue
+
+		if should_hold:
+			_hold(device)
+			joy_disconnected.emit(device)
+			continue
+
+		_held.remove_at(_held.find(device))
+		_broadcast_connected_joypad(device)
+
+
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
 func _on_Input_joy_connection_changed(device: int, connected: bool) -> void:
 	if not connected:
+		# NOTE: A held joypad was never reported, so its disconnect isn't either.
+		var index := _held.find(device)
+		if index != -1:
+			_held.remove_at(index)
+			return
+
 		_logger.info("Joypad disconnected.", {&"device": device})
 
 		joy_disconnected.emit(device)
+		return
+
+	if _should_hold(device):
+		_hold(device)
 		return
 
 	_broadcast_connected_joypad(device)

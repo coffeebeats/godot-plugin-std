@@ -269,6 +269,11 @@ func swap_joypad_components(
 		Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
 		Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
 
+	# NOTE: The next monitor numbers joypads its own way, so an action held on a joypad
+	# the last one never reported, whose release may never reach the slot, can't block
+	# a press from the joypad which next takes its device ID.
+	_pressed.clear()
+
 	# NOTE: The keyboard may share the joypad's actions component, in which case its
 	# connection must survive the swap.
 	if actions_joy and actions_joy != actions_kbm:

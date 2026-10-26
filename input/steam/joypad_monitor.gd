@@ -10,6 +10,7 @@ extends StdInputSlot.JoypadMonitor
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const GodotJoypadMonitor := preload("../godot/joypad_monitor.gd")
 const Signals := preload("../../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
@@ -20,6 +21,16 @@ const Signals := preload("../../event/signal.gd")
 const _LIST_TIMEOUT_MSEC := 1000
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
+
+## godot_joypad_monitor is an optional Godot joypad monitor, which reports joypads while
+## no controller using the Steam Input API is connected. Once Steam Input starts, it
+## stops reporting the virtual gamepad Steam runs for each controller, except one whose
+## configuration doesn't use the Steam Input API, so each controller reaches a slot
+## through one monitor.
+##
+## NOTE: This monitor refers to the Godot one, rather than the reverse, since the Godot
+## monitor loads without the GodotSteam extension.
+@export var godot_joypad_monitor: StdInputSlot.JoypadMonitor = null
 
 ## steam_input_enabled_property is a settings property the joypad monitor turns on while
 ## a controller whose configuration uses the Steam Input API is connected, and off
@@ -35,7 +46,8 @@ var _connected := PackedInt64Array()
 var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_frame()
 
 ## _opted_out holds the handle of each device whose configuration doesn't use the Steam
-## Input API, so a later connect report doesn't connect it.
+## Input API, so a later connect report doesn't connect it and `godot_joypad_monitor`
+## reports its virtual gamepad instead.
 var _opted_out := PackedInt64Array()
 
 ## _types holds the Steam Input type read as each connected device connected. Valve
@@ -104,6 +116,11 @@ func get_slot_for_device_id(device: int) -> int:
 
 
 func _enter_tree() -> void:
+	assert(
+		not godot_joypad_monitor or godot_joypad_monitor is GodotJoypadMonitor,
+		"invalid config; wrong joypad monitor",
+	)
+
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 	Signals.connect_safe(Steam.input_device_connected, _on_device_connected)
@@ -113,6 +130,8 @@ func _enter_tree() -> void:
 	if not Steam.inputInit():
 		assert(false, "failed to initialize Steam Input")
 		return
+
+	_hold_virtual_gamepads()
 
 	Steam.enableActionEventCallbacks()
 
@@ -129,6 +148,11 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(Steam.input_configuration_loaded, _on_configuration_loaded)
 	Signals.disconnect_safe(Steam.input_device_connected, _on_device_connected)
 	Signals.disconnect_safe(Steam.input_device_disconnected, _on_device_disconnected)
+
+	# NOTE: This monitor reports no controller once Steam Input shuts down, so the Godot
+	# monitor reports each virtual gamepad again.
+	if godot_joypad_monitor:
+		godot_joypad_monitor.release_steam_virtual_gamepads()
 
 	_logger.info("Shut down Steam Input API.")
 
@@ -258,17 +282,18 @@ func _disconnect_device(device: int) -> void:
 		steam_input_enabled_property.set_value(false)
 
 
-## _get_steam_handle returns the Steam handle of the controller behind a joypad whose
-## info Godot reports as `info`, or `0` for a joypad Steam doesn't drive. Godot's SDL
-## driver records the handle, as a string, for each virtual gamepad Steam runs.
-static func _get_steam_handle(info: Dictionary) -> int:
-	return String(info.get("steam_input_index", "")).to_int()
-
-
 ## _has_connected_type returns whether the connected `device` connected with Steam
 ## Input type `input_type`.
 func _has_connected_type(device: int, input_type: int) -> bool:
 	return device in _types and _types[device] == input_type
+
+
+## _hold_virtual_gamepads has `godot_joypad_monitor`, when it's set, hold each Steam
+## virtual gamepad except those of the devices whose configuration opts out, since this
+## monitor reports every other device once Steam lists it.
+func _hold_virtual_gamepads() -> void:
+	if godot_joypad_monitor:
+		godot_joypad_monitor.hold_steam_virtual_gamepads(_opted_out)
 
 
 ## _is_virtual_gamepad returns whether Godot's joypad `device` is the virtual gamepad
@@ -280,7 +305,7 @@ func _is_virtual_gamepad(device: int) -> bool:
 	if device not in Input.get_connected_joypads():
 		return false
 
-	var handle := _get_steam_handle(Input.get_joy_info(device))
+	var handle := GodotJoypadMonitor.get_steam_handle(Input.get_joy_info(device))
 
 	return handle != 0 and handle in _connected
 
@@ -290,6 +315,21 @@ func _is_virtual_gamepad(device: int) -> bool:
 func _poll_waiting_devices() -> void:
 	var listed: Array = Steam.getConnectedControllers() if _waiting else []
 	_connect_waiting_devices(listed, Time.get_ticks_msec())
+
+
+## _set_opted_out records whether `device`'s configuration opts out of the Steam Input
+## API, handing each change to `godot_joypad_monitor`.
+func _set_opted_out(device: int, opted_out: bool) -> void:
+	var index := _opted_out.find(device)
+	if opted_out == (index != -1):
+		return
+
+	if opted_out:
+		_opted_out.append(device)
+	else:
+		_opted_out.remove_at(index)
+
+	_hold_virtual_gamepads()
 
 
 ## _wait_for_device starts waiting for Steam to list `device`, which Steam reported at
@@ -314,12 +354,7 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 	)
 
 	var uses_steam_input_api: bool = cfg.get("uses_steam_input_api", true)
-
-	var opted_out_index := _opted_out.find(device)
-	if uses_steam_input_api and opted_out_index != -1:
-		_opted_out.remove_at(opted_out_index)
-	elif not uses_steam_input_api and opted_out_index == -1:
-		_opted_out.append(device)
+	_set_opted_out(device, not uses_steam_input_api)
 
 	if not uses_steam_input_api:
 		_waiting.erase(device)
@@ -359,9 +394,7 @@ func _on_device_connected(device: int) -> void:
 
 func _on_device_disconnected(device: int) -> void:
 	# NOTE: The device's configuration is loaded again when it reconnects.
-	var opted_out_index := _opted_out.find(device)
-	if opted_out_index != -1:
-		_opted_out.remove_at(opted_out_index)
+	_set_opted_out(device, false)
 
 	_waiting.erase(device)
 
