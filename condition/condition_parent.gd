@@ -11,8 +11,10 @@ extends StdCondition
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## include_internal determines whether to remove internal nodes from the scene tree when
-## conditions are not met. A removed internal node returns with its internal mode,
-## except that one removed while no regular child is present returns to the front.
+## conditions are not met.
+##
+## NOTE: A removed internal node returns with its internal mode, except that one
+## removed while no regular child is present returns to the front.
 @export var include_internal: bool = true
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -63,10 +65,10 @@ func _on_allow() -> void:
 
 
 func _on_block() -> void:
-	# NOTE: Godot exposes no getter for a child's internal mode, so it's inferred from the
-	# child's place: `get_children(true)` lists front internal children, then regular
-	# ones, then back internal ones. With no regular child present, an internal child is
-	# counted as front, which keeps the order the children return in.
+	# NOTE: Godot exposes no getter for a child's internal mode, so it's inferred from
+	# position: `get_children(true)` lists front internal children, then regular ones,
+	# then back ones. With no regular child, an internal child counts as front, which
+	# keeps their order on return.
 	var regular := get_children()
 	var is_after_regular := false
 

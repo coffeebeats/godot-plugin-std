@@ -244,8 +244,10 @@ func test_condition_parent_held_out_child_returns_on_entering_allowed() -> void:
 	var holder := _place_parent(condition)
 	assert_null(child.get_parent(), "precondition: child held out")
 
-	# Given: The holder leaves the scene tree and the allow expression becomes true.
+	# Given: The holder leaves the scene tree.
 	remove_child(holder)
+
+	# Given: The allow expression becomes true while it's outside.
 	allow.set_value(true)
 
 	# When: The holder enters the scene tree again.
@@ -256,11 +258,13 @@ func test_condition_parent_held_out_child_returns_on_entering_allowed() -> void:
 
 
 func test_condition_parent_freed_frees_held_out_child() -> void:
-	# Given: A condition parent in the scene tree which holds its child out.
+	# Given: A condition parent whose allow expression is false, over a child.
 	var condition := StdConditionParent.new()
 	condition.expressions_allow = [FakeExpression.new(false)]
 	var child: Node = autofree(Node.new())
 	condition.add_child(child)
+
+	# Given: It's in the scene tree under a holder, holding the child out.
 	var holder := _place_parent(condition)
 	assert_null(child.get_parent(), "precondition: child held out")
 
@@ -273,12 +277,14 @@ func test_condition_parent_freed_frees_held_out_child() -> void:
 
 
 func test_condition_parent_block_after_close_request_removes_child() -> void:
-	# Given: A condition parent in the scene tree which shows its child.
+	# Given: A condition parent whose allow expression is true, over a child.
 	var allow := FakeExpression.new(true)
 	var condition := StdConditionParent.new()
 	condition.expressions_allow = [allow]
 	var child: Node = autofree(Node.new())
 	condition.add_child(child)
+
+	# Given: It's in the scene tree under a holder.
 	_place_parent(condition)
 
 	# Given: A close request arrives, which the game doesn't accept.
@@ -297,9 +303,11 @@ func test_condition_parent_allowed_again_restores_front_internal_child() -> void
 	var condition := StdConditionParent.new()
 	condition.expressions_allow = [allow]
 
-	# Given: It has a regular child and an internal child at the front.
+	# Given: It has a regular child.
 	var regular: Node = autofree(Node.new())
 	condition.add_child(regular)
+
+	# Given: It has an internal child at the front.
 	var internal: Node = autofree(Node.new())
 	condition.add_child(internal, false, Node.INTERNAL_MODE_FRONT)
 
@@ -321,9 +329,11 @@ func test_condition_parent_allowed_again_restores_back_internal_child() -> void:
 	var condition := StdConditionParent.new()
 	condition.expressions_allow = [allow]
 
-	# Given: It has a regular child and an internal child at the back.
+	# Given: It has a regular child.
 	var regular: Node = autofree(Node.new())
 	condition.add_child(regular)
+
+	# Given: It has an internal child at the back.
 	var internal: Node = autofree(Node.new())
 	condition.add_child(internal, false, Node.INTERNAL_MODE_BACK)
 
