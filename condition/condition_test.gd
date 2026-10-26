@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## std/condition/condition_test.gd
 ##
@@ -203,6 +204,74 @@ func test_condition_block_expression_changing_toggles_target() -> void:
 	assert_true(target.visible)
 
 
+func test_condition_parent_change_outside_tree_applies_on_entering() -> void:
+	# Given: A condition parent whose allow expression is true, over a child.
+	var allow := FakeExpression.new(true)
+	var condition := StdConditionParent.new()
+	condition.expressions_allow = [allow]
+	var child: Node = autofree(Node.new())
+	condition.add_child(child)
+
+	# Given: It's in the scene tree under a holder, as in a screen.
+	var holder := _place_parent(condition)
+	assert_eq(child.get_parent(), condition, "precondition: child in the tree")
+
+	# Given: The holder leaves the scene tree, as a cached screen does.
+	remove_child(holder)
+
+	# When: The allow expression becomes false.
+	allow.set_value(false)
+
+	# Then: The child is left in place while the condition is outside the tree.
+	assert_eq(child.get_parent(), condition)
+
+	# When: The holder enters the scene tree again.
+	add_child(holder)
+
+	# Then: The child is removed.
+	assert_null(child.get_parent())
+
+
+func test_condition_parent_held_out_child_returns_on_entering_allowed() -> void:
+	# Given: A condition parent whose allow expression is false, over a child.
+	var allow := FakeExpression.new(false)
+	var condition := StdConditionParent.new()
+	condition.expressions_allow = [allow]
+	var child: Node = autofree(Node.new())
+	condition.add_child(child)
+
+	# Given: It's in the scene tree under a holder, holding the child out.
+	var holder := _place_parent(condition)
+	assert_null(child.get_parent(), "precondition: child held out")
+
+	# Given: The holder leaves the scene tree and the allow expression becomes true.
+	remove_child(holder)
+	allow.set_value(true)
+
+	# When: The holder enters the scene tree again.
+	add_child(holder)
+
+	# Then: The child is added back.
+	assert_has(condition.get_children(), child)
+
+
+func test_condition_parent_freed_frees_held_out_child() -> void:
+	# Given: A condition parent in the scene tree which holds its child out.
+	var condition := StdConditionParent.new()
+	condition.expressions_allow = [FakeExpression.new(false)]
+	var child: Node = autofree(Node.new())
+	condition.add_child(child)
+	var holder := _place_parent(condition)
+	assert_null(child.get_parent(), "precondition: child held out")
+
+	# When: The condition is freed with its holder.
+	remove_child(holder)
+	holder.free()
+
+	# Then: The child is freed too.
+	assert_false(is_instance_valid(child))
+
+
 func test_settings_property_expression_with_only_allow_follows_allow(
 	value = use_parameters([true, false]),
 ) -> void:
@@ -341,3 +410,12 @@ func _place(condition: StdConditionTarget2D) -> Control:
 	condition.targets = [target]
 	add_child_autofree(condition)
 	return target
+
+
+## _place_parent adds the condition parent to the scene tree under a new holder node and
+## returns that holder.
+func _place_parent(condition: StdConditionParent) -> Node:
+	var holder := Node.new()
+	holder.add_child(condition)
+	add_child_autofree(holder)
+	return holder

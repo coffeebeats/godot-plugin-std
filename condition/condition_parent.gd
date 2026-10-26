@@ -24,16 +24,19 @@ var _children: Array[Node] = []
 func _enter_tree() -> void:
 	_logger = _logger.named(&"std/condition/target")
 
-	_children = get_children()
+	# NOTE: Children held out of the tree stay in `_children` while the condition is
+	# outside it, as in a cached screen, so entering adds them back once allowed.
+	for child in get_children(include_internal):
+		if child not in _children:
+			_children.append(child)
+
 	super._enter_tree()
 
 
-func _exit_tree() -> void:
-	_free_removed_children()
-
-
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+	# NOTE: Children held out of the tree are freed with the condition, and before
+	# Godot reports orphans at quit, so none is leaked.
+	if what == NOTIFICATION_PREDELETE or what == NOTIFICATION_WM_CLOSE_REQUEST:
 		_free_removed_children()
 
 
@@ -81,10 +84,18 @@ func _should_trigger_block_action_on_enter() -> bool:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _free_removed_children frees children that were removed from the tree by `_on_block`.
+## _free_removed_children frees children that were removed from the tree by `_on_block`
+## and stops tracking them.
 func _free_removed_children() -> void:
+	var kept: Array[Node] = []
+
 	for child in _children:
-		if child and not is_ancestor_of(child) and not child.is_queued_for_deletion():
+		if not is_instance_valid(child):
+			continue
+
+		if is_ancestor_of(child):
+			kept.append(child)
+		elif not child.is_queued_for_deletion():
 			child.free()
 
-	_children.clear()
+	_children = kept
