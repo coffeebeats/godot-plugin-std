@@ -164,27 +164,6 @@ func test_joypad_monitor_broadcast_skips_held_joypads() -> void:
 	)
 
 
-func test_joypad_monitor_release_reports_every_held_joypad() -> void:
-	# Given: A joypad monitor holding two open virtual gamepads.
-	var monitor: JoypadMonitor = autofree(JoypadMonitor.new())
-	monitor.hold_steam_virtual_gamepads(PackedInt64Array())
-	monitor.open(0, virtual_gamepad(7))
-	monitor.open(1, virtual_gamepad(9))
-	watch_signals(monitor)
-
-	# When: The hold ends.
-	monitor.release_steam_virtual_gamepads()
-
-	# Then: Both are reported connected.
-	assert_signal_emit_count(monitor, "joy_connected", 2)
-
-	# When: Another virtual gamepad opens.
-	monitor.open(2, virtual_gamepad(11))
-
-	# Then: It's reported connected.
-	assert_signal_emit_count(monitor, "joy_connected", 3)
-
-
 func test_joypad_monitor_reads_a_virtual_gamepads_steam_handle() -> void:
 	# When/Then: The Steam handle SDL records for a virtual gamepad is read back.
 	#

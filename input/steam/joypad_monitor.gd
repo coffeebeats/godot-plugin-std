@@ -149,10 +149,8 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(Steam.input_device_connected, _on_device_connected)
 	Signals.disconnect_safe(Steam.input_device_disconnected, _on_device_disconnected)
 
-	# NOTE: This monitor reports no controller once Steam Input shuts down, so the Godot
-	# monitor reports each virtual gamepad again.
-	if godot_joypad_monitor:
-		godot_joypad_monitor.release_steam_virtual_gamepads()
+	# NOTE: The Godot monitor keeps holding Steam's virtual gamepads, as this monitor
+	# doesn't report its own controllers disconnected, so quitting reports neither.
 
 	_logger.info("Shut down Steam Input API.")
 
