@@ -99,6 +99,36 @@ func _get_action_origin_label(
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _get_input_type returns the Steam Input type whose origins draw the glyphs of
+## `device_type`. A device type with no Steam counterpart, such as a generic joypad,
+## maps to `INPUT_TYPE_UNKNOWN`, for which Steam keeps each origin on its controller's
+## own type, or the closest one GodotSteam's Steamworks SDK knows.
+static func _get_input_type(device_type: StdInputDevice.DeviceType) -> int:
+	match device_type:
+		StdInputDevice.DEVICE_TYPE_PS_4:
+			return Steam.INPUT_TYPE_PS4_CONTROLLER
+		StdInputDevice.DEVICE_TYPE_PS_5:
+			return Steam.INPUT_TYPE_PS5_CONTROLLER
+		StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER:
+			return Steam.INPUT_TYPE_STEAM_CONTROLLER
+		StdInputDevice.DEVICE_TYPE_STEAM_DECK:
+			return Steam.INPUT_TYPE_STEAM_DECK_CONTROLLER
+		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR:
+			return Steam.INPUT_TYPE_SWITCH_JOYCON_PAIR
+		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE:
+			return Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE
+		StdInputDevice.DEVICE_TYPE_SWITCH_PRO:
+			return Steam.INPUT_TYPE_SWITCH_PRO_CONTROLLER
+		StdInputDevice.DEVICE_TYPE_TOUCH:
+			return Steam.INPUT_TYPE_MOBILE_TOUCH
+		StdInputDevice.DEVICE_TYPE_XBOX_360:
+			return Steam.INPUT_TYPE_XBOX360_CONTROLLER
+		StdInputDevice.DEVICE_TYPE_XBOX_ONE:
+			return Steam.INPUT_TYPE_XBOXONE_CONTROLLER
+
+	return Steam.INPUT_TYPE_UNKNOWN
+
+
 ## _list_action_origins returns the origin bound to the action at binding `index`, as a
 ## list which is empty when nothing is bound there.
 func _list_action_origins(
@@ -196,32 +226,8 @@ func _map_target_size_to_glyph_size(target_size: Vector2) -> int:
 	return 2  # 256 x 256 px
 
 
-## _translate_origin maps the provided origin to the specified Steam Input device type.
+## _translate_origin maps the provided origin to the specified device type's glyphs.
 ## This allows overridden device types (e.g. from player settings) to work with the
 ## Steam Input API.
 func _translate_origin(origin: int, device_type: StdInputDevice.DeviceType) -> int:
-	var target: int = Steam.INPUT_TYPE_GENERIC_XINPUT
-
-	match device_type:
-		StdInputDevice.DEVICE_TYPE_PS_4:
-			target = Steam.INPUT_TYPE_PS4_CONTROLLER
-		StdInputDevice.DEVICE_TYPE_PS_5:
-			target = Steam.INPUT_TYPE_PS5_CONTROLLER
-		StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER:
-			target = Steam.INPUT_TYPE_STEAM_CONTROLLER
-		StdInputDevice.DEVICE_TYPE_STEAM_DECK:
-			target = Steam.INPUT_TYPE_STEAM_DECK_CONTROLLER
-		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR:
-			target = Steam.INPUT_TYPE_SWITCH_JOYCON_PAIR
-		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE:
-			target = Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE
-		StdInputDevice.DEVICE_TYPE_SWITCH_PRO:
-			target = Steam.INPUT_TYPE_SWITCH_PRO_CONTROLLER
-		StdInputDevice.DEVICE_TYPE_TOUCH:
-			target = Steam.INPUT_TYPE_MOBILE_TOUCH
-		StdInputDevice.DEVICE_TYPE_XBOX_360:
-			target = Steam.INPUT_TYPE_XBOX360_CONTROLLER
-		StdInputDevice.DEVICE_TYPE_XBOX_ONE:
-			target = Steam.INPUT_TYPE_XBOXONE_CONTROLLER
-
-	return Steam.translateActionOrigin(target, origin)
+	return Steam.translateActionOrigin(_get_input_type(device_type), origin)

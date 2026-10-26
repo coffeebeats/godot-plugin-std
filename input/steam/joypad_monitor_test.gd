@@ -81,17 +81,16 @@ func test_joypad_monitor_broadcast_skips_empty_slots() -> void:
 	# Given: A joypad monitor whose slot 0 emptied when its device disconnected.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
 	monitor._connected = PackedInt64Array([0, 9])
+	monitor._types[9] = Steam.INPUT_TYPE_PS4_CONTROLLER
 	watch_signals(monitor)
 
 	# When: The connected joypads are broadcast.
 	monitor.broadcast_connected_joypads()
 
-	# Then: Only the occupied slot is reported, as a generic joypad, since Steam Input
-	# isn't running to name the device's family.
-	assert_engine_error("SteamAPI_SteamInput() == nullptr")
+	# Then: Only the occupied slot is reported, with the type its device connected with.
 	assert_signal_emit_count(monitor, "joy_connected", 1)
 	assert_signal_emitted_with_parameters(
-		monitor, "joy_connected", [1, StdInputDevice.DEVICE_TYPE_GENERIC]
+		monitor, "joy_connected", [1, StdInputDevice.DEVICE_TYPE_PS_4]
 	)
 
 
@@ -118,14 +117,23 @@ func test_joypad_monitor_disconnect_drops_trailing_empty_slots() -> void:
 	assert_false(monitor.steam_input_enabled_property.get_value())
 
 
-func test_joypad_monitor_connects_a_device_steam_reports_connected() -> void:
+func test_joypad_monitor_waits_for_steam_to_list_a_reported_device() -> void:
 	# Given: A joypad monitor with no device connected.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	watch_signals(monitor)
 
-	# When: Steam reports a controller connected.
-	monitor._on_device_connected(7)
+	# When: Steam reports a controller it doesn't list yet.
+	monitor._wait_for_device(7, 0)
+	monitor._connect_waiting_devices([], 16)
+
+	# Then: The controller waits, checked each frame, without connecting.
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_eq(monitor.get_slot_for_device_id(7), -1)
+	assert_true(monitor.is_processing())
+
+	# When: Steam lists the controller.
+	monitor._connect_waiting_devices([7], 32)
 
 	# Then: The device takes slot 0 as a generic joypad.
 	#
@@ -136,26 +144,147 @@ func test_joypad_monitor_connects_a_device_steam_reports_connected() -> void:
 	)
 	assert_eq(monitor.get_device_id_for_slot(0), 7)
 
-	# Then: Steam Input is in use.
+	# Then: Steam Input is in use, and nothing is checked each frame.
 	assert_true(monitor.steam_input_enabled_property.get_value())
+	assert_false(monitor.is_processing())
 
-	# When: Steam reports the controller connected again.
-	monitor._on_device_connected(7)
+	# When: Steam reports the controller again.
+	monitor._wait_for_device(7, 48)
+	monitor._connect_waiting_devices([7], 48)
 
 	# Then: It isn't connected twice.
 	assert_signal_emit_count(monitor, "joy_connected", 1)
+
+
+func test_joypad_monitor_waits_for_a_device_steam_reports_connected() -> void:
+	# Given: A joypad monitor with no device connected.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	watch_signals(monitor)
+
+	# When: Steam reports a controller connected which it doesn't list.
+	#
+	# NOTE: Steam Input isn't running under test to list it.
+	monitor._on_device_connected(7)
+
+	# Then: The controller waits, checked each frame, without connecting.
+	assert_engine_error(_STEAM_ERROR)
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_true(monitor.is_processing())
+
+	# When: Steam lists the controller.
+	monitor._connect_waiting_devices([7], Time.get_ticks_msec())
+
+	# Then: The controller takes slot 0.
+	assert_engine_error(_STEAM_ERROR)
+	assert_eq(monitor.get_slot_for_device_id(7), 0)
+
+
+func test_joypad_monitor_waits_for_a_device_whose_configuration_loads_first() -> void:
+	# Given: A joypad monitor with no device connected.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	watch_signals(monitor)
+
+	# When: A Steam Input configuration loads before Steam reports the controller.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# Then: The controller waits, checked each frame, without connecting.
+	assert_engine_error(_STEAM_ERROR)
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_true(monitor.is_processing())
+
+	# When: Steam reports the controller connected, then lists it.
+	monitor._on_device_connected(7)
+	monitor._connect_waiting_devices([7], Time.get_ticks_msec())
+
+	# Then: The controller is connected once.
+	assert_engine_error(_STEAM_ERROR)
+	assert_engine_error(_STEAM_ERROR)
+	assert_signal_emit_count(monitor, "joy_connected", 1)
+
+
+func test_joypad_monitor_connects_an_unlisted_device_after_the_timeout() -> void:
+	# Given: A joypad monitor waiting for Steam to list a reported controller.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	monitor._wait_for_device(7, 0)
+	watch_signals(monitor)
+
+	# When: Steam still doesn't list it just before the timeout.
+	monitor._connect_waiting_devices([], 999)
+
+	# Then: The controller still waits.
+	assert_signal_not_emitted(monitor, "joy_connected")
+
+	# When: Steam still doesn't list it at the timeout.
+	monitor._connect_waiting_devices([], 1000)
+
+	# Then: The controller connects anyway, and nothing is checked each frame.
+	assert_engine_error(_STEAM_ERROR)
+	assert_eq(monitor.get_slot_for_device_id(7), 0)
+	assert_false(monitor.is_processing())
+
+
+func test_joypad_monitor_drops_a_waiting_device_which_disconnects() -> void:
+	# Given: A joypad monitor waiting for Steam to list a reported controller.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	monitor._wait_for_device(7, 0)
+	watch_signals(monitor)
+
+	# When: The controller disconnects, and Steam then lists its handle.
+	monitor._on_device_disconnected(7)
+	monitor._connect_waiting_devices([7], 16)
+
+	# Then: The controller isn't connected, and nothing is checked each frame.
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_false(monitor.is_processing())
+
+
+func test_joypad_monitor_drops_a_waiting_device_whose_configuration_opts_out() -> void:
+	# Given: A joypad monitor waiting for Steam to list a reported controller.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	monitor._wait_for_device(7, 0)
+	watch_signals(monitor)
+
+	# When: Its configuration loads without the Steam Input API, then Steam lists it.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+	monitor._connect_waiting_devices([7], 16)
+
+	# Then: The controller isn't connected, and nothing is checked each frame.
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_false(monitor.is_processing())
+
+
+func test_joypad_monitor_compares_a_reported_type_with_the_connected_one() -> void:
+	# Given: A joypad monitor which connected a device of unknown type.
+	#
+	# NOTE: Steam Input isn't running under test to report one.
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	monitor._wait_for_device(7, 0)
+	monitor._connect_waiting_devices([7], 0)
+	assert_engine_error(_STEAM_ERROR)
+
+	# When/Then: The type it connected with matches, and another type doesn't.
+	assert_true(monitor._has_connected_type(7, Steam.INPUT_TYPE_UNKNOWN))
+	assert_false(monitor._has_connected_type(7, Steam.INPUT_TYPE_PS4_CONTROLLER))
 
 
 func test_joypad_monitor_connects_a_replugged_device_again() -> void:
 	# Given: A joypad monitor with a device connected in slot 0.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
-	monitor._on_device_connected(7)
+	monitor._wait_for_device(7, 0)
+	monitor._connect_waiting_devices([7], 0)
 	assert_engine_error(_STEAM_ERROR)
 
 	# When: The controller is unplugged and plugged in again under a new handle.
 	monitor._on_device_disconnected(7)
-	monitor._on_device_connected(9)
+	monitor._wait_for_device(9, 16)
+	monitor._connect_waiting_devices([9], 16)
 
 	# Then: The controller is connected in slot 0 again.
 	assert_engine_error(_STEAM_ERROR)
@@ -181,7 +310,8 @@ func test_joypad_monitor_skips_a_device_whose_configuration_opted_out_first() ->
 
 	# When: The controller is replugged before its configuration loads again.
 	monitor._on_device_disconnected(7)
-	monitor._on_device_connected(7)
+	monitor._wait_for_device(7, 0)
+	monitor._connect_waiting_devices([7], 0)
 
 	# Then: It's connected, since its old configuration no longer applies.
 	assert_engine_error(_STEAM_ERROR)
