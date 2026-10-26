@@ -291,18 +291,52 @@ func test_condition_parent_block_after_close_request_removes_child() -> void:
 	assert_null(child.get_parent())
 
 
-func test_condition_parent_entering_blocked_holds_out_internal_child() -> void:
-	# Given: A condition parent whose allow expression is false, over an internal child.
+func test_condition_parent_allowed_again_restores_front_internal_child() -> void:
+	# Given: A condition parent whose allow expression is false.
+	var allow := FakeExpression.new(false)
 	var condition := StdConditionParent.new()
-	condition.expressions_allow = [FakeExpression.new(false)]
-	var child: Node = autofree(Node.new())
-	condition.add_child(child, false, Node.INTERNAL_MODE_FRONT)
+	condition.expressions_allow = [allow]
 
-	# When: It enters the scene tree under a holder.
+	# Given: It has a regular child and an internal child at the front.
+	var regular: Node = autofree(Node.new())
+	condition.add_child(regular)
+	var internal: Node = autofree(Node.new())
+	condition.add_child(internal, false, Node.INTERNAL_MODE_FRONT)
+
+	# Given: It's in the scene tree, holding both children out.
 	_place_parent(condition)
+	assert_null(internal.get_parent(), "precondition: child held out")
 
-	# Then: The internal child is held out.
-	assert_null(child.get_parent())
+	# When: The allow expression becomes true.
+	allow.set_value(true)
+
+	# Then: The child is internal again, ahead of the regular child.
+	assert_does_not_have(condition.get_children(), internal)
+	assert_eq(condition.get_child(0, true), internal)
+
+
+func test_condition_parent_allowed_again_restores_back_internal_child() -> void:
+	# Given: A condition parent whose allow expression is false.
+	var allow := FakeExpression.new(false)
+	var condition := StdConditionParent.new()
+	condition.expressions_allow = [allow]
+
+	# Given: It has a regular child and an internal child at the back.
+	var regular: Node = autofree(Node.new())
+	condition.add_child(regular)
+	var internal: Node = autofree(Node.new())
+	condition.add_child(internal, false, Node.INTERNAL_MODE_BACK)
+
+	# Given: It's in the scene tree, holding both children out.
+	_place_parent(condition)
+	assert_null(internal.get_parent(), "precondition: child held out")
+
+	# When: The allow expression becomes true.
+	allow.set_value(true)
+
+	# Then: The child is internal again, behind the regular child.
+	assert_does_not_have(condition.get_children(), internal)
+	assert_eq(condition.get_child(-1, true), internal)
 
 
 func test_settings_property_expression_with_only_allow_follows_allow(

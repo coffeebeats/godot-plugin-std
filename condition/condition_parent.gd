@@ -11,12 +11,14 @@ extends StdCondition
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## include_internal determines whether to remove internal nodes from the scene tree when
-## conditions are not met.
+## conditions are not met. A removed internal node returns with its internal mode,
+## except that one removed while no regular child is present returns to the front.
 @export var include_internal: bool = true
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _children: Array[Node] = []
+var _internal_modes: Dictionary[Node, InternalMode] = {}
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
@@ -54,12 +56,29 @@ func _on_allow() -> void:
 				)
 			)
 
-			add_child(child, false)
+			var mode: InternalMode = _internal_modes.get(child, INTERNAL_MODE_DISABLED)
+			_internal_modes.erase(child)
+
+			add_child(child, false, mode)
 
 
 func _on_block() -> void:
+	# NOTE: Godot exposes no getter for a child's internal mode, so it's inferred from the
+	# child's place: `get_children(true)` lists front internal children, then regular
+	# ones, then back internal ones. With no regular child present, an internal child is
+	# counted as front, which keeps the order the children return in.
+	var regular := get_children()
+	var is_after_regular := false
+
 	for child in get_children(include_internal):
 		assert(child in _children, "invalid state; found unknown child node")
+
+		if child in regular:
+			is_after_regular = true
+		else:
+			_internal_modes[child] = (
+				INTERNAL_MODE_BACK if is_after_regular else INTERNAL_MODE_FRONT
+			)
 
 		if is_ancestor_of(child):
 			(
@@ -99,3 +118,6 @@ func _free_removed_children() -> void:
 			child.free()
 
 	_children = kept
+
+	# NOTE: Only held-out children have a recorded mode, and none of them stays tracked.
+	_internal_modes.clear()
