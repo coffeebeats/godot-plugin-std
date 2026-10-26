@@ -272,6 +272,39 @@ func test_condition_parent_freed_frees_held_out_child() -> void:
 	assert_false(is_instance_valid(child))
 
 
+func test_condition_parent_block_after_close_request_removes_child() -> void:
+	# Given: A condition parent in the scene tree which shows its child.
+	var allow := FakeExpression.new(true)
+	var condition := StdConditionParent.new()
+	condition.expressions_allow = [allow]
+	var child: Node = autofree(Node.new())
+	condition.add_child(child)
+	_place_parent(condition)
+
+	# Given: A close request arrives, which the game doesn't accept.
+	condition.notification(NOTIFICATION_WM_CLOSE_REQUEST)
+
+	# When: The allow expression becomes false.
+	allow.set_value(false)
+
+	# Then: The child is removed.
+	assert_null(child.get_parent())
+
+
+func test_condition_parent_entering_blocked_holds_out_internal_child() -> void:
+	# Given: A condition parent whose allow expression is false, over an internal child.
+	var condition := StdConditionParent.new()
+	condition.expressions_allow = [FakeExpression.new(false)]
+	var child: Node = autofree(Node.new())
+	condition.add_child(child, false, Node.INTERNAL_MODE_FRONT)
+
+	# When: It enters the scene tree under a holder.
+	_place_parent(condition)
+
+	# Then: The internal child is held out.
+	assert_null(child.get_parent())
+
+
 func test_settings_property_expression_with_only_allow_follows_allow(
 	value = use_parameters([true, false]),
 ) -> void:
