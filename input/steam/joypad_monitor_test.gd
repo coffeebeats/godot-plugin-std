@@ -135,8 +135,9 @@ func test_joypad_monitor_waits_for_steam_to_list_a_reported_device() -> void:
 	# When: Steam lists the controller.
 	monitor._connect_waiting_devices([7], 32)
 
-	# Then: The device takes slot 0 as a generic joypad, since Steam Input isn't running
-	# under test to name its family.
+	# Then: The device takes slot 0 as a generic joypad.
+	#
+	# NOTE: Steam Input isn't running under test to name the joypad's family.
 	assert_engine_error(_STEAM_ERROR)
 	assert_signal_emitted_with_parameters(
 		monitor, "joy_connected", [0, StdInputDevice.DEVICE_TYPE_GENERIC]
@@ -161,8 +162,9 @@ func test_joypad_monitor_waits_for_a_device_steam_reports_connected() -> void:
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	watch_signals(monitor)
 
-	# When: Steam reports a controller connected, which it doesn't list, since Steam
-	# Input isn't running under test.
+	# When: Steam reports a controller connected which it doesn't list.
+	#
+	# NOTE: Steam Input isn't running under test to list it.
 	monitor._on_device_connected(7)
 
 	# Then: The controller waits, checked each frame, without connecting.
@@ -184,8 +186,7 @@ func test_joypad_monitor_waits_for_a_device_whose_configuration_loads_first() ->
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	watch_signals(monitor)
 
-	# When: A controller's configuration loads using the Steam Input API before Steam
-	# reports the controller connected.
+	# When: A Steam Input configuration loads before Steam reports the controller.
 	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
 
 	# Then: The controller waits, checked each frame, without connecting.
@@ -258,8 +259,9 @@ func test_joypad_monitor_drops_a_waiting_device_whose_configuration_opts_out() -
 
 
 func test_joypad_monitor_compares_a_reported_type_with_the_connected_one() -> void:
-	# Given: A joypad monitor which connected a device of unknown type, since Steam
-	# Input isn't running under test to report one.
+	# Given: A joypad monitor which connected a device of unknown type.
+	#
+	# NOTE: Steam Input isn't running under test to report one.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	monitor._wait_for_device(7, 0)

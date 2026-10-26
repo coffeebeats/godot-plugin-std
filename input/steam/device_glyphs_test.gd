@@ -33,8 +33,10 @@ func test_device_glyphs_maps_device_families_to_their_steam_input_types() -> voi
 
 
 func test_device_glyphs_maps_a_generic_joypad_to_the_unknown_steam_input_type() -> void:
-	# When/Then: A generic joypad maps to the unknown type, which keeps each origin on
-	# its controller's own type rather than translating it to Xbox's.
+	# When/Then: A generic joypad maps to the unknown type.
+	#
+	# NOTE: Steam keeps each origin on its controller's own type for it, rather than
+	# translating it to Xbox's.
 	assert_eq(
 		_device_glyphs._get_input_type(StdInputDevice.DEVICE_TYPE_GENERIC),
 		Steam.INPUT_TYPE_UNKNOWN,

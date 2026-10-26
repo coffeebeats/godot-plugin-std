@@ -15,7 +15,8 @@ const Signals := preload("../../event/signal.gd")
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## _LIST_TIMEOUT_MSEC is how long a device Steam reported waits for Steam to list it
-## before it connects anyway, since Valve doesn't document one which stays unlisted.
+## before it connects anyway, since Valve doesn't document whether one can remain
+## unlisted.
 const _LIST_TIMEOUT_MSEC := 1000
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -37,7 +38,7 @@ var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_f
 ## Input API, so a later connect report doesn't connect it.
 var _opted_out := PackedInt64Array()
 
-## _types holds the Steam Input type each connected device connected with. Valve
+## _types holds the Steam Input type read as each connected device connected. Valve
 ## documents the type as the controller's model, so it's read once per connection.
 var _types: Dictionary[int, int] = {}
 
@@ -143,9 +144,9 @@ func _input(event: InputEvent) -> void:
 
 	# NOTE: Godot opens the virtual gamepad Steam runs for a layout binding a gamepad
 	# button; its controller's input arrives as Steam actions, so its events are dropped.
-	# A controller waiting for Steam to list it isn't in `_connected`, and its Steam
-	# actions aren't published until it connects, so its virtual gamepad's events pass
-	# through as the controller's only input.
+	# A controller waiting for Steam to list it isn't in `_connected` and publishes no
+	# Steam actions until it connects, so its virtual gamepad's events pass through as
+	# its only input.
 	if _is_virtual_gamepad(event.device):
 		get_viewport().set_input_as_handled()
 
@@ -291,8 +292,8 @@ func _poll_waiting_devices() -> void:
 	_connect_waiting_devices(listed, Time.get_ticks_msec())
 
 
-## _wait_for_device starts `device`, which Steam reported at `now` in milliseconds since
-## launch, waiting for Steam to list it, unless it's connected, waiting or opted out.
+## _wait_for_device starts waiting for Steam to list `device`, which Steam reported at
+## `now` in milliseconds since launch, unless it's connected, waiting or opted out.
 func _wait_for_device(device: int, now: int) -> void:
 	if device in _connected or device in _opted_out or device in _waiting:
 		return
