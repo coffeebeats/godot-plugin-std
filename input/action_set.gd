@@ -83,8 +83,12 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 @export_subgroup("Hide")
 
 ## cursor_hide_actions is a list of actions which, when "just" triggered by any device,
-## request the cursor to be hidden, as a desktop hides the pointer while typing. Other
-## factors, such as `cursor_hide_delay`, can still keep the cursor visible.
+## request the cursor to be hidden. Other factors, such as `cursor_hide_delay`, can
+## still keep the cursor visible.
+##
+## NOTE: A key or mouse button press triggers an action only with exactly the action's
+## modifiers, as Godot's GUI matches its focus actions, so Shift+Tab doesn't trigger an
+## action bound to Tab alone.
 ##
 ## NOTE: Actions defined in layers will add to the total set of actions which will hide
 ## the cursor. As such, there's no need to include actions from parent layers.

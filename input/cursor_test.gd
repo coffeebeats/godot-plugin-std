@@ -8,7 +8,8 @@ extends GutTest
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## _TEST_HIDE_ACTION is an action registered in the `InputMap` for hiding the cursor.
+## _TEST_HIDE_ACTION is an action registered in the `InputMap` for hiding the cursor,
+## which Tab alone presses.
 const _TEST_HIDE_ACTION := &"test_hide"
 
 ## _TEST_HIDE_ACTION_OTHER is a second action registered in the `InputMap` for hiding
@@ -1148,6 +1149,31 @@ func test_input_hide_action_pressed_after_hide_delay_hides() -> void:
 	assert_false(cursor.get_is_visible())
 
 
+func test_input_hide_key_with_extra_modifier_keeps_cursor_visible() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: The action set hides on the test action, which Tab alone presses.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_hide_actions = [_TEST_HIDE_ACTION]
+	cursor.update_configuration([action_set])
+
+	# Given: The cursor is visible.
+	cursor.show_cursor()
+
+	# When: Shift+Tab is pressed.
+	get_viewport().push_input(_tab_press(true))
+
+	# Then: The cursor is visible.
+	assert_true(cursor.get_is_visible())
+
+	# When: Tab is pressed alone.
+	get_viewport().push_input(_tab_press())
+
+	# Then: The cursor is hidden.
+	assert_false(cursor.get_is_visible())
+
+
 func test_input_hovered_only_hide_action_hides_while_hovered() -> void:
 	# Given: A cursor added to the scene.
 	add_child_autofree(cursor)
@@ -1341,6 +1367,7 @@ func before_all() -> void:
 	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
 
 	InputMap.add_action(_TEST_HIDE_ACTION)
+	InputMap.action_add_event(_TEST_HIDE_ACTION, _tab_press())
 	InputMap.add_action(_TEST_HIDE_ACTION_OTHER)
 
 
@@ -1420,4 +1447,13 @@ func _motion(relative: Vector2) -> InputEventMouseMotion:
 	var event := InputEventMouseMotion.new()
 	event.relative = relative
 	event.screen_relative = relative
+	return event
+
+
+## _tab_press returns a press of Tab, with Shift held if `shift` is set.
+func _tab_press(shift: bool = false) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = KEY_TAB
+	event.shift_pressed = shift
+	event.pressed = true
 	return event
