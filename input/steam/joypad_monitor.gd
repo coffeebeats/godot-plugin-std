@@ -143,6 +143,9 @@ func _input(event: InputEvent) -> void:
 
 	# NOTE: Godot opens the virtual gamepad Steam runs for a layout binding a gamepad
 	# button; its controller's input arrives as Steam actions, so its events are dropped.
+	# A controller waiting for Steam to list it isn't in `_connected`, and its Steam
+	# actions aren't published until it connects, so its virtual gamepad's events pass
+	# through as the controller's only input.
 	if _is_virtual_gamepad(event.device):
 		get_viewport().set_input_as_handled()
 
