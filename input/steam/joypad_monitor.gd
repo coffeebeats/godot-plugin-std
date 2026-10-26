@@ -22,6 +22,16 @@ const _LIST_TIMEOUT_MSEC := 1000
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
+## action_sets are the game's action sets and layers, every one its Steam Input manifest
+## lists. Steam loads no configuration at launch, so a controller it reports before one
+## loads doesn't use the Steam Input API if its binding gives none of their actions an
+## origin, as Valve defines that flag. Left empty, such a controller connects until its
+## configuration loads.
+##
+## NOTE: A set left out can make a controller which uses the Steam Input API look opted
+## out, so it gets no Steam actions until its configuration loads.
+@export var action_sets: Array[StdInputActionSet] = []
+
 ## godot_joypad_monitor is an optional Godot joypad monitor, which this one has stop
 ## reporting Steam's virtual gamepads once Steam Input starts, except for a controller
 ## whose configuration opts out, so each controller reaches a slot through one monitor.
@@ -44,8 +54,9 @@ var _connected := PackedInt64Array()
 var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_frame()
 
 ## _opted_out holds the handle of each device whose configuration doesn't use the Steam
-## Input API, so a later connect report doesn't connect it and `godot_joypad_monitor`
-## reports its virtual gamepad instead.
+## Input API, as its configuration load or, before one, its binding reports, so a later
+## connect report doesn't connect it and `godot_joypad_monitor` reports its virtual
+## gamepad instead.
 var _opted_out := PackedInt64Array()
 
 ## _types holds the Steam Input type read as each connected device connected. Valve
@@ -278,6 +289,32 @@ func _disconnect_device(device: int) -> void:
 		steam_input_enabled_property.set_value(false)
 
 
+## _has_bound_action returns whether `device`'s binding gives an origin to one of
+## `action_set`'s actions in the manifest's set or layer `action_set_handle`.
+static func _has_bound_action(
+	device: int, action_set_handle: int, action_set: StdInputActionSet
+) -> bool:
+	for action in action_set.actions_digital:
+		# NOTE: A stick's directional actions have no Steam action of their own.
+		if action_set.get_analog_2d_action(action):
+			continue
+
+		var handle := Steam.getDigitalActionHandle(action)
+		if handle and Steam.getDigitalActionOrigins(device, action_set_handle, handle):
+			return true
+
+	var analog := action_set.actions_analog_1d + action_set.actions_analog_2d
+	if action_set.action_absolute_mouse:
+		analog.append(action_set.action_absolute_mouse)
+
+	for action in analog:
+		var handle := Steam.getAnalogActionHandle(action)
+		if handle and Steam.getAnalogActionOrigins(device, action_set_handle, handle):
+			return true
+
+	return false
+
+
 ## _has_connected_type returns whether the connected `device` connected with Steam
 ## Input type `input_type`.
 func _has_connected_type(device: int, input_type: int) -> bool:
@@ -292,6 +329,35 @@ func _hold_virtual_gamepads() -> void:
 		godot_joypad_monitor.hold_steam_virtual_gamepads(_opted_out)
 
 
+## _is_binding_opted_out returns whether `device`'s binding gives none of the actions in
+## `action_sets` an origin, as a configuration which doesn't use the Steam Input API.
+## It's `false` when that can't be read: with `action_sets` empty, or before Steam loads
+## the binding.
+func _is_binding_opted_out(device: int) -> bool:
+	if not action_sets:
+		return false
+
+	# NOTE: Valve documents that the revision can't be read while the binding loads.
+	if not Steam.getDeviceBindingRevision(device):
+		return false
+
+	for action_set in action_sets:
+		if not action_set:
+			continue
+
+		for action_set_name in _list_manifest_names(action_set, action_sets):
+			var handle := Steam.getActionSetHandle(action_set_name)
+			if handle and _has_bound_action(device, handle, action_set):
+				return false
+
+	return true
+
+
+## _is_tracked returns whether `device` is connected, waiting or opted out.
+func _is_tracked(device: int) -> bool:
+	return device in _connected or device in _opted_out or device in _waiting
+
+
 ## _is_virtual_gamepad returns whether Godot's joypad `device` is the virtual gamepad
 ## Steam runs for a controller this monitor connected. It's matched by Steam handle,
 ## since SDL reports the physical controller's vendor and product IDs for it.
@@ -304,6 +370,23 @@ func _is_virtual_gamepad(device: int) -> bool:
 	var handle := GodotJoypadMonitor.get_steam_handle(Input.get_joy_info(device))
 
 	return handle != 0 and handle in _connected
+
+
+## _list_manifest_names returns the names the Steam Input manifest gives `action_set`.
+## The manifest writes a layer with no parent under each set in `sets`, as
+## `<Layer>_<Set>`.
+static func _list_manifest_names(
+	action_set: StdInputActionSet, sets: Array[StdInputActionSet]
+) -> PackedStringArray:
+	if not action_set is StdInputActionSetLayer or action_set.parent:
+		return PackedStringArray([action_set.name])
+
+	var names := PackedStringArray()
+	for parent in sets:
+		if parent and not parent is StdInputActionSetLayer:
+			names.append("%s_%s" % [action_set.name, parent.name])
+
+	return names
 
 
 ## _poll_waiting_devices connects each waiting device Steam now lists. Steam's list is
@@ -331,7 +414,7 @@ func _set_opted_out(device: int, opted_out: bool) -> void:
 ## _wait_for_device starts waiting for Steam to list `device`, which Steam reported at
 ## `now` in milliseconds since launch, unless it's connected, waiting or opted out.
 func _wait_for_device(device: int, now: int) -> void:
-	if device in _connected or device in _opted_out or device in _waiting:
+	if _is_tracked(device):
 		return
 
 	_waiting[device] = now
@@ -382,6 +465,12 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 
 
 func _on_device_connected(device: int) -> void:
+	# NOTE: Steam loads a configuration on a focus change or a hot plug, never at launch,
+	# so a device reported before one loads is read from its binding.
+	if not _is_tracked(device) and _is_binding_opted_out(device):
+		_logger.info("Joypad binding has no Steam Input actions.", {&"device": device})
+		_set_opted_out(device, true)
+
 	# NOTE: A configuration load can report the device first, or report first that
 	# the device doesn't use the Steam Input API, as on a replug.
 	_wait_for_device(device, Time.get_ticks_msec())

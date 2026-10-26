@@ -399,6 +399,108 @@ func test_joypad_monitor_tracks_an_opt_out_without_a_godot_joypad_monitor() -> v
 	assert_eq(monitor._opted_out, PackedInt64Array([7]))
 
 
+func test_joypad_monitor_releases_a_virtual_gamepad_whose_binding_opts_out() -> void:
+	# Given: A joypad monitor holding the open virtual gamepad of a controller whose
+	# binding has none of the game's actions.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var monitor := _make_joypad_monitor(godot_monitor, partial_double(_joypad_monitor))
+	stub(monitor, "_is_binding_opted_out").to_return(true)
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+	watch_signals(godot_monitor)
+	watch_signals(monitor)
+
+	# When: Steam reports the controller connected before its configuration loads.
+	monitor._on_device_connected(7)
+
+	# Then: The Godot monitor reports its virtual gamepad, and this monitor doesn't.
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_signal_emitted_with_parameters(
+		godot_monitor, "joy_connected", [0, StdInputDevice.DEVICE_TYPE_PS_4]
+	)
+
+	# When: Its configuration loads using the Steam Input API, and Steam lists it.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+	monitor._connect_waiting_devices([7], Time.get_ticks_msec())
+
+	# Then: The Godot monitor holds the virtual gamepad again, and this monitor connects.
+	#
+	# NOTE: Steam Input isn't running under test to list or type the controller.
+	assert_engine_error(_STEAM_ERROR)
+	assert_engine_error(_STEAM_ERROR)
+	assert_signal_emitted_with_parameters(godot_monitor, "joy_disconnected", [0])
+	assert_eq(monitor.get_slot_for_device_id(7), 0)
+
+
+func test_joypad_monitor_reads_no_binding_once_a_configuration_loads() -> void:
+	# Given: A joypad monitor whose controller's binding has none of the game's actions.
+	var monitor := _make_joypad_monitor(null, partial_double(_joypad_monitor))
+	stub(monitor, "_is_binding_opted_out").to_return(true)
+
+	# When: The controller's configuration loads using the Steam Input API, and Steam
+	# then reports the controller connected.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+	monitor._on_device_connected(7)
+
+	# Then: The configuration decides, so the binding isn't read.
+	#
+	# NOTE: Steam Input isn't running under test to list the controller.
+	assert_engine_error(_STEAM_ERROR)
+	assert_engine_error(_STEAM_ERROR)
+	assert_not_called(monitor, "_is_binding_opted_out")
+	assert_eq(monitor._opted_out, PackedInt64Array())
+
+
+func test_joypad_monitor_reads_no_binding_without_action_sets() -> void:
+	# Given: A joypad monitor without the game's action sets.
+	var monitor := _make_joypad_monitor(null)
+
+	# When/Then: A controller isn't opted out, since its binding isn't read.
+	#
+	# NOTE: Reading it would raise an engine error, since Steam Input isn't running.
+	assert_false(monitor._is_binding_opted_out(7))
+
+
+func test_joypad_monitor_keeps_a_binding_steam_has_not_loaded() -> void:
+	# Given: A joypad monitor with the game's action sets.
+	var monitor := _make_joypad_monitor(null)
+	var action_sets: Array[StdInputActionSet] = [_make_action_set(&"Menu")]
+	action_sets[0].actions_digital = [&"ui_accept"]
+	monitor.action_sets = action_sets
+
+	# When/Then: A controller whose binding revision can't be read isn't opted out.
+	#
+	# NOTE: Steam Input isn't running under test, so no binding loads.
+	assert_false(monitor._is_binding_opted_out(7))
+	assert_engine_error(_STEAM_ERROR)
+
+
+func test_joypad_monitor_names_action_sets_as_the_manifest_does() -> void:
+	# Given: Two sets, a layer under one of them, and a layer with no parent.
+	var menu := _make_action_set(&"Menu")
+	var options := _make_action_set(&"MenuOptions", true) as StdInputActionSetLayer
+	options.parent = menu
+	var navigation := _make_action_set(&"MenuNavigation", true)
+	var action_sets: Array[StdInputActionSet] = [
+		menu, _make_action_set(&"Splash"), options, navigation
+	]
+
+	# When/Then: A set and a layer with a parent keep their names.
+	assert_eq(
+		_joypad_monitor._list_manifest_names(menu, action_sets),
+		PackedStringArray(["Menu"]),
+	)
+	assert_eq(
+		_joypad_monitor._list_manifest_names(options, action_sets),
+		PackedStringArray(["MenuOptions"]),
+	)
+
+	# When/Then: A layer with no parent is named under each set.
+	assert_eq(
+		_joypad_monitor._list_manifest_names(navigation, action_sets),
+		PackedStringArray(["MenuNavigation_Menu", "MenuNavigation_Splash"]),
+	)
+
+
 func test_joypad_monitor_does_not_match_a_virtual_gamepad_by_index() -> void:
 	# Given: A joypad monitor which connected one device.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
@@ -454,13 +556,29 @@ func _make_godot_joypad_monitor() -> GodotJoypadMonitorTest.JoypadMonitor:
 	return autofree(GodotJoypadMonitorTest.JoypadMonitor.new())
 
 
+## _make_action_set returns an action set called `action_set_name`, or a layer if
+## `is_layer` is set.
+func _make_action_set(
+	action_set_name: StringName, is_layer: bool = false
+) -> StdInputActionSet:
+	var action_set: StdInputActionSet = (
+		StdInputActionSetLayer.new() if is_layer else StdInputActionSet.new()
+	)
+	action_set.name = action_set_name
+	return action_set
+
+
 ## _make_joypad_monitor returns a joypad monitor which holds Steam's virtual gamepads in
-## `godot_monitor`, when it's set, as it does once Steam Input starts. It isn't added to
-## the scene, since entering it needs Steam Input.
+## `godot_monitor`, when it's set, as it does once Steam Input starts. It's an instance
+## of `script`, such as a partial double, when that's set. It isn't added to the scene,
+## since entering it needs Steam Input.
 func _make_joypad_monitor(
 	godot_monitor: StdInputSlot.JoypadMonitor,
+	script: Script = null,
 ) -> StdInputSlot.JoypadMonitor:
-	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	var monitor: StdInputSlot.JoypadMonitor = autofree(
+		(script if script else _joypad_monitor).new()
+	)
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	monitor.godot_joypad_monitor = godot_monitor
 	monitor._hold_virtual_gamepads()
