@@ -12,6 +12,12 @@ extends StdInputSlot.JoypadMonitor
 
 const Signals := preload("../../event/signal.gd")
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## _LIST_TIMEOUT_MSEC is how long a device Steam reported waits for Steam to list it
+## before it connects anyway, since Valve doesn't document one which stays unlisted.
+const _LIST_TIMEOUT_MSEC := 1000
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## steam_input_enabled_property is a settings property the joypad monitor turns on while
@@ -30,6 +36,15 @@ var _logger := StdLogger.create("std/input/steam/joypad-monitor").with_process_f
 ## _opted_out holds the handle of each device whose configuration doesn't use the Steam
 ## Input API, so a later connect report doesn't connect it.
 var _opted_out := PackedInt64Array()
+
+## _types holds the Steam Input type each connected device connected with. Valve
+## documents the type as the controller's model, so it's read once per connection.
+var _types: Dictionary[int, int] = {}
+
+## _waiting holds the time, in milliseconds since launch, at which Steam first reported
+## each device it doesn't list yet. Steam's callbacks can arrive before it lists the
+## device, and until then it reports no type for it.
+var _waiting: Dictionary[int, int] = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -132,6 +147,15 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func _process(_delta: float) -> void:
+	_poll_waiting_devices()
+
+
+func _ready() -> void:
+	# NOTE: Processing runs only while a device waits for Steam to list it.
+	set_process(not _waiting.is_empty())
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
@@ -143,7 +167,8 @@ func _broadcast_connected_joypads() -> void:
 
 		# NOTE: The type is reported here too, so a pad connected before a slot listened
 		# gets its family's glyphs rather than generic ones.
-		joy_connected.emit(slot, get_device_type(Steam.getInputTypeForHandle(device)))
+		var input_type: int = _types.get(device, Steam.INPUT_TYPE_UNKNOWN)
+		joy_connected.emit(slot, get_device_type(input_type))
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -166,15 +191,45 @@ func _connect_device(device: int) -> void:
 		assert(false, "invalid argument: duplicate device")
 		return
 
-	var device_type := get_device_type(Steam.getInputTypeForHandle(device))
+	var input_type := Steam.getInputTypeForHandle(device)
+	var device_type := get_device_type(input_type)
 
 	_logger.info("Joypad connected.", {&"device": device, &"type": device_type})
+
+	_types[device] = input_type
 
 	# NOTE: The property is set first, so Steam-backed components handle the
 	# notifications that follow.
 	steam_input_enabled_property.set_value(true)
 
 	joy_connected.emit(_claim_slot(device), device_type)
+
+
+## _connect_waiting_devices connects each waiting device which Steam lists in `listed`,
+## or which has waited `_LIST_TIMEOUT_MSEC` by `now`, in milliseconds since launch.
+## Processing runs while any device still waits.
+func _connect_waiting_devices(listed: Array, now: int) -> void:
+	for device: int in _waiting.keys():
+		var waited: int = now - _waiting[device]
+
+		if device not in listed:
+			if waited < _LIST_TIMEOUT_MSEC:
+				continue
+
+			# NOTE: A controller which does nothing is worse than one with the wrong
+			# glyphs.
+			(
+				_logger
+				. warn(
+					"Joypad unlisted by Steam; connecting it anyway.",
+					{&"device": device, &"waited_msec": waited},
+				)
+			)
+
+		_waiting.erase(device)
+		_connect_device(device)
+
+	set_process(not _waiting.is_empty())
 
 
 func _disconnect_device(device: int) -> void:
@@ -188,6 +243,7 @@ func _disconnect_device(device: int) -> void:
 	# under the components which keep state per slot.
 	var slot := _connected.find(device)
 	_connected[slot] = 0
+	_types.erase(device)
 
 	while _connected and not _connected[_connected.size() - 1]:
 		_connected.resize(_connected.size() - 1)
@@ -205,6 +261,12 @@ static func _get_steam_handle(info: Dictionary) -> int:
 	return String(info.get("steam_input_index", "")).to_int()
 
 
+## _has_connected_type returns whether the connected `device` connected with Steam
+## Input type `input_type`.
+func _has_connected_type(device: int, input_type: int) -> bool:
+	return device in _types and _types[device] == input_type
+
+
 ## _is_virtual_gamepad returns whether Godot's joypad `device` is the virtual gamepad
 ## Steam runs for a controller this monitor connected. It's matched by Steam handle,
 ## since SDL reports the physical controller's vendor and product IDs for it.
@@ -217,6 +279,22 @@ func _is_virtual_gamepad(device: int) -> bool:
 	var handle := _get_steam_handle(Input.get_joy_info(device))
 
 	return handle != 0 and handle in _connected
+
+
+## _poll_waiting_devices connects each waiting device Steam now lists. Steam's list is
+## read only while a device waits, since GodotSteam prints a line on each read.
+func _poll_waiting_devices() -> void:
+	var listed: Array = Steam.getConnectedControllers() if _waiting else []
+	_connect_waiting_devices(listed, Time.get_ticks_msec())
+
+
+## _wait_for_device starts `device`, which Steam reported at `now` in milliseconds since
+## launch, waiting for Steam to list it, unless it's connected, waiting or opted out.
+func _wait_for_device(device: int, now: int) -> void:
+	if device in _connected or device in _opted_out or device in _waiting:
+		return
+
+	_waiting[device] = now
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
@@ -232,7 +310,6 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 	)
 
 	var uses_steam_input_api: bool = cfg.get("uses_steam_input_api", true)
-	var device_in_connected := device in _connected
 
 	var opted_out_index := _opted_out.find(device)
 	if uses_steam_input_api and opted_out_index != -1:
@@ -240,17 +317,40 @@ func _on_configuration_loaded(app: int, device: int, cfg: Dictionary) -> void:
 	elif not uses_steam_input_api and opted_out_index == -1:
 		_opted_out.append(device)
 
-	if not uses_steam_input_api and device_in_connected:
-		_disconnect_device(device)
-	elif uses_steam_input_api and not device_in_connected:
-		_connect_device(device)
+	if not uses_steam_input_api:
+		_waiting.erase(device)
+
+		if device in _connected:
+			_disconnect_device(device)
+
+	elif device in _connected:
+		# NOTE: Valve documents a controller's type as its model, so a type which
+		# changes on a live handle is logged rather than applied.
+		var input_type := Steam.getInputTypeForHandle(device)
+		if not _has_connected_type(device, input_type):
+			(
+				_logger
+				. warn(
+					"Steam reports a new type for a connected joypad.",
+					{
+						&"device": device,
+						&"type": input_type,
+						&"connected_type": _types.get(device),
+					},
+				)
+			)
+
+	else:
+		_wait_for_device(device, Time.get_ticks_msec())
+
+	_poll_waiting_devices()
 
 
 func _on_device_connected(device: int) -> void:
-	# NOTE: A configuration load can connect the device first, or report first that
+	# NOTE: A configuration load can report the device first, or report first that
 	# the device doesn't use the Steam Input API, as on a replug.
-	if device not in _connected and device not in _opted_out:
-		_connect_device(device)
+	_wait_for_device(device, Time.get_ticks_msec())
+	_poll_waiting_devices()
 
 
 func _on_device_disconnected(device: int) -> void:
@@ -259,7 +359,11 @@ func _on_device_disconnected(device: int) -> void:
 	if opted_out_index != -1:
 		_opted_out.remove_at(opted_out_index)
 
+	_waiting.erase(device)
+
 	# NOTE: A configuration which doesn't use the Steam Input API can disconnect the
 	# device first.
 	if device in _connected:
 		_disconnect_device(device)
+
+	_poll_waiting_devices()
