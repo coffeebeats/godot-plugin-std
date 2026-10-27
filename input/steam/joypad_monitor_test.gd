@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## std/input/steam/joypad_monitor_test.gd
 ##
@@ -5,6 +6,10 @@
 ##
 
 extends GutTest
+
+# -- DEPENDENCIES -------------------------------------------------------------------- #
+
+const GodotJoypadMonitorTest := preload("../godot/joypad_monitor_test.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -331,17 +336,67 @@ func test_joypad_monitor_ignores_a_disconnect_of_a_device_it_dropped() -> void:
 	assert_signal_not_emitted(monitor, "joy_disconnected")
 
 
-func test_joypad_monitor_reads_a_virtual_gamepads_steam_handle() -> void:
-	# When/Then: The Steam handle SDL records for a virtual gamepad is read back.
-	#
-	# NOTE: The joypad info is as hardware reported it on 2026-10-24.
-	assert_eq(
-		_joypad_monitor._get_steam_handle({"steam_input_index": "176657670040285"}),
-		176657670040285,
+func test_joypad_monitor_releases_an_opted_out_virtual_gamepad() -> void:
+	# Given: A joypad monitor which holds Steam's virtual gamepads in a Godot one.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var monitor := _make_joypad_monitor(godot_monitor)
+
+	# Given: A Steam controller's virtual gamepad is open.
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+	watch_signals(godot_monitor)
+
+	# When: The controller's configuration loads without the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+
+	# Then: The Godot monitor reports its virtual gamepad.
+	assert_signal_emitted_with_parameters(
+		godot_monitor, "joy_connected", [0, StdInputDevice.DEVICE_TYPE_PS_4]
 	)
 
-	# When/Then: A joypad Steam doesn't drive has no handle.
-	assert_eq(_joypad_monitor._get_steam_handle({"vendor_id": "1356"}), 0)
+	# When: Its configuration loads again using the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# Then: The Godot monitor holds its virtual gamepad again.
+	#
+	# NOTE: Steam Input isn't running under test to list the controller.
+	assert_engine_error(_STEAM_ERROR)
+	assert_signal_emitted_with_parameters(godot_monitor, "joy_disconnected", [0])
+
+
+func test_joypad_monitor_holds_a_disconnected_controllers_virtual_gamepad() -> void:
+	# Given: A joypad monitor which holds Steam's virtual gamepads in a Godot one.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var monitor := _make_joypad_monitor(godot_monitor)
+
+	# Given: A Steam controller's virtual gamepad is open.
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+
+	# Given: The controller's configuration loaded without the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+	watch_signals(godot_monitor)
+
+	# When: Steam reports the controller disconnected before Godot closes its gamepad.
+	monitor._on_device_disconnected(7)
+
+	# Then: The Godot monitor reports the virtual gamepad disconnected.
+	assert_signal_emitted_with_parameters(godot_monitor, "joy_disconnected", [0])
+
+	# When: Godot closes it.
+	godot_monitor.close(0)
+
+	# Then: It isn't reported disconnected again.
+	assert_signal_emit_count(godot_monitor, "joy_disconnected", 1)
+
+
+func test_joypad_monitor_tracks_an_opt_out_without_a_godot_joypad_monitor() -> void:
+	# Given: A joypad monitor without a Godot joypad monitor.
+	var monitor := _make_joypad_monitor(null)
+
+	# When: A controller's configuration loads without the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+
+	# Then: The controller is opted out.
+	assert_eq(monitor._opted_out, PackedInt64Array([7]))
 
 
 func test_joypad_monitor_does_not_match_a_virtual_gamepad_by_index() -> void:
@@ -391,6 +446,25 @@ func should_skip_script():
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _make_godot_joypad_monitor returns a Godot joypad monitor whose open joypads are
+## faked.
+func _make_godot_joypad_monitor() -> GodotJoypadMonitorTest.JoypadMonitor:
+	return autofree(GodotJoypadMonitorTest.JoypadMonitor.new())
+
+
+## _make_joypad_monitor returns a joypad monitor which holds Steam's virtual gamepads in
+## `godot_monitor`, when it's set, as it does once Steam Input starts. It isn't added to
+## the scene, since entering it needs Steam Input.
+func _make_joypad_monitor(
+	godot_monitor: StdInputSlot.JoypadMonitor,
+) -> StdInputSlot.JoypadMonitor:
+	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
+	monitor.godot_joypad_monitor = godot_monitor
+	monitor._hold_virtual_gamepads()
+	return monitor
 
 
 ## _make_steam_input_enabled_property returns a property for the monitor to toggle, in a

@@ -959,6 +959,38 @@ func test_input_slot_joypad_disconnect_keeps_another_joypads_tracked_action() ->
 	assert_has(slot._pressed[1], "fire")
 
 
+func test_input_slot_swap_drops_an_unreported_joypads_tracked_action() -> void:
+	# Given: The keyboard is active after a bound key press, with no joypad connected.
+	slot.claim_kbm_input = true
+	slot.prefer_activate_joypad_on_ready = false
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+	slot._actions = [&"aim", &"test_action"]
+	slot._input(_key())
+	slot._input(_key(false))
+
+	# Given: A joypad its monitor never reports holds a joypad action.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+	assert_has(slot._pressed[0], "aim", "precondition: action tracked")
+
+	# When: The joypad components are swapped for a monitor which reports joypad `0`.
+	var joypad_monitor := JoypadMonitor.new()
+	joypad_monitor.connected = [0] as Array[int]
+	joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_PS_4
+	add_child_autofree(joypad_monitor)
+	slot.swap_joypad_components(
+		joypad_monitor, slot.actions_joy, slot.glyphs_joy, slot.haptics_joy
+	)
+	autofree(slot.get_connected_devices(false)[0])
+
+	# When: The newly reported joypad presses the same action.
+	slot._input(_injected_action(0, 1.0, &"aim"))
+
+	# Then: That joypad is active.
+	var got: StdInputDevice = slot.get_active_device()
+	assert_eq(got.device_type, StdInputDevice.DEVICE_TYPE_PS_4)
+
+
 func test_input_slot_release_from_another_joypad_keeps_a_tracked_action() -> void:
 	# Given: The keyboard is active with a joypad connected.
 	_activate_kbm_with_joypad_connected()
