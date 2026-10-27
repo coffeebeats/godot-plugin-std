@@ -441,8 +441,14 @@ func _resolve_confined() -> bool:
 func _track_hide_actions(event: InputEvent) -> StringName:
 	var trigger := &""
 
+	# NOTE: A mouse motion never presses an action, and it is the most frequent event.
+	if event is InputEventMouseMotion:
+		return trigger
+
 	for action in _hide_actions_if_hovered + _hide_actions:
-		if not event.is_action_pressed(action) or action in _pressed:
+		# NOTE: A press matches exactly, as Godot's GUI matches the focus actions, so
+		# Shift+Tab doesn't hide the cursor through an action bound to Tab alone.
+		if not event.is_action_pressed(action, false, true) or action in _pressed:
 			continue
 
 		_pressed.append(action)
