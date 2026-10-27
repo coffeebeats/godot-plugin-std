@@ -55,6 +55,7 @@ jobs:
           file-excludes: |
             **/AGENTS.md
             **/CLAUDE.md
+            docs
             **/pyproject.toml
             **/uv.lock
 

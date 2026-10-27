@@ -2,6 +2,10 @@
 
 Godot 4+ plugin providing a standard library of reusable GDScript utilities for game development.
 
+Design documents under review live in `docs/`, which carries a `.gdignore` so the editor never
+imports it and which the addon package leaves out; `docs/PANEL.md` designs UI shown over a
+running world.
+
 ## Commands
 
 ```bash
