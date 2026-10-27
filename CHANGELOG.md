@@ -1,5 +1,17 @@
 # Changelog
 
+## 7.1.2 (2026-10-27)
+
+## What's Changed
+* fix(condition): keep a condition parent intact when its screen is cached by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/548
+* fix(input): match the cursor's hide actions exactly, as Godot's GUI does by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/549
+* fix(input): connect a Steam controller once Steam lists it by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/550
+* fix(input): hide a Steam controller's virtual gamepad from Godot's joypad monitor by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/552
+* fix(input): let a Steam controller's binding decide whether it uses the Steam Input API by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/553
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v7.1.1...v7.1.2
+
 ## 7.1.1 (2026-10-25)
 
 ## What's Changed
