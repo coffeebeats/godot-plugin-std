@@ -399,6 +399,398 @@ func test_joypad_monitor_tracks_an_opt_out_without_a_godot_joypad_monitor() -> v
 	assert_eq(monitor._opted_out, PackedInt64Array([7]))
 
 
+func test_joypad_monitor_releases_a_virtual_gamepad_whose_binding_opts_out() -> void:
+	# Given: A joypad monitor reading a controller binding without the game's actions.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var binding := {"loaded": true, "actions": false}
+	var monitor := _make_joypad_monitor_with_binding(godot_monitor, binding)
+
+	# Given: The Godot monitor holds the controller's open virtual gamepad.
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+	watch_signals(godot_monitor)
+	watch_signals(monitor)
+
+	# When: Steam reports the controller connected before its configuration loads.
+	monitor._on_device_connected(7)
+
+	# Then: The Godot monitor reports its virtual gamepad, and this monitor doesn't.
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_signal_emitted_with_parameters(
+		godot_monitor, "joy_connected", [0, StdInputDevice.DEVICE_TYPE_PS_4]
+	)
+
+
+func test_joypad_monitor_keeps_an_opt_out_whose_configuration_binds_no_actions(
+) -> void:
+	# Given: A joypad monitor reading a controller binding without the game's actions.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var binding := {"loaded": true, "actions": false}
+	var monitor := _make_joypad_monitor_with_binding(godot_monitor, binding)
+
+	# Given: The Godot monitor holds the controller's open virtual gamepad.
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+
+	# Given: The controller opted out once Steam reported it.
+	monitor._on_device_connected(7)
+	watch_signals(godot_monitor)
+	watch_signals(monitor)
+
+	# When: Its configuration loads using the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# When: A frame later, Steam lists the controller.
+	monitor._read_settling_bindings(Time.get_ticks_msec())
+	monitor._connect_waiting_devices([7], Time.get_ticks_msec())
+
+	# Then: The Godot monitor still reports the gamepad, and this monitor doesn't.
+	assert_signal_not_emitted(godot_monitor, "joy_disconnected")
+	assert_signal_not_emitted(monitor, "joy_connected")
+
+
+func test_joypad_monitor_keeps_an_opt_out_while_its_binding_loads_again() -> void:
+	# Given: A joypad monitor reading a controller binding without the game's actions.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var binding := {"loaded": true, "actions": false}
+	var monitor := _make_joypad_monitor_with_binding(godot_monitor, binding)
+
+	# Given: The Godot monitor holds the controller's open virtual gamepad.
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+
+	# Given: The controller opted out once Steam reported it.
+	monitor._on_device_connected(7)
+	watch_signals(godot_monitor)
+
+	# Given: Steam is loading the binding again.
+	binding["loaded"] = false
+
+	# When: The controller's configuration loads using the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# Then: The Godot monitor still reports the virtual gamepad, and nothing waits.
+	assert_signal_not_emitted(godot_monitor, "joy_disconnected")
+	assert_true(monitor._waiting.is_empty())
+
+	# When: A frame later, the binding loads without any of the game's actions.
+	binding["loaded"] = true
+	monitor._read_settling_bindings(Time.get_ticks_msec())
+
+	# Then: The Godot monitor still reports the virtual gamepad, never dropping it.
+	assert_signal_not_emitted(godot_monitor, "joy_disconnected")
+	assert_signal_not_emitted(godot_monitor, "joy_connected")
+
+
+func test_joypad_monitor_opts_in_a_configuration_opt_out_once_its_binding_loads(
+) -> void:
+	# Given: A joypad monitor reading a controller binding Steam hasn't loaded.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var binding := {"loaded": false, "actions": true}
+	var monitor := _make_joypad_monitor_with_binding(godot_monitor, binding)
+
+	# Given: The Godot monitor holds the controller's open virtual gamepad.
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+
+	# Given: The controller's configuration loaded without the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+	watch_signals(godot_monitor)
+
+	# When: A configuration using the Steam Input API loads.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# Then: The Godot monitor still reports the virtual gamepad.
+	assert_signal_not_emitted(godot_monitor, "joy_disconnected")
+
+	# When: A frame later, the binding loads with the game's actions.
+	binding["loaded"] = true
+	monitor._read_settling_bindings(Time.get_ticks_msec())
+
+	# Then: The Godot monitor holds the virtual gamepad again.
+	assert_signal_emitted_with_parameters(godot_monitor, "joy_disconnected", [0])
+
+	# Then: The controller waits for Steam.
+	assert_true(7 in monitor._waiting)
+
+
+func test_joypad_monitor_reads_a_binding_again_after_its_configuration_loads() -> void:
+	# Given: A joypad monitor reading a controller binding with the game's actions.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var binding := {"loaded": true, "actions": true}
+	var monitor := _make_joypad_monitor_with_binding(godot_monitor, binding)
+
+	# Given: The Godot monitor holds the controller's open virtual gamepad.
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+
+	# Given: The joypad monitor connected the controller.
+	monitor._on_device_connected(7)
+	monitor._connect_waiting_devices([7], Time.get_ticks_msec())
+	assert_engine_error(_STEAM_ERROR)
+	assert_engine_error(_STEAM_ERROR)
+	watch_signals(godot_monitor)
+	watch_signals(monitor)
+
+	# When: A new configuration loads while the binding still reports the previous one.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# Then: The controller stays connected.
+	#
+	# NOTE: Steam Input isn't running under test to type the controller.
+	assert_engine_error(_STEAM_ERROR)
+	assert_signal_not_emitted(monitor, "joy_disconnected")
+
+	# When: A frame later, the binding gives none of the game's actions an origin.
+	binding["actions"] = false
+	monitor._read_settling_bindings(Time.get_ticks_msec())
+
+	# Then: The joypad monitor disconnects the controller.
+	assert_signal_emitted_with_parameters(monitor, "joy_disconnected", [0])
+
+	# Then: The Godot monitor reports its virtual gamepad.
+	assert_signal_emitted_with_parameters(
+		godot_monitor, "joy_connected", [0, StdInputDevice.DEVICE_TYPE_PS_4]
+	)
+
+
+func test_joypad_monitor_stops_reading_a_binding_once_it_settles() -> void:
+	# Given: A joypad monitor reading a controller binding without the game's actions.
+	var binding := {"loaded": true, "actions": false}
+	var monitor := _make_joypad_monitor_with_binding(null, binding)
+
+	# Given: It started reading the binding on each frame at launch.
+	monitor._settle_binding(7, 0)
+
+	# When: A frame passes just before the reads stop.
+	monitor._read_settling_bindings(999)
+
+	# Then: The binding is read again, and processing continues.
+	assert_called_count(monitor._is_binding_opted_out, 2)
+	assert_true(monitor.is_processing())
+
+	# When: A frame passes once the reads stop.
+	monitor._read_settling_bindings(1000)
+
+	# Then: The binding isn't read, and nothing is processed each frame.
+	assert_called_count(monitor._is_binding_opted_out, 2)
+	assert_false(monitor.is_processing())
+
+
+func test_joypad_monitor_reads_no_binding_after_a_configuration_opts_out() -> void:
+	# Given: A joypad monitor reading a controller binding with the game's actions.
+	var binding := {"loaded": true, "actions": true}
+	var monitor := _make_joypad_monitor_with_binding(null, binding)
+
+	# Given: The joypad monitor connected the controller.
+	monitor._on_device_connected(7)
+	monitor._connect_waiting_devices([7], Time.get_ticks_msec())
+	assert_engine_error(_STEAM_ERROR)
+	assert_engine_error(_STEAM_ERROR)
+
+	# When: A configuration loads without the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+
+	# When: A frame later, the binding still reports the previous configuration.
+	monitor._read_settling_bindings(Time.get_ticks_msec())
+
+	# Then: The controller stays opted out, and nothing is processed each frame.
+	assert_eq(monitor._opted_out, PackedInt64Array([7]))
+	assert_eq(monitor.get_slot_for_device_id(7), -1)
+	assert_false(monitor.is_processing())
+
+
+func test_joypad_monitor_reads_no_binding_once_a_configuration_opts_out_first() -> void:
+	# Given: A joypad monitor reading a stale binding with the game's actions.
+	var binding := {"loaded": true, "actions": true}
+	var monitor := _make_joypad_monitor_with_binding(null, binding)
+
+	# When: A configuration loads without the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+
+	# When: Steam then reports the controller connected, as on a replug.
+	monitor._on_device_connected(7)
+
+	# When: A frame passes.
+	monitor._read_settling_bindings(Time.get_ticks_msec())
+
+	# Then: The controller stays opted out, and nothing is processed each frame.
+	assert_eq(monitor._opted_out, PackedInt64Array([7]))
+	assert_false(monitor.is_processing())
+
+
+func test_joypad_monitor_stops_reading_the_binding_of_a_device_which_disconnects(
+) -> void:
+	# Given: A joypad monitor reading a controller binding with the game's actions.
+	var binding := {"loaded": true, "actions": true}
+	var monitor := _make_joypad_monitor_with_binding(null, binding)
+
+	# Given: The joypad monitor connected the controller.
+	monitor._on_device_connected(7)
+	monitor._connect_waiting_devices([7], Time.get_ticks_msec())
+	assert_engine_error(_STEAM_ERROR)
+	assert_engine_error(_STEAM_ERROR)
+
+	# When: The controller disconnects.
+	monitor._on_device_disconnected(7)
+
+	# When: A frame later, its binding reads as before.
+	monitor._read_settling_bindings(Time.get_ticks_msec())
+
+	# Then: It isn't waited for again, and nothing is processed each frame.
+	assert_true(monitor._waiting.is_empty())
+	assert_false(monitor.is_processing())
+
+
+func test_joypad_monitor_waits_for_a_listed_device_until_its_binding_loads() -> void:
+	# Given: A joypad monitor reading a controller binding Steam hasn't loaded.
+	var binding := {"loaded": false, "actions": true}
+	var monitor := _make_joypad_monitor_with_binding(null, binding)
+
+	# Given: The joypad monitor waits for the controller.
+	monitor._wait_for_device(7, 0)
+	watch_signals(monitor)
+
+	# When: Steam lists the controller.
+	monitor._connect_waiting_devices([7], 16)
+
+	# Then: The controller still waits, checked each frame.
+	assert_signal_not_emitted(monitor, "joy_connected")
+	assert_true(monitor.is_processing())
+
+	# When: Steam loads its binding.
+	binding["loaded"] = true
+	monitor._connect_waiting_devices([7], 32)
+
+	# Then: The controller takes slot 0.
+	#
+	# NOTE: Steam Input isn't running under test to type the controller.
+	assert_engine_error(_STEAM_ERROR)
+	assert_eq(monitor.get_slot_for_device_id(7), 0)
+
+
+func test_joypad_monitor_opts_out_a_hot_plugged_device_once_its_binding_loads() -> void:
+	# Given: A joypad monitor reading a controller binding Steam hasn't loaded.
+	var godot_monitor := _make_godot_joypad_monitor()
+	var binding := {"loaded": false, "actions": false}
+	var monitor := _make_joypad_monitor_with_binding(godot_monitor, binding)
+
+	# Given: The Godot monitor holds the hot-plugged controller's open virtual gamepad.
+	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+	watch_signals(godot_monitor)
+	watch_signals(monitor)
+
+	# When: The controller's configuration loads using the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# When: Steam then reports the controller connected.
+	monitor._on_device_connected(7)
+
+	# Then: The Godot monitor still holds the virtual gamepad.
+	#
+	# NOTE: Steam Input isn't running under test to list the controller.
+	assert_engine_error(_STEAM_ERROR)
+	assert_engine_error(_STEAM_ERROR)
+	assert_signal_not_emitted(godot_monitor, "joy_connected")
+
+	# When: A frame later, the binding loads without any of the game's actions.
+	binding["loaded"] = true
+	monitor._read_settling_bindings(Time.get_ticks_msec())
+
+	# When: Steam lists the controller.
+	monitor._connect_waiting_devices([7], Time.get_ticks_msec())
+
+	# Then: The Godot monitor reports its virtual gamepad, and this monitor doesn't.
+	assert_signal_emitted_with_parameters(
+		godot_monitor, "joy_connected", [0, StdInputDevice.DEVICE_TYPE_PS_4]
+	)
+	assert_signal_not_emitted(monitor, "joy_connected")
+
+
+func test_joypad_monitor_waits_for_a_new_device_whose_binding_is_loading() -> void:
+	# Given: A joypad monitor reading a controller binding Steam hasn't loaded.
+	var binding := {"loaded": false, "actions": true}
+	var monitor := _make_joypad_monitor_with_binding(null, binding)
+
+	# When: Its configuration loads using the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# Then: The controller waits for Steam.
+	#
+	# NOTE: Steam Input isn't running under test to list it.
+	assert_engine_error(_STEAM_ERROR)
+	assert_true(7 in monitor._waiting)
+
+
+func test_joypad_monitor_follows_each_configuration_without_action_sets() -> void:
+	# Given: A joypad monitor without the game's action sets.
+	var monitor := _make_joypad_monitor(null)
+
+	# Given: A controller's configuration loaded without the Steam Input API.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
+
+	# When: A configuration using the Steam Input API loads.
+	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": true})
+
+	# Then: The controller opts in, waiting for Steam.
+	#
+	# NOTE: Steam Input isn't running under test to list it.
+	assert_engine_error(_STEAM_ERROR)
+	assert_eq(monitor._opted_out, PackedInt64Array())
+	assert_true(7 in monitor._waiting)
+
+
+func test_joypad_monitor_reads_no_binding_without_action_sets() -> void:
+	# Given: A joypad monitor without the game's action sets.
+	var monitor := _make_joypad_monitor(null)
+
+	# When: Steam reports a controller.
+	monitor._settle_binding(7, 0)
+
+	# Then: Its binding can't be read, so it isn't read on each frame.
+	#
+	# NOTE: Reading it would raise an engine error, since Steam Input isn't running.
+	assert_false(monitor._can_read_binding(7))
+	assert_true(monitor._settling.is_empty())
+	assert_false(monitor.is_processing())
+
+
+func test_joypad_monitor_cannot_read_a_binding_steam_has_not_loaded() -> void:
+	# Given: A joypad monitor with the game's action sets.
+	var monitor := _make_joypad_monitor(null)
+	var action_sets: Array[StdInputActionSet] = [_make_action_set(&"Menu")]
+	action_sets[0].actions_digital = [&"ui_accept"]
+	monitor.action_sets = action_sets
+
+	# When/Then: A controller's binding can't be read before Steam loads it.
+	#
+	# NOTE: Steam Input isn't running under test, so no binding loads.
+	assert_false(monitor._can_read_binding(7))
+	assert_engine_error(_STEAM_ERROR)
+
+
+func test_joypad_monitor_names_action_sets_as_the_manifest_does() -> void:
+	# Given: Two sets, a layer under one of them, and a layer with no parent.
+	var menu := _make_action_set(&"Menu")
+	var options := _make_action_set(&"MenuOptions", true) as StdInputActionSetLayer
+	options.parent = menu
+	var navigation := _make_action_set(&"MenuNavigation", true)
+	var action_sets: Array[StdInputActionSet] = [
+		menu, _make_action_set(&"Splash"), options, navigation
+	]
+
+	# When/Then: A set and a layer with a parent keep their names.
+	assert_eq(
+		_joypad_monitor._list_manifest_names(menu, action_sets),
+		PackedStringArray(["Menu"]),
+	)
+	assert_eq(
+		_joypad_monitor._list_manifest_names(options, action_sets),
+		PackedStringArray(["MenuOptions"]),
+	)
+
+	# When/Then: A layer with no parent is named under each set.
+	assert_eq(
+		_joypad_monitor._list_manifest_names(navigation, action_sets),
+		PackedStringArray(["MenuNavigation_Menu", "MenuNavigation_Splash"]),
+	)
+
+
 func test_joypad_monitor_does_not_match_a_virtual_gamepad_by_index() -> void:
 	# Given: A joypad monitor which connected one device.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
@@ -454,16 +846,51 @@ func _make_godot_joypad_monitor() -> GodotJoypadMonitorTest.JoypadMonitor:
 	return autofree(GodotJoypadMonitorTest.JoypadMonitor.new())
 
 
-## _make_joypad_monitor returns a joypad monitor which holds Steam's virtual gamepads in
-## `godot_monitor`, when it's set, as it does once Steam Input starts. It isn't added to
-## the scene, since entering it needs Steam Input.
+## _make_action_set returns an action set called `action_set_name`, or a layer if
+## `is_layer` is set.
+func _make_action_set(
+	action_set_name: StringName, is_layer: bool = false
+) -> StdInputActionSet:
+	var action_set: StdInputActionSet = (
+		StdInputActionSetLayer.new() if is_layer else StdInputActionSet.new()
+	)
+	action_set.name = action_set_name
+	return action_set
+
+
+## _make_joypad_monitor returns an instance of `script`, or of the monitor, which holds
+## Steam's virtual gamepads in `godot_monitor`, when it's set, as it does once Steam
+## Input starts. It isn't added to the scene, since entering it needs Steam Input.
 func _make_joypad_monitor(
 	godot_monitor: StdInputSlot.JoypadMonitor,
+	script: Script = null,
 ) -> StdInputSlot.JoypadMonitor:
-	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
+	var monitor: StdInputSlot.JoypadMonitor = autofree(
+		(script if script else _joypad_monitor).new()
+	)
 	monitor.steam_input_enabled_property = _make_steam_input_enabled_property()
 	monitor.godot_joypad_monitor = godot_monitor
 	monitor._hold_virtual_gamepads()
+	return monitor
+
+
+## _make_joypad_monitor_with_binding returns a joypad monitor, as `_make_joypad_monitor`
+## does, with an action set. Every binding it reads has loaded while the `loaded` key of
+## `binding` is set, and gives the game's actions an origin while `actions` is set.
+func _make_joypad_monitor_with_binding(
+	godot_monitor: StdInputSlot.JoypadMonitor, binding: Dictionary
+) -> StdInputSlot.JoypadMonitor:
+	var monitor := _make_joypad_monitor(godot_monitor, partial_double(_joypad_monitor))
+	var action_sets: Array[StdInputActionSet] = [_make_action_set(&"Menu")]
+	monitor.action_sets = action_sets
+
+	stub(monitor, "_can_read_binding").to_call(
+		func(_device: int) -> bool: return binding["loaded"]
+	)
+	stub(monitor, "_is_binding_opted_out").to_call(
+		func(_device: int) -> bool: return not binding["actions"]
+	)
+
 	return monitor
 
 
