@@ -22,11 +22,9 @@ const _LIST_TIMEOUT_MSEC := 1000
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## godot_joypad_monitor is an optional Godot joypad monitor, which reports joypads while
-## no controller using the Steam Input API is connected. Once Steam Input starts, it
-## stops reporting the virtual gamepad Steam runs for each controller, except one whose
-## configuration doesn't use the Steam Input API, so each controller reaches a slot
-## through one monitor.
+## godot_joypad_monitor is an optional Godot joypad monitor, which this one has stop
+## reporting Steam's virtual gamepads once Steam Input starts, except for a controller
+## whose configuration opts out, so each controller reaches a slot through one monitor.
 ##
 ## NOTE: This monitor refers to the Godot one, rather than the reverse, since the Godot
 ## monitor loads without the GodotSteam extension.

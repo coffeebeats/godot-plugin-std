@@ -969,8 +969,7 @@ func test_input_slot_swap_drops_an_unreported_joypads_tracked_action() -> void:
 	slot._input(_key())
 	slot._input(_key(false))
 
-	# Given: A joypad its monitor never reports holds a joypad action, as a held Steam
-	# virtual gamepad does.
+	# Given: A joypad its monitor never reports holds a joypad action.
 	slot._input(_injected_action(0, 1.0, &"aim"))
 	assert_has(slot._pressed[0], "aim", "precondition: action tracked")
 

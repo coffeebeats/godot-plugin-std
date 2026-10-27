@@ -30,7 +30,7 @@ class JoypadMonitor:
 		joypads.erase(device)
 		_on_Input_joy_connection_changed(device, false)
 
-	## open opens the joypad `device` with joypad info `info`, reporting it as Godot does.
+	## open opens the joypad `device` with info `info`, reporting it as Godot does.
 	func open(device: int, info: Dictionary) -> void:
 		joypads[device] = info
 		_on_Input_joy_connection_changed(device, true)
@@ -146,11 +146,12 @@ func test_joypad_monitor_does_not_report_a_held_joypads_disconnect() -> void:
 
 
 func test_joypad_monitor_broadcast_skips_held_joypads() -> void:
-	# Given: A joypad monitor holding an open virtual gamepad beside a joypad Steam
-	# doesn't drive.
+	# Given: A virtual gamepad and a joypad Steam doesn't drive, both open.
 	var monitor: JoypadMonitor = autofree(JoypadMonitor.new())
 	monitor.joypads[0] = virtual_gamepad(7)
 	monitor.joypads[1] = {"vendor_id": "1356"}
+
+	# Given: The joypad monitor holds Steam's virtual gamepads.
 	monitor.hold_steam_virtual_gamepads(PackedInt64Array())
 	watch_signals(monitor)
 

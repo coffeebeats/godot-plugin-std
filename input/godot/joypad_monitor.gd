@@ -108,14 +108,11 @@ static func get_steam_handle(info: Dictionary) -> int:
 
 
 ## hold_steam_virtual_gamepads stops reporting the virtual gamepad Steam runs for each
-## controller, except a controller whose Steam handle is in `released`. Each joypad the
-## call holds is reported disconnected, and each one it releases is reported connected.
-## A later call replaces `released`, and the hold lasts as long as this monitor.
+## controller whose Steam handle isn't in `released`, reporting each joypad held as
+## disconnected and each one released as connected. A later call replaces `released`.
 ##
-## NOTE: The Steam joypad monitor holds them while Steam Input runs, releasing each
-## controller whose configuration doesn't use the Steam Input API, so each controller
-## reaches a slot through one monitor. A virtual gamepad is held from the moment it
-## opens, so one whose controller's configuration hasn't loaded yet isn't reported.
+## NOTE: The hold lasts as long as this monitor, and covers a virtual gamepad from the
+## moment it opens, even before Steam reports its controller.
 func hold_steam_virtual_gamepads(released: PackedInt64Array) -> void:
 	_is_holding = true
 	_released = released.duplicate()

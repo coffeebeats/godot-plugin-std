@@ -337,10 +337,11 @@ func test_joypad_monitor_ignores_a_disconnect_of_a_device_it_dropped() -> void:
 
 
 func test_joypad_monitor_releases_an_opted_out_virtual_gamepad() -> void:
-	# Given: A joypad monitor which holds Steam's virtual gamepads in a Godot joypad
-	# monitor, where one is open.
+	# Given: A joypad monitor which holds Steam's virtual gamepads in a Godot one.
 	var godot_monitor := _make_godot_joypad_monitor()
 	var monitor := _make_joypad_monitor(godot_monitor)
+
+	# Given: A Steam controller's virtual gamepad is open.
 	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
 	watch_signals(godot_monitor)
 
@@ -363,16 +364,18 @@ func test_joypad_monitor_releases_an_opted_out_virtual_gamepad() -> void:
 
 
 func test_joypad_monitor_holds_a_disconnected_controllers_virtual_gamepad() -> void:
-	# Given: A joypad monitor whose Godot joypad monitor reports the open virtual gamepad
-	# of a controller whose configuration opted out.
+	# Given: A joypad monitor which holds Steam's virtual gamepads in a Godot one.
 	var godot_monitor := _make_godot_joypad_monitor()
 	var monitor := _make_joypad_monitor(godot_monitor)
+
+	# Given: A Steam controller's virtual gamepad is open.
 	godot_monitor.open(0, GodotJoypadMonitorTest.virtual_gamepad(7))
+
+	# Given: The controller's configuration loaded without the Steam Input API.
 	monitor._on_configuration_loaded(480, 7, {"uses_steam_input_api": false})
 	watch_signals(godot_monitor)
 
-	# When: Steam reports the controller disconnected before Godot closes its virtual
-	# gamepad.
+	# When: Steam reports the controller disconnected before Godot closes its gamepad.
 	monitor._on_device_disconnected(7)
 
 	# Then: The Godot monitor reports the virtual gamepad disconnected.
