@@ -50,7 +50,7 @@ func _get_origin_glyph(
 			MOUSE_BUTTON_LEFT:
 				texture = button_left
 			MOUSE_BUTTON_RIGHT:
-				texture = button_left
+				texture = button_right
 			MOUSE_BUTTON_MIDDLE:
 				texture = button_middle
 
