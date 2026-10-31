@@ -254,6 +254,8 @@ func test_pop_keeps_hover_on_clicked_button_when_cursor_visible(
 		await input.mount_at_root(manager)
 	else:
 		await input.mount(manager)
+
+	# Given: The cursor is visible.
 	_get_cursor().show_cursor()
 
 	# Given: A base screen with a button away from the viewport's origin.

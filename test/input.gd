@@ -11,20 +11,15 @@
 ##
 ## `mount` is the default. Its events go straight to a `SubViewport` through
 ## `Viewport.push_input`, so they pick and focus as usual but `Input` doesn't see them.
-## `mount_at_root` is for a scene that polls `Input`. Its events take the engine's own
-## path through `Input.parse_input_event`, so `Input.is_key_pressed`,
-## `Input.is_mouse_button_pressed` and the root's `get_mouse_position` all follow them.
+## `mount_at_root` is for a scene that polls `Input`. Its events go through
+## `Input.parse_input_event`, so `Input` and the root's `get_mouse_position` track them.
 ##
-## NOTE: Events do dispatch at the headless root, whatever godotengine/godot#73557
-## suggests. Two other things lose a click there, and `mount_at_root` undoes both while
-## this node lives. The headless display server leaves the root window at 64x64, and a
-## press beyond that rect picks no control. GUT's own panel, on canvas layer 128, covers
-## most of that corner and takes the press itself.
-##
-## NOTE: The other suspects were not the cause. A control with a set size takes a click
-## in the frame it mounts, though a container's children only settle a frame later,
-## which is why mounting awaits one. `Input.parse_input_event` does hold events until
-## `Input.flush_buffered_events`, which each event sent at the root calls.
+## NOTE: A click at the headless root is lost to two things, which `mount_at_root`
+## undoes while this node lives. The root window stays 64x64, and a press beyond it
+## picks no control. GUT's panel, on canvas layer 128, takes a press over most of that
+## corner. Events do dispatch there, whatever godotengine/godot#73557 suggests. A
+## control with a set size takes a click in the frame it mounts, and each event sent at
+## the root flushes `Input`'s buffer, so neither loses one.
 ##
 ## NOTE: Mounting awaits, which std otherwise never does, since only GUT tests call it.
 ##

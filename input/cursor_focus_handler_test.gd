@@ -665,7 +665,7 @@ func test_disabled_button_stops_click_from_reaching_control_behind() -> void:
 		func(event: InputEvent) -> void: behind_received.append(event)
 	)
 
-	# Given: A disabled button over it with a focus handler, recording the same.
+	# Given: A disabled button over it, recording the same.
 	var button := Button.new()
 	button.disabled = true
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -675,6 +675,8 @@ func test_disabled_button_stops_click_from_reaching_control_behind() -> void:
 	button.gui_input.connect(
 		func(event: InputEvent) -> void: button_received.append(event)
 	)
+
+	# Given: A focus handler on the button.
 	var handler := _add_handler(button)
 
 	# Given: Both are mounted at the root, as a game's scene is.

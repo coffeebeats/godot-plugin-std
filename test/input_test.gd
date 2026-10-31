@@ -1,6 +1,5 @@
 ##
-## Tests pertaining to the `StdTestInput` class. These double as the spike which found
-## what a click at the headless root takes; `StdTestInput` documents the result.
+## Tests pertaining to the `StdTestInput` class.
 ##
 
 extends GutTest
@@ -10,7 +9,7 @@ extends GutTest
 const _GUT_LAYER_PATH := ^"GutRunner/GutLayer"
 
 
-## Records the input events left unhandled in its viewport.
+## UnhandledInputRecorder records the input events left unhandled in its viewport.
 class UnhandledInputRecorder:
 	extends Node
 
@@ -139,10 +138,12 @@ func test_mount_at_root_free_restores_mouse_position() -> void:
 	var root := get_tree().root
 	var position_before := root.get_mouse_position()
 
-	# Given: A scene mounted at the root with the mouse moved elsewhere.
+	# Given: A scene mounted at the root.
 	var input := StdTestInput.new()
 	add_child(input)
 	await input.mount_at_root(Control.new())
+
+	# Given: The mouse moved elsewhere.
 	input.move_mouse(position_before + Vector2(200, 100))
 	assert_ne(root.get_mouse_position(), position_before, "precondition: mouse moved")
 
@@ -154,10 +155,12 @@ func test_mount_at_root_free_restores_mouse_position() -> void:
 
 
 func test_mount_at_root_free_releases_held_key() -> void:
-	# Given: A scene mounted at the root with a key held.
+	# Given: A scene mounted at the root.
 	var input := StdTestInput.new()
 	add_child(input)
 	await input.mount_at_root(Control.new())
+
+	# Given: A key held.
 	input.press_key(KEY_F1)
 	assert_true(Input.is_key_pressed(KEY_F1), "precondition: key held")
 
@@ -182,8 +185,10 @@ func test_mount_at_root_content_scale_click_reaches_button() -> void:
 	# When: The button is clicked.
 	input.click(button)
 
-	# Then: The click landed on it, and the mouse is at its center in root coordinates.
+	# Then: The click landed on it.
 	assert_eq(pressed.size(), 1)
+
+	# Then: The mouse is at its center in root coordinates.
 	assert_eq(root.get_mouse_position(), button.get_global_rect().get_center())
 
 	root.content_scale_factor = scale_before
@@ -242,12 +247,14 @@ func test_click_moves_mouse_to_control_center(
 func test_click_updates_polled_mouse_state_only_at_root(
 	params = use_parameters([false, true])
 ) -> void:
-	# Given: A mounted button recording what `Input` reports when it goes down.
+	# Given: A button recording what `Input` reports when it goes down.
 	var button := _make_button(Vector2(100, 100))
 	var polled: Array[bool] = []
 	button.button_down.connect(
 		func() -> void: polled.append(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
 	)
+
+	# Given: The button is mounted.
 	var input := await _mount(button, params)
 
 	# When: The button is clicked.
@@ -255,6 +262,8 @@ func test_click_updates_polled_mouse_state_only_at_root(
 
 	# Then: `Input` saw the press only where events go through it.
 	assert_eq(polled, [params] as Array[bool])
+
+	# Then: `Input` doesn't report the button as held afterward.
 	assert_false(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
 
 
@@ -279,11 +288,13 @@ func test_move_mouse_updates_hover(params = use_parameters([false, true])) -> vo
 func test_move_mouse_leaves_hidden_cursor_hidden(
 	params = use_parameters([false, true])
 ) -> void:
-	# Given: A mounted, hidden cursor.
+	# Given: A mounted cursor.
 	StdGroup.with_id(StdInputCursor.GROUP_INPUT_CURSOR).clear_members()
 	var cursor := StdInputCursor.new()
 	var input := await _mount(cursor, params)
 	cursor.update_configuration([StdInputActionSet.new()])
+
+	# Given: The cursor is hidden.
 	cursor.hide_cursor()
 
 	# When: The mouse moves.
@@ -304,10 +315,12 @@ func test_move_mouse_leaves_hidden_cursor_hidden(
 func test_press_action_focused_button_holds_action_and_presses_on_release(
 	params = use_parameters([false, true])
 ) -> void:
-	# Given: A mounted, focused button.
+	# Given: A mounted button.
 	var button := _make_button(Vector2(100, 100))
 	var pressed := _count_pressed(button)
 	var input := await _mount(button, params)
+
+	# Given: The button has focus.
 	button.grab_focus()
 
 	# When: An action which activates the button is pressed.
@@ -326,10 +339,12 @@ func test_press_action_focused_button_holds_action_and_presses_on_release(
 
 
 func test_press_action_held_at_free_is_released() -> void:
-	# Given: A mounted scene with an action held.
+	# Given: A mounted scene.
 	var input := StdTestInput.new()
 	add_child(input)
 	await input.mount(Control.new())
+
+	# Given: An action held.
 	input.press_action(&"ui_accept")
 	assert_true(Input.is_action_pressed(&"ui_accept"), "precondition: action held")
 
@@ -343,10 +358,12 @@ func test_press_action_held_at_free_is_released() -> void:
 func test_press_key_focused_button_presses_on_release(
 	params = use_parameters([false, true])
 ) -> void:
-	# Given: A mounted, focused button.
+	# Given: A mounted button.
 	var button := _make_button(Vector2(100, 100))
 	var pressed := _count_pressed(button)
 	var input := await _mount(button, params)
+
+	# Given: The button has focus.
 	button.grab_focus()
 
 	# When: A key bound to `ui_accept` is pressed and released.
