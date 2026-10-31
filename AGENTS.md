@@ -89,6 +89,8 @@ return OK  # gdlint:ignore=max-returns
 
 Tests use GUT framework. Test files end in `_test.gd`. Test cases are named like `test_<subject>_<scenario>_<expectation>` (e.g. `test_config_set_float_updates_value`).
 
+A test that needs a click, key or action to reach a control uses `StdTestInput` rather than emitting a signal or calling the handler. It ships in `dist` so a downstream project's tests can use it. Its mounts `await`, which is allowed because only GUT tests call them.
+
 ### Test Structure
 
 Use BDD-style Given/When/Then comments:

@@ -43,6 +43,10 @@ The [iter](./iter) directory contains helpful functions for interacting with seq
 
 The [scene](./scene) directory contains an implementation of a [`StateMachine`](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
 
+#### **`test`**
+
+The [test](./test) directory contains helpers for a project's GUT tests. [`StdTestInput`](./test/input.gd) mounts a scene where input dispatches under `--headless` and sends it real mouse motion, clicks, keys and actions, so a test covers picking and focus. By default events reach a `SubViewport` through `push_input`; a scene that polls `Input` mounts at the root instead, where events go through `Input`. Its header records what a click at the headless root takes.
+
 ## **Development**
 
 ### Setup

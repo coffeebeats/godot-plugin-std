@@ -236,9 +236,6 @@ func _add_button(
 
 ## _hold_button adds a press-mode button inside a SubViewport and presses it with the
 ## mouse, checking that the trigger holds the action. Returns the viewport and button.
-##
-## NOTE: The root viewport dispatches no GUI input in headless mode; see
-## https://github.com/godotengine/godot/issues/73557.
 func _hold_button() -> Array:
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i(400, 300)

@@ -467,8 +467,6 @@ func test_clear_press_on_focus_root_exit_sends_focus_exit_to_pressed_button() ->
 	var modal := Control.new()
 	add_child_autofree(modal)
 
-	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
-	# mode (see https://github.com/godotengine/godot/issues/73557).
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)
@@ -595,8 +593,6 @@ func test_disabled_button_clears_pressed_visual() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
 
-	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
-	# mode (see https://github.com/godotengine/godot/issues/73557).
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)
@@ -660,36 +656,37 @@ func test_disabled_button_stops_click_from_reaching_control_behind() -> void:
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
-	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
-	# mode (see https://github.com/godotengine/godot/issues/73557).
-	var sv := SubViewport.new()
-	sv.size = Vector2i(400, 300)
-	add_child_autofree(sv)
-
-	# Given: A control filling the SubViewport, recording the GUI input it receives.
+	# Given: A control recording the GUI input it receives.
 	var behind := Control.new()
 	behind.size = Vector2(400, 300)
 	behind.mouse_filter = Control.MOUSE_FILTER_STOP
-	sv.add_child(behind)
-	var received: Array[InputEvent] = []
-	behind.gui_input.connect(func(event: InputEvent) -> void: received.append(event))
+	var behind_received: Array[InputEvent] = []
+	behind.gui_input.connect(
+		func(event: InputEvent) -> void: behind_received.append(event)
+	)
 
-	# Given: A disabled button over it with a focus handler.
+	# Given: A disabled button over it with a focus handler, recording the same.
 	var button := Button.new()
 	button.disabled = true
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.size = Vector2(100, 40)
-	sv.add_child(button)
+	behind.add_child(button)
+	var button_received: Array[InputEvent] = []
+	button.gui_input.connect(
+		func(event: InputEvent) -> void: button_received.append(event)
+	)
 	var handler := _add_handler(button)
-	await get_tree().process_frame
 
-	# When: The mouse clicks the button.
-	_press_mouse(sv)
-	await get_tree().process_frame
+	# Given: Both are mounted at the root, as a game's scene is.
+	var input: StdTestInput = add_child_autofree(StdTestInput.new())
+	await input.mount_at_root(behind)
+
+	# When: The button is clicked.
+	input.click(button)
 
 	# Then: The click stopped at the button.
-	assert_eq(received.size(), 0)
-	assert_false(button.is_pressed())
+	assert_eq(button_received.size(), 2)
+	assert_eq(behind_received.size(), 0)
 
 	button.remove_child(handler)
 	handler.free()
@@ -1219,9 +1216,6 @@ func _press_mouse(viewport: SubViewport) -> void:
 
 ## _setup_button_in_viewport adds a SubViewport holding a button with the given
 ## `disabled` state, and returns them as `[viewport, button]`.
-##
-## NOTE: The root viewport doesn't dispatch GUI input in headless mode; see
-## https://github.com/godotengine/godot/issues/73557.
 func _setup_button_in_viewport(disabled: bool) -> Array:
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
