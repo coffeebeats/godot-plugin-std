@@ -1,5 +1,5 @@
 ##
-## std/input/action_set_keyboard.gd
+## std/input/godot/glyph_set_keyboard.gd
 ##
 ## StdInputGlyphSetKeyboard is a collections of glyph icon resources for keyboard
 ## devices.

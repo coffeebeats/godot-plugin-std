@@ -11,7 +11,7 @@ extends Node
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_action_glyphs returns the glyph icon for the origin bound to the specified
+## get_action_glyph returns the glyph icon for the origin bound to the specified
 ## action and "binding index" (e.g. primary or secondary).
 func get_action_glyph(
 	device: int,
