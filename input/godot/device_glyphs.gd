@@ -75,6 +75,9 @@ const _JOY_BUTTON_LABELS_NINTENDO := {
 
 ## _JOY_BUTTON_LABELS maps a device type to the names it gives its buttons, which take
 ## precedence over `_JOY_BUTTON_LABELS_DEFAULT`.
+##
+## NOTE: `DEVICE_TYPE_PS_4` also covers PS2 and PS3 pads, which have no device type of
+## their own, so those read "Share" and "Options" instead of "Select" and "Start".
 const _JOY_BUTTON_LABELS := {
 	StdInputDevice.DEVICE_TYPE_PS_4:
 	{
