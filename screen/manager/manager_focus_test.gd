@@ -244,16 +244,10 @@ func test_pop_recalculates_hover_when_cursor_visible():
 	)
 
 
-func test_pop_keeps_hover_on_clicked_button_when_cursor_visible(
-	params = use_parameters([false, true])
-) -> void:
+func test_pop_keeps_hover_on_clicked_button_when_cursor_visible() -> void:
 	# Given: A manager mounted by the helper.
 	var manager := Manager.new()
-	var input: StdTestInput = add_child_autofree(StdTestInput.new())
-	if params:
-		await input.mount_at_root(manager)
-	else:
-		await input.mount(manager)
+	var input := await StdTestInput.mount(self, manager)
 
 	# Given: The cursor is visible.
 	_get_cursor().show_cursor()

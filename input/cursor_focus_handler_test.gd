@@ -680,14 +680,16 @@ func test_disabled_button_stops_click_from_reaching_control_behind() -> void:
 	var handler := _add_handler(button)
 
 	# Given: Both are mounted at the root, as a game's scene is.
-	var input: StdTestInput = add_child_autofree(StdTestInput.new())
-	await input.mount_at_root(behind)
+	var input := await StdTestInput.mount(self, behind)
 
 	# When: The button is clicked.
 	input.click(button)
 
 	# Then: The click stopped at the button.
-	assert_eq(button_received.size(), 2)
+	var clicks := button_received.filter(
+		func(event: InputEvent) -> bool: return event is InputEventMouseButton
+	)
+	assert_eq(clicks.size(), 2)
 	assert_eq(behind_received.size(), 0)
 
 	button.remove_child(handler)

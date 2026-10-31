@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## Tests pertaining to the `StdTestInput` class.
 ##
@@ -28,28 +29,20 @@ var _ui_accept_events: Array[InputEvent] = []
 
 func test_click_mounted_button_presses_focuses_and_hovers_it(
 	params = use_parameters(
-		(
-			ParameterFactory
-			. named_parameters(
-				["at_root", "position"],
-				[
-					[false, Vector2(10, 10)],
-					[false, Vector2(400, 300)],
-					# NOTE: This is under GUT's panel.
-					[true, Vector2(10, 10)],
-					# NOTE: This is beyond the headless root's own size.
-					[true, Vector2(400, 300)],
-				]
-			)
-		)
+		[
+			# NOTE: This is under GUT's panel.
+			Vector2(10, 10),
+			# NOTE: This is beyond the headless root's own size.
+			Vector2(400, 300),
+		]
 	)
 ) -> void:
 	# Given: A button at the given position.
-	var button := _make_button(params.position)
+	var button := _make_button(params)
 	var pressed := _count_pressed(button)
 
 	# Given: The button is mounted.
-	var input := await _mount(button, params.at_root)
+	var input := await StdTestInput.mount(self, button)
 
 	# When: The button is clicked.
 	input.click(button)
@@ -57,12 +50,10 @@ func test_click_mounted_button_presses_focuses_and_hovers_it(
 	# Then: The click was picked as a real one is.
 	assert_eq(pressed.size(), 1)
 	assert_true(button.has_focus())
-	assert_eq(input.viewport.gui_get_hovered_control(), button)
+	assert_eq(get_tree().root.gui_get_hovered_control(), button)
 
 
-func test_click_overlapping_controls_picks_topmost(
-	params = use_parameters([false, true])
-) -> void:
+func test_click_overlapping_controls_picks_topmost() -> void:
 	# Given: Two buttons in the same place, the second drawn over the first.
 	var scene := Control.new()
 	var back := _make_button(Vector2(100, 100))
@@ -73,7 +64,7 @@ func test_click_overlapping_controls_picks_topmost(
 	var front_pressed := _count_pressed(front)
 
 	# Given: The buttons are mounted.
-	var input := await _mount(scene, params)
+	var input := await StdTestInput.mount(self, scene)
 
 	# When: The covered button is clicked.
 	input.click(back)
@@ -83,9 +74,90 @@ func test_click_overlapping_controls_picks_topmost(
 	assert_eq(back_pressed.size(), 0)
 
 
-func test_mount_container_child_lays_out_before_returning(
-	params = use_parameters([false, true])
-) -> void:
+func test_click_sends_motion_then_press_then_release() -> void:
+	# Given: A mounted button recording the GUI input it receives.
+	var button := _make_button(Vector2(100, 100))
+	var received := _record_gui_input(button)
+	var input := await StdTestInput.mount(self, button)
+
+	# When: The button is clicked.
+	input.click(button)
+
+	# Then: The mouse arrived before it pressed, as a player's does.
+	assert_eq(received.size(), 3)
+	assert_true(received[0] is InputEventMouseMotion)
+	assert_true(received[1] is InputEventMouseButton and received[1].pressed)
+	assert_true(received[2] is InputEventMouseButton and not received[2].pressed)
+
+
+func test_click_moves_mouse_to_control_center() -> void:
+	# Given: A mounted button.
+	var button := _make_button(Vector2(400, 300))
+	var input := await StdTestInput.mount(self, button)
+
+	# When: The button is clicked.
+	input.click(button)
+
+	# Then: The root's mouse position is at the button's center.
+	var center := button.get_global_rect().get_center()
+	assert_eq(get_tree().root.get_mouse_position(), center)
+
+
+func test_click_updates_polled_mouse_state() -> void:
+	# Given: A button recording what `Input` reports when it goes down.
+	var button := _make_button(Vector2(100, 100))
+	var polled: Array[bool] = []
+	button.button_down.connect(
+		func() -> void: polled.append(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+	)
+
+	# Given: The button is mounted.
+	var input := await StdTestInput.mount(self, button)
+
+	# When: The button is clicked.
+	input.click(button)
+
+	# Then: `Input` saw the press.
+	assert_eq(polled, [true] as Array[bool])
+
+	# Then: `Input` doesn't report the button as held afterward.
+	assert_false(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+
+
+func test_click_at_position_picks_control_there() -> void:
+	# Given: A mounted button.
+	var button := _make_button(Vector2(400, 300))
+	var pressed := _count_pressed(button)
+	var input := await StdTestInput.mount(self, button)
+
+	# When: A point inside the button is clicked.
+	input.click_at(Vector2(410, 310))
+
+	# Then: The button took the click.
+	assert_eq(pressed.size(), 1)
+
+	# When: A point outside the button is clicked.
+	input.click_at(Vector2(50, 50))
+
+	# Then: The button didn't take it.
+	assert_eq(pressed.size(), 1)
+
+
+func test_click_at_button_index_sends_that_button() -> void:
+	# Given: A mounted button recording the GUI input it receives.
+	var button := _make_button(Vector2(100, 100))
+	var received := _record_gui_input(button)
+	var input := await StdTestInput.mount(self, button)
+
+	# When: The button is clicked with the right mouse button.
+	input.click_at(Vector2(110, 110), MOUSE_BUTTON_RIGHT)
+
+	# Then: The press and release are of that button.
+	assert_eq(received[1].button_index, MOUSE_BUTTON_RIGHT)
+	assert_eq(received[2].button_index, MOUSE_BUTTON_RIGHT)
+
+
+func test_mount_container_child_lays_out_before_returning() -> void:
 	# Given: A button with no size of its own, centered by a full-rect container.
 	var container := CenterContainer.new()
 	container.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -95,10 +167,10 @@ func test_mount_container_child_lays_out_before_returning(
 	var pressed := _count_pressed(button)
 
 	# When: The container is mounted.
-	var input := await _mount(container, params)
+	var input := await StdTestInput.mount(self, container)
 
-	# Then: The container fills the viewport and centers the button.
-	var visible_rect := input.viewport.get_visible_rect()
+	# Then: The container fills the root and centers the button.
+	var visible_rect := get_tree().root.get_visible_rect()
 	assert_eq(container.size, visible_rect.size)
 	assert_true(button.get_global_rect().has_point(visible_rect.get_center()))
 
@@ -109,39 +181,51 @@ func test_mount_container_child_lays_out_before_returning(
 	assert_eq(pressed.size(), 1)
 
 
-func test_mount_at_root_free_restores_root_and_gut_layer() -> void:
-	# Given: The root's size and GUT's panel before mounting.
+func test_mount_registers_helper_to_be_freed_with_the_test() -> void:
+	# Given: The number of nodes GUT will free after this test.
+	var count_before: int = gut.get_autofree().get_free_count()
+
+	# When: A scene is mounted.
+	await StdTestInput.mount(self, Control.new())
+
+	# Then: GUT will free the helper too.
+	assert_eq(gut.get_autofree().get_free_count(), count_before + 1)
+
+
+func test_mount_free_restores_root_and_gut_layer() -> void:
+	# Given: A root sized differently from the project's window.
 	var root := get_tree().root
 	var size_before := root.size
+	root.size = Vector2i(64, 64)
+
+	# Given: GUT's panel is shown.
 	var gut_layer: CanvasLayer = root.get_node(_GUT_LAYER_PATH)
 	assert_true(gut_layer.visible, "precondition: GUT's panel is shown")
 
-	# Given: A scene mounted at the root.
-	var input := StdTestInput.new()
-	add_child(input)
-	await input.mount_at_root(Control.new())
+	# Given: A mounted scene.
+	var input := await StdTestInput.mount(self, Control.new())
 
-	# Then: The scene is at the root and GUT's panel is hidden.
-	assert_eq(input.viewport, root)
+	# Then: The root has changed size and GUT's panel is hidden.
+	assert_ne(root.size, Vector2i(64, 64))
 	assert_false(gut_layer.visible)
 
 	# When: The helper is freed.
 	input.free()
 
 	# Then: The root and GUT's panel are as they were.
-	assert_eq(root.size, size_before)
+	assert_eq(root.size, Vector2i(64, 64))
 	assert_true(gut_layer.visible)
 
+	root.size = size_before
 
-func test_mount_at_root_free_restores_mouse_position() -> void:
+
+func test_mount_free_restores_mouse_position() -> void:
 	# Given: The root's mouse position before mounting.
 	var root := get_tree().root
 	var position_before := root.get_mouse_position()
 
-	# Given: A scene mounted at the root.
-	var input := StdTestInput.new()
-	add_child(input)
-	await input.mount_at_root(Control.new())
+	# Given: A mounted scene.
+	var input := await StdTestInput.mount(self, Control.new())
 
 	# Given: The mouse moved elsewhere.
 	input.move_mouse(position_before + Vector2(200, 100))
@@ -154,33 +238,44 @@ func test_mount_at_root_free_restores_mouse_position() -> void:
 	assert_eq(root.get_mouse_position(), position_before)
 
 
-func test_mount_at_root_free_releases_held_key() -> void:
-	# Given: A scene mounted at the root.
-	var input := StdTestInput.new()
-	add_child(input)
-	await input.mount_at_root(Control.new())
-
-	# Given: A key held.
-	input.press_key(KEY_F1)
-	assert_true(Input.is_key_pressed(KEY_F1), "precondition: key held")
+func test_mount_free_frees_mounted_scene() -> void:
+	# Given: A mounted scene.
+	var scene := Control.new()
+	var input := await StdTestInput.mount(self, scene)
 
 	# When: The helper is freed.
 	input.free()
 
-	# Then: The key is no longer held.
-	assert_false(Input.is_key_pressed(KEY_F1))
+	# Then: The scene is freed with it.
+	assert_false(is_instance_valid(scene))
 
 
-func test_mount_at_root_content_scale_click_reaches_button() -> void:
+func test_mount_free_without_mounting_leaves_root_unchanged() -> void:
+	# Given: The root's size.
+	var root := get_tree().root
+	var size_before := root.size
+
+	# Given: A helper in the tree which never mounted anything.
+	var input := StdTestInput.new()
+	add_child(input)
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: The root is unchanged.
+	assert_eq(root.size, size_before)
+
+
+func test_mount_content_scale_click_reaches_button() -> void:
 	# Given: A root drawn at twice its size.
 	var root := get_tree().root
 	var scale_before := root.content_scale_factor
 	root.content_scale_factor = 2.0
 
-	# Given: A button mounted at the root.
+	# Given: A mounted button.
 	var button := _make_button(Vector2(200, 100))
 	var pressed := _count_pressed(button)
-	var input := await _mount(button, true)
+	var input := await StdTestInput.mount(self, button)
 
 	# When: The button is clicked.
 	input.click(button)
@@ -194,28 +289,7 @@ func test_mount_at_root_content_scale_click_reaches_button() -> void:
 	root.content_scale_factor = scale_before
 
 
-func test_mount_free_frees_mounted_scene(
-	params = use_parameters([false, true])
-) -> void:
-	# Given: A mounted scene.
-	var scene := Control.new()
-	var input := StdTestInput.new()
-	add_child(input)
-	if params:
-		await input.mount_at_root(scene)
-	else:
-		await input.mount(scene)
-
-	# When: The helper is freed.
-	input.free()
-
-	# Then: The scene is freed with it.
-	assert_false(is_instance_valid(scene))
-
-
-func test_mount_sizes_viewport_to_project_window(
-	params = use_parameters([false, true])
-) -> void:
+func test_mount_sizes_root_to_project_window() -> void:
 	# Given: The project's window size.
 	var window_size := Vector2(
 		ProjectSettings.get_setting(&"display/window/size/viewport_width"),
@@ -223,54 +297,16 @@ func test_mount_sizes_viewport_to_project_window(
 	)
 
 	# When: A scene is mounted.
-	var input := await _mount(Control.new(), params)
+	await StdTestInput.mount(self, Control.new())
 
-	# Then: The viewport has both of the project's dimensions.
-	assert_eq(input.viewport.get_visible_rect().size, window_size)
+	# Then: The root has both of the project's dimensions.
+	assert_eq(get_tree().root.get_visible_rect().size, window_size)
 
 
-func test_click_moves_mouse_to_control_center(
-	params = use_parameters([false, true])
-) -> void:
+func test_move_mouse_updates_hover() -> void:
 	# Given: A mounted button.
 	var button := _make_button(Vector2(400, 300))
-	var input := await _mount(button, params)
-
-	# When: The button is clicked.
-	input.click(button)
-
-	# Then: The viewport's mouse position is at the button's center.
-	var center := button.get_global_rect().get_center()
-	assert_eq(input.viewport.get_mouse_position(), center)
-
-
-func test_click_updates_polled_mouse_state_only_at_root(
-	params = use_parameters([false, true])
-) -> void:
-	# Given: A button recording what `Input` reports when it goes down.
-	var button := _make_button(Vector2(100, 100))
-	var polled: Array[bool] = []
-	button.button_down.connect(
-		func() -> void: polled.append(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
-	)
-
-	# Given: The button is mounted.
-	var input := await _mount(button, params)
-
-	# When: The button is clicked.
-	input.click(button)
-
-	# Then: `Input` saw the press only where events go through it.
-	assert_eq(polled, [params] as Array[bool])
-
-	# Then: `Input` doesn't report the button as held afterward.
-	assert_false(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
-
-
-func test_move_mouse_updates_hover(params = use_parameters([false, true])) -> void:
-	# Given: A mounted button.
-	var button := _make_button(Vector2(400, 300))
-	var input := await _mount(button, params)
+	var input := await StdTestInput.mount(self, button)
 
 	# When: The mouse moves over the button.
 	input.move_mouse(button.get_global_rect().get_center())
@@ -285,40 +321,34 @@ func test_move_mouse_updates_hover(params = use_parameters([false, true])) -> vo
 	assert_false(button.is_hovered())
 
 
-func test_move_mouse_leaves_hidden_cursor_hidden(
-	params = use_parameters([false, true])
-) -> void:
+func test_move_mouse_reveals_hidden_cursor_only_with_relative_distance() -> void:
 	# Given: A mounted cursor.
 	StdGroup.with_id(StdInputCursor.GROUP_INPUT_CURSOR).clear_members()
 	var cursor := StdInputCursor.new()
-	var input := await _mount(cursor, params)
+	var input := await StdTestInput.mount(self, cursor)
 	cursor.update_configuration([StdInputActionSet.new()])
 
 	# Given: The cursor is hidden.
 	cursor.hide_cursor()
 
-	# When: The mouse moves.
+	# When: The mouse moves with no relative distance.
 	input.move_mouse(Vector2(400, 300))
 
 	# Then: The cursor stays hidden.
 	assert_false(cursor.get_is_visible())
 
-	# When: A motion with a relative distance arrives.
-	var motion := InputEventMouseMotion.new()
-	motion.screen_relative = Vector2(50, 0)
-	input.viewport.push_input(motion, true)
+	# When: The mouse moves with a relative distance.
+	input.move_mouse(Vector2(450, 300), Vector2(50, 0))
 
-	# Then: The cursor reveals, so it was listening to the mouse.
+	# Then: The cursor is revealed.
 	assert_true(cursor.get_is_visible())
 
 
-func test_press_action_focused_button_holds_action_and_presses_on_release(
-	params = use_parameters([false, true])
-) -> void:
+func test_press_action_focused_button_holds_action_and_presses_on_release() -> void:
 	# Given: A mounted button.
 	var button := _make_button(Vector2(100, 100))
 	var pressed := _count_pressed(button)
-	var input := await _mount(button, params)
+	var input := await StdTestInput.mount(self, button)
 
 	# Given: The button has focus.
 	button.grab_focus()
@@ -338,30 +368,11 @@ func test_press_action_focused_button_holds_action_and_presses_on_release(
 	assert_eq(pressed.size(), 1)
 
 
-func test_press_action_held_at_free_is_released() -> void:
-	# Given: A mounted scene.
-	var input := StdTestInput.new()
-	add_child(input)
-	await input.mount(Control.new())
-
-	# Given: An action held.
-	input.press_action(&"ui_accept")
-	assert_true(Input.is_action_pressed(&"ui_accept"), "precondition: action held")
-
-	# When: The helper is freed.
-	input.free()
-
-	# Then: The action is no longer held.
-	assert_false(Input.is_action_pressed(&"ui_accept"))
-
-
-func test_press_key_focused_button_presses_on_release(
-	params = use_parameters([false, true])
-) -> void:
+func test_press_key_focused_button_presses_on_release() -> void:
 	# Given: A mounted button.
 	var button := _make_button(Vector2(100, 100))
 	var pressed := _count_pressed(button)
-	var input := await _mount(button, params)
+	var input := await StdTestInput.mount(self, button)
 
 	# Given: The button has focus.
 	button.grab_focus()
@@ -374,18 +385,16 @@ func test_press_key_focused_button_presses_on_release(
 	assert_eq(pressed.size(), 1)
 
 
-func test_press_key_updates_polled_key_state_only_at_root(
-	params = use_parameters([false, true])
-) -> void:
+func test_press_key_updates_polled_key_state() -> void:
 	# Given: A mounted scene.
-	var input := await _mount(Control.new(), params)
+	var input := await StdTestInput.mount(self, Control.new())
 
 	# When: A key bound to `ui_accept` is pressed.
 	input.press_key(KEY_ENTER)
 
-	# Then: `Input` saw it only where events go through it.
-	assert_eq(Input.is_key_pressed(KEY_ENTER), params)
-	assert_eq(Input.is_action_pressed(&"ui_accept"), params)
+	# Then: `Input` saw it.
+	assert_true(Input.is_key_pressed(KEY_ENTER))
+	assert_true(Input.is_action_pressed(&"ui_accept"))
 
 	# When: The key is released.
 	input.release_key(KEY_ENTER)
@@ -395,12 +404,10 @@ func test_press_key_updates_polled_key_state_only_at_root(
 	assert_false(Input.is_action_pressed(&"ui_accept"))
 
 
-func test_press_key_with_nothing_focused_reaches_unhandled_input(
-	params = use_parameters([false, true])
-) -> void:
+func test_press_key_with_nothing_focused_reaches_unhandled_input() -> void:
 	# Given: A mounted scene recording unhandled input.
 	var recorder := UnhandledInputRecorder.new()
-	var input := await _mount(recorder, params)
+	var input := await StdTestInput.mount(self, recorder)
 
 	# When: A key is pressed and released.
 	input.press_key(KEY_ESCAPE)
@@ -412,6 +419,117 @@ func test_press_key_with_nothing_focused_reaches_unhandled_input(
 	assert_true(recorder.events[0].pressed)
 	assert_eq(recorder.events[1].keycode, KEY_ESCAPE)
 	assert_false(recorder.events[1].pressed)
+
+
+func test_press_mouse_holds_button_until_released() -> void:
+	# Given: A mounted button with the mouse over it.
+	var button := _make_button(Vector2(100, 100))
+	var pressed := _count_pressed(button)
+	var input := await StdTestInput.mount(self, button)
+	input.move_mouse(button.get_global_rect().get_center())
+
+	# When: The mouse button is pressed.
+	input.press_mouse()
+
+	# Then: It's held and the button hasn't fired yet.
+	assert_true(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+	assert_eq(pressed.size(), 0)
+
+	# When: The mouse button is released.
+	input.release_mouse()
+
+	# Then: It's no longer held and the button fired.
+	assert_false(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+	assert_eq(pressed.size(), 1)
+
+
+func test_send_dispatches_event_through_input() -> void:
+	# Given: A mounted scene recording unhandled input.
+	var recorder := UnhandledInputRecorder.new()
+	var input := await StdTestInput.mount(self, recorder)
+
+	# When: A joypad button is sent.
+	input.send(_make_joy_button(0, JOY_BUTTON_X))
+
+	# Then: `Input` saw it and it reached the scene.
+	assert_true(Input.is_joy_button_pressed(0, JOY_BUTTON_X))
+	assert_eq(recorder.events.size(), 1)
+	assert_eq(recorder.events[0].button_index, JOY_BUTTON_X)
+
+
+func test_send_free_releases_each_held_input() -> void:
+	# Given: A mounted scene.
+	var input := await StdTestInput.mount(self, Control.new())
+
+	# Given: A press of each kind is held, on two joypads.
+	input.press_mouse()
+	input.press_key(KEY_F1)
+	input.press_action(&"ui_accept")
+	input.send(_make_joy_button(0, JOY_BUTTON_X))
+	input.send(_make_joy_button(1, JOY_BUTTON_X))
+	assert_true(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT), "precondition: mouse")
+	assert_true(Input.is_key_pressed(KEY_F1), "precondition: key")
+	assert_true(Input.is_action_pressed(&"ui_accept"), "precondition: action")
+	assert_true(Input.is_joy_button_pressed(0, JOY_BUTTON_X), "precondition: joypad 0")
+	assert_true(Input.is_joy_button_pressed(1, JOY_BUTTON_X), "precondition: joypad 1")
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: None of them is held.
+	assert_false(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+	assert_false(Input.is_key_pressed(KEY_F1))
+	assert_false(Input.is_action_pressed(&"ui_accept"))
+	assert_false(Input.is_joy_button_pressed(0, JOY_BUTTON_X))
+	assert_false(Input.is_joy_button_pressed(1, JOY_BUTTON_X))
+
+
+func test_send_free_resets_held_joypad_axis(
+	params = use_parameters(
+		[
+			1.0,
+			# NOTE: This is below the value at which the event reports being pressed.
+			0.25,
+		]
+	)
+) -> void:
+	# Given: A mounted scene.
+	var input := await StdTestInput.mount(self, Control.new())
+
+	# Given: A joypad axis is held.
+	var event := InputEventJoypadMotion.new()
+	event.axis = JOY_AXIS_LEFT_X
+	event.axis_value = params
+	input.send(event)
+	assert_eq(Input.get_joy_axis(0, JOY_AXIS_LEFT_X), params, "precondition: axis held")
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: The axis is back at rest.
+	assert_eq(Input.get_joy_axis(0, JOY_AXIS_LEFT_X), 0.0)
+
+
+func test_send_released_input_is_not_released_again_at_free() -> void:
+	# Given: A mounted scene recording unhandled input.
+	var recorder := UnhandledInputRecorder.new()
+	var input := await StdTestInput.mount(self, recorder)
+
+	# Given: A key was pressed and released.
+	input.press_key(KEY_ESCAPE)
+	input.release_key(KEY_ESCAPE)
+	var count_before := recorder.events.size()
+
+	# When: The scene is taken out of the helper and the helper is freed.
+	input.remove_child(recorder)
+	add_child_autofree(recorder)
+	input.free()
+
+	# Then: No further key event arrived.
+	var keys := recorder.events.filter(
+		func(event: InputEvent) -> bool: return event is InputEventKey
+	)
+	assert_eq(keys.size(), count_before)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
@@ -450,14 +568,16 @@ func _make_button(position: Vector2) -> Button:
 	return button
 
 
-## _mount adds a helper which is freed with the test and mounts `scene` with it, at the
-## root when `at_root` is set.
-func _mount(scene: Node, at_root: bool) -> StdTestInput:
-	var input: StdTestInput = add_child_autofree(StdTestInput.new())
+func _make_joy_button(device: int, button_index: JoyButton) -> InputEventJoypadButton:
+	var event := InputEventJoypadButton.new()
+	event.device = device
+	event.button_index = button_index
+	event.pressed = true
+	return event
 
-	if at_root:
-		await input.mount_at_root(scene)
-	else:
-		await input.mount(scene)
 
-	return input
+## _record_gui_input returns an array which grows with the GUI input `control` receives.
+func _record_gui_input(control: Control) -> Array[InputEvent]:
+	var received: Array[InputEvent] = []
+	control.gui_input.connect(func(event: InputEvent) -> void: received.append(event))
+	return received

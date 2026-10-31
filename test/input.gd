@@ -1,25 +1,25 @@
 ##
 ## std/test/input.gd
 ##
-## StdTestInput mounts a scene where input dispatches under headless GUT and drives it
+## StdTestInput mounts a scene at the root viewport under headless GUT and drives it
 ## with real events, so a test covers the picking and focus that emitting `pressed` or
 ## aiming GUT's `InputSender` at a control's `_gui_input` skips.
 ##
-## A GUT test adds it with `add_child_autofree`, awaits one mount, and then sends
-## events. Freeing it frees the mounted scene and undoes what mounting and sending
-## changed.
+## A GUT test awaits `mount` and then sends events, each of which takes effect before
+## its call returns. GUT frees this node after the test, which frees the mounted scene
+## and undoes what mounting and sending changed.
 ##
-## `mount` is the default. Its events go straight to a `SubViewport` through
-## `Viewport.push_input`, so they pick and focus as usual but `Input` doesn't see them.
-## `mount_at_root` is for a scene that polls `Input`. Its events go through
-## `Input.parse_input_event`, so `Input` and the root's `get_mouse_position` track them.
+## NOTE: Events go through `Input`, so polled state follows them, and they reach every
+## node in the tree as a game's do, including a node an earlier test left there. A
+## `SubViewport` would isolate a scene, but `Input` doesn't see what `push_input` sends,
+## so a scene that polls it would silently read nothing.
 ##
-## NOTE: A click at the headless root is lost to two things, which `mount_at_root`
-## undoes while this node lives. The root window stays 64x64, and a press beyond it
-## picks no control. GUT's panel, on canvas layer 128, takes a press over most of that
-## corner. Events do dispatch there, whatever godotengine/godot#73557 suggests. A
-## control with a set size takes a click in the frame it mounts, and each event sent at
-## the root flushes `Input`'s buffer, so neither loses one.
+## NOTE: A click at the headless root is lost to two things, which this node undoes
+## while it lives. The root window stays 64x64, and a press beyond it picks no control.
+## GUT's panel, on canvas layer 128, takes a press over most of that corner. Events do
+## dispatch there, whatever godotengine/godot#73557 suggests. A control with a set size
+## takes a click in the frame it mounts, and each event flushes `Input`'s buffer, so
+## neither loses one.
 ##
 ## NOTE: Mounting awaits, which std otherwise never does, since only GUT tests call it.
 ##
@@ -35,141 +35,127 @@ const _SETTING_WINDOW_WIDTH := &"display/window/size/viewport_width"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## viewport is where the scene is mounted and where events are sent. It's `null` until a
-## mount starts.
-var viewport: Viewport = null
-
 var _gut_layer: CanvasLayer = null
-var _held_actions: Array[StringName] = []
-var _held_keys: Array[Key] = []
+var _held: Array[InputEvent] = []
+var _is_mounted: bool = false
 var _root_mouse_position := Vector2.ZERO
 var _root_size := Vector2i.ZERO
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## click sends a press and a release of `button_index` at the center of `control`, which
-## also moves the mouse there. Both are picked as a real click is, so whatever covers
-## `control` takes them instead.
+## click moves the mouse to the center of `control` and clicks there. The click is
+## picked as a real one is, so whatever covers `control` takes it instead.
 func click(control: Control, button_index: MouseButton = MOUSE_BUTTON_LEFT) -> void:
-	assert(viewport, "invalid state: nothing mounted")
 	assert(
-		control.get_viewport() == viewport,
-		"invalid argument: control isn't in the mounted viewport",
+		control.get_viewport() == get_viewport(),
+		"invalid argument: control isn't in the root viewport",
 	)
 
-	var center := control.get_global_transform_with_canvas() * (control.size / 2.0)
-
-	for pressed in [true, false]:
-		var event := InputEventMouseButton.new()
-		event.button_index = button_index
-		event.pressed = pressed
-		_set_mouse_position(event, center)
-
-		_send(event)
+	click_at(
+		control.get_global_transform_with_canvas() * (control.size / 2.0),
+		button_index,
+	)
 
 
-## mount adds `scene` to a `SubViewport` of the project's window size, away from
-## everything at the root, and returns after one frame so that its layout has settled.
-func mount(scene: Node) -> void:
-	assert(viewport == null, "invalid state: already mounted")
-
-	var sub_viewport := SubViewport.new()
-	sub_viewport.size = _get_window_size()
-	add_child(sub_viewport)
-
-	viewport = sub_viewport
-	viewport.add_child(scene)
-
-	await get_tree().process_frame
+## click_at moves the mouse to `position`, in the root's coordinates, and clicks there.
+func click_at(
+	position: Vector2,
+	button_index: MouseButton = MOUSE_BUTTON_LEFT,
+) -> void:
+	move_mouse(position)
+	press_mouse(button_index)
+	release_mouse(button_index)
 
 
-## mount_at_root adds `scene` to the root viewport, sizes the root to the project's
-## window size, hides GUT's panel, and returns after one frame so that its layout has
-## settled.
-func mount_at_root(scene: Node) -> void:
-	assert(viewport == null, "invalid state: already mounted")
-	assert(get_viewport() == get_tree().root, "invalid state: not in the root viewport")
-
-	var root := get_tree().root
-
-	_root_mouse_position = root.get_mouse_position()
-	_root_size = root.size
-	root.size = _get_window_size()
-
-	_gut_layer = root.get_node_or_null(_GUT_LAYER_PATH)
-	if _gut_layer:
-		_gut_layer.hide()
-
-	viewport = root
-	add_child(scene)
-
-	await get_tree().process_frame
-
-
-## move_mouse sends a motion to `position`, in the mounted viewport's coordinates.
+## mount adds `scene` to the root viewport, sizes the root to the project's window size,
+## hides GUT's panel, and returns once the scene's layout has settled. `test` is the
+## calling `GutTest`, which frees the returned node when the test ends.
 ##
-## NOTE: The motion has no relative distance, so it updates hover and the viewport's
-## mouse position without crossing the threshold that reveals a hidden cursor.
-func move_mouse(position: Vector2) -> void:
+## NOTE: `test` is typed as a `Node` so that this file loads in a project without GUT.
+static func mount(test: Node, scene: Node) -> StdTestInput:
+	assert(
+		test.has_method(&"add_child_autofree"),
+		"invalid argument: test isn't a GutTest",
+	)
+
+	var input := StdTestInput.new()
+	test.add_child_autofree(input)
+
+	await input._mount(scene)
+
+	return input
+
+
+## move_mouse sends a motion to `position`, in the root's coordinates, which updates
+## hover and the root's mouse position.
+##
+## NOTE: A hidden cursor is revealed only by a motion crossing its threshold, so pass a
+## `relative` distance to stand in for a player moving the mouse.
+func move_mouse(position: Vector2, relative := Vector2.ZERO) -> void:
 	var event := InputEventMouseMotion.new()
+	event.relative = relative
+	event.screen_relative = relative
 	_set_mouse_position(event, position)
 
-	_send(event)
+	send(event)
 
 
-## press_action holds `action` in `Input` and sends its press event. An action still
-## held when this node is freed is released then.
+## press_action sends a press of `action`, held until it's released or this node is
+## freed.
 func press_action(action: StringName) -> void:
-	Input.action_press(action)
-	_held_actions.append(action)
-
-	_send_action(action, true)
+	send(_make_action(action, true))
 
 
-## press_key sends a press of the key `keycode`. A key still held when this node is
-## freed is released then.
+## press_key sends a press of the key `keycode`, held until it's released or this node
+## is freed.
 ##
-## NOTE: The event carries no `unicode`, so a `LineEdit` takes no text from it. Under
-## `mount`, `Input` doesn't see the key, so a test polling a bound action there should
-## use `press_action`.
+## NOTE: The event carries no `unicode`, so a `LineEdit` takes no text from it.
 func press_key(keycode: Key) -> void:
-	_held_keys.append(keycode)
-
-	_send_key(keycode, true)
+	send(_make_key(keycode, true))
 
 
-## release_action releases `action` in `Input` and sends its release event.
+## press_mouse sends a press of `button_index` where the mouse is, held until it's
+## released or this node is freed.
+func press_mouse(button_index: MouseButton = MOUSE_BUTTON_LEFT) -> void:
+	send(_make_mouse_button(button_index, true))
+
+
+## release_action sends a release of `action`.
 func release_action(action: StringName) -> void:
-	Input.action_release(action)
-	_held_actions.erase(action)
-
-	_send_action(action, false)
+	send(_make_action(action, false))
 
 
 ## release_key sends a release of the key `keycode`.
 func release_key(keycode: Key) -> void:
-	_held_keys.erase(keycode)
+	send(_make_key(keycode, false))
 
-	_send_key(keycode, false)
+
+## release_mouse sends a release of `button_index` where the mouse is.
+func release_mouse(button_index: MouseButton = MOUSE_BUTTON_LEFT) -> void:
+	send(_make_mouse_button(button_index, false))
+
+
+## send dispatches `event` as a player's input, for anything the other methods don't
+## cover. A press or a joypad axis still held when this node is freed is released then.
+func send(event: InputEvent) -> void:
+	assert(_is_mounted, "invalid state: nothing mounted")
+
+	_track_held(event)
+
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
 func _exit_tree() -> void:
-	for action in _held_actions:
-		Input.action_release(action)
-
-	_held_actions.clear()
-
-	if viewport != get_tree().root:
+	if not _is_mounted:
 		return
 
-	for keycode in _held_keys:
-		_send_key(keycode, false)
-
-	_held_keys.clear()
+	for event in _held.duplicate():
+		send(_make_release(event))
 
 	move_mouse(_root_mouse_position)
 
@@ -182,49 +168,96 @@ func _exit_tree() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-func _get_window_size() -> Vector2i:
-	return Vector2i(
-		ProjectSettings.get_setting(_SETTING_WINDOW_WIDTH),
-		ProjectSettings.get_setting(_SETTING_WINDOW_HEIGHT),
-	)
-
-
-func _send(event: InputEvent) -> void:
-	assert(viewport, "invalid state: nothing mounted")
-
-	if viewport is SubViewport:
-		viewport.push_input(event, true)
-		return
-
-	Input.parse_input_event(event)
-	Input.flush_buffered_events()
-
-
-func _send_action(action: StringName, pressed: bool) -> void:
+func _make_action(action: StringName, pressed: bool) -> InputEventAction:
 	var event := InputEventAction.new()
 	event.action = action
 	event.pressed = pressed
 
-	_send(event)
+	return event
 
 
-func _send_key(keycode: Key, pressed: bool) -> void:
+func _make_key(keycode: Key, pressed: bool) -> InputEventKey:
 	var event := InputEventKey.new()
 	event.keycode = keycode
 	event.physical_keycode = keycode
 	event.pressed = pressed
 
-	_send(event)
+	return event
 
 
-## _set_mouse_position places `event` at `position` in the mounted viewport's
-## coordinates.
+func _make_mouse_button(
+	button_index: MouseButton,
+	pressed: bool,
+) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = button_index
+	event.pressed = pressed
+	_set_mouse_position(event, get_viewport().get_mouse_position())
+
+	return event
+
+
+## _make_release returns an event which ends the hold that `event` started.
+func _make_release(event: InputEvent) -> InputEvent:
+	var release: InputEvent = event.duplicate()
+
+	if release is InputEventJoypadMotion:
+		release.axis_value = 0.0
+	else:
+		release.pressed = false
+
+	return release
+
+
+func _mount(scene: Node) -> void:
+	var root := get_tree().root
+	assert(get_viewport() == root, "invalid state: not in the root viewport")
+
+	_is_mounted = true
+	_root_mouse_position = root.get_mouse_position()
+	_root_size = root.size
+
+	root.size = Vector2i(
+		ProjectSettings.get_setting(_SETTING_WINDOW_WIDTH),
+		ProjectSettings.get_setting(_SETTING_WINDOW_HEIGHT),
+	)
+
+	_gut_layer = root.get_node_or_null(_GUT_LAYER_PATH)
+	if _gut_layer:
+		_gut_layer.hide()
+
+	add_child(scene)
+
+	await get_tree().process_frame
+
+
+## _set_mouse_position places `event` at `position` in the root's coordinates.
 ##
-## NOTE: `Input` takes window coordinates, which differ from the root viewport's own
-## under a content scale, while `push_input` is called with local ones.
+## NOTE: `Input` takes window coordinates, which differ from the root's own under a
+## content scale.
 func _set_mouse_position(event: InputEventMouse, position: Vector2) -> void:
-	if viewport is Window:
-		position = (viewport as Window).get_final_transform() * position
+	position = get_tree().root.get_final_transform() * position
 
 	event.global_position = position
 	event.position = position
+
+
+## _track_held records `event` if it holds input, replacing any earlier event from the
+## same device on the same origin.
+##
+## NOTE: A joypad axis counts as held at any value other than zero, since `Input` keeps
+## the value while `is_pressed` is false below 0.5.
+func _track_held(event: InputEvent) -> void:
+	for index in _held.size():
+		if _held[index].device == event.device and _held[index].is_match(event, false):
+			_held.remove_at(index)
+			break
+
+	var is_held: bool = (
+		not is_zero_approx(event.axis_value)
+		if event is InputEventJoypadMotion
+		else event.is_pressed()
+	)
+
+	if is_held:
+		_held.append(event)
