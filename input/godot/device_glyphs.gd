@@ -296,8 +296,8 @@ func _get_action_origin_label(
 ## _get_joypad_origin_label returns the name `device_type` gives the joypad origin of
 ## `event`, or an empty string if `event` isn't a joypad origin.
 ##
-## NOTE: These are the platforms' own terms, so they aren't translated here. A caller
-## with a catalogue can translate the returned name.
+## NOTE: These names are always English, since std has no translation catalogue. A
+## caller with a catalogue should translate the returned name.
 static func _get_joypad_origin_label(
 	device_type: StdInputDevice.DeviceType,
 	event: InputEvent,
