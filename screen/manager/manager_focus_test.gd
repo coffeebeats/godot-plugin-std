@@ -247,7 +247,7 @@ func test_pop_recalculates_hover_when_cursor_visible():
 func test_pop_keeps_hover_on_clicked_button_when_cursor_visible(
 	params = use_parameters([false, true])
 ) -> void:
-	# Given: A manager mounted away from the root's mouse position.
+	# Given: A manager mounted by the helper.
 	var manager := Manager.new()
 	var input: StdTestInput = add_child_autofree(StdTestInput.new())
 	if params:
