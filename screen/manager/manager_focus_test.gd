@@ -189,8 +189,6 @@ func test_focus_saved_from_hovered_when_cursor_visible():
 
 
 func test_pop_recalculates_hover_when_cursor_visible():
-	# NOTE: A SubViewport avoids what blocks clicks at the headless root; see
-	# `StdTestInput`.
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)
@@ -246,9 +244,44 @@ func test_pop_recalculates_hover_when_cursor_visible():
 	)
 
 
+func test_pop_keeps_hover_on_clicked_button_when_cursor_visible(
+	params = use_parameters([false, true])
+) -> void:
+	# Given: A manager mounted away from the root's mouse position.
+	var manager := Manager.new()
+	var input: StdTestInput = add_child_autofree(StdTestInput.new())
+	if params:
+		await input.mount_at_root(manager)
+	else:
+		await input.mount(manager)
+	_get_cursor().show_cursor()
+
+	# Given: A base screen with a button away from the viewport's origin.
+	var base := Control.new()
+	var button := Button.new()
+	button.position = Vector2(400, 300)
+	button.size = Vector2(100, 40)
+	base.add_child(button)
+	manager.push(_create_screen(), base)
+	await wait_idle_frames(1)
+
+	# Given: The button was clicked, which leaves it hovered.
+	input.click(button)
+	assert_true(button.is_hovered(), "precondition: button hovered")
+
+	# Given: A second screen covers it.
+	manager.push(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+
+	# When: The second screen is popped.
+	manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: Hover is recalculated at the mouse, over the button.
+	assert_true(button.is_hovered())
+
+
 func test_push_recalculates_hover_when_cursor_visible():
-	# NOTE: A SubViewport avoids what blocks clicks at the headless root; see
-	# `StdTestInput`.
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)

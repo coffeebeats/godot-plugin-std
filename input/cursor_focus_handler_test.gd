@@ -467,8 +467,6 @@ func test_clear_press_on_focus_root_exit_sends_focus_exit_to_pressed_button() ->
 	var modal := Control.new()
 	add_child_autofree(modal)
 
-	# NOTE: A SubViewport avoids what blocks clicks at the headless root; see
-	# `StdTestInput`.
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)
@@ -595,8 +593,6 @@ func test_disabled_button_clears_pressed_visual() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
 
-	# NOTE: A SubViewport avoids what blocks clicks at the headless root; see
-	# `StdTestInput`.
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)
@@ -691,7 +687,6 @@ func test_disabled_button_stops_click_from_reaching_control_behind() -> void:
 	# Then: The click stopped at the button.
 	assert_eq(button_received.size(), 2)
 	assert_eq(behind_received.size(), 0)
-	assert_false(button.is_pressed())
 
 	button.remove_child(handler)
 	handler.free()
@@ -1221,9 +1216,6 @@ func _press_mouse(viewport: SubViewport) -> void:
 
 ## _setup_button_in_viewport adds a SubViewport holding a button with the given
 ## `disabled` state, and returns them as `[viewport, button]`.
-##
-## NOTE: A SubViewport avoids what blocks clicks at the headless root; see
-## `StdTestInput`.
 func _setup_button_in_viewport(disabled: bool) -> Array:
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)

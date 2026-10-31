@@ -45,7 +45,7 @@ The [scene](./scene) directory contains an implementation of a [`StateMachine`](
 
 #### **`test`**
 
-The [test](./test) directory contains helpers for a project's GUT tests. [`StdTestInput`](./test/input.gd) mounts a scene where input dispatches under `--headless` and sends it real clicks, keys and actions through `push_input`, so a test covers picking and focus. Its header records what a click at the headless root takes.
+The [test](./test) directory contains helpers for a project's GUT tests. [`StdTestInput`](./test/input.gd) mounts a scene where input dispatches under `--headless` and sends it real mouse motion, clicks, keys and actions, so a test covers picking and focus. By default events reach a `SubViewport` through `push_input`; a scene that polls `Input` mounts at the root instead, where events go through `Input`. Its header records what a click at the headless root takes.
 
 ## **Development**
 

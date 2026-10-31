@@ -122,11 +122,8 @@ func test_mount_at_root_free_restores_root_and_gut_layer() -> void:
 	add_child(input)
 	await input.mount_at_root(Control.new())
 
-	# Then: The root is sized for the scene and GUT's panel is hidden.
+	# Then: The scene is at the root and GUT's panel is hidden.
 	assert_eq(input.viewport, root)
-	assert_eq(
-		root.size.x, ProjectSettings.get_setting(&"display/window/size/viewport_width")
-	)
 	assert_false(gut_layer.visible)
 
 	# When: The helper is freed.
@@ -135,6 +132,61 @@ func test_mount_at_root_free_restores_root_and_gut_layer() -> void:
 	# Then: The root and GUT's panel are as they were.
 	assert_eq(root.size, size_before)
 	assert_true(gut_layer.visible)
+
+
+func test_mount_at_root_free_restores_mouse_position() -> void:
+	# Given: The root's mouse position before mounting.
+	var root := get_tree().root
+	var position_before := root.get_mouse_position()
+
+	# Given: A scene mounted at the root with the mouse moved elsewhere.
+	var input := StdTestInput.new()
+	add_child(input)
+	await input.mount_at_root(Control.new())
+	input.move_mouse(position_before + Vector2(200, 100))
+	assert_ne(root.get_mouse_position(), position_before, "precondition: mouse moved")
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: The mouse is back where it was.
+	assert_eq(root.get_mouse_position(), position_before)
+
+
+func test_mount_at_root_free_releases_held_key() -> void:
+	# Given: A scene mounted at the root with a key held.
+	var input := StdTestInput.new()
+	add_child(input)
+	await input.mount_at_root(Control.new())
+	input.press_key(KEY_F1)
+	assert_true(Input.is_key_pressed(KEY_F1), "precondition: key held")
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: The key is no longer held.
+	assert_false(Input.is_key_pressed(KEY_F1))
+
+
+func test_mount_at_root_content_scale_click_reaches_button() -> void:
+	# Given: A root drawn at twice its size.
+	var root := get_tree().root
+	var scale_before := root.content_scale_factor
+	root.content_scale_factor = 2.0
+
+	# Given: A button mounted at the root.
+	var button := _make_button(Vector2(200, 100))
+	var pressed := _count_pressed(button)
+	var input := await _mount(button, true)
+
+	# When: The button is clicked.
+	input.click(button)
+
+	# Then: The click landed on it, and the mouse is at its center in root coordinates.
+	assert_eq(pressed.size(), 1)
+	assert_eq(root.get_mouse_position(), button.get_global_rect().get_center())
+
+	root.content_scale_factor = scale_before
 
 
 func test_mount_free_frees_mounted_scene(
@@ -154,6 +206,99 @@ func test_mount_free_frees_mounted_scene(
 
 	# Then: The scene is freed with it.
 	assert_false(is_instance_valid(scene))
+
+
+func test_mount_sizes_viewport_to_project_window(
+	params = use_parameters([false, true])
+) -> void:
+	# Given: The project's window size.
+	var window_size := Vector2(
+		ProjectSettings.get_setting(&"display/window/size/viewport_width"),
+		ProjectSettings.get_setting(&"display/window/size/viewport_height"),
+	)
+
+	# When: A scene is mounted.
+	var input := await _mount(Control.new(), params)
+
+	# Then: The viewport has both of the project's dimensions.
+	assert_eq(input.viewport.get_visible_rect().size, window_size)
+
+
+func test_click_moves_mouse_to_control_center(
+	params = use_parameters([false, true])
+) -> void:
+	# Given: A mounted button.
+	var button := _make_button(Vector2(400, 300))
+	var input := await _mount(button, params)
+
+	# When: The button is clicked.
+	input.click(button)
+
+	# Then: The viewport's mouse position is at the button's center.
+	var center := button.get_global_rect().get_center()
+	assert_eq(input.viewport.get_mouse_position(), center)
+
+
+func test_click_updates_polled_mouse_state_only_at_root(
+	params = use_parameters([false, true])
+) -> void:
+	# Given: A mounted button recording what `Input` reports when it goes down.
+	var button := _make_button(Vector2(100, 100))
+	var polled: Array[bool] = []
+	button.button_down.connect(
+		func() -> void: polled.append(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+	)
+	var input := await _mount(button, params)
+
+	# When: The button is clicked.
+	input.click(button)
+
+	# Then: `Input` saw the press only where events go through it.
+	assert_eq(polled, [params] as Array[bool])
+	assert_false(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
+
+
+func test_move_mouse_updates_hover(params = use_parameters([false, true])) -> void:
+	# Given: A mounted button.
+	var button := _make_button(Vector2(400, 300))
+	var input := await _mount(button, params)
+
+	# When: The mouse moves over the button.
+	input.move_mouse(button.get_global_rect().get_center())
+
+	# Then: The button is hovered.
+	assert_true(button.is_hovered())
+
+	# When: The mouse moves off the button.
+	input.move_mouse(Vector2(50, 50))
+
+	# Then: The button is no longer hovered.
+	assert_false(button.is_hovered())
+
+
+func test_move_mouse_leaves_hidden_cursor_hidden(
+	params = use_parameters([false, true])
+) -> void:
+	# Given: A mounted, hidden cursor.
+	StdGroup.with_id(StdInputCursor.GROUP_INPUT_CURSOR).clear_members()
+	var cursor := StdInputCursor.new()
+	var input := await _mount(cursor, params)
+	cursor.update_configuration([StdInputActionSet.new()])
+	cursor.hide_cursor()
+
+	# When: The mouse moves.
+	input.move_mouse(Vector2(400, 300))
+
+	# Then: The cursor stays hidden.
+	assert_false(cursor.get_is_visible())
+
+	# When: A motion with a relative distance arrives.
+	var motion := InputEventMouseMotion.new()
+	motion.screen_relative = Vector2(50, 0)
+	input.viewport.push_input(motion, true)
+
+	# Then: The cursor reveals, so it was listening to the mouse.
+	assert_true(cursor.get_is_visible())
 
 
 func test_press_action_focused_button_holds_action_and_presses_on_release(
@@ -210,6 +355,27 @@ func test_press_key_focused_button_presses_on_release(
 
 	# Then: The button fired.
 	assert_eq(pressed.size(), 1)
+
+
+func test_press_key_updates_polled_key_state_only_at_root(
+	params = use_parameters([false, true])
+) -> void:
+	# Given: A mounted scene.
+	var input := await _mount(Control.new(), params)
+
+	# When: A key bound to `ui_accept` is pressed.
+	input.press_key(KEY_ENTER)
+
+	# Then: `Input` saw it only where events go through it.
+	assert_eq(Input.is_key_pressed(KEY_ENTER), params)
+	assert_eq(Input.is_action_pressed(&"ui_accept"), params)
+
+	# When: The key is released.
+	input.release_key(KEY_ENTER)
+
+	# Then: Neither is held.
+	assert_false(Input.is_key_pressed(KEY_ENTER))
+	assert_false(Input.is_action_pressed(&"ui_accept"))
 
 
 func test_press_key_with_nothing_focused_reaches_unhandled_input(

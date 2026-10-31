@@ -236,9 +236,6 @@ func _add_button(
 
 ## _hold_button adds a press-mode button inside a SubViewport and presses it with the
 ## mouse, checking that the trigger holds the action. Returns the viewport and button.
-##
-## NOTE: A SubViewport avoids what blocks clicks at the headless root; see
-## `StdTestInput`.
 func _hold_button() -> Array:
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i(400, 300)
