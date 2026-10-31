@@ -189,8 +189,8 @@ func test_focus_saved_from_hovered_when_cursor_visible():
 
 
 func test_pop_recalculates_hover_when_cursor_visible():
-	# NOTE: SubViewport required; root viewport doesn't dispatch GUI input in headless
-	# mode.
+	# NOTE: A SubViewport avoids what blocks clicks at the headless root; see
+	# `StdTestInput`.
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)
@@ -247,8 +247,8 @@ func test_pop_recalculates_hover_when_cursor_visible():
 
 
 func test_push_recalculates_hover_when_cursor_visible():
-	# NOTE: SubViewport required; root viewport doesn't
-	# dispatch GUI input in headless mode.
+	# NOTE: A SubViewport avoids what blocks clicks at the headless root; see
+	# `StdTestInput`.
 	var sv := SubViewport.new()
 	sv.size = Vector2i(400, 300)
 	add_child_autofree(sv)
