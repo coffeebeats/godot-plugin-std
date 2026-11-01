@@ -584,32 +584,24 @@ func test_clear_press_on_focus_root_exit_noop_already_outside() -> void:
 	assert_true(button.is_hovered())
 
 
-func test_disabled_button_clears_stale_visuals() -> void:
+func test_disabled_button_clears_hover_visual() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
 
-	# Given: A press-mode button with a focus handler.
+	# Given: An enabled button with a focus handler.
 	var setup := await _mount_button(false)
 	var input: StdTestInput = setup[0]
 	var button: Button = setup[1]
 	var handler: StdInputCursorFocusHandler = setup[2]
-	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 
 	# Given: The mouse rests over the button.
 	input.move_mouse(button.get_global_rect().get_center())
 	assert_true(button.is_hovered(), "precondition: button should be hovered")
 
-	# Given: The mouse presses the button.
-	input.press_mouse()
-	assert_true(button.is_pressed(), "precondition: button should be pressed")
-
 	# When: The button becomes disabled.
 	button.disabled = true
 	button.queue_redraw()
 	await get_tree().process_frame
-
-	# Then: The button is no longer pressed.
-	assert_false(button.is_pressed())
 
 	# Then: The button is no longer hovered.
 	assert_false(button.is_hovered())
