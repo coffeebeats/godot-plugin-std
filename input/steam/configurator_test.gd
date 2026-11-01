@@ -12,9 +12,7 @@ const SlotTest := preload("../slot_test.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## _CONFIGURATOR_PATH is the configurator script, loaded in `before_all` rather than
-## preloaded, since it can't be parsed without the `Steam` singleton the GodotSteam
-## extension registers and `should_skip_script` skips this script without it.
+## _CONFIGURATOR_PATH is the configurator script, loaded in `before_all`.
 const _CONFIGURATOR_PATH := "configurator.gd"
 
 ## _JOYPAD_MONITOR_PATH is the joypad monitor script, loaded as `_CONFIGURATOR_PATH`.
@@ -106,13 +104,6 @@ func before_each() -> void:
 	_slot = SlotTest.make_slot()
 	_slot.claim_kbm_input = true
 	_slot.joypad_monitor = _monitor
-
-
-func should_skip_script():
-	if not ClassDB.class_exists(&"Steam"):
-		return "the GodotSteam extension isn't available on this platform"
-
-	return false
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #

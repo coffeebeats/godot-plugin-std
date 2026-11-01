@@ -13,9 +13,7 @@ const GodotJoypadMonitorTest := preload("../godot/joypad_monitor_test.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## _JOYPAD_MONITOR_PATH is the monitor script, loaded in `before_all` rather than
-## preloaded, since it can't be parsed without the `Steam` singleton the GodotSteam
-## extension registers and `should_skip_script` skips this script without it.
+## _JOYPAD_MONITOR_PATH is the monitor script, loaded in `before_all`.
 const _JOYPAD_MONITOR_PATH := "joypad_monitor.gd"
 
 ## _STEAM_ERROR is the condition GodotSteam reports when it rejects a call because
@@ -828,13 +826,6 @@ func before_all() -> void:
 		_JOYPAD_MONITOR_PATH
 	)
 	_joypad_monitor = load(path)
-
-
-func should_skip_script():
-	if not ClassDB.class_exists(&"Steam"):
-		return "the GodotSteam extension isn't available on this platform"
-
-	return false
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
