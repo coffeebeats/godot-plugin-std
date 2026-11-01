@@ -188,52 +188,6 @@ func test_focus_saved_from_hovered_when_cursor_visible():
 	)
 
 
-func test_pop_recalculates_hover_when_cursor_visible():
-	# Given: A manager mounted by the helper.
-	var manager := Manager.new()
-	var input := await StdTestInput.mount(self, manager)
-
-	# Given: The cursor is visible.
-	_get_cursor().show_cursor()
-
-	# Given: A base screen with a hoverable button.
-	var base := Control.new()
-	var button := Button.new()
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	button.size = Vector2(100, 40)
-	base.add_child(button)
-	manager.push(_create_screen(), base)
-	await wait_idle_frames(1)
-
-	# Given: The button is hovered.
-	input.move_mouse(button.get_global_rect().get_center())
-	assert_true(
-		button.is_hovered(),
-		"precondition: button hovered",
-	)
-
-	# Given: A second screen covers it.
-	manager.push(_create_screen(), Control.new())
-	await wait_idle_frames(1)
-
-	# Given: A motion there clears its hover.
-	input.move_mouse(button.get_global_rect().get_center())
-	assert_false(
-		button.is_hovered(),
-		"precondition: button not hovered",
-	)
-
-	# When: The second screen is popped.
-	manager.pop()
-	await wait_idle_frames(1)
-
-	# Then: The button regains hover after recalculation.
-	assert_true(
-		button.is_hovered(),
-		"button should be hovered after pop",
-	)
-
-
 func test_pop_recalculates_hover_at_mouse_away_from_origin() -> void:
 	# Given: A manager mounted by the helper.
 	var manager := Manager.new()
