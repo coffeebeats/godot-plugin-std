@@ -9,9 +9,7 @@ extends GutTest
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## _DEVICE_ACTIONS_PATH is the component script, loaded in `before_all` rather than
-## preloaded, since it can't be parsed without the `Steam` singleton the GodotSteam
-## extension registers and `should_skip_script` skips this script without it.
+## _DEVICE_ACTIONS_PATH is the component script, loaded in `before_all`.
 const _DEVICE_ACTIONS_PATH := "device_actions.gd"
 
 ## _JOYPAD_MONITOR_PATH is the joypad monitor script, loaded as `_DEVICE_ACTIONS_PATH`.
@@ -657,13 +655,6 @@ func before_each() -> void:
 	# NOTE: The component isn't added to the scene, since its `_ready` needs Steam Input;
 	# publishing only touches `Input` and the instance's own state.
 	_actions = autofree(_device_actions.new())
-
-
-func should_skip_script():
-	if not ClassDB.class_exists(&"Steam"):
-		return "the GodotSteam extension isn't available on this platform"
-
-	return false
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #

@@ -8,9 +8,7 @@ extends GutTest
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## _DEVICE_GLYPHS_PATH is the glyphs script, loaded in `before_all` rather than
-## preloaded, since it can't be parsed without the `Steam` singleton the GodotSteam
-## extension registers and `should_skip_script` skips this script without it.
+## _DEVICE_GLYPHS_PATH is the glyphs script, loaded in `before_all`.
 const _DEVICE_GLYPHS_PATH := "device_glyphs.gd"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -51,10 +49,3 @@ func before_all() -> void:
 		_DEVICE_GLYPHS_PATH
 	)
 	_device_glyphs = load(path)
-
-
-func should_skip_script():
-	if not ClassDB.class_exists(&"Steam"):
-		return "the GodotSteam extension isn't available on this platform"
-
-	return false
