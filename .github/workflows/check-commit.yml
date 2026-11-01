@@ -3,17 +3,17 @@ name: "🔎 Check: Godot project"
 on:
   pull_request:
     branches:
-      - main
+      - tmp/check-project-probe-base
   push:
     branches:
-      - main
+      - tmp/check-project-probe-base
 
 permissions:
   contents: write
 
 jobs:
   check:
-    uses: coffeebeats/godot-infra/.github/workflows/check-project.yaml@v6
+    uses: coffeebeats/godot-infra/.github/workflows/check-project.yaml@fix/check-project-test-submodule-bumps
     secrets: inherit
 
   # NOTE: This job name is required by the branch ruleset.
