@@ -326,11 +326,8 @@ func get_action_origin_count(
 	)
 
 
-## get_action_origin_label returns a display name for the first origin bound to the
-## specified action.
-##
-## NOTE: Only some providers localize this name, so a caller with a translation
-## catalogue should translate it.
+## get_action_origin_label returns a localized display name for the first origin bound
+## to the specified action.
 func get_action_origin_label(
 	action_set: StdInputActionSet,
 	action: StringName,

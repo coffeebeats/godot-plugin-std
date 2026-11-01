@@ -52,11 +52,8 @@ func get_action_origin_count(
 	return _get_action_origin_count(device, device_type, action_set, action)
 
 
-## get_action_origin_label returns the display name for the first origin bound to the
-## specified action.
-##
-## NOTE: Only some providers localize this name, so a caller with a translation
-## catalogue should translate it.
+## get_action_origin_label returns the localized display name for the first origin bound
+## to the specified action.
 func get_action_origin_label(
 	device: int,
 	device_type: StdInputDevice.DeviceType,
