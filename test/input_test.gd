@@ -368,6 +368,37 @@ func test_mount_content_scale_click_reaches_button() -> void:
 	root.content_scale_factor = scale_before
 
 
+func test_move_mouse_content_scale_scales_relative_as_position() -> void:
+	# Given: A root drawn at twice its size.
+	var root := get_tree().root
+	var scale_before := root.content_scale_factor
+	root.content_scale_factor = 2.0
+
+	# Given: A mounted control recording the motions it receives.
+	var control := Control.new()
+	control.size = Vector2(400, 400)
+	var motions: Array[InputEventMouseMotion] = []
+	control.gui_input.connect(
+		func(event: InputEvent) -> void:
+			if event is InputEventMouseMotion:
+				motions.append(event)
+	)
+	var input := await StdTestInput.mount(self, control)
+
+	# When: The mouse moves a distance in root coordinates.
+	input.move_mouse(Vector2(100, 100), Vector2(40, 0))
+
+	# Then: The control receives the position and distance as requested.
+	assert_eq(motions.size(), 1)
+	assert_eq(motions[0].position, Vector2(100, 100))
+	assert_eq(motions[0].relative, Vector2(40, 0))
+
+	# Then: The screen distance is in window pixels, as a player's motion is.
+	assert_eq(motions[0].screen_relative, Vector2(80, 0))
+
+	root.content_scale_factor = scale_before
+
+
 func test_mount_sizes_root_to_project_window() -> void:
 	# Given: The project's window size.
 	var window_size := Vector2(

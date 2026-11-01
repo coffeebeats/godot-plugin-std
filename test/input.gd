@@ -102,12 +102,13 @@ static func mount(test: Node, scene: Node) -> StdTestInput:
 ## hover and the root's mouse position.
 ##
 ## NOTE: A hidden cursor is revealed only by a motion crossing its threshold, so pass a
-## `relative` distance to stand in for a player moving the mouse. A held press starts a
-## drag the same way, once the distance sent adds up past the viewport's threshold.
+## `relative` distance, in the root's coordinates, to stand in for a player moving the
+## mouse. A held press starts a drag the same way, once the distance sent adds up past
+## the viewport's threshold.
 func move_mouse(position: Vector2, relative := Vector2.ZERO) -> void:
 	var event := InputEventMouseMotion.new()
-	event.relative = relative
-	event.screen_relative = relative
+	event.relative = get_tree().root.get_final_transform().basis_xform(relative)
+	event.screen_relative = event.relative
 	event.button_mask = Input.get_mouse_button_mask()
 	_set_mouse_position(event, position)
 
