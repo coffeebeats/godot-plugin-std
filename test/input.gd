@@ -89,12 +89,16 @@ func click_at(
 ##
 ## NOTE: A test mounts once, so several scenes go under one parent.
 ##
+## NOTE: This requires `--headless`. Elsewhere the root's mouse position follows the
+## real cursor, so a press would land there rather than where this node moved the mouse.
+##
 ## NOTE: `test` is typed as a `Node` so that this file loads in a project without GUT.
 static func mount(test: Node, scene: Node) -> StdTestInput:
 	assert(
 		test.has_method(&"add_child_autofree"),
 		"invalid argument: test isn't a GutTest",
 	)
+	assert(DisplayServer.get_name() == &"headless", "invalid state: not headless")
 	assert(_mounted == null, "invalid state: a helper is already mounted")
 
 	var input := StdTestInput.new()
