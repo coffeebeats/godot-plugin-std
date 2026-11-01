@@ -56,6 +56,7 @@ class ReleaseSwallower:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var input: StdTestInput = null
 var slot: StdInputSlot = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
@@ -124,7 +125,7 @@ func test_input_slot_mouse_motion_reveals_cursor_without_activating_kbm() -> voi
 	# Given: The slot is added to the scene with a joypad preferred.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = true
-	add_child_autofree(slot)
+	input = await StdTestInput.mount(self, slot)
 	autofree(slot.get_active_device())
 
 	# Given: A joypad connects, which activates it.
@@ -332,8 +333,7 @@ func test_input_slot_release_swallowed_upstream_is_caught_by_backstop() -> void:
 	add_child_autofree(ReleaseSwallower.new())
 
 	# When: The key is released.
-	Input.parse_input_event(_key(false))
-	Input.flush_buffered_events()
+	input.send(_key(false))
 
 	# Then: The slot hasn't seen the release.
 	assert_false(Input.is_action_pressed(_TEST_ACTION), "precondition: released")
@@ -555,7 +555,8 @@ func test_input_slot_leaving_the_tree_releases_held_actions() -> void:
 	await _dispatch(_key(true))
 
 	# When: The slot leaves the tree.
-	remove_child(slot)
+	slot.get_parent().remove_child(slot)
+	autofree(slot)
 
 	# Then: The hold ends.
 	assert_signal_emit_count(slot, "action_released", 1)
@@ -568,15 +569,13 @@ func test_input_slot_leaving_the_tree_releases_held_actions() -> void:
 
 
 func after_all() -> void:
-	for action in _list_test_actions():
+	for action in [
+		_TEST_ACTION,
+		_TEST_AXIS_ACTION,
+		_TEST_HIDE_ACTION,
+		_TEST_TRIGGER_ACTION,
+	]:
 		InputMap.erase_action(action)
-
-
-func after_each() -> void:
-	# NOTE: Every test action is released, so a held stick can't leak into the next.
-	for action in _list_test_actions():
-		Input.action_release(action)
-	await wait_process_frames(1)
 
 
 func before_all() -> void:
@@ -613,7 +612,7 @@ func before_each() -> void:
 func _activate_kbm_with_joypad_connected() -> void:
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = false
-	add_child_autofree(slot)
+	input = await StdTestInput.mount(self, slot)
 	autofree(slot.get_active_device())
 
 	slot.joypad_monitor.connected = [0] as Array[int]
@@ -640,11 +639,11 @@ func _button(pressed: bool) -> InputEventJoypadButton:
 	return event
 
 
-## _dispatch parses `event` through `Input` and lets two frames pass so the engine
-## delivers it to the scene.
+## _dispatch sends `event` as a player's input and lets a frame pass, so anything
+## polling `Input` in `_process` reads it.
 func _dispatch(event: InputEvent) -> void:
-	Input.parse_input_event(event)
-	await wait_process_frames(2)
+	input.send(event)
+	await wait_process_frames(1)
 
 
 ## _key returns a press, or a release when `pressed` is `false`, of `keycode`.
@@ -653,11 +652,6 @@ func _key(pressed: bool, keycode: Key = _TEST_KEY) -> InputEventKey:
 	event.keycode = keycode
 	event.pressed = pressed
 	return event
-
-
-## _list_test_actions returns every action `before_all` adds to the `InputMap`.
-func _list_test_actions() -> Array[StringName]:
-	return [_TEST_ACTION, _TEST_AXIS_ACTION, _TEST_HIDE_ACTION, _TEST_TRIGGER_ACTION]
 
 
 ## _make_action_set returns an action set declaring the test actions, hiding the cursor
