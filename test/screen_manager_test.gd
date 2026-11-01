@@ -29,6 +29,17 @@ class _PausingScene:
 		get_tree().paused = true
 
 
+## _PushingScene pushes a screen when it's ready, as a scene opening a dialog does.
+class _PushingScene:
+	extends Control
+
+	var manager: StdScreenManager = null
+	var screen: StdScreen = null
+
+	func _ready() -> void:
+		manager.push(screen, Control.new())
+
+
 ## _UnfinishedTransition mounts at once and never finishes.
 class _UnfinishedTransition:
 	extends StdScreenTransition
@@ -93,6 +104,25 @@ func test_push_and_wait_with_instance_nests_scene_under_manager():
 	assert_true(manager.is_ancestor_of(scene))
 
 
+func test_push_and_wait_with_push_waiting_ahead_returns_new_scene():
+	# Given: A manager.
+	var manager := _add_manager()
+
+	# Given: A scene already pushed, which leaves another push waiting for the next frame.
+	manager.push(StdScreen.new(), _create_pushing_scene(manager, StdScreen.new()))
+
+	# Given: A scene instance.
+	var instance := Control.new()
+	var screen := StdScreen.new()
+
+	# When: A screen is pushed with that instance in the same frame.
+	var scene := await manager.push_and_wait(screen, instance)
+
+	# Then: The second scene is the one returned, on top of the stack.
+	assert_eq(scene, instance)
+	assert_true(manager.is_current(screen))
+
+
 func test_push_and_wait_with_scene_on_top_returns_new_scene():
 	# Given: A manager with a screen on it.
 	var manager := _add_manager()
@@ -132,6 +162,30 @@ func test_push_and_wait_with_scene_pausing_tree_still_returns():
 	# Then: The push returned while the tree was paused.
 	assert_true(get_tree().paused)
 	assert_eq(scene, instance)
+
+
+func test_push_and_wait_with_scene_pushing_screen_waits_for_it():
+	# Given: A manager.
+	var manager := _add_manager()
+
+	# Given: A screen whose enter transition takes time.
+	var dialog := StdScreen.new()
+	dialog.transition = _DelayedTransition.new()
+
+	# Given: A record of that transition finishing.
+	var entered: Array[Node] = []
+	dialog.entered.connect(entered.append)
+
+	# Given: A scene which pushes that screen when it's ready.
+	var instance := _create_pushing_scene(manager, dialog)
+
+	# When: A screen is pushed with that scene.
+	var scene := await manager.push_and_wait(StdScreen.new(), instance)
+
+	# Then: The scene is returned, with the screen it pushed on top and entered.
+	assert_eq(scene, instance)
+	assert_true(manager.is_current(dialog))
+	assert_eq(entered.size(), 1)
 
 
 func test_push_and_wait_with_screen_transition_waits_for_it():
@@ -277,6 +331,17 @@ func _create_button() -> Button:
 	button.size = Vector2(100, 40)
 
 	return button
+
+
+func _create_pushing_scene(
+	manager: StdScreenManager,
+	screen: StdScreen,
+) -> _PushingScene:
+	var scene := _PushingScene.new()
+	scene.manager = manager
+	scene.screen = screen
+
+	return scene
 
 
 ## _register_scene makes `path` load a packed copy of `node`, which this frees.

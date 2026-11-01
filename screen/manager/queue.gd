@@ -77,6 +77,11 @@ func enqueue_or_run(operation: Callable) -> void:
 	_is_operating = false
 
 
+## is_idle returns whether no operation is running, scheduled or waiting.
+func is_idle() -> bool:
+	return not _is_active and not _drain_scheduled and _queue.is_empty()
+
+
 ## is_operating returns whether an operation's synchronous phase is executing.
 func is_operating() -> bool:
 	return _is_operating

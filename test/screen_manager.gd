@@ -7,9 +7,6 @@
 ## A test adds a `StdInputCursor` to the tree, as any manager requires, then this node,
 ## and awaits `push_and_wait`.
 ##
-## NOTE: A headless root stays 64x64 unless `StdTestInput` sizes it, so a test which
-## clicks a scene or reads its layout mounts this node with that helper before pushing.
-##
 
 class_name StdTestScreenManager
 extends StdScreenManager
@@ -23,9 +20,10 @@ const _TIMEOUT_MSEC := 10000
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## push_and_wait pushes `screen`, and returns its scene once its enter transition has
-## finished and the scene's layout has settled. The arguments are those of `push`, so a
-## bare `StdScreenTransition.new()` runs no transition.
+## push_and_wait pushes `screen`, and returns its scene once the stack's queue has
+## drained, so its enter transition and anything it pushed have finished, and the
+## scene's layout has settled. The arguments are those of `push`, so a bare
+## `StdScreenTransition.new()` runs no transition.
 ##
 ## NOTE: An empty screen sits under the first one pushed, because a manager won't pop
 ## its bottom screen, and `get_depth()` counts it.
@@ -38,18 +36,18 @@ func push_and_wait(
 
 	push(screen, instance, transition)
 
-	# NOTE: A failed load never emits `screen_entered`, so wait on the operation. A loop
-	# on `process_frame` keeps running for a scene that pauses the tree, unlike GUT's
-	# `wait_until`.
+	# NOTE: A failed load never emits `screen_entered`, so wait on the queue, which also
+	# covers a push waiting behind another. A loop on `process_frame` keeps running for a
+	# scene that pauses the tree, unlike GUT's `wait_until`.
 	var tree := get_tree()
 	var deadline := Time.get_ticks_msec() + _TIMEOUT_MSEC
-	while _active_op and Time.get_ticks_msec() < deadline:
+	while not _queue.is_idle() and Time.get_ticks_msec() < deadline:
 		await tree.process_frame
 
-	assert(_active_op == null, "invalid state: transition didn't finish")
+	assert(_queue.is_idle(), "invalid state: transition didn't finish")
 
 	var scene: Node = _scenes.get(screen)
-	assert(scene, "invalid state: screen didn't mount")
+	assert(scene, "invalid state: screen isn't on the stack")
 
 	await tree.process_frame
 
