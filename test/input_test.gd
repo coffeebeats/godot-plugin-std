@@ -484,6 +484,27 @@ func test_send_free_releases_each_held_input() -> void:
 	assert_false(Input.is_joy_button_pressed(1, JOY_BUTTON_X))
 
 
+func test_send_free_releases_action_after_bound_joypad_event() -> void:
+	# Given: An action bound to a joypad button.
+	InputMap.action_add_event(&"ui_accept", _make_joy_button(-1, JOY_BUTTON_Y))
+
+	# Given: A mounted scene holding the action.
+	var input := await StdTestInput.mount(self, Control.new())
+	input.press_action(&"ui_accept")
+
+	# Given: The bound button was pressed and released on the action's device.
+	input.send(_make_joy_button(0, JOY_BUTTON_Y))
+	var release := _make_joy_button(0, JOY_BUTTON_Y)
+	release.pressed = false
+	input.send(release)
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: The action isn't held.
+	assert_false(Input.is_action_pressed(&"ui_accept"))
+
+
 func test_send_free_resets_held_joypad_axis(
 	params = use_parameters(
 		[
@@ -532,6 +553,27 @@ func test_send_released_input_is_not_released_again_at_free() -> void:
 	assert_eq(keys.size(), count_before)
 
 
+func test_send_released_touch_is_not_released_again_at_free() -> void:
+	# Given: A mounted scene recording unhandled input.
+	var recorder := UnhandledInputRecorder.new()
+	var input := await StdTestInput.mount(self, recorder)
+
+	# Given: A touch was pressed and released.
+	var press := InputEventScreenTouch.new()
+	press.pressed = true
+	input.send(press)
+	input.send(InputEventScreenTouch.new())
+	assert_eq(_filter_touches(recorder.events).size(), 2, "precondition: touches seen")
+
+	# When: The scene is taken out of the helper and the helper is freed.
+	input.remove_child(recorder)
+	add_child_autofree(recorder)
+	input.free()
+
+	# Then: No further touch arrived.
+	assert_eq(_filter_touches(recorder.events).size(), 2)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -559,6 +601,13 @@ func _count_pressed(button: BaseButton) -> Array[bool]:
 	var pressed: Array[bool] = []
 	button.pressed.connect(func() -> void: pressed.append(true))
 	return pressed
+
+
+## _filter_touches returns the touches among `events`.
+func _filter_touches(events: Array[InputEvent]) -> Array[InputEvent]:
+	return events.filter(
+		func(event: InputEvent) -> bool: return event is InputEventScreenTouch
+	)
 
 
 func _make_button(position: Vector2) -> Button:

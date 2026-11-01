@@ -168,6 +168,20 @@ func _exit_tree() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _is_same_input returns whether `a` and `b` come from one origin on one device.
+##
+## NOTE: `is_match` isn't enough alone. An action matches any event bound to it, and a
+## touch matches nothing.
+func _is_same_input(a: InputEvent, b: InputEvent) -> bool:
+	if a.device != b.device or a.get_class() != b.get_class():
+		return false
+
+	if a is InputEventScreenTouch:
+		return a.index == b.index
+
+	return a.is_match(b, false)
+
+
 func _make_action(action: StringName, pressed: bool) -> InputEventAction:
 	var event := InputEventAction.new()
 	event.action = action
@@ -249,7 +263,7 @@ func _set_mouse_position(event: InputEventMouse, position: Vector2) -> void:
 ## the value while `is_pressed` is false below 0.5.
 func _track_held(event: InputEvent) -> void:
 	for index in _held.size():
-		if _held[index].device == event.device and _held[index].is_match(event, false):
+		if _is_same_input(_held[index], event):
 			_held.remove_at(index)
 			break
 
