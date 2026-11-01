@@ -88,16 +88,16 @@ func test_push_and_wait_with_bare_transition_skips_screen_transition():
 	# When: The screen is pushed with a bare transition.
 	await manager.push_and_wait(screen, Control.new(), StdScreenTransition.new())
 
-	# Then: The push returned with the screen entered.
+	# Then: The push returned with the screen on top.
 	assert_true(manager.is_current(screen))
 
 
 func test_push_and_wait_with_instance_nests_scene_under_manager():
-	# Given: A scene instance.
+	# Given: A screen and the scene instance to push with it.
 	var instance := Control.new()
 	var screen := StdScreen.new()
 
-	# Given: A manager to push it onto.
+	# Given: A manager to push them onto.
 	var manager := _add_manager()
 
 	# When: A screen is pushed with that instance.
@@ -125,7 +125,7 @@ func test_push_and_wait_with_push_interrupted_returns_scene():
 		func(_scene: Node) -> void: manager.push.call_deferred(other, Control.new())
 	)
 
-	# When: The screen is pushed.
+	# When: The screen is pushed with a scene instance.
 	var instance := Control.new()
 	var scene := await manager.push_and_wait(screen, instance)
 
@@ -145,11 +145,11 @@ func test_push_and_wait_with_push_waiting_ahead_returns_new_scene():
 	# Given: That scene already pushed, leaving its push waiting for the next frame.
 	manager.push(StdScreen.new(), opener)
 
-	# Given: A scene instance.
+	# Given: Another screen and the scene instance to push with it.
 	var instance := Control.new()
 	var screen := StdScreen.new()
 
-	# When: A screen is pushed with that instance in the same frame.
+	# When: That screen is pushed in the same frame.
 	var scene := await manager.push_and_wait(screen, instance)
 
 	# Then: The second scene is the one returned, on top of the stack.
@@ -183,11 +183,11 @@ func test_push_and_wait_with_scene_on_top_returns_new_scene():
 	var manager := _add_manager()
 	await manager.push_and_wait(StdScreen.new(), Control.new())
 
-	# Given: A second scene instance.
+	# Given: A second screen and the scene instance to push with it.
 	var instance := Control.new()
 	var screen := StdScreen.new()
 
-	# When: A screen is pushed with that instance.
+	# When: That screen is pushed.
 	var scene := await manager.push_and_wait(screen, instance)
 
 	# Then: The second scene is the one returned, on top of the stack.
@@ -345,9 +345,11 @@ func test_scene_pops_to_empty_base_screen():
 	manager.pop(&"result")
 	await wait_idle_frames(1)
 
-	# Then: The screen below takes over, and the result arrives.
+	# Then: The screen below takes over.
 	assert_false(manager.is_current(screen))
 	assert_eq(manager.get_depth(), 1)
+
+	# Then: The result arrives.
 	assert_eq(results, [&"result"])
 
 

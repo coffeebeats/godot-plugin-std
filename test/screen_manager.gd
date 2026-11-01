@@ -7,6 +7,9 @@
 ## A test adds a `StdInputCursor` to the tree, as any manager requires, then this node,
 ## and awaits `push_and_wait`.
 ##
+## NOTE: An empty screen sits under the first one pushed, because a manager won't pop
+## its bottom screen, and `get_depth()` counts it.
+##
 
 class_name StdTestScreenManager
 extends StdScreenManager
@@ -21,15 +24,12 @@ const _TIMEOUT_MSEC := 10000
 
 
 ## push_and_wait pushes `screen`, and returns its scene once that push has finished and
-## the scene's layout has settled, or null if the scene has since left the stack. The
-## arguments are those of `push`, so a bare `StdScreenTransition.new()` runs no
-## transition.
+## the scene's layout has settled, or null if the scene has since left the stack.
+##
+## NOTE: Passing a bare `StdScreenTransition.new()` skips the screen's own transition.
 ##
 ## NOTE: This doesn't wait for anything after the push, including a screen the scene
 ## itself pushes. That screen's `entered` signal reports when it's done.
-##
-## NOTE: An empty screen sits under the first one pushed, because a manager won't pop
-## its bottom screen, and `get_depth()` counts it.
 func push_and_wait(
 	screen: StdScreen,
 	instance: Node = null,
@@ -52,9 +52,8 @@ func push_and_wait(
 			_execute_op(op),
 	)
 
-	# NOTE: A failed load never emits `screen_entered`, and a push that gets interrupted
-	# never emits it either, so wait on the operation. A loop on `process_frame` keeps
-	# running for a scene that pauses the tree, unlike GUT's `wait_until`.
+	# NOTE: Neither a failed load nor an interrupted push emits `screen_entered`, so this
+	# polls the operation, on `process_frame` since GUT's `wait_until` stops under a pause.
 	var is_finished := func() -> bool: return started[0] and _active_op != op
 	var tree := get_tree()
 	var deadline := Time.get_ticks_msec() + _TIMEOUT_MSEC
