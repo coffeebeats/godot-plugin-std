@@ -46,8 +46,11 @@ static var _mounted: StdTestInput = null
 
 var _gut_layer: CanvasLayer = null
 var _held: Array[InputEvent] = []
-var _root_mouse_position := Vector2.ZERO
 var _root_size := Vector2i.ZERO
+
+## _window_mouse_position is where the mouse was at mount. It's in window coordinates
+## because the root's own coordinates change with its content scale.
+var _window_mouse_position := Vector2.ZERO
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -173,12 +176,13 @@ func _exit_tree() -> void:
 	for event in _held.duplicate():
 		send(_make_release(event))
 
-	move_mouse(_root_mouse_position)
+	var root := get_tree().root
+	move_mouse(root.get_final_transform().affine_inverse() * _window_mouse_position)
 
 	if _gut_layer:
 		_gut_layer.show()
 
-	get_tree().root.size = _root_size
+	root.size = _root_size
 
 	_mounted = null
 
@@ -246,8 +250,8 @@ func _mount(scene: Node) -> void:
 	assert(get_viewport() == root, "invalid state: not in the root viewport")
 
 	_mounted = self
-	_root_mouse_position = root.get_mouse_position()
 	_root_size = root.size
+	_window_mouse_position = root.get_final_transform() * root.get_mouse_position()
 
 	root.size = Vector2i(
 		ProjectSettings.get_setting(_SETTING_WINDOW_WIDTH),

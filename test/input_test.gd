@@ -296,6 +296,27 @@ func test_mount_free_restores_mouse_position() -> void:
 	assert_eq(root.get_mouse_position(), position_before)
 
 
+func test_mount_free_restores_mouse_position_after_content_scale_changes() -> void:
+	# Given: The mouse away from the root's origin.
+	var root := get_tree().root
+	var position_before := root.get_mouse_position()
+	_place_mouse(Vector2(600, 400))
+
+	# Given: A scene mounted at twice the root's scale.
+	var scale_before := root.content_scale_factor
+	root.content_scale_factor = 2.0
+	var input := await StdTestInput.mount(self, Control.new())
+
+	# When: The scale is restored and then the helper is freed, as GUT's order has it.
+	root.content_scale_factor = scale_before
+	input.free()
+
+	# Then: The mouse is back where it was.
+	assert_eq(root.get_mouse_position(), Vector2(600, 400))
+
+	_place_mouse(position_before)
+
+
 func test_mount_free_frees_mounted_scene() -> void:
 	# Given: A mounted scene.
 	var scene := Control.new()
@@ -810,6 +831,15 @@ func _make_joy_button(device: int, button_index: JoyButton) -> InputEventJoypadB
 	event.button_index = button_index
 	event.pressed = true
 	return event
+
+
+## _place_mouse moves the mouse to `position` with no helper to move it back.
+func _place_mouse(position: Vector2) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = position
+	motion.global_position = position
+	Input.parse_input_event(motion)
+	Input.flush_buffered_events()
 
 
 ## _record_gui_input returns an array which grows with the GUI input `control` receives.
