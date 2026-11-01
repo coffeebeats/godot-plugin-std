@@ -35,9 +35,12 @@ const _SETTING_WINDOW_WIDTH := &"display/window/size/viewport_width"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+## _mounted is the helper holding the root, since two can't restore it in the right
+## order when GUT frees them in the order they were added.
+static var _mounted: StdTestInput = null
+
 var _gut_layer: CanvasLayer = null
 var _held: Array[InputEvent] = []
-var _is_mounted: bool = false
 var _root_mouse_position := Vector2.ZERO
 var _root_size := Vector2i.ZERO
 
@@ -72,12 +75,15 @@ func click_at(
 ## hides GUT's panel, and returns once the scene's layout has settled. `test` is the
 ## calling `GutTest`, which frees the returned node when the test ends.
 ##
+## NOTE: A test mounts once, so several scenes go under one parent.
+##
 ## NOTE: `test` is typed as a `Node` so that this file loads in a project without GUT.
 static func mount(test: Node, scene: Node) -> StdTestInput:
 	assert(
 		test.has_method(&"add_child_autofree"),
 		"invalid argument: test isn't a GutTest",
 	)
+	assert(_mounted == null, "invalid state: a helper is already mounted")
 
 	var input := StdTestInput.new()
 	test.add_child_autofree(input)
@@ -143,7 +149,7 @@ func release_mouse(button_index: MouseButton = MOUSE_BUTTON_LEFT) -> void:
 ## send dispatches `event` as a player's input, for anything the other methods don't
 ## cover. A press or a joypad axis still held when this node is freed is released then.
 func send(event: InputEvent) -> void:
-	assert(_is_mounted, "invalid state: nothing mounted")
+	assert(_mounted == self, "invalid state: nothing mounted")
 
 	_track_held(event)
 
@@ -155,7 +161,7 @@ func send(event: InputEvent) -> void:
 
 
 func _exit_tree() -> void:
-	if not _is_mounted:
+	if _mounted != self:
 		return
 
 	for event in _held.duplicate():
@@ -167,6 +173,8 @@ func _exit_tree() -> void:
 		_gut_layer.show()
 
 	get_tree().root.size = _root_size
+
+	_mounted = null
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -231,7 +239,7 @@ func _mount(scene: Node) -> void:
 	var root := get_tree().root
 	assert(get_viewport() == root, "invalid state: not in the root viewport")
 
-	_is_mounted = true
+	_mounted = self
 	_root_mouse_position = root.get_mouse_position()
 	_root_size = root.size
 

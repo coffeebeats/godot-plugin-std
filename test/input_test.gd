@@ -232,6 +232,27 @@ func test_mount_registers_helper_to_be_freed_with_the_test() -> void:
 	assert_eq(gut.get_autofree().get_free_count(), count_before + 1)
 
 
+func test_mount_twice_fails_and_first_helper_restores_root() -> void:
+	# Given: The root's size before mounting.
+	var root_size := get_tree().root.size
+
+	# Given: A mounted scene.
+	var input := await StdTestInput.mount(self, Control.new())
+
+	# When: A second scene is mounted.
+	var second := await StdTestInput.mount(self, autofree(Control.new()))
+
+	# Then: The second mount failed.
+	assert_null(second)
+	assert_engine_error("already mounted")
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: The root has its size back.
+	assert_eq(get_tree().root.size, root_size)
+
+
 func test_mount_free_restores_root_and_gut_layer() -> void:
 	# Given: A root sized differently from the project's window.
 	var root := get_tree().root
