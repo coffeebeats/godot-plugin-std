@@ -23,6 +23,11 @@
 ##
 ## NOTE: Mounting awaits, which std otherwise never does, since only GUT tests call it.
 ##
+## NOTE: A release sent at free is stamped with the current frame, and GUT doesn't
+## always cross one between tests, so a test reading `Input.is_action_just_released`
+## before its first await can see one from the test before it. Awaiting `mount` crosses
+## a frame.
+##
 
 class_name StdTestInput
 extends Node
