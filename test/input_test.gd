@@ -164,6 +164,24 @@ func test_click_updates_polled_mouse_state() -> void:
 	assert_false(Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT))
 
 
+func test_click_control_in_offset_canvas_layer_lands_on_it() -> void:
+	# Given: A button in a canvas layer moved away from the root's origin.
+	var layer := CanvasLayer.new()
+	layer.offset = Vector2(300, 200)
+	var button := _make_button(Vector2.ZERO)
+	layer.add_child(button)
+	var pressed := _count_pressed(button)
+
+	# Given: The layer is mounted.
+	var input := await StdTestInput.mount(self, layer)
+
+	# When: The button is clicked.
+	input.click(button)
+
+	# Then: The click landed on it.
+	assert_eq(pressed.size(), 1)
+
+
 func test_click_at_position_picks_control_there() -> void:
 	# Given: A mounted button.
 	var button := _make_button(Vector2(400, 300))
