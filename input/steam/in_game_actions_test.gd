@@ -4,6 +4,21 @@
 
 extends GutTest
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+
+## _LabelsBySet names an action after the set it's written for.
+class _LabelsBySet:
+	extends StdInputSteamInGameActions
+
+	func _get_action_display_name(
+		action_set_name: StringName,
+		action_name: StringName,
+		_locale: StringName = &"",
+	) -> String:
+		return "%s %s" % [action_set_name, action_name]
+
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var manifest: StdInputSteamInGameActions = null
@@ -39,7 +54,7 @@ func test_render_writes_sets_layers_and_localization() -> void:
 			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
 			'\t\t\t"Button"',
 			"\t\t\t{",
-			'\t\t\t\t"ui_accept"\t\t\t\t"#action_ui_accept"',
+			'\t\t\t\t"ui_accept"\t\t\t\t"#action_Menu_ui_accept"',
 			"\t\t\t}",
 			"\t\t}",
 			"\t}",
@@ -53,7 +68,7 @@ func test_render_writes_sets_layers_and_localization() -> void:
 			'\t\t\t"parent_set_name"\t\t\t\t\t"Menu"',
 			'\t\t\t"Button"',
 			"\t\t\t{",
-			'\t\t\t\t"ui_tab_next"\t\t\t\t"#action_ui_tab_next"',
+			'\t\t\t\t"ui_tab_next"\t\t\t\t"#action_MenuTabbed_ui_tab_next"',
 			"\t\t\t}",
 			"\t\t}",
 			"\t}",
@@ -62,9 +77,9 @@ func test_render_writes_sets_layers_and_localization() -> void:
 			'\t\t"english"',
 			"\t\t{",
 			'\t\t\t"set_Menu"\t\t\t\t\t"Menu"',
-			'\t\t\t"action_ui_accept"\t\t\t\t\t"ui_accept"',
+			'\t\t\t"action_Menu_ui_accept"\t\t\t\t\t"ui_accept"',
 			'\t\t\t"layer_MenuTabbed"\t\t\t\t\t"MenuTabbed"',
-			'\t\t\t"action_ui_tab_next"\t\t\t\t\t"ui_tab_next"',
+			'\t\t\t"action_MenuTabbed_ui_tab_next"\t\t\t\t\t"ui_tab_next"',
 			"\t\t}",
 			"\t}",
 			"}",
@@ -103,22 +118,22 @@ func test_render_writes_analog_sections() -> void:
 			"\t\t\t{",
 			'\t\t\t\t"look"',
 			"\t\t\t\t{",
-			'\t\t\t\t\t"title"\t\t\t"#action_look"',
+			'\t\t\t\t\t"title"\t\t\t"#action_Gameplay_look"',
 			'\t\t\t\t\t"input_mode"\t\t\t"joystick_move"',
 			"\t\t\t\t}",
 			'\t\t\t\t"aim"',
 			"\t\t\t\t{",
-			'\t\t\t\t\t"title"\t\t\t"#action_aim"',
+			'\t\t\t\t\t"title"\t\t\t"#action_Gameplay_aim"',
 			'\t\t\t\t\t"input_mode"\t\t\t"absolute_mouse"',
 			"\t\t\t\t}",
 			"\t\t\t}",
 			'\t\t\t"AnalogTrigger"',
 			"\t\t\t{",
-			'\t\t\t\t"throttle"\t\t\t\t"#action_throttle"',
+			'\t\t\t\t"throttle"\t\t\t\t"#action_Gameplay_throttle"',
 			"\t\t\t}",
 			'\t\t\t"Button"',
 			"\t\t\t{",
-			'\t\t\t\t"fire"\t\t\t\t"#action_fire"',
+			'\t\t\t\t"fire"\t\t\t\t"#action_Gameplay_fire"',
 			"\t\t\t}",
 			"\t\t}",
 			"\t}",
@@ -165,7 +180,7 @@ func test_render_writes_a_parentless_layer_under_every_set() -> void:
 			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
 			'\t\t\t"Button"',
 			"\t\t\t{",
-			'\t\t\t\t"ui_accept"\t\t\t\t"#action_ui_accept"',
+			'\t\t\t\t"ui_accept"\t\t\t\t"#action_Menu_ui_accept"',
 			"\t\t\t}",
 			"\t\t}",
 			'\t\t"Gameplay"',
@@ -174,7 +189,7 @@ func test_render_writes_a_parentless_layer_under_every_set() -> void:
 			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
 			'\t\t\t"Button"',
 			"\t\t\t{",
-			'\t\t\t\t"fire"\t\t\t\t"#action_fire"',
+			'\t\t\t\t"fire"\t\t\t\t"#action_Gameplay_fire"',
 			"\t\t\t}",
 			"\t\t}",
 			"\t}",
@@ -188,7 +203,7 @@ func test_render_writes_a_parentless_layer_under_every_set() -> void:
 			'\t\t\t"parent_set_name"\t\t\t\t\t"Menu"',
 			'\t\t\t"Button"',
 			"\t\t\t{",
-			'\t\t\t\t"ui_cancel"\t\t\t\t"#action_ui_cancel"',
+			'\t\t\t\t"ui_cancel"\t\t\t\t"#action_Nav_ui_cancel"',
 			"\t\t\t}",
 			"\t\t}",
 			'\t\t"Nav_Gameplay"',
@@ -199,7 +214,7 @@ func test_render_writes_a_parentless_layer_under_every_set() -> void:
 			'\t\t\t"parent_set_name"\t\t\t\t\t"Gameplay"',
 			'\t\t\t"Button"',
 			"\t\t\t{",
-			'\t\t\t\t"ui_cancel"\t\t\t\t"#action_ui_cancel"',
+			'\t\t\t\t"ui_cancel"\t\t\t\t"#action_Nav_ui_cancel"',
 			"\t\t\t}",
 			"\t\t}",
 			"\t}",
@@ -208,17 +223,41 @@ func test_render_writes_a_parentless_layer_under_every_set() -> void:
 			'\t\t"english"',
 			"\t\t{",
 			'\t\t\t"set_Menu"\t\t\t\t\t"Menu"',
-			'\t\t\t"action_ui_accept"\t\t\t\t\t"ui_accept"',
+			'\t\t\t"action_Menu_ui_accept"\t\t\t\t\t"ui_accept"',
 			'\t\t\t"set_Gameplay"\t\t\t\t\t"Gameplay"',
-			'\t\t\t"action_fire"\t\t\t\t\t"fire"',
+			'\t\t\t"action_Gameplay_fire"\t\t\t\t\t"fire"',
 			'\t\t\t"layer_Nav"\t\t\t\t\t"Nav"',
-			'\t\t\t"action_ui_cancel"\t\t\t\t\t"ui_cancel"',
+			'\t\t\t"action_Nav_ui_cancel"\t\t\t\t\t"ui_cancel"',
 			"\t\t}",
 			"\t}",
 			"}",
 		]
 	)
 	assert_eq(got, want)
+
+
+func test_render_gives_an_action_a_label_per_set() -> void:
+	# Given: Two sets holding the same action, and a manifest naming it per set.
+	var menu := StdInputActionSet.new()
+	menu.name = &"Menu"
+	menu.actions_digital = [&"ui_accept"]
+
+	var splash := StdInputActionSet.new()
+	splash.name = &"Splash"
+	splash.actions_digital = [&"ui_accept"]
+
+	var labels := _LabelsBySet.new()
+
+	# When: The manifest is rendered for one language.
+	var got := labels.render([menu, splash], {"english": "en"})
+
+	# Then: Each set titles the action with its own key.
+	assert_true(got.contains('"ui_accept"\t\t\t\t"#action_Menu_ui_accept"'))
+	assert_true(got.contains('"ui_accept"\t\t\t\t"#action_Splash_ui_accept"'))
+
+	# Then: Each key has that set's label.
+	assert_true(got.contains('"action_Menu_ui_accept"\t\t\t\t\t"Menu ui_accept"'))
+	assert_true(got.contains('"action_Splash_ui_accept"\t\t\t\t\t"Splash ui_accept"'))
 
 
 func test_render_skips_null_action_sets() -> void:

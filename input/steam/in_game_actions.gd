@@ -281,6 +281,16 @@ static func _descendants(
 	return found
 
 
+## _get_action_key returns the localization key of `action` in `action_set`.
+##
+## NOTE: Steam keeps one label per key across the manifest, the last one written, so
+## the key names the set for each set's label to reach Steam.
+static func _get_action_key(
+	action_set: StdInputActionSet, action: StringName
+) -> String:
+	return "action_%s_%s" % [action_set.name, action]
+
+
 ## _list_button_actions returns the digital actions Steam defines as buttons: every one
 ## no stick drives, since a 2D analog action publishes its directional actions itself.
 static func _list_button_actions(action_set: StdInputActionSet) -> Array[StringName]:
@@ -381,7 +391,9 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 
 					_write_string("title", true, false)
 					_write_space()
-					_write_string("#action_%s" % action, false, true)
+					_write_string(
+						"#" + _get_action_key(action_set, action), false, true
+					)
 
 					_write_string("input_mode", true, false)
 					_write_space()
@@ -404,7 +416,14 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 					_write_string("title", true, false)
 					_write_space()
 					_write_string(
-						"#action_%s" % action_set.action_absolute_mouse, false, true
+						(
+							"#"
+							+ _get_action_key(
+								action_set, action_set.action_absolute_mouse
+							)
+						),
+						false,
+						true,
 					)
 
 					_write_string("input_mode", true, false)
@@ -425,7 +444,7 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 				for action in action_set.actions_analog_1d:
 					_write_string(action, true, false)
 					_write_space()
-					_write_string("#action_%s" % action, false)
+					_write_string("#" + _get_action_key(action_set, action), false)
 
 				_write_close_bracket()
 			"Button":
@@ -439,7 +458,7 @@ func _write_game_actions_in_action_set(action_set: StdInputActionSet) -> void:
 				for action in buttons:
 					_write_string(action, true, false)
 					_write_space()
-					_write_string("#action_%s" % action, false)
+					_write_string("#" + _get_action_key(action_set, action), false)
 
 				_write_close_bracket()
 
@@ -498,7 +517,7 @@ func _write_locale_actions_in_action_set(
 			else []
 		)
 	):
-		_write_string("action_" + action, true, false)
+		_write_string(_get_action_key(action_set, action), true, false)
 		_write_space()
 
 		var action_display_name := _get_action_display_name(
