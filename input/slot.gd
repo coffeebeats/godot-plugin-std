@@ -419,6 +419,9 @@ func stop_vibrate() -> void:
 
 
 func _enter_tree() -> void:
+	# NOTE: A hold's prompt can sit in a pause menu, so input runs in a paused tree.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
 	assert(
 		not StdGroup.with_id(GROUP_INPUT_SLOT).list_members().any(
 			func(m): return m.player_id == player_id
@@ -778,7 +781,6 @@ func _release_held_action(action: StringName) -> void:
 	_held_devices.erase(action)
 	_held_since.erase(action)
 	set_process(not _held_devices.is_empty())
-
 	action_released.emit(action, device, held_seconds)
 
 
@@ -891,10 +893,8 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 ## _update_held_actions starts the hold of each active action which `event` presses, and
 ## ends the hold of each which it releases for good.
 func _update_held_actions(event: InputEvent) -> void:
-	if (
-		not claim_kbm_input
-		and (event is InputEventKey or event is InputEventMouseButton)
-	):
+	var is_kbm := event is InputEventKey or event is InputEventMouseButton
+	if is_kbm and not claim_kbm_input:
 		return
 
 	for action: StringName in _actions:

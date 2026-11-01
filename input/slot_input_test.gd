@@ -565,6 +565,60 @@ func test_input_slot_leaving_the_tree_releases_held_actions() -> void:
 	assert_false(slot.is_processing())
 
 
+func test_input_slot_times_a_hold_while_the_tree_is_paused() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	await _activate_kbm_with_joypad_connected()
+
+	# Given: The key's action is active.
+	slot._actions = [_TEST_ACTION]
+
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# Given: The tree is paused, as behind a pause menu.
+	get_tree().paused = true
+
+	# When: The key is pressed.
+	input.send(_key(true))
+
+	# Then: The hold starts.
+	assert_signal_emit_count(slot, "action_pressed", 1)
+	assert_true(_is_held(_TEST_ACTION))
+
+	# When: The key is released.
+	input.send(_key(false))
+
+	# Then: The hold ends.
+	assert_signal_emit_count(slot, "action_released", 1)
+	assert_false(_is_held(_TEST_ACTION))
+
+
+func test_input_slot_backstop_runs_while_the_tree_is_paused() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	await _activate_kbm_with_joypad_connected()
+
+	# Given: The key's action is active.
+	slot._actions = [_TEST_ACTION]
+
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# Given: The key is held.
+	await _dispatch(_key(true))
+
+	# Given: The tree is paused, as behind a pause menu.
+	get_tree().paused = true
+
+	# When: `Input` drops the action with no event, as when the window loses focus.
+	Input.action_release(_TEST_ACTION)
+
+	# When: A frame passes.
+	await wait_process_frames(1)
+
+	# Then: The hold ends.
+	assert_signal_emit_count(slot, "action_released", 1)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -576,6 +630,10 @@ func after_all() -> void:
 		_TEST_TRIGGER_ACTION,
 	]:
 		InputMap.erase_action(action)
+
+
+func after_each() -> void:
+	get_tree().paused = false
 
 
 func before_all() -> void:
@@ -644,6 +702,11 @@ func _button(pressed: bool) -> InputEventJoypadButton:
 func _dispatch(event: InputEvent) -> void:
 	input.send(event)
 	await wait_process_frames(1)
+
+
+## _is_held returns whether the slot times `action` as held.
+func _is_held(action: StringName) -> bool:
+	return slot._held_since.has(action)
 
 
 ## _key returns a press, or a release when `pressed` is `false`, of `keycode`.
