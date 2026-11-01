@@ -47,7 +47,7 @@ The [scene](./scene) directory contains an implementation of a [`StateMachine`](
 
 The [test](./test) directory contains helpers for a project's GUT tests. [`StdTestInput`](./test/input.gd) mounts a scene at the root viewport under `--headless` and sends it real mouse motion, clicks, keys and actions through `Input`, so a test covers picking, focus and polled state.
 
-A scene run on its own, by F6 or in a test, has no [`StdScreenManager`](./screen/manager/manager.gd) among its ancestors, so it has no stack to push onto. [`StdTestScreen`](./test/screen.gd) holds a manager, and its `push` waits for the enter transition and returns the scene. A test that also clicks through what the scene pushes mounts it with `StdTestInput` before pushing.
+A scene run on its own, by F6 or in a test, has no [`StdScreenManager`](./screen/manager/manager.gd) among its ancestors, so it has no stack to push onto. [`StdTestScreenManager`](./test/screen_manager.gd) is a manager whose `push_and_wait` waits for the enter transition and returns the scene. A test that also clicks through what the scene pushes mounts the manager with `StdTestInput` before pushing.
 
 ## **Development**
 
