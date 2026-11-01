@@ -14,15 +14,6 @@
 ## `SubViewport` would isolate a scene, but `Input` doesn't see what `push_input` sends,
 ## so a scene that polls it would silently read nothing.
 ##
-## NOTE: A click at the headless root is lost to two things, which this node undoes
-## while it lives. The root window stays 64x64, and a press beyond it picks no control.
-## GUT's panel, on canvas layer 128, takes a press over most of that corner. Events do
-## dispatch there, whatever godotengine/godot#73557 suggests. A control with a set size
-## takes a click in the frame it mounts, and each event flushes `Input`'s buffer, so
-## neither loses one.
-##
-## NOTE: Mounting awaits, which std otherwise never does, since only GUT tests call it.
-##
 ## NOTE: A release sent at free is stamped with the current frame, and GUT doesn't
 ## always cross one between tests, so a test reading `Input.is_action_just_released`
 ## before its first await can see one from the test before it. Awaiting `mount` crosses
@@ -91,9 +82,8 @@ func click_at(
 ##
 ## NOTE: This requires `--headless`. Elsewhere the root's mouse position follows the
 ## real cursor, so a press would land there rather than where this node moved the mouse.
-##
-## NOTE: `test` is typed as a `Node` so that this file loads in a project without GUT.
 static func mount(test: Node, scene: Node) -> StdTestInput:
+	# NOTE: `test` is a `Node` so that this file loads in a project without GUT.
 	assert(
 		test.has_method(&"add_child_autofree"),
 		"invalid argument: test isn't a GutTest",
@@ -112,10 +102,8 @@ static func mount(test: Node, scene: Node) -> StdTestInput:
 ## move_mouse sends a motion to `position`, in the root's coordinates, which updates
 ## hover and the root's mouse position.
 ##
-## NOTE: A hidden cursor is revealed only by a motion crossing its threshold, so pass a
-## `relative` distance, in the root's coordinates, to stand in for a player moving the
-## mouse. A held press starts a drag the same way, once the distance sent adds up past
-## the viewport's threshold.
+## NOTE: Only a `relative` distance, in the root's coordinates, reveals a hidden cursor
+## or starts a drag from a held press, once it passes that feature's threshold.
 func move_mouse(position: Vector2, relative := Vector2.ZERO) -> void:
 	var event := InputEventMouseMotion.new()
 	event.relative = get_tree().root.get_final_transform().basis_xform(relative)
@@ -259,6 +247,12 @@ func _make_release(event: InputEvent) -> InputEvent:
 	return release
 
 
+## _mount adds `scene` once the root no longer loses a click. The headless root window
+## stays 64x64, where a press beyond it picks no control, and GUT's panel, on canvas
+## layer 128, takes a press over most of that corner.
+##
+## NOTE: Events do dispatch at the headless root, whatever godotengine/godot#73557
+## suggests.
 func _mount(scene: Node) -> void:
 	var root := get_tree().root
 	assert(get_viewport() == root, "invalid state: not in the root viewport")
@@ -296,8 +290,10 @@ func _set_mouse_position(event: InputEventMouse, position: Vector2) -> void:
 ## record from the same device on the same origin.
 ##
 ## NOTE: A joypad axis counts as held at any value other than zero, since `Input` keeps
-## the value while `is_pressed` is false below 0.5. A shortcut event is always pressed
-## but holds nothing, so an event without a `pressed` property to clear isn't held.
+## the value while `is_pressed` is false below 0.5.
+##
+## NOTE: A shortcut event is always pressed but holds nothing, so an event without a
+## `pressed` property to clear isn't held.
 func _track_held(event: InputEvent) -> void:
 	for index in _releases.size():
 		if _is_same_input(_releases[index], event):

@@ -265,9 +265,11 @@ func test_pop_recalculates_hover_at_mouse_away_from_origin() -> void:
 	input.click(button)
 	assert_true(button.is_hovered(), "precondition: button hovered")
 
-	# Given: A second screen covers it, and a motion there clears its hover.
+	# Given: A second screen covers it.
 	manager.push(_create_screen(), Control.new())
 	await wait_idle_frames(1)
+
+	# Given: A motion there clears its hover.
 	input.move_mouse(button.get_global_rect().get_center())
 	assert_false(button.is_hovered(), "precondition: button not hovered")
 

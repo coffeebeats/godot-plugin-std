@@ -115,9 +115,11 @@ func test_click_overlapping_controls_picks_topmost() -> void:
 
 
 func test_click_sends_motion_then_press_then_release() -> void:
-	# Given: A mounted button recording the GUI input it receives.
+	# Given: A button recording the GUI input it receives.
 	var button := _make_button(Vector2(100, 100))
 	var received := _record_gui_input(button)
+
+	# Given: The button is mounted.
 	var input := await StdTestInput.mount(self, button)
 
 	# When: The button is clicked.
@@ -202,9 +204,11 @@ func test_click_at_position_picks_control_there() -> void:
 
 
 func test_click_at_button_index_sends_that_button() -> void:
-	# Given: A mounted button recording the GUI input it receives.
+	# Given: A button recording the GUI input it receives.
 	var button := _make_button(Vector2(100, 100))
 	var received := _record_gui_input(button)
+
+	# Given: The button is mounted.
 	var input := await StdTestInput.mount(self, button)
 
 	# When: The button is clicked with the right mouse button.
@@ -307,8 +311,10 @@ func test_mount_free_restores_mouse_position_after_content_scale_changes() -> vo
 	root.content_scale_factor = 2.0
 	var input := await StdTestInput.mount(self, Control.new())
 
-	# When: The scale is restored and then the helper is freed, as GUT's order has it.
+	# Given: The scale was restored, as it is before GUT frees the helper.
 	root.content_scale_factor = scale_before
+
+	# When: The helper is freed.
 	input.free()
 
 	# Then: The mouse is back where it was.
@@ -374,7 +380,7 @@ func test_move_mouse_content_scale_scales_relative_as_position() -> void:
 	var scale_before := root.content_scale_factor
 	root.content_scale_factor = 2.0
 
-	# Given: A mounted control recording the motions it receives.
+	# Given: A control recording the motions it receives.
 	var control := Control.new()
 	control.size = Vector2(400, 400)
 	var motions: Array[InputEventMouseMotion] = []
@@ -383,6 +389,8 @@ func test_move_mouse_content_scale_scales_relative_as_position() -> void:
 			if event is InputEventMouseMotion:
 				motions.append(event)
 	)
+
+	# Given: The control is mounted.
 	var input := await StdTestInput.mount(self, control)
 
 	# When: The mouse moves a distance in root coordinates.
@@ -400,11 +408,13 @@ func test_move_mouse_content_scale_scales_relative_as_position() -> void:
 
 
 func test_send_shortcut_presses_button_and_frees_without_release() -> void:
-	# Given: A mounted button with a shortcut.
+	# Given: A button with a shortcut.
 	var shortcut := Shortcut.new()
 	var button := _make_button(Vector2.ZERO)
 	button.shortcut = shortcut
 	var pressed := _count_pressed(button)
+
+	# Given: The button is mounted.
 	var input := await StdTestInput.mount(self, button)
 
 	# When: The shortcut is sent.
@@ -479,11 +489,15 @@ func test_move_mouse_reveals_hidden_cursor_only_with_relative_distance() -> void
 
 
 func test_move_mouse_carries_buttons_held_at_the_time() -> void:
-	# Given: A mounted control recording its input, with the mouse over it.
+	# Given: A control recording its input.
 	var control := Control.new()
 	control.size = Vector2(200, 200)
 	var received := _record_gui_input(control)
+
+	# Given: The control is mounted.
 	var input := await StdTestInput.mount(self, control)
+
+	# Given: The mouse is over it.
 	input.move_mouse(Vector2(10, 10))
 
 	# When: The mouse moves during a press.
@@ -502,9 +516,11 @@ func test_move_mouse_carries_buttons_held_at_the_time() -> void:
 
 
 func test_move_mouse_without_relative_distance_starts_no_drag() -> void:
-	# Given: A press on a mounted drag source.
+	# Given: A mounted drag source.
 	var scene := DragScene.new()
 	var input := await StdTestInput.mount(self, scene)
+
+	# Given: The mouse is pressed on it.
 	input.move_mouse(scene.source.get_global_rect().get_center())
 	input.press_mouse()
 
@@ -593,10 +609,12 @@ func test_press_key_with_nothing_focused_reaches_unhandled_input() -> void:
 
 
 func test_press_mouse_holds_button_until_released() -> void:
-	# Given: A mounted button with the mouse over it.
+	# Given: A mounted button.
 	var button := _make_button(Vector2(100, 100))
 	var pressed := _count_pressed(button)
 	var input := await StdTestInput.mount(self, button)
+
+	# Given: The mouse is over it.
 	input.move_mouse(button.get_global_rect().get_center())
 
 	# When: The mouse button is pressed.
@@ -615,9 +633,11 @@ func test_press_mouse_holds_button_until_released() -> void:
 
 
 func test_press_mouse_then_move_mouse_past_threshold_drags_and_drops() -> void:
-	# Given: A press on a mounted drag source.
+	# Given: A mounted drag source.
 	var scene := DragScene.new()
 	var input := await StdTestInput.mount(self, scene)
+
+	# Given: The mouse is pressed on it.
 	input.move_mouse(scene.source.get_global_rect().get_center())
 	input.press_mouse()
 
@@ -680,8 +700,10 @@ func test_send_free_releases_action_after_bound_joypad_event() -> void:
 	# Given: An action bound to a joypad button.
 	InputMap.action_add_event(&"ui_accept", _make_joy_button(-1, JOY_BUTTON_Y))
 
-	# Given: A mounted scene holding the action.
+	# Given: A mounted scene.
 	var input := await StdTestInput.mount(self, Control.new())
+
+	# Given: The action is held.
 	input.press_action(&"ui_accept")
 
 	# Given: The bound button was pressed and released on the action's device.
@@ -755,9 +777,11 @@ func test_send_free_releases_input_of_event_changed_while_held() -> void:
 
 
 func test_send_free_ends_drag_in_progress() -> void:
-	# Given: A drag in progress in a mounted scene.
+	# Given: A mounted drag source.
 	var scene := DragScene.new()
 	var input := await StdTestInput.mount(self, scene)
+
+	# Given: A drag of it is in progress.
 	input.move_mouse(scene.source.get_global_rect().get_center())
 	input.press_mouse()
 	input.move_mouse(scene.target.get_global_rect().get_center(), _DRAG_DISTANCE)
