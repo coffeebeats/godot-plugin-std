@@ -1,5 +1,20 @@
 # Changelog
 
+## 7.2.0 (2026-11-01)
+
+## What's Changed
+* fix(input): draw the right mouse button with its own texture by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/572
+* feat(test): add `StdTestInput` to drive UI with real input under headless GUT by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/573
+* chore(deps-dev): bump ruff from 0.16.9 to 0.16.10 in the python group by @dependabot[bot] in https://github.com/coffeebeats/godot-plugin-std/pull/574
+* feat(test): add `StdTestScreenManager` to run a scene under a real stack by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/580
+* chore(input): save and restore Steam's state around the harness by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/581
+* test(input): move the remaining `SubViewport` setups onto `StdTestInput` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/582
+* fix(input): give each set its own action labels in the Steam manifest by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/586
+* chore(addons): update `GodotSteam` to latest (adds `linux64` binaries) by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/584
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v7.1.2...v7.2.0
+
 ## 7.1.2 (2026-10-27)
 
 ## What's Changed

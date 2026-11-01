@@ -1,5 +1,5 @@
 ##
-## std/input/action_set.gd
+## std/input/godot/glyph_set.gd
 ##
 ## `StdInputGlyphSet` is a base class for collections of glyph icon resources for
 ## specific device types.

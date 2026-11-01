@@ -1,7 +1,7 @@
 ##
-## std/input/action_set_keyboard.gd
+## std/input/godot/glyph_set_keyboard.gd
 ##
-## StdInputGlyphSetKeyboard is a collections of glyph icon resources for keyboard
+## StdInputGlyphSetKeyboard is a collection of glyph icon resources for keyboard
 ## devices.
 ##
 
@@ -137,8 +137,8 @@ func _get_origin_glyph(
 		assert(false, "invalid input; found conflicting keycodes")
 		return null
 
-	# NOTE: Only one of these properties can be set, so take the union of them in order
-	# to handle all of them.
+	# NOTE: A binding sets one of these properties, or both to the same key, so their
+	# union is the key.
 	var keycode: Key = event.keycode | event.physical_keycode
 
 	var texture: Texture2D = null
