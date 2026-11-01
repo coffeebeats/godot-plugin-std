@@ -9,11 +9,11 @@ Mount std's Steam joypad monitor, actions and glyph components under a real `Std
 
 ## When to use it
 
-GUT covers the Steam components only where they run without Steam (`input/steam/*_test.gd`, which skip when the `Steam` class is absent, as on Linux CI). The harness answers what Steam actually sends: a stick's `y` sign, whether a held stick reports once, trigger thresholds, `absolute_mouse` warps, origin counts and glyph cycling, `input_configuration_loaded` after a rebind, and the family a pad connected before the slot gets.
+GUT covers the Steam components only where they run without Steam (`input/steam/*_test.gd`, which skip when the `Steam` class is absent). The harness answers what Steam actually sends: a stick's `y` sign, whether a held stick reports once, trigger thresholds, `absolute_mouse` warps, origin counts and glyph cycling, `input_configuration_loaded` after a rebind, and the family a pad connected before the slot gets.
 
 ## Running it
 
-Needs the Steam client running and logged in on Windows or macOS (the GodotSteam submodule ships no Linux library), a controller whose family is enabled under Steam > Settings > Controller, and nothing else running as the app ID (close Spacewar when using 480).
+Needs the Steam client running and logged in on Windows or macOS (the submodule's Linux library is there for CI, not as a target), a controller whose family is enabled under Steam > Settings > Controller, and nothing else running as the app ID (close Spacewar when using 480).
 
 ```sh
 printf 480 > steam_appid.txt     # git-ignored; the game's own ID when it has a manifest
