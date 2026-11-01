@@ -45,7 +45,11 @@ const _SETTING_WINDOW_WIDTH := &"display/window/size/viewport_width"
 static var _mounted: StdTestInput = null
 
 var _gut_layer: CanvasLayer = null
-var _held: Array[InputEvent] = []
+
+## _releases holds the event which ends each input still held. Each is a copy taken at
+## the press, so a test that goes on to change the event it sent doesn't change it.
+var _releases: Array[InputEvent] = []
+
 var _root_size := Vector2i.ZERO
 
 ## _window_mouse_position is where the mouse was at mount. It's in window coordinates
@@ -173,8 +177,8 @@ func _exit_tree() -> void:
 	if _mounted != self:
 		return
 
-	for event in _held.duplicate():
-		send(_make_release(event))
+	for release in _releases.duplicate():
+		send(release)
 
 	var root := get_tree().root
 	move_mouse(root.get_final_transform().affine_inverse() * _window_mouse_position)
@@ -234,6 +238,9 @@ func _make_mouse_button(
 
 
 ## _make_release returns an event which ends the hold that `event` started.
+##
+## NOTE: A key repeat holds an action as a press does, but `Input` ignores a repeat for
+## key state, so a release can't be one.
 func _make_release(event: InputEvent) -> InputEvent:
 	var release: InputEvent = event.duplicate()
 
@@ -241,6 +248,9 @@ func _make_release(event: InputEvent) -> InputEvent:
 		release.axis_value = 0.0
 	else:
 		release.pressed = false
+
+	if release is InputEventKey:
+		release.echo = false
 
 	return release
 
@@ -278,16 +288,16 @@ func _set_mouse_position(event: InputEventMouse, position: Vector2) -> void:
 	event.position = position
 
 
-## _track_held records `event` if it holds input, replacing any earlier event from the
-## same device on the same origin.
+## _track_held records the release for `event` if it holds input, replacing any earlier
+## record from the same device on the same origin.
 ##
 ## NOTE: A joypad axis counts as held at any value other than zero, since `Input` keeps
 ## the value while `is_pressed` is false below 0.5. A shortcut event is always pressed
 ## but holds nothing, so an event without a `pressed` property to clear isn't held.
 func _track_held(event: InputEvent) -> void:
-	for index in _held.size():
-		if _is_same_input(_held[index], event):
-			_held.remove_at(index)
+	for index in _releases.size():
+		if _is_same_input(_releases[index], event):
+			_releases.remove_at(index)
 			break
 
 	var is_held: bool = (
@@ -297,4 +307,4 @@ func _track_held(event: InputEvent) -> void:
 	)
 
 	if is_held:
-		_held.append(event)
+		_releases.append(_make_release(event))

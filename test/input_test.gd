@@ -697,6 +697,63 @@ func test_send_free_releases_action_after_bound_joypad_event() -> void:
 	assert_false(Input.is_action_pressed(&"ui_accept"))
 
 
+func test_send_free_releases_key_repeat(
+	params = use_parameters(
+		[
+			# NOTE: This is a held key's repeat, which follows a press.
+			true,
+			# NOTE: This is a repeat alone, which holds only the action.
+			false,
+		]
+	)
+) -> void:
+	# Given: A mounted scene.
+	var input := await StdTestInput.mount(self, Control.new())
+
+	# Given: A key bound to `ui_accept` was pressed, or not.
+	if params:
+		input.press_key(KEY_ENTER)
+
+	# Given: The key repeated.
+	var repeat := InputEventKey.new()
+	repeat.keycode = KEY_ENTER
+	repeat.physical_keycode = KEY_ENTER
+	repeat.pressed = true
+	repeat.echo = true
+	input.send(repeat)
+	assert_true(Input.is_action_pressed(&"ui_accept"), "precondition: action held")
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: Neither the key nor its action is held.
+	assert_false(Input.is_key_pressed(KEY_ENTER))
+	assert_false(Input.is_action_pressed(&"ui_accept"))
+
+
+func test_send_free_releases_input_of_event_changed_while_held() -> void:
+	# Given: A mounted scene.
+	var input := await StdTestInput.mount(self, Control.new())
+
+	# Given: An event was sent which holds a joypad button.
+	var event := _make_joy_button(0, JOY_BUTTON_X)
+	input.send(event)
+
+	# Given: On a later frame, as the engine requires, the event was reused for another.
+	await get_tree().process_frame
+	event.button_index = JOY_BUTTON_Y
+	input.send(event)
+	assert_true(Input.is_joy_button_pressed(0, JOY_BUTTON_X), "precondition: X held")
+	assert_true(Input.is_joy_button_pressed(0, JOY_BUTTON_Y), "precondition: Y held")
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: Neither button is held.
+	assert_false(Input.is_joy_button_pressed(0, JOY_BUTTON_X))
+	assert_false(Input.is_joy_button_pressed(0, JOY_BUTTON_Y))
+
+
 func test_send_free_ends_drag_in_progress() -> void:
 	# Given: A drag in progress in a mounted scene.
 	var scene := DragScene.new()
