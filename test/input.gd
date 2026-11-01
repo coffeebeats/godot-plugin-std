@@ -91,11 +91,13 @@ static func mount(test: Node, scene: Node) -> StdTestInput:
 ## hover and the root's mouse position.
 ##
 ## NOTE: A hidden cursor is revealed only by a motion crossing its threshold, so pass a
-## `relative` distance to stand in for a player moving the mouse.
+## `relative` distance to stand in for a player moving the mouse. A held press starts a
+## drag the same way, once the distance sent adds up past the viewport's threshold.
 func move_mouse(position: Vector2, relative := Vector2.ZERO) -> void:
 	var event := InputEventMouseMotion.new()
 	event.relative = relative
 	event.screen_relative = relative
+	event.button_mask = Input.get_mouse_button_mask()
 	_set_mouse_position(event, position)
 
 	send(event)
@@ -117,6 +119,8 @@ func press_key(keycode: Key) -> void:
 
 ## press_mouse sends a press of `button_index` where the mouse is, held until it's
 ## released or this node is freed.
+##
+## NOTE: The event carries no `button_mask`, which the engine reads only from a motion.
 func press_mouse(button_index: MouseButton = MOUSE_BUTTON_LEFT) -> void:
 	send(_make_mouse_button(button_index, true))
 

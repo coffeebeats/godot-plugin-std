@@ -7,7 +7,47 @@ extends GutTest
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+const _DRAG_DISTANCE := Vector2(50, 0)
+const _DRAG_PAYLOAD := "payload"
 const _GUT_LAYER_PATH := ^"GutRunner/GutLayer"
+
+
+## DragScene holds a control which starts a drag, and one which accepts the drop.
+class DragScene:
+	extends Control
+
+	var source := DragSource.new()
+	var target := DropTarget.new()
+
+	func _init() -> void:
+		source.position = Vector2(100, 100)
+		source.size = Vector2(100, 40)
+		add_child(source)
+
+		target.position = Vector2(400, 100)
+		target.size = Vector2(100, 40)
+		add_child(target)
+
+
+## DragSource offers a payload to drag.
+class DragSource:
+	extends Button
+
+	func _get_drag_data(_at_position: Vector2) -> Variant:
+		return _DRAG_PAYLOAD
+
+
+## DropTarget records what's dropped on it.
+class DropTarget:
+	extends Control
+
+	var dropped: Array[Variant] = []
+
+	func _can_drop_data(_at_position: Vector2, _data: Variant) -> bool:
+		return true
+
+	func _drop_data(_at_position: Vector2, data: Variant) -> void:
+		dropped.append(data)
 
 
 ## UnhandledInputRecorder records the input events left unhandled in its viewport.
@@ -344,6 +384,43 @@ func test_move_mouse_reveals_hidden_cursor_only_with_relative_distance() -> void
 	assert_true(cursor.get_is_visible())
 
 
+func test_move_mouse_carries_buttons_held_at_the_time() -> void:
+	# Given: A mounted control recording its input, with the mouse over it.
+	var control := Control.new()
+	control.size = Vector2(200, 200)
+	var received := _record_gui_input(control)
+	var input := await StdTestInput.mount(self, control)
+	input.move_mouse(Vector2(10, 10))
+
+	# When: The mouse moves during a press.
+	input.press_mouse()
+	input.move_mouse(Vector2(20, 10))
+
+	# Then: The motion reports the held button.
+	assert_eq(received[-1].button_mask, MOUSE_BUTTON_MASK_LEFT)
+
+	# When: The mouse moves after the release.
+	input.release_mouse()
+	input.move_mouse(Vector2(30, 10))
+
+	# Then: The motion reports no button.
+	assert_eq(received[-1].button_mask, 0)
+
+
+func test_move_mouse_without_relative_distance_starts_no_drag() -> void:
+	# Given: A press on a mounted drag source.
+	var scene := DragScene.new()
+	var input := await StdTestInput.mount(self, scene)
+	input.move_mouse(scene.source.get_global_rect().get_center())
+	input.press_mouse()
+
+	# When: The mouse moves without a distance.
+	input.move_mouse(scene.target.get_global_rect().get_center())
+
+	# Then: No drag started.
+	assert_false(get_viewport().gui_is_dragging())
+
+
 func test_press_action_focused_button_holds_action_and_presses_on_release() -> void:
 	# Given: A mounted button.
 	var button := _make_button(Vector2(100, 100))
@@ -443,6 +520,27 @@ func test_press_mouse_holds_button_until_released() -> void:
 	assert_eq(pressed.size(), 1)
 
 
+func test_press_mouse_then_move_mouse_past_threshold_drags_and_drops() -> void:
+	# Given: A press on a mounted drag source.
+	var scene := DragScene.new()
+	var input := await StdTestInput.mount(self, scene)
+	input.move_mouse(scene.source.get_global_rect().get_center())
+	input.press_mouse()
+
+	# When: The mouse moves past the drag threshold.
+	input.move_mouse(scene.target.get_global_rect().get_center(), _DRAG_DISTANCE)
+
+	# Then: A drag started.
+	assert_true(get_viewport().gui_is_dragging())
+
+	# When: The mouse button is released over the target.
+	input.release_mouse()
+
+	# Then: The payload dropped and the drag ended.
+	assert_eq(scene.target.dropped, [_DRAG_PAYLOAD] as Array[Variant])
+	assert_false(get_viewport().gui_is_dragging())
+
+
 func test_send_dispatches_event_through_input() -> void:
 	# Given: A mounted scene recording unhandled input.
 	var recorder := UnhandledInputRecorder.new()
@@ -503,6 +601,22 @@ func test_send_free_releases_action_after_bound_joypad_event() -> void:
 
 	# Then: The action isn't held.
 	assert_false(Input.is_action_pressed(&"ui_accept"))
+
+
+func test_send_free_ends_drag_in_progress() -> void:
+	# Given: A drag in progress in a mounted scene.
+	var scene := DragScene.new()
+	var input := await StdTestInput.mount(self, scene)
+	input.move_mouse(scene.source.get_global_rect().get_center())
+	input.press_mouse()
+	input.move_mouse(scene.target.get_global_rect().get_center(), _DRAG_DISTANCE)
+	assert_true(get_viewport().gui_is_dragging(), "precondition: dragging")
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: The drag ended.
+	assert_false(get_viewport().gui_is_dragging())
 
 
 func test_send_free_resets_held_joypad_axis(
