@@ -25,10 +25,11 @@ const _PROPERTIES := {
 
 
 func test_glyph_set_mouse_origin_glyph_returns_each_buttons_own_texture() -> void:
-	# Given: A mouse glyph set with a distinct texture per button.
+	# Given: A mouse glyph set.
 	var glyph_set := StdInputGlyphSetMouse.new()
 	glyph_set.device_types = [StdInputDevice.DEVICE_TYPE_KEYBOARD]
 
+	# Given: A distinct texture for each button.
 	for button in _PROPERTIES:
 		glyph_set.set(_PROPERTIES[button], PlaceholderTexture2D.new())
 

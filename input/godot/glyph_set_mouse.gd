@@ -1,7 +1,7 @@
 ##
 ## std/input/godot/glyph_set_mouse.gd
 ##
-## StdInputGlyphSetMouse is a collections of glyph icon resources for mouse devices.
+## StdInputGlyphSetMouse is a collection of glyph icon resources for mouse devices.
 ##
 
 class_name StdInputGlyphSetMouse
