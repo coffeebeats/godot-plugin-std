@@ -8,7 +8,7 @@ extends GutTest
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
-const TransitionTests := preload("../transition_test.gd")
+const TransitionTests := preload("../../transition/transition_test.gd")
 const Manager := preload("../manager/manager.gd")
 const Screen := preload("../screen.gd")
 
@@ -118,7 +118,7 @@ func test_pop_to_skips_intermediate_transitions():
 
 	# Then: Only the last pop's exit transition is active.
 	assert_not_null(_manager._active_transition)
-	assert_true(_get_active_transition().pop_started)
+	assert_true(_get_active_transition().exit_started)
 
 
 func test_pop_intermediate_emits_exiting_for_each():
@@ -188,7 +188,7 @@ func test_pop_with_transition_delays_exited():
 	_manager.pop()
 	await wait_idle_frames(1)
 	var active := _get_active_transition()
-	assert_true(active.pop_started)
+	assert_true(active.exit_started)
 	assert_signal_not_emitted(_manager, "screen_exited")
 
 	# When: The transition unmounts and completes.
@@ -213,7 +213,7 @@ func test_pop_with_transition_blocks_input():
 	_manager.pop()
 	await wait_idle_frames(1)
 	var active := _get_active_transition()
-	assert_true(active.pop_started)
+	assert_true(active.exit_started)
 
 	# Then: An input blocker is present.
 	var blocker := (
@@ -311,7 +311,7 @@ func test_pop_with_transition_emits_popped_after_exited():
 	_manager.pop("value")
 	await wait_idle_frames(1)
 	var active := _get_active_transition()
-	assert_true(active.pop_started)
+	assert_true(active.exit_started)
 
 	# Then: Neither signal has fired yet.
 	assert_eq(order.size(), 0)
@@ -465,7 +465,7 @@ func before_each():
 
 
 func _create_screen(
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 	block_input_below: bool = true,
 ) -> Screen:
 	var screen := Screen.new()

@@ -371,7 +371,7 @@ func _create_recorder(recorder_name: StringName, sink: Array = []) -> _InputReco
 
 
 func _create_screen(
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 	block_input_below: bool = true,
 ) -> Screen:
 	var screen := Screen.new()

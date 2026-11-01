@@ -17,8 +17,8 @@ static var _logger := StdLogger.create(&"std/screen/operation")  # gdlint:ignore
 
 ## execute runs the operation.
 ##
-## NOTE: Subclasses *must* override this to implement the operation logic. Additionally,
-## the provided `done` callback when the operation finishes.
+## NOTE: Subclasses *must* override this to implement the operation logic, and call
+## `_done` when the operation finishes.
 func _execute(_manager: StdScreenManager, _done: Callable) -> void:
 	_done.call()
 
@@ -43,33 +43,29 @@ func _emit_entered(
 
 
 ## _run_transition sets up and dispatches a transition for the given operation method.
-## When `transition` is null, a bare `StdScreenTransition` is used so that the default
-## instant mount/unmount/swap behavior is applied without input-blocker overhead.
+## When `transition` is null, a bare `StdTransition` is used so that the default instant
+## mount/unmount/swap behavior is applied without input-blocker overhead.
 func _run_transition(
 	manager: StdScreenManager,
-	transition: StdScreenTransition,
+	transition: StdTransition,
 	method: StringName,
 	current_scene: Node,
-	entering_scene: Node,
+	entering: Node,
 	mount_fn: Callable,
 	unmount_fn: Callable,
 	on_done: Callable,
 	resolver: Callable = Callable(),
 ) -> void:
 	if transition == null:
-		transition = StdScreenTransition.new()
+		transition = StdTransition.new()
 		transition.block_input = false
 
 	var tx := transition.duplicate()
 
-	# NOTE: Capture the bool, not the transition resource. The lambda below
-	# fires after this function returns, and the temp transition created
-	# above is gone by then.
-	var block_input: bool = transition.block_input
-
 	var ctx := StdScreenTransitionContext.new(manager)
 	ctx.current_scene = current_scene
-	ctx.entering_scene = entering_scene
+	ctx.entering = entering
+	ctx.exiting = null if method == &"enter" else current_scene
 	ctx._mount_fn = mount_fn
 	ctx._resolver = resolver
 	ctx._unmount_fn = unmount_fn
@@ -79,9 +75,6 @@ func _run_transition(
 			manager._active_transition = null
 			manager._active_context = null
 
-			if block_input:
-				manager._unblock_input()
-
 			if manager._cursor and manager._cursor.get_is_visible():
 				manager._force_hover_recalculation.call_deferred()
 
@@ -89,16 +82,13 @@ func _run_transition(
 		CONNECT_ONE_SHOT,
 	)
 
-	if block_input:
-		manager._block_input()
-
 	manager._active_transition = tx
 	manager._active_context = ctx
 
 	match method:
-		&"push":
-			tx.push(ctx)
-		&"pop":
-			tx.pop(ctx)
-		&"replace":
-			tx.replace(ctx)
+		&"enter":
+			tx.enter(ctx)
+		&"exit":
+			tx.exit(ctx)
+		&"swap":
+			tx.swap(ctx)

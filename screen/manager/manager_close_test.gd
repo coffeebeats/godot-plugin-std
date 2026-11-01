@@ -10,7 +10,7 @@ extends GutTest
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Screen := preload("../screen.gd")
-const TransitionTests := preload("../transition_test.gd")
+const TransitionTests := preload("../../transition/transition_test.gd")
 const Manager := preload("manager.gd")
 
 const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant-name
@@ -189,7 +189,7 @@ func test_close_action_is_dropped_while_an_operation_is_in_flight():
 	_manager.push(_create_screen(true, [], MockTransition.new()), Control.new())
 	await wait_idle_frames(1)
 	var tx: MockTransition = _manager._active_transition
-	assert_true(tx.push_started)
+	assert_true(tx.enter_started)
 
 	# When: The close action is dispatched during the transition.
 	_dispatch_action(_TEST_CLOSE_ACTION)
@@ -258,7 +258,7 @@ func before_each():
 func _create_screen(
 	block_input_below: bool = true,
 	close_actions: Array[StringName] = [],
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> Screen:
 	var screen := Screen.new()
 	screen.block_input_below = block_input_below

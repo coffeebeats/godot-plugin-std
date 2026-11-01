@@ -1,7 +1,7 @@
 ##
-## screen/transitions/fade_test.gd
+## std/screen/transitions/curtain_test.gd
 ##
-## Tests pertaining to the 'StdScreenTransitionFade' class.
+## Tests pertaining to the 'StdScreenTransitionCurtain' class.
 ##
 
 extends GutTest
@@ -249,8 +249,9 @@ func _create_context(
 	return ctx
 
 
-func _create_fade() -> StdScreenTransitionFade:
-	var fade := StdScreenTransitionFade.new()
+func _create_fade() -> StdScreenTransitionCurtain:
+	var fade := StdScreenTransitionCurtain.new()
+	fade.block_input = false
 	fade.curve = StdTweenCurve.new()
 	fade.curve.duration = 0.01
 	return fade
@@ -272,24 +273,24 @@ func _find_overlay() -> ColorRect:
 
 
 func _start_push(
-	fade: StdScreenTransitionFade,
-	entering_scene: Node,
+	fade: StdScreenTransitionCurtain,
+	entering: Node,
 	current_scene: Node,
 ) -> Context:
 	var ctx := _create_context(current_scene)
-	ctx.entering_scene = entering_scene
+	ctx.entering = entering
 	ctx._mount_fn = func(_scene: Node) -> void: pass
 	ctx._unmount_fn = func() -> void: pass
 	ctx.finished.connect(
 		func(): _mock.transition_done.emit(),
 		CONNECT_ONE_SHOT,
 	)
-	fade.push(ctx)
+	fade.enter(ctx)
 	return ctx
 
 
 func _start_pop(
-	fade: StdScreenTransitionFade,
+	fade: StdScreenTransitionCurtain,
 	scene: Node,
 ) -> Context:
 	var ctx := _create_context(scene)
@@ -298,22 +299,22 @@ func _start_pop(
 		func(): _mock.transition_done.emit(),
 		CONNECT_ONE_SHOT,
 	)
-	fade.pop(ctx)
+	fade.exit(ctx)
 	return ctx
 
 
 func _start_replace(
-	fade: StdScreenTransitionFade,
-	entering_scene: Node,
+	fade: StdScreenTransitionCurtain,
+	entering: Node,
 	current_scene: Node,
 ) -> Context:
 	var ctx := _create_context(current_scene)
-	ctx.entering_scene = entering_scene
+	ctx.entering = entering
 	ctx._mount_fn = func(_scene: Node) -> void: pass
 	ctx._unmount_fn = func() -> void: pass
 	ctx.finished.connect(
 		func(): _mock.transition_done.emit(),
 		CONNECT_ONE_SHOT,
 	)
-	fade.replace(ctx)
+	fade.swap(ctx)
 	return ctx

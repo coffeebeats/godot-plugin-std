@@ -14,7 +14,7 @@ const Replace := preload("replace.gd")
 
 var _instance: Node
 var _screen: StdScreen
-var _transition: StdScreenTransition
+var _transition: StdTransition
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -23,7 +23,7 @@ var _transition: StdScreenTransition
 static func create(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> RefCounted:
 	var op = Replace.new()
 	op._screen = screen
@@ -84,7 +84,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	_run_transition(
 		manager,
 		transition,
-		&"replace",
+		&"swap",
 		scene_prev,
 		sync_scene,
 		func(scene: Node) -> void:

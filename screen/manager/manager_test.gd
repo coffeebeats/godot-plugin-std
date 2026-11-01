@@ -11,7 +11,7 @@ extends GutTest
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Screen := preload("../screen.gd")
-const TransitionTests := preload("../transition_test.gd")
+const TransitionTests := preload("../../transition/transition_test.gd")
 const Manager := preload("manager.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
@@ -155,7 +155,7 @@ func test_transition_push_overrides_default_transition():
 	# Then: The push-specific transition was used.
 	var active := _get_active_transition()
 	assert_true(active is MockTransition)
-	assert_true(active.push_started)
+	assert_true(active.enter_started)
 	assert_false(
 		active.block_input,
 		"active should be a duplicate of push_tx",
@@ -187,7 +187,7 @@ func test_transition_pop_overrides_default_transition():
 	# Then: The pop-specific transition was used.
 	var active := _get_active_transition()
 	assert_true(active is MockTransition)
-	assert_true(active.pop_started)
+	assert_true(active.exit_started)
 	assert_false(
 		active.block_input,
 		"active should be a duplicate of pop_tx",
@@ -212,7 +212,7 @@ func test_replace_uses_transition_push_override():
 	# Then: The push-specific transition was used for replace.
 	var active := _get_active_transition()
 	assert_true(active is MockTransition)
-	assert_true(active.replace_started)
+	assert_true(active.swap_started)
 	assert_false(
 		active.block_input,
 		"replace should use transition_push",
@@ -239,7 +239,7 @@ func test_exit_tree_stops_transitions_and_clears_queue():
 	var screen := _create_screen(MockTransition.new())
 	await _do_push(screen)
 	var active := _get_active_transition()
-	assert_true(active.push_started)
+	assert_true(active.enter_started)
 
 	# When: The manager is removed from the tree.
 	_manager.get_parent().remove_child(_manager)
@@ -285,7 +285,7 @@ func test_interrupting_blocking_transition_rearms_input_blocker():
 
 	# Then: The blocker is armed for the new transition.
 	var active := _get_active_transition()
-	assert_true(active.replace_started)
+	assert_true(active.swap_started)
 	assert_true(_manager._input_blocker.is_inside_tree(), "blocker re-armed")
 
 	# When: The new transition completes.
@@ -382,7 +382,7 @@ func before_each():
 
 
 func _create_screen(
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 	block_input_below: bool = true,
 ) -> Screen:
 	var screen := Screen.new()

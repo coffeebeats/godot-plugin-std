@@ -1,13 +1,13 @@
 ##
-## screen/transitions/fade.gd
+## std/screen/transitions/curtain.gd
 ##
-## StdScreenTransitionFade is a fade-to-color transition that uses a ColorRect overlay
-## to fade the screen in or out. Each duplicated transition instance manages its own
-## overlay.
+## StdScreenTransitionCurtain is a fade-to-color transition that hides a screen change
+## behind a ColorRect overlay on the manager, so it needs nothing from the scene. Each
+## duplicated transition instance manages its own overlay.
 ##
 
-class_name StdScreenTransitionFade
-extends StdScreenTransition
+class_name StdScreenTransitionCurtain
+extends StdTransition
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -30,23 +30,18 @@ extends StdScreenTransition
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _change_fn: Callable = Callable()
-var _context: StdScreenTransitionContext = null
 var _overlay: ColorRect = null
 var _tween: Tween = null
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _push(ctx: StdScreenTransitionContext) -> void:
+func _enter(ctx: StdTransitionContext) -> void:
 	_start_curtain(ctx, ctx.mount)
 
 
-func _pop(ctx: StdScreenTransitionContext) -> void:
+func _exit(ctx: StdTransitionContext) -> void:
 	_start_curtain(ctx, ctx.unmount)
-
-
-func _replace(ctx: StdScreenTransitionContext) -> void:
-	_start_curtain(ctx, ctx.swap)
 
 
 func _stop() -> void:
@@ -59,27 +54,36 @@ func _stop() -> void:
 		_overlay.queue_free()
 
 	_overlay = null
-	_context = null
 	_change_fn = Callable()
+
+
+func _swap(ctx: StdTransitionContext) -> void:
+	_start_curtain(ctx, ctx.swap)
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
 ## _start_curtain begins the fade-to-opaque, change, then fade-to-transparent sequence.
-func _start_curtain(ctx: StdScreenTransitionContext, change_fn: Callable) -> void:
-	_context = ctx
+func _start_curtain(ctx: StdTransitionContext, change_fn: Callable) -> void:
+	assert(
+		ctx is StdScreenTransitionContext,
+		"invalid argument; a curtain only runs on the screen stack",
+	)
+
+	var screen_ctx := ctx as StdScreenTransitionContext
+
 	_change_fn = change_fn
-	_overlay = _create_overlay(ctx)
+	_overlay = _create_overlay(screen_ctx)
 	_overlay.color = color
 
-	if ctx.current_scene:
+	if screen_ctx.current_scene:
 		# Fade to opaque over the current scene, then callback.
 		var c := curve_cover if curve_cover else curve
 		assert(c is StdTweenCurve, "invalid config; missing curve")
 		_fade_to(c, 1.0, _on_covered)
 	else:
-		# Initial push: start fully opaque, skip fade-out.
+		# An initial push starts fully opaque and skips the fade-out.
 		_overlay.modulate.a = 1.0
 		_on_covered()
 
@@ -117,7 +121,7 @@ func _create_overlay(ctx: StdScreenTransitionContext) -> ColorRect:
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 
-	ctx.manager.add_child(overlay, false, Node.INTERNAL_MODE_BACK)
+	ctx.mount_overlay(overlay)
 
 	return overlay
 
