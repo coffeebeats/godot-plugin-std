@@ -24,13 +24,37 @@ Run it in the background and read `results.log` beside the harness. User argumen
 
 In a game, std sits under `addons/std` and the harness finds its scripts from `StdInputSlot`'s path, so `harness.gd` and `run.gd` work from any directory under `res://`.
 
+## Saving Steam's state
+
+The manifest and the layout live in Steam's folders, outside the repo, and the next test of the app ID reads them. Save both before the harness changes either. A snapshot sits outside the repo, so removing a worktree can't take it, and each one has its own folder, so a later run can't overwrite it. Set `ACCOUNT` from `Steam/userdata/`; the block stops if that folder doesn't exist.
+
+```sh
+(
+  set -eu
+  APP=480
+  ACCOUNT="<account id>"
+  STEAM="/c/Program Files (x86)/Steam"   # macOS: "$HOME/Library/Application Support/Steam"
+  CONFIGS="$STEAM/steamapps/common/Steam Controller Configs"
+  test -d "$CONFIGS/$ACCOUNT"
+  SNAPSHOT="$HOME/.steam-input-harness/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$(dirname "$SNAPSHOT")"
+  mkdir "$SNAPSHOT"
+  if [ -e "$STEAM/controller_config/game_actions_$APP.vdf" ]; then
+    cp "$STEAM/controller_config/game_actions_$APP.vdf" "$SNAPSHOT/"
+  fi
+  if [ -d "$CONFIGS/$ACCOUNT/config/$APP" ]; then
+    cp -R "$CONFIGS/$ACCOUNT/config/$APP" "$SNAPSHOT/layouts"
+  fi
+  echo "saved $SNAPSHOT"
+)
+```
+
 ## The manifest
 
 Steam reads `game_actions_<appid>.vdf` from its own `controller_config` folder ahead of the path given to `setInputActionManifestFilePath`, which returns `false` while such a file exists. The harness writes its manifest beside itself; install it there (the folder is outside the repo, so say what is being replaced). No Steam restart is needed.
 
 ```sh
 CC="/c/Program Files (x86)/Steam/controller_config"   # macOS: ~/Library/Application Support/Steam/controller_config
-cp "$CC/game_actions_480.vdf" "$CC/game_actions_480.bak" 2>/dev/null
 cp .claude/skills/steam-input-harness/game_actions_480.vdf "$CC/"
 ```
 
@@ -49,7 +73,7 @@ A manifest binds nothing until the Steam account has a layout for it, so the `bi
 | Right stick or trackpad | Mouse | `pointer` |
 | Any second button | Button | `jump` (lets the cycling step see two origins) |
 
-Steam autosaves the selected layout as plain VDF at `Steam/steamapps/common/Steam Controller Configs/<account id>/config/<app id>/controller_<type>.vdf` (`Steam/userdata/` lists the account id). A copy of that file, placed at the same path on another account or machine, installs the layout without the panel; keep one under `layouts/` here when a person exports it. If the active layout keeps switching, open `steam://forceinputappid/480` in a browser and `steam://forceinputappid/0` afterwards.
+Steam autosaves the selected layout as plain VDF at `Steam/steamapps/common/Steam Controller Configs/<account id>/config/<app id>/controller_<type>.vdf` (`Steam/userdata/` lists the account id), and an edited one beside it as `<controller handle in hex>.vdf`. A copy of that file, placed at the same path on another account or machine, installs the layout without the panel; keep one under `layouts/` here when a person exports it. If the active layout keeps switching, open `steam://forceinputappid/480` in a browser and `steam://forceinputappid/0` afterwards.
 
 ## The steps
 
@@ -88,4 +112,36 @@ Each step ends by itself when its condition is met; Enter skips one. When a step
 
 ## Cleaning up
 
-Close the window, delete `steam_appid.txt`, restore the backed-up manifest if wanted, and reset `steam://forceinputappid/0` if it was set. The harness's `results.log`, `stdout.log` and `game_actions_*.vdf` are git-ignored.
+Close the window, which stays open after the last step, delete `steam_appid.txt`, and reset `steam://forceinputappid/0` if it was set. The harness's `results.log`, `stdout.log` and `game_actions_*.vdf` are git-ignored.
+
+Then put the snapshot back, named by what `ls ~/.steam-input-harness` lists. The block first moves the current manifest and layouts into a new snapshot, so nothing is deleted, the harness's layout stays available for a later run, and the restore can itself be restored. A file the snapshot doesn't hold is absent afterwards.
+
+```sh
+(
+  set -eu
+  APP=480
+  ACCOUNT="<account id>"
+  NAME="<snapshot name>"
+  STEAM="/c/Program Files (x86)/Steam"   # macOS: "$HOME/Library/Application Support/Steam"
+  CONFIGS="$STEAM/steamapps/common/Steam Controller Configs"
+  test -d "$CONFIGS/$ACCOUNT"
+  test -d "$HOME/.steam-input-harness/$NAME"
+  CURRENT="$HOME/.steam-input-harness/$(date +%Y%m%d-%H%M%S)-before-restore"
+  mkdir "$CURRENT"
+  if [ -e "$STEAM/controller_config/game_actions_$APP.vdf" ]; then
+    mv "$STEAM/controller_config/game_actions_$APP.vdf" "$CURRENT/"
+  fi
+  if [ -d "$CONFIGS/$ACCOUNT/config/$APP" ]; then
+    mv "$CONFIGS/$ACCOUNT/config/$APP" "$CURRENT/layouts"
+  fi
+  if [ -e "$HOME/.steam-input-harness/$NAME/game_actions_$APP.vdf" ]; then
+    cp "$HOME/.steam-input-harness/$NAME/game_actions_$APP.vdf" "$STEAM/controller_config/"
+  fi
+  if [ -d "$HOME/.steam-input-harness/$NAME/layouts" ]; then
+    cp -R "$HOME/.steam-input-harness/$NAME/layouts" "$CONFIGS/$ACCOUNT/config/$APP"
+  fi
+  echo "restored $NAME; the previous state is in $CURRENT"
+)
+```
+
+Steam autosaves layouts and reloads them on a focus change, so a restored file may not be the layout it shows at once. Open the app's controller settings and confirm the selected layout before the next test.
