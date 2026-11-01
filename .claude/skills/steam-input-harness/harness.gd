@@ -273,7 +273,7 @@ func _ready() -> void:
 
 	# NOTE: The manifest is written before the monitor calls inputInit. Steam prefers a
 	# `game_actions_<appid>.vdf` in its own `controller_config` folder, and the override
-	# call returns false while one exists; the skill covers copying it there.
+	# call returns false while one exists; the skill covers installing it there.
 	var manifest := StdInputSteamInGameActions.new()
 	manifest.app_id = _app_id
 	var vdf := manifest.render([_set], {"english": "en"})
@@ -602,7 +602,7 @@ func _s_connect_exit() -> void:
 		if harness_handle == 0:
 			_log(
 				(
-					"!! Steam has no Harness set: copy game_actions_%d.vdf into Steam's controller_config folder and relaunch"
+					"!! Steam has no Harness set: install game_actions_%d.vdf with steam_state.sh and relaunch"
 					% _app_id
 				)
 			)

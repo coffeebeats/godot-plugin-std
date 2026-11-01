@@ -26,15 +26,15 @@ In a game, std sits under `addons/std` and the harness finds its scripts from `S
 
 ## The manifest
 
-Steam reads `game_actions_<appid>.vdf` from its own `controller_config` folder ahead of the path given to `setInputActionManifestFilePath`, which returns `false` while such a file exists. The harness writes its manifest beside itself; install it there (the folder is outside the repo, so say what is being replaced). No Steam restart is needed.
+Steam reads `game_actions_<appid>.vdf` from its own `controller_config` folder ahead of the path given to `setInputActionManifestFilePath`, which returns `false` while such a file exists. The harness writes its manifest beside itself; install it into Steam's folder with the account ID from `Steam/userdata/` (the folder is outside the repo, so say what is being replaced). No Steam restart is needed.
 
 ```sh
-CC="/c/Program Files (x86)/Steam/controller_config"   # macOS: ~/Library/Application Support/Steam/controller_config
-cp "$CC/game_actions_480.vdf" "$CC/game_actions_480.bak" 2>/dev/null
-cp .claude/skills/steam-input-harness/game_actions_480.vdf "$CC/"
+sh .claude/skills/steam-input-harness/steam_state.sh install <account id>
 ```
 
-To test a game's own manifest instead, `godot --headless -s addons/std/input/steam/write_in_game_actions.gd` writes it beside `project.godot`; install it the same way and swap the harness action set for one of the game's in `_build_action_set`.
+The next test of the app ID reads Steam's manifest and layout, so the first install saves both to `~/.steam-input-harness/saved-<account id>`, outside the repo where removing a worktree can't take them. Later installs leave that folder alone until a restore, so they can't save the harness's files over Steam's own. They also don't save what they overwrite, so restore first if something else has replaced the manifest since the last install. Set `APP` for another app ID, and on macOS set `STEAM="$HOME/Library/Application Support/Steam"`.
+
+To test a game's own manifest instead, `godot --headless -s addons/std/input/steam/write_in_game_actions.gd` writes it beside `project.godot`; install it the same way, with its path after the account ID, and swap the harness action set for one of the game's in `_build_action_set`.
 
 ## The layout
 
@@ -49,7 +49,7 @@ A manifest binds nothing until the Steam account has a layout for it, so the `bi
 | Right stick or trackpad | Mouse | `pointer` |
 | Any second button | Button | `jump` (lets the cycling step see two origins) |
 
-Steam autosaves the selected layout as plain VDF at `Steam/steamapps/common/Steam Controller Configs/<account id>/config/<app id>/controller_<type>.vdf` (`Steam/userdata/` lists the account id). A copy of that file, placed at the same path on another account or machine, installs the layout without the panel; keep one under `layouts/` here when a person exports it. If the active layout keeps switching, open `steam://forceinputappid/480` in a browser and `steam://forceinputappid/0` afterwards.
+Steam autosaves the selected layout as plain VDF at `Steam/steamapps/common/Steam Controller Configs/<account id>/config/<app id>/controller_<type>.vdf` (`Steam/userdata/` lists the account id), and an edited one beside it as `<controller handle in hex>.vdf`. A copy of `controller_<type>.vdf`, placed at the same path on another account or machine, installs the layout without the panel; keep one under `layouts/` here when a person exports it. If the active layout keeps switching, open `steam://forceinputappid/480` in a browser and `steam://forceinputappid/0` afterwards.
 
 ## The steps
 
@@ -88,4 +88,14 @@ Each step ends by itself when its condition is met; Enter skips one. When a step
 
 ## Cleaning up
 
-Close the window, delete `steam_appid.txt`, restore the backed-up manifest if wanted, and reset `steam://forceinputappid/0` if it was set. The harness's `results.log`, `stdout.log` and `game_actions_*.vdf` are git-ignored.
+Close the window, which stays open after the last step, delete `steam_appid.txt`, and reset `steam://forceinputappid/0` if it was set. The harness's `results.log`, `stdout.log` and `game_actions_*.vdf` are git-ignored.
+
+Then put Steam's state back:
+
+```sh
+sh .claude/skills/steam-input-harness/steam_state.sh restore <account id>
+```
+
+The current manifest and layouts move to a timestamped folder in `~/.steam-input-harness`, along with the saved state as `restored/`, so nothing is deleted and the harness's layout stays available for a later run. If a restore stops partway, fix what it reports and run it again, since the saved state stays whole until the end. A file the saved state doesn't hold is absent afterwards.
+
+Steam autosaves layouts and reloads them on a focus change, so a restored file may not be the layout it shows at once. Steam records the selection in `Steam Controller Configs/<account id>/config/configset_*.vdf`, keyed by app ID, and a restore leaves those files alone. Open the app's controller settings and confirm the selected layout before the next test.
