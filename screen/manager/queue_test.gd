@@ -186,52 +186,6 @@ func test_clear_prevents_queued_operations_from_running():
 	assert_not_called(spy, "called", ["second"])
 
 
-func test_is_idle_with_no_operations_returns_true():
-	# Then: A new queue reports idle.
-	assert_true(_queue.is_idle())
-
-
-func test_is_idle_during_async_phase_returns_false():
-	# Given: An operation in its async phase (sync returned, `complete` not yet called).
-	_queue.enqueue_or_run(func(): pass)
-
-	# Then: The queue isn't idle.
-	assert_false(_queue.is_idle())
-
-	# When: The operation completes.
-	_queue.complete()
-
-	# Then: The queue is idle.
-	assert_true(_queue.is_idle())
-
-
-func test_is_idle_with_operation_scheduled_returns_false():
-	# Given: A spy to track inner execution.
-	var spy = double(Spy).new()
-
-	# When: A completed operation leaves a nested one scheduled for the next frame.
-	_queue.enqueue_or_run(
-		func():
-			_queue.enqueue_or_run(
-				func():
-					spy.called()
-					_queue.complete(),
-			)
-			_queue.complete(),
-	)
-
-	# Then: The queue isn't idle, though the scheduled operation hasn't run.
-	assert_not_called(spy, "called")
-	assert_false(_queue.is_idle())
-
-	# When: A frame passes, allowing `call_deferred` to fire.
-	await get_tree().process_frame
-
-	# Then: The queue is idle once the scheduled operation has completed.
-	assert_called(spy, "called")
-	assert_true(_queue.is_idle())
-
-
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

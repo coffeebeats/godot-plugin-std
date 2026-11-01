@@ -20,10 +20,13 @@ const _TIMEOUT_MSEC := 10000
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## push_and_wait pushes `screen`, and returns its scene once the stack's queue has
-## drained, so its enter transition and anything it pushed have finished, and the
-## scene's layout has settled. The arguments are those of `push`, so a bare
-## `StdScreenTransition.new()` runs no transition.
+## push_and_wait pushes `screen`, and returns its scene once that push has finished and
+## the scene's layout has settled, or null if the scene has since left the stack. The
+## arguments are those of `push`, so a bare `StdScreenTransition.new()` runs no
+## transition.
+##
+## NOTE: This doesn't wait for anything after the push, including a screen the scene
+## itself pushes. That screen's `entered` signal reports when it's done.
 ##
 ## NOTE: An empty screen sits under the first one pushed, because a manager won't pop
 ## its bottom screen, and `get_depth()` counts it.
@@ -33,25 +36,41 @@ func push_and_wait(
 	transition: StdScreenTransition = null,
 ) -> Node:
 	assert(is_node_ready(), "invalid state: not in the tree")
+	assert(screen != null, "invalid argument: missing screen")
 
-	push(screen, instance, transition)
+	# NOTE: A lambda can't rebind a local, so these are arrays.
+	var mounted := [false]
+	var started := [false]
 
-	# NOTE: A failed load never emits `screen_entered`, so wait on the queue, which also
-	# covers a push waiting behind another. A loop on `process_frame` keeps running for a
-	# scene that pauses the tree, unlike GUT's `wait_until`.
+	var on_entering := func(_scene: Node) -> void: mounted[0] = true
+	screen.entering.connect(on_entering)
+
+	var op: Operation = Push.create(screen, instance, transition)
+	_queue.enqueue_or_run(
+		func() -> void:
+			started[0] = true
+			_execute_op(op),
+	)
+
+	# NOTE: A failed load never emits `screen_entered`, and a push that gets interrupted
+	# never emits it either, so wait on the operation. A loop on `process_frame` keeps
+	# running for a scene that pauses the tree, unlike GUT's `wait_until`.
+	var is_finished := func() -> bool: return started[0] and _active_op != op
 	var tree := get_tree()
 	var deadline := Time.get_ticks_msec() + _TIMEOUT_MSEC
-	while not _queue.is_idle() and Time.get_ticks_msec() < deadline:
+	while not is_finished.call() and Time.get_ticks_msec() < deadline:
 		await tree.process_frame
 
-	assert(_queue.is_idle(), "invalid state: transition didn't finish")
+	screen.entering.disconnect(on_entering)
 
-	var scene: Node = _scenes.get(screen)
-	assert(scene, "invalid state: screen isn't on the stack")
+	assert(is_finished.call(), "invalid state: transition didn't finish")
+
+	# NOTE: A push of a screen already on the stack mounts nothing and is no failure.
+	assert(mounted[0] or _scenes.has(screen), "invalid state: screen didn't mount")
 
 	await tree.process_frame
 
-	return scene
+	return _scenes.get(screen)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
