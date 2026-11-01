@@ -131,10 +131,10 @@ func test_action_trigger_pressed_with_action_on_another_slot_raises_it() -> void
 func test_action_trigger_press_mode_button_holds_action_until_released() -> void:
 	# Given: A press-mode button held down by the mouse.
 	var parts := await _hold_button()
-	var viewport: SubViewport = parts[0]
+	var input: StdTestInput = parts[0]
 
 	# When: The mouse releases the button.
-	viewport.push_input(_mouse_left(false))
+	input.release_mouse()
 	await wait_idle_frames(2)
 
 	# Then: The handler saw the release.
@@ -211,56 +211,12 @@ func before_each() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _add_button adds a button carrying a trigger for the test action under `parent`,
-## which defaults to the test.
-func _add_button(
-	parent: Node = null,
-	action_mode: BaseButton.ActionMode = BaseButton.ACTION_MODE_BUTTON_RELEASE,
-) -> Button:
-	var button := Button.new()
-	button.action_mode = action_mode
-	button.size = Vector2(100, 40)
-
-	var trigger := StdInputActionTrigger.new()
-	trigger.action = _TEST_ACTION
-	button.add_child(trigger)
-
-	if parent:
-		parent.add_child(button)
-		autofree(button)
-	else:
-		add_child_autofree(button)
+## _add_button adds a release-mode button carrying a trigger for the test action.
+func _add_button() -> Button:
+	var button := _make_button(BaseButton.ACTION_MODE_BUTTON_RELEASE)
+	add_child_autofree(button)
 
 	return button
-
-
-## _hold_button adds a press-mode button inside a SubViewport and presses it with the
-## mouse, checking that the trigger holds the action. Returns the viewport and button.
-func _hold_button() -> Array:
-	var viewport := SubViewport.new()
-	viewport.size = Vector2i(400, 300)
-	add_child_autofree(viewport)
-
-	var button := _add_button(viewport, BaseButton.ACTION_MODE_BUTTON_PRESS)
-	await wait_idle_frames(1)
-
-	viewport.push_input(_mouse_left(true))
-	await wait_idle_frames(2)
-
-	assert_true(button.is_pressed(), "precondition: button should be held")
-	assert_eq(_recorder.seen, [true] as Array[bool], "precondition: press only")
-	assert_true(Input.is_action_pressed(_TEST_ACTION), "precondition: action held")
-
-	return [viewport, button]
-
-
-## _mouse_left returns a left mouse button event over the held button.
-func _mouse_left(pressed: bool) -> InputEventMouseButton:
-	var event := InputEventMouseButton.new()
-	event.button_index = MOUSE_BUTTON_LEFT
-	event.pressed = pressed
-	event.position = Vector2(50, 20)
-	return event
 
 
 ## _add_slot adds an input slot for `player_id` to the tree, sharing `cursor` if given.
@@ -270,3 +226,34 @@ func _add_slot(player_id: int = 1, cursor: StdInputCursor = null) -> StdInputSlo
 	autofree(slot.get_active_device())
 
 	return slot
+
+
+## _hold_button mounts a press-mode button and presses it with the mouse, checking that
+## the trigger holds the action. Returns the helper and the button.
+func _hold_button() -> Array:
+	var button := _make_button(BaseButton.ACTION_MODE_BUTTON_PRESS)
+	var input := await StdTestInput.mount(self, button)
+
+	input.move_mouse(button.get_global_rect().get_center())
+	input.press_mouse()
+	await wait_idle_frames(2)
+
+	assert_true(button.is_pressed(), "precondition: button should be held")
+	assert_eq(_recorder.seen, [true] as Array[bool], "precondition: press only")
+	assert_true(Input.is_action_pressed(_TEST_ACTION), "precondition: action held")
+
+	return [input, button]
+
+
+## _make_button returns a button carrying a trigger for the test action, outside the
+## tree.
+func _make_button(action_mode: BaseButton.ActionMode) -> Button:
+	var button := Button.new()
+	button.action_mode = action_mode
+	button.size = Vector2(100, 40)
+
+	var trigger := StdInputActionTrigger.new()
+	trigger.action = _TEST_ACTION
+	button.add_child(trigger)
+
+	return button
