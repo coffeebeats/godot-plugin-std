@@ -11,7 +11,7 @@
 ## being queue-freed, and nothing is freed outright while it still has children.
 ##
 ## NOTE: A scene run on its own, by F6 or in a test, has no manager among its ancestors,
-## so it has no stack to push onto. A test gets one by mounting it with `StdTestScreen`.
+## so it has no stack to push onto. A test gets one by pushing it onto `StdTestScreen`.
 ##
 
 class_name StdScreenManager

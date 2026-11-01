@@ -91,7 +91,7 @@ Tests use GUT framework. Test files end in `_test.gd`. Test cases are named like
 
 A test that needs a click, key or action to reach a control uses `StdTestInput` rather than emitting a signal or calling the handler. It ships in `dist` so a downstream project's tests can use it. Its `mount` awaits, which is allowed because only GUT tests call it.
 
-A test of a scene that uses the screen stack mounts it with `StdTestScreen`, which ships and awaits on the same terms, rather than copying what the stack does into the scene.
+A test of a scene that uses the screen stack pushes it onto a `StdTestScreen`, which ships and awaits on the same terms, rather than copying what the stack does into the scene.
 
 ### Test Structure
 
