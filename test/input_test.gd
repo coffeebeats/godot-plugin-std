@@ -399,6 +399,30 @@ func test_move_mouse_content_scale_scales_relative_as_position() -> void:
 	root.content_scale_factor = scale_before
 
 
+func test_send_shortcut_presses_button_and_frees_without_release() -> void:
+	# Given: A mounted button with a shortcut.
+	var shortcut := Shortcut.new()
+	var button := _make_button(Vector2.ZERO)
+	button.shortcut = shortcut
+	var pressed := _count_pressed(button)
+	var input := await StdTestInput.mount(self, button)
+
+	# When: The shortcut is sent.
+	var event := InputEventShortcut.new()
+	event.shortcut = shortcut
+	input.send(event)
+
+	# Then: The button is pressed.
+	assert_eq(pressed.size(), 1)
+
+	# When: The helper is freed.
+	input.free()
+
+	# Then: Nothing was released, so no error was raised.
+	assert_engine_error_count(0)
+	assert_push_error_count(0)
+
+
 func test_mount_sizes_root_to_project_window() -> void:
 	# Given: The project's window size.
 	var window_size := Vector2(

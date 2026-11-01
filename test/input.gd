@@ -278,7 +278,8 @@ func _set_mouse_position(event: InputEventMouse, position: Vector2) -> void:
 ## same device on the same origin.
 ##
 ## NOTE: A joypad axis counts as held at any value other than zero, since `Input` keeps
-## the value while `is_pressed` is false below 0.5.
+## the value while `is_pressed` is false below 0.5. A shortcut event is always pressed
+## but holds nothing, so an event without a `pressed` property to clear isn't held.
 func _track_held(event: InputEvent) -> void:
 	for index in _held.size():
 		if _is_same_input(_held[index], event):
@@ -288,7 +289,7 @@ func _track_held(event: InputEvent) -> void:
 	var is_held: bool = (
 		not is_zero_approx(event.axis_value)
 		if event is InputEventJoypadMotion
-		else event.is_pressed()
+		else event.is_pressed() and &"pressed" in event
 	)
 
 	if is_held:
