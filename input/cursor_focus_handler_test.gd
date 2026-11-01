@@ -467,23 +467,18 @@ func test_clear_press_on_focus_root_exit_sends_focus_exit_to_pressed_button() ->
 	var modal := Control.new()
 	add_child_autofree(modal)
 
-	var sv := SubViewport.new()
-	sv.size = Vector2i(400, 300)
-	add_child_autofree(sv)
-
-	# Given: A button inside the SubViewport with a focus handler.
-	var button := Button.new()
-	button.focus_mode = Control.FOCUS_ALL
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Given: A press-mode button with a focus handler.
+	var setup := await _mount_button(false)
+	var input: StdTestInput = setup[0]
+	var button: Button = setup[1]
+	var handler: StdInputCursorFocusHandler = setup[2]
 	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
-	button.size = Vector2(100, 40)
-	sv.add_child(button)
-	var handler := _add_handler(button)
-	await get_tree().process_frame
 
-	# Given: The button is pressed via SubViewport input dispatch.
-	_press_mouse(sv)
-	await get_tree().process_frame
+	# Given: The mouse rests over the button.
+	input.move_mouse(button.get_global_rect().get_center())
+
+	# Given: The mouse presses the button.
+	input.press_mouse()
 	assert_true(button.is_pressed(), "precondition: button should be pressed")
 
 	# When: Focus root is set to the modal (button moves outside).
@@ -589,36 +584,27 @@ func test_clear_press_on_focus_root_exit_noop_already_outside() -> void:
 	assert_true(button.is_hovered())
 
 
-func test_disabled_button_clears_pressed_visual() -> void:
+func test_disabled_button_clears_hover_visual() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
 
-	var sv := SubViewport.new()
-	sv.size = Vector2i(400, 300)
-	add_child_autofree(sv)
+	# Given: An enabled button with a focus handler.
+	var setup := await _mount_button(false)
+	var input: StdTestInput = setup[0]
+	var button: Button = setup[1]
+	var handler: StdInputCursorFocusHandler = setup[2]
 
-	# Given: A button inside the SubViewport with a focus handler.
-	var button := Button.new()
-	button.focus_mode = Control.FOCUS_ALL
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
-	button.size = Vector2(100, 40)
-	sv.add_child(button)
-	var handler := _add_handler(button)
-	await get_tree().process_frame
-
-	# Given: The button is pressed via SubViewport input dispatch.
-	_press_mouse(sv)
-	await get_tree().process_frame
-	assert_true(button.is_pressed(), "precondition: button should be pressed")
+	# Given: The mouse rests over the button.
+	input.move_mouse(button.get_global_rect().get_center())
+	assert_true(button.is_hovered(), "precondition: button should be hovered")
 
 	# When: The button becomes disabled.
 	button.disabled = true
 	button.queue_redraw()
 	await get_tree().process_frame
 
-	# Then: The button is no longer pressed.
-	assert_false(button.is_pressed())
+	# Then: The button is no longer hovered.
+	assert_false(button.is_hovered())
 
 	button.remove_child(handler)
 	handler.free()
@@ -793,21 +779,18 @@ func test_button_enabled_under_mouse_is_hovered() -> void:
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
-	# Given: A disabled button in a SubViewport.
-	var setup := _setup_button_in_viewport(true)
-	var sv: SubViewport = setup[0]
+	# Given: A disabled button with a focus handler.
+	var setup := await _mount_button(true)
+	var input: StdTestInput = setup[0]
 	var button: Button = setup[1]
+	var handler: StdInputCursorFocusHandler = setup[2]
 
 	# Given: The button's draw modes are recorded as it draws.
 	var drawn: Array[int] = []
 	button.draw.connect(func() -> void: drawn.append(button.get_draw_mode()))
 
-	# Given: A focus handler on the button.
-	var handler := _add_handler(button)
-	await get_tree().process_frame
-
 	# Given: The mouse rests over the button.
-	_move_mouse(sv, Vector2(50, 20))
+	input.move_mouse(button.get_global_rect().get_center())
 	await get_tree().process_frame
 	watch_signals(handler)
 
@@ -831,15 +814,14 @@ func test_button_reenabled_under_mouse_is_hovered() -> void:
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
-	# Given: An enabled button with a focus handler in a SubViewport.
-	var setup := _setup_button_in_viewport(false)
-	var sv: SubViewport = setup[0]
+	# Given: An enabled button with a focus handler.
+	var setup := await _mount_button(false)
+	var input: StdTestInput = setup[0]
 	var button: Button = setup[1]
-	var handler := _add_handler(button)
-	await get_tree().process_frame
+	var handler: StdInputCursorFocusHandler = setup[2]
 
 	# Given: The mouse hovers the button.
-	_move_mouse(sv, Vector2(50, 20))
+	input.move_mouse(button.get_global_rect().get_center())
 	await get_tree().process_frame
 
 	# Given: The button becomes disabled under the mouse.
@@ -865,18 +847,17 @@ func test_button_enabled_after_mouse_leaves_stays_unhovered() -> void:
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
-	# Given: A disabled button with a focus handler in a SubViewport.
-	var setup := _setup_button_in_viewport(true)
-	var sv: SubViewport = setup[0]
+	# Given: A disabled button with a focus handler.
+	var setup := await _mount_button(true)
+	var input: StdTestInput = setup[0]
 	var button: Button = setup[1]
-	var handler := _add_handler(button)
-	await get_tree().process_frame
+	var handler: StdInputCursorFocusHandler = setup[2]
 
 	# Given: The mouse moves over the button.
-	_move_mouse(sv, Vector2(50, 20))
+	input.move_mouse(button.get_global_rect().get_center())
 
 	# Given: The mouse moves off the button.
-	_move_mouse(sv, Vector2(300, 200))
+	input.move_mouse(Vector2(300, 200))
 	await get_tree().process_frame
 	watch_signals(handler)
 
@@ -897,18 +878,17 @@ func test_button_enabled_behind_new_overlay_stays_unhovered() -> void:
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
-	# Given: A disabled button with a focus handler in a SubViewport.
-	var setup := _setup_button_in_viewport(true)
-	var sv: SubViewport = setup[0]
+	# Given: A disabled button with a focus handler.
+	var setup := await _mount_button(true)
+	var input: StdTestInput = setup[0]
 	var button: Button = setup[1]
-	var handler := _add_handler(button)
-	await get_tree().process_frame
+	var handler: StdInputCursorFocusHandler = setup[2]
 
 	# Given: The mouse rests over the button.
-	_move_mouse(sv, Vector2(50, 20))
+	input.move_mouse(button.get_global_rect().get_center())
 
 	# Given: An overlay opens over the button as the focus root.
-	_open_overlay(sv)
+	_open_overlay(button)
 	await get_tree().process_frame
 	watch_signals(handler)
 
@@ -929,18 +909,17 @@ func test_button_enabled_behind_overlay_is_hovered_once_overlay_closes() -> void
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
-	# Given: A disabled button with a focus handler in a SubViewport.
-	var setup := _setup_button_in_viewport(true)
-	var sv: SubViewport = setup[0]
+	# Given: A disabled button with a focus handler.
+	var setup := await _mount_button(true)
+	var input: StdTestInput = setup[0]
 	var button: Button = setup[1]
-	var handler := _add_handler(button)
-	await get_tree().process_frame
+	var handler: StdInputCursorFocusHandler = setup[2]
 
 	# Given: The mouse rests over the button.
-	_move_mouse(sv, Vector2(50, 20))
+	input.move_mouse(button.get_global_rect().get_center())
 
 	# Given: An overlay opens over the button as the focus root.
-	var overlay := _open_overlay(sv)
+	var overlay := _open_overlay(button)
 	await get_tree().process_frame
 
 	# Given: The button becomes enabled behind the overlay.
@@ -966,19 +945,18 @@ func test_button_hovered_behind_overlay_is_drawn_hovered_once_overlay_closes() -
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
-	# Given: An enabled button with a focus handler in a SubViewport.
-	var setup := _setup_button_in_viewport(false)
-	var sv: SubViewport = setup[0]
+	# Given: An enabled button with a focus handler.
+	var setup := await _mount_button(false)
+	var input: StdTestInput = setup[0]
 	var button: Button = setup[1]
-	var handler := _add_handler(button)
-	await get_tree().process_frame
+	var handler: StdInputCursorFocusHandler = setup[2]
 
 	# Given: The mouse hovers the button.
-	_move_mouse(sv, Vector2(50, 20))
+	input.move_mouse(button.get_global_rect().get_center())
 	await get_tree().process_frame
 
 	# Given: An overlay opens over the button, which clears its hover visuals.
-	var overlay := _open_overlay(sv)
+	var overlay := _open_overlay(button)
 	await get_tree().process_frame
 	assert_false(button.is_hovered(), "precondition: button should look unhovered")
 	watch_signals(handler)
@@ -1005,23 +983,22 @@ func test_button_left_behind_overlay_stays_unhovered_once_overlay_closes() -> vo
 	# Given: A cursor in the scene (starts visible).
 	add_child_autofree(cursor)
 
-	# Given: An enabled button with a focus handler in a SubViewport.
-	var setup := _setup_button_in_viewport(false)
-	var sv: SubViewport = setup[0]
+	# Given: An enabled button with a focus handler.
+	var setup := await _mount_button(false)
+	var input: StdTestInput = setup[0]
 	var button: Button = setup[1]
-	var handler := _add_handler(button)
-	await get_tree().process_frame
+	var handler: StdInputCursorFocusHandler = setup[2]
 
 	# Given: The mouse hovers the button.
-	_move_mouse(sv, Vector2(50, 20))
+	input.move_mouse(button.get_global_rect().get_center())
 	await get_tree().process_frame
 
 	# Given: An overlay opens over the button as the focus root.
-	var overlay := _open_overlay(sv)
+	var overlay := _open_overlay(button)
 	await get_tree().process_frame
 
 	# Given: The mouse moves, so the overlay takes it from the button.
-	_move_mouse(sv, Vector2(60, 22))
+	input.move_mouse(Vector2(60, 22))
 	await get_tree().process_frame
 	watch_signals(handler)
 
@@ -1043,15 +1020,15 @@ func test_button_left_behind_overlay_stays_unhovered_once_overlay_closes() -> vo
 func test_click_while_cursor_visible_restores_focus_to_clicked_button() -> void:
 	# Given: Two buttons with focus handlers, the first focused before a reveal.
 	var setup := await _setup_reveal_from_first_button()
-	var sv: SubViewport = setup[0]
+	var input: StdTestInput = setup[0]
 	var first: Button = setup[1]
 	var second: Button = setup[2]
 
 	# When: The second button is clicked.
-	_click_mouse(sv, second.position + Vector2(50, 20))
+	input.click(second)
 
 	# When: The mouse leaves the button.
-	_move_mouse(sv, Vector2(300, 250))
+	input.move_mouse(Vector2(300, 250))
 
 	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
@@ -1067,7 +1044,7 @@ func test_click_while_cursor_visible_restores_focus_to_clicked_button() -> void:
 func test_click_which_reveals_cursor_restores_focus_to_clicked_button() -> void:
 	# Given: Two buttons with focus handlers, the first focused before a reveal.
 	var setup := await _setup_reveal_from_first_button()
-	var sv: SubViewport = setup[0]
+	var input: StdTestInput = setup[0]
 	var first: Button = setup[1]
 	var second: Button = setup[2]
 
@@ -1077,14 +1054,14 @@ func test_click_which_reveals_cursor_restores_focus_to_clicked_button() -> void:
 	assert_true(first.has_focus(), "precondition: first button focused")
 
 	# When: The mouse moves over the second button while the cursor is hidden.
-	_move_mouse(sv, second.position + Vector2(50, 20))
+	input.move_mouse(second.get_global_rect().get_center())
 
 	# When: The second button is clicked, which reveals the cursor.
-	_click_mouse(sv, second.position + Vector2(50, 20))
+	input.click(second)
 	assert_true(cursor.get_is_visible(), "precondition: click revealed the cursor")
 
 	# When: The mouse leaves the button.
-	_move_mouse(sv, Vector2(300, 250))
+	input.move_mouse(Vector2(300, 250))
 
 	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
@@ -1100,15 +1077,15 @@ func test_click_which_reveals_cursor_restores_focus_to_clicked_button() -> void:
 func test_wheel_over_button_keeps_focus_from_before_reveal() -> void:
 	# Given: Two buttons with focus handlers, the first focused before a reveal.
 	var setup := await _setup_reveal_from_first_button()
-	var sv: SubViewport = setup[0]
+	var input: StdTestInput = setup[0]
 	var first: Button = setup[1]
 	var second: Button = setup[2]
 
 	# When: The wheel scrolls over the second button.
-	_click_mouse(sv, second.position + Vector2(50, 20), MOUSE_BUTTON_WHEEL_DOWN)
+	input.click(second, MOUSE_BUTTON_WHEEL_DOWN)
 
 	# When: The mouse leaves the button.
-	_move_mouse(sv, Vector2(300, 250))
+	input.move_mouse(Vector2(300, 250))
 
 	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
@@ -1123,7 +1100,7 @@ func test_wheel_over_button_keeps_focus_from_before_reveal() -> void:
 func test_click_on_disabled_button_keeps_focus_from_before_reveal() -> void:
 	# Given: Two buttons with focus handlers, the first focused before a reveal.
 	var setup := await _setup_reveal_from_first_button()
-	var sv: SubViewport = setup[0]
+	var input: StdTestInput = setup[0]
 	var first: Button = setup[1]
 	var second: Button = setup[2]
 
@@ -1132,10 +1109,10 @@ func test_click_on_disabled_button_keeps_focus_from_before_reveal() -> void:
 	await get_tree().process_frame
 
 	# When: The disabled button is clicked.
-	_click_mouse(sv, second.position + Vector2(50, 20))
+	input.click(second)
 
 	# When: The mouse leaves the button.
-	_move_mouse(sv, Vector2(300, 250))
+	input.move_mouse(Vector2(300, 250))
 
 	# When: The cursor hides with nothing hovered.
 	cursor.hide_cursor()
@@ -1177,60 +1154,29 @@ func _add_handler(control: Control) -> StdInputCursorFocusHandler:
 	return handler
 
 
-## _click_mouse pushes a press and then a release of `button_index` at `position` into
-## `viewport`.
-func _click_mouse(
-	viewport: SubViewport,
-	position: Vector2,
-	button_index: MouseButton = MOUSE_BUTTON_LEFT,
-) -> void:
-	for pressed in [true, false]:
-		var event := InputEventMouseButton.new()
-		event.button_index = button_index
-		event.pressed = pressed
-		event.position = position
-		viewport.push_input(event)
-
-
-## _move_mouse pushes mouse motion to `position` into `viewport`.
-func _move_mouse(viewport: SubViewport, position: Vector2) -> void:
-	var event := InputEventMouseMotion.new()
-	event.position = position
-	viewport.push_input(event)
-
-
-## _open_overlay adds a mouse-stopping overlay covering `viewport`, makes it the focus
-## root, and returns it.
-func _open_overlay(viewport: SubViewport) -> Control:
-	var overlay := Control.new()
-	overlay.size = Vector2(viewport.size)
-	viewport.add_child(overlay)
-	cursor.set_focus_root(overlay)
-	return overlay
-
-
-## _press_mouse pushes a left mouse press at the test button's position into `viewport`.
-func _press_mouse(viewport: SubViewport) -> void:
-	var event := InputEventMouseButton.new()
-	event.button_index = MOUSE_BUTTON_LEFT
-	event.pressed = true
-	event.position = Vector2(50, 20)
-	viewport.push_input(event)
-
-
-## _setup_button_in_viewport adds a SubViewport holding a button with the given
-## `disabled` state, and returns them as `[viewport, button]`.
-func _setup_button_in_viewport(disabled: bool) -> Array:
-	var sv := SubViewport.new()
-	sv.size = Vector2i(400, 300)
-	add_child_autofree(sv)
+## _mount_button mounts a button with the given `disabled` state and a focus handler,
+## and returns them as `[input, button, handler]`.
+func _mount_button(disabled: bool) -> Array:
 	var button := Button.new()
 	button.focus_mode = Control.FOCUS_ALL
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.disabled = disabled
 	button.size = Vector2(100, 40)
-	sv.add_child(button)
-	return [sv, button]
+	var handler := _add_handler(button)
+
+	var input := await StdTestInput.mount(self, button)
+
+	return [input, button, handler]
+
+
+## _open_overlay adds a mouse-stopping overlay over `button`, covering the viewport,
+## makes it the focus root, and returns it.
+func _open_overlay(button: Button) -> Control:
+	var overlay := Control.new()
+	overlay.size = button.get_viewport_rect().size
+	button.add_sibling(overlay)
+	cursor.set_focus_root(overlay)
+	return overlay
 
 
 func _setup_outside_focus_root() -> Array:
@@ -1245,33 +1191,28 @@ func _setup_outside_focus_root() -> Array:
 	return [button, handler, modal]
 
 
-## _setup_reveal_from_first_button adds a SubViewport holding the cursor and two buttons
-## with focus handlers, focuses the first, and reveals the cursor, returning them as
-## `[viewport, first, second]`.
-##
-## NOTE: The cursor sits in the SubViewport, since it records and restores the focus of
-## its own viewport.
+## _setup_reveal_from_first_button mounts two buttons with focus handlers, focuses the
+## first, and reveals the cursor, returning them as `[input, first, second]`.
 func _setup_reveal_from_first_button() -> Array:
-	var sv := SubViewport.new()
-	sv.size = Vector2i(400, 300)
-	add_child_autofree(sv)
-	sv.add_child(cursor)
+	add_child_autofree(cursor)
 	cursor.update_configuration([StdInputActionSet.new()])
+
+	var scene := Control.new()
 
 	var buttons: Array[Button] = []
 	for i in 2:
 		var button := Button.new()
 		button.size = Vector2(100, 40)
 		button.position = Vector2(0, 100 * i)
-		sv.add_child(button)
+		scene.add_child(button)
 		_add_handler(button)
 		buttons.append(button)
 
-	await get_tree().process_frame
+	var input := await StdTestInput.mount(self, scene)
 
 	cursor.hide_cursor()
 	buttons[0].grab_focus()
 	cursor.show_cursor()
 	assert_false(buttons[0].has_focus(), "precondition: focus released on reveal")
 
-	return [sv, buttons[0], buttons[1]]
+	return [input, buttons[0], buttons[1]]

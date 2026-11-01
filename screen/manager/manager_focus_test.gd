@@ -188,62 +188,6 @@ func test_focus_saved_from_hovered_when_cursor_visible():
 	)
 
 
-func test_pop_recalculates_hover_when_cursor_visible():
-	var sv := SubViewport.new()
-	sv.size = Vector2i(400, 300)
-	add_child_autofree(sv)
-	sv.notification(Viewport.NOTIFICATION_VP_MOUSE_ENTER)
-
-	# Given: A manager inside the SubViewport.
-	var sv_manager := Manager.new()
-	sv.add_child(sv_manager)
-	await wait_idle_frames(1)
-	_get_cursor().show_cursor()
-
-	# Given: A base screen with a hoverable button.
-	var base := Control.new()
-	var button := Button.new()
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	button.size = Vector2(100, 40)
-	base.add_child(button)
-	sv_manager.push(_create_screen(), base)
-	await wait_idle_frames(1)
-
-	# Given: The button is hovered.
-	var motion := InputEventMouseMotion.new()
-	motion.position = Vector2(50, 20)
-	motion.relative = Vector2(50, 20)
-	sv.push_input(motion)
-	await get_tree().process_frame
-	assert_true(
-		button.is_hovered(),
-		"precondition: button hovered",
-	)
-
-	# When: A second screen is pushed and mouse motion sent.
-	sv_manager.push(_create_screen(), Control.new())
-	await wait_idle_frames(1)
-	var covered := InputEventMouseMotion.new()
-	covered.position = Vector2(50, 20)
-	covered.relative = Vector2.ZERO
-	sv.push_input(covered)
-	await get_tree().process_frame
-	assert_false(
-		button.is_hovered(),
-		"precondition: button not hovered",
-	)
-
-	# When: The second screen is popped.
-	sv_manager.pop()
-	await wait_idle_frames(1)
-
-	# Then: The button regains hover after recalculation.
-	assert_true(
-		button.is_hovered(),
-		"button should be hovered after pop",
-	)
-
-
 func test_pop_recalculates_hover_at_mouse_away_from_origin() -> void:
 	# Given: A manager mounted by the helper.
 	var manager := Manager.new()
@@ -282,30 +226,17 @@ func test_pop_recalculates_hover_at_mouse_away_from_origin() -> void:
 
 
 func test_push_recalculates_hover_when_cursor_visible():
-	var sv := SubViewport.new()
-	sv.size = Vector2i(400, 300)
-	add_child_autofree(sv)
-	(
-		sv
-		. notification(
-			Viewport.NOTIFICATION_VP_MOUSE_ENTER,
-		)
-	)
+	# Given: A manager mounted by the helper.
+	var manager := Manager.new()
+	var input := await StdTestInput.mount(self, manager)
 
-	# Given: A manager inside the SubViewport.
-	var sv_manager := Manager.new()
-	sv.add_child(sv_manager)
-	await wait_idle_frames(1)
+	# Given: The cursor is visible.
 	_get_cursor().show_cursor()
 
 	# Given: A base screen and the mouse at a known position.
-	sv_manager.push(_create_screen(), Control.new())
+	manager.push(_create_screen(), Control.new())
 	await wait_idle_frames(1)
-	var motion := InputEventMouseMotion.new()
-	motion.position = Vector2(50, 20)
-	motion.relative = Vector2(50, 20)
-	sv.push_input(motion)
-	await get_tree().process_frame
+	input.move_mouse(Vector2(50, 20))
 
 	# When: A screen with a hoverable button at the cursor position is pushed.
 	var scene := Control.new()
@@ -313,7 +244,7 @@ func test_push_recalculates_hover_when_cursor_visible():
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.size = Vector2(100, 40)
 	scene.add_child(button)
-	sv_manager.push(_create_screen(), scene)
+	manager.push(_create_screen(), scene)
 	await wait_idle_frames(1)
 
 	# Then: The button is hovered after deferred recalculation.
