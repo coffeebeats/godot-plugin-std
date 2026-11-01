@@ -9,7 +9,7 @@ Mount std's Steam joypad monitor, actions and glyph components under a real `Std
 
 ## When to use it
 
-GUT covers the Steam components only where they run without Steam (`input/steam/*_test.gd`, which skip when the `Steam` class is absent). The harness answers what Steam actually sends: a stick's `y` sign, whether a held stick reports once, trigger thresholds, `absolute_mouse` warps, origin counts and glyph cycling, `input_configuration_loaded` after a rebind, and the family a pad connected before the slot gets.
+GUT covers the Steam components only where they run without Steam (`input/steam/*_test.gd`). The harness answers what Steam actually sends: a stick's `y` sign, whether a held stick reports once, trigger thresholds, `absolute_mouse` warps, origin counts and glyph cycling, `input_configuration_loaded` after a rebind, and the family a pad connected before the slot gets.
 
 ## Running it
 
