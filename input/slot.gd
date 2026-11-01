@@ -31,7 +31,9 @@ extends StdInputDevice
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## action_pressed is emitted on an active action's first press from any device. `device`
-## is the event's `device`, such as `InputEvent.DEVICE_ID_KEYBOARD` for a key.
+## is the event's `device`, such as `InputEvent.DEVICE_ID_KEYBOARD` for a key. An action
+## already down when it became active, or when a joypad swap ended its hold, isn't
+## pressed again until it's released on every device.
 signal action_pressed(action: StringName, device: int)
 
 ## action_released is emitted when that hold ends, with the ID on the ending event, or
@@ -61,6 +63,7 @@ const Signals := preload("../event/signal.gd")
 const StdInputSlotDeviceActions := preload("slot_actions.gd")
 const StdInputSlotDeviceGlyphs := preload("slot_glyphs.gd")
 const StdInputSlotDeviceHaptics := preload("slot_haptics.gd")
+const StdInputSlotHeldActions := preload("slot_held_actions.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
@@ -107,6 +110,9 @@ class JoypadMonitor:
 ## received.
 ##
 ## NOTE: If `true`, the keyboard and mouse device will be activated initially.
+##
+## NOTE: If `false`, a key or mouse button starts no hold, but `Input` still counts one
+## that's down, so it prolongs a joypad's hold and blocks an action a set brings in.
 @export var claim_kbm_input: bool = true
 
 ## prefer_activate_joypad_on_ready defines whether a joypad connected before the
@@ -173,10 +179,8 @@ var _last_active_joypad: StdInputDevice = null
 ## activate that joypad again and ends only with that joypad's own release.
 var _pressed: Dictionary[int, Array] = {}
 
-## _held_devices and _held_since map each held action, on every device, to the device ID
-## its release reports and the ticks, in microseconds, of its first press.
-var _held_devices: Dictionary[StringName, int] = {}
-var _held_since: Dictionary[StringName, int] = {}
+## _held_actions times the active actions held on every device.
+var _held_actions: StdInputSlotHeldActions = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -210,10 +214,10 @@ static func for_player(player: int) -> StdInputSlot:
 ## get_action_held_seconds returns the wall clock seconds since `action` was first
 ## pressed on any device, or `0.0` while it isn't held. A hold also ends when its action
 ## leaves the active sets, on a joypad component swap, and on leaving the tree.
+##
+## NOTE: `Input` can read `action` as pressed while this is `0.0`; see `action_pressed`.
 func get_action_held_seconds(action: StringName) -> float:
-	if not _held_since.has(action):
-		return 0.0
-	return (Time.get_ticks_usec() - _held_since[action]) / 1_000_000.0
+	return _held_actions.get_held_seconds(action)
 
 
 # Devices
@@ -294,7 +298,6 @@ func swap_joypad_components(
 	# NOTE: An action held on a joypad the old monitor never reported may never release,
 	# and would block a press from the joypad the next monitor gives its device ID.
 	_pressed.clear()
-	_release_held_actions()
 
 	# NOTE: The keyboard may share the joypad's actions component, in which case its
 	# connection must survive the swap.
@@ -323,6 +326,10 @@ func swap_joypad_components(
 				continue
 
 			joypad.load_action_set(action_set)
+
+	# NOTE: This comes last, since a listener can load a set, which every joypad must
+	# then keep rather than have `action_sets` replace.
+	_held_actions.release_all()
 
 
 # -- PUBLIC METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -493,7 +500,15 @@ func _exit_tree() -> void:
 		_disconnect_joy_device(joypad.device_id)
 
 	_joypad_devices = []
-	_release_held_actions()
+	_held_actions.release_all()
+
+
+func _init() -> void:
+	_held_actions = StdInputSlotHeldActions.new()
+	add_child(_held_actions, false, INTERNAL_MODE_BACK)
+
+	Signals.connect_safe(_held_actions.action_pressed, action_pressed.emit)
+	Signals.connect_safe(_held_actions.action_released, action_released.emit)
 
 
 func _input(event: InputEvent) -> void:
@@ -504,22 +519,17 @@ func _input(event: InputEvent) -> void:
 	# one side to the other releases the first direction without a centered event.
 	var held: Array = _pressed.get(event.device, [])
 	for action in held.duplicate():
-		if _is_action_released(event, action):
+		if StdInputSlotHeldActions.is_action_released(event, action):
 			held.erase(action)
 
 	if event.is_pressed() and not _try_activate_joypad(event):
 		_try_activate_kbm(event)
 
+	var is_kbm := event is InputEventKey or event is InputEventMouseButton
+
 	# NOTE: This follows activation, so a listener reads the device which just pressed.
-	_update_held_actions(event)
-
-
-func _process(_delta: float) -> void:
-	# NOTE: An upstream `_input` can hide a release from this slot, and a disconnected
-	# joypad or a window losing focus changes `Input` with no event at all.
-	for action in _held_devices.keys():
-		if InputMap.has_action(action) and not Input.is_action_pressed(action):
-			_release_held_action(action)
+	if claim_kbm_input or not is_kbm:
+		_held_actions.update(event, _pressed)
 
 
 func _ready() -> void:
@@ -552,7 +562,6 @@ func _ready() -> void:
 	super._ready()
 
 	_logger = _logger.named(&"std/input/slot")
-	set_process(false)
 
 	assert(
 		joypad_monitor is JoypadMonitor,
@@ -697,25 +706,6 @@ func _disconnect_joy_device(device: int) -> bool:
 	return false
 
 
-## _is_action_pressed returns whether `event` is a press of `action`. An injected action
-## is matched by name, and a key, button, or motion only against an action the
-## `InputMap` knows, since Steam publishes actions the map needn't define.
-func _is_action_pressed(event: InputEvent, action: StringName) -> bool:
-	if event is InputEventAction:
-		return event.action == action and event.pressed
-
-	return InputMap.has_action(action) and event.is_action_pressed(action)
-
-
-## _is_action_released returns whether `event` is a release of `action`, matched as
-## `_is_action_pressed` does.
-func _is_action_released(event: InputEvent, action: StringName) -> bool:
-	if event is InputEventAction:
-		return event.action == action and not event.pressed
-
-	return InputMap.has_action(action) and event.is_action_released(action)
-
-
 func _list_action_sets(
 	device: int = DEVICE_ID_ALL, reverse: bool = false
 ) -> Array[StdInputActionSet]:
@@ -771,26 +761,6 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 	return kbm
 
 
-## _release_held_action ends the hold of `action`, if there is one, and reports it.
-func _release_held_action(action: StringName) -> void:
-	if not _held_devices.has(action):
-		return
-
-	var device: int = _held_devices[action]
-	var held_seconds := get_action_held_seconds(action)
-	_held_devices.erase(action)
-	_held_since.erase(action)
-	set_process(not _held_devices.is_empty())
-	action_released.emit(action, device, held_seconds)
-
-
-## _release_held_actions ends the hold of every action not in `kept`.
-func _release_held_actions(kept: Array[String] = []) -> void:
-	for action in _held_devices.keys():
-		if action not in kept:
-			_release_held_action(action)
-
-
 ## _try_activate_joypad activates the joypad which just pressed one of the active
 ## actions and returns whether it did. Key and mouse button events are ignored.
 func _try_activate_joypad(event: InputEvent) -> bool:
@@ -807,7 +777,7 @@ func _try_activate_joypad(event: InputEvent) -> bool:
 	var is_held := false
 	var is_match := false
 	for action in _actions:
-		if not _is_action_pressed(event, action):
+		if not StdInputSlotHeldActions.is_action_pressed(event, action):
 			continue
 
 		if action in held:
@@ -873,7 +843,7 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 
 	if not is_match:
 		for action in _actions:
-			if _is_action_pressed(event, action):
+			if StdInputSlotHeldActions.is_action_pressed(event, action):
 				is_match = true
 				break
 
@@ -888,32 +858,6 @@ func _try_activate_kbm(event: InputEvent) -> bool:
 		return false
 
 	return _activate_device(_kbm_device)
-
-
-## _update_held_actions starts the hold of each active action which `event` presses, and
-## ends the hold of each which it releases for good.
-func _update_held_actions(event: InputEvent) -> void:
-	var is_kbm := event is InputEventKey or event is InputEventMouseButton
-	if is_kbm and not claim_kbm_input:
-		return
-
-	for action: StringName in _actions:
-		if not _held_devices.has(action):
-			if _is_action_pressed(event, action):
-				_held_devices[action] = event.device
-				_held_since[action] = Time.get_ticks_usec()
-				set_process(true)
-				action_pressed.emit(action, event.device)
-			continue
-
-		# NOTE: `Input` tracks every bound event of every device and updates before it
-		# dispatches, so it still reads pressed while anything else holds the action.
-		if (
-			_is_action_released(event, action)
-			and not (InputMap.has_action(action) and Input.is_action_pressed(action))
-		):
-			_held_devices[action] = event.device
-			_release_held_action(action)
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
@@ -939,6 +883,8 @@ func _on_Self_action_configuration_changed() -> void:
 	_actions = []
 	_cursor_click_activates_kbm = false
 
+	var hold_actions: Array[StringName] = []
+
 	# NOTE: These must be iterated in forward order so that later action set layers can
 	# override properties set in earlier action sets.
 	for action_set in action_sets:
@@ -960,6 +906,10 @@ func _on_Self_action_configuration_changed() -> void:
 			assert(action not in _actions, "found duplicate action")
 			_actions.append(action)
 
+		# NOTE: The absolute mouse action only marks joypad activity, so it's never held.
+		for action in action_set.list_action_names():
+			hold_actions.append(StringName(action))
+
 	# NOTE: A set change can erase the origins of a held action, so its release could
 	# never match; an action the active sets no longer bind is dropped instead.
 	for held in _pressed.values():
@@ -967,10 +917,12 @@ func _on_Self_action_configuration_changed() -> void:
 			if action not in _actions:
 				held.erase(action)
 
-	_release_held_actions(_actions)
-
 	if cursor is StdInputCursor:
 		cursor.update_configuration(action_sets)
+
+	# NOTE: This comes last, since a listener can load a set, whose configuration must
+	# then outlive this one.
+	_held_actions.set_actions(hold_actions)
 
 
 func _on_Self_device_activated(device: StdInputDevice) -> void:
