@@ -20,6 +20,9 @@ const _ACTION_BUTTON := &"probe_bindings_button"
 ## _ACTION_KEY is bound to `_KEY`.
 const _ACTION_KEY := &"probe_bindings_key"
 
+## _ACTION_LAYER is bound to a key nothing else uses.
+const _ACTION_LAYER := &"probe_bindings_layer"
+
 ## _ACTION_LEFT is bound to the left stick's negative X axis.
 const _ACTION_LEFT := &"probe_bindings_left"
 
@@ -42,6 +45,7 @@ const _ACTION_TRIGGER := &"probe_bindings_trigger"
 const _ACTIONS: Array[StringName] = [
 	_ACTION_BUTTON,
 	_ACTION_KEY,
+	_ACTION_LAYER,
 	_ACTION_LEFT,
 	_ACTION_OTHER,
 	_ACTION_RIGHT,
@@ -60,6 +64,148 @@ var input: StdTestInput = null
 var slot: StdInputSlot = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
+
+
+func test_input_slot_key_keeps_its_hold_when_a_set_keeps_its_action() -> void:
+	# Given: The key's action is active.
+	await _load([_ACTION_KEY])
+
+	# Given: The key is held.
+	await _dispatch(_key(true))
+
+	# When: A set keeping the action is loaded.
+	await _load([_ACTION_KEY, _ACTION_OTHER])
+
+	# Then: The hold goes on, with no second press.
+	assert_signal_emit_count(slot, "action_pressed", 1)
+	assert_signal_emit_count(slot, "action_released", 0)
+	assert_gt(slot.get_action_held_seconds(_ACTION_KEY), 0.0)
+	assert_true(Input.is_action_pressed(_ACTION_KEY))
+
+	# When: The key is released.
+	await _dispatch(_key(false))
+
+	# Then: The hold ends.
+	assert_signal_emit_count(slot, "action_released", 1)
+
+
+func test_input_slot_key_keeps_its_hold_through_a_reload() -> void:
+	# Given: The key's action is active.
+	await _load([_ACTION_KEY])
+
+	# Given: The key is held.
+	await _dispatch(_key(true))
+
+	# When: The bindings are reloaded with nothing changed.
+	actions.reload()
+	await wait_process_frames(2)
+
+	# Then: The hold goes on.
+	assert_signal_emit_count(slot, "action_released", 0)
+	assert_gt(slot.get_action_held_seconds(_ACTION_KEY), 0.0)
+
+
+func test_input_slot_button_keeps_its_hold_when_a_layer_is_disabled() -> void:
+	# Given: The button's action is active with an unrelated layer over it.
+	var layer := _make_layer([_ACTION_LAYER])
+	var action_set := _make_set([_ACTION_BUTTON])
+	layer.parent = action_set
+	slot.load_action_set(action_set)
+	slot.enable_action_set_layer(layer)
+	await wait_process_frames(1)
+
+	# Given: The button is held.
+	await _dispatch(_button(true))
+
+	# When: The layer is disabled.
+	slot.disable_action_set_layer(layer)
+	await wait_process_frames(2)
+
+	# Then: The hold goes on.
+	assert_signal_emit_count(slot, "action_released", 0)
+	assert_gt(slot.get_action_held_seconds(_ACTION_BUTTON), 0.0)
+
+
+func test_input_slot_stick_keeps_its_hold_when_a_set_keeps_its_action() -> void:
+	# Given: The stick's action is active.
+	await _load([_ACTION_STICK])
+
+	# Given: The stick is held.
+	await _dispatch(_motion(JOY_AXIS_RIGHT_Y, 1.0))
+
+	# When: A set keeping the action is loaded.
+	await _load([_ACTION_STICK, _ACTION_OTHER])
+
+	# When: The still-held stick reports motion.
+	await _dispatch(_motion(JOY_AXIS_RIGHT_Y, 0.9))
+
+	# Then: The hold goes on, with no second press.
+	assert_signal_emit_count(slot, "action_pressed", 1)
+	assert_signal_emit_count(slot, "action_released", 0)
+
+
+func test_input_slot_trigger_keeps_its_hold_when_a_set_keeps_its_action() -> void:
+	# Given: The trigger's action is active.
+	await _load([_ACTION_TRIGGER])
+
+	# Given: The trigger is held past its deadzone, but below the slot's `0.5`.
+	await _dispatch(_motion(JOY_AXIS_TRIGGER_RIGHT, 0.3))
+
+	# When: A set keeping the action is loaded.
+	await _load([_ACTION_TRIGGER, _ACTION_OTHER])
+
+	# When: The still-held trigger reports motion.
+	await _dispatch(_motion(JOY_AXIS_TRIGGER_RIGHT, 0.35))
+
+	# Then: The hold goes on, with no second press.
+	assert_signal_emit_count(slot, "action_pressed", 1)
+	assert_signal_emit_count(slot, "action_released", 0)
+
+
+func test_input_slot_injected_press_keeps_its_hold_when_a_set_keeps_its_action(
+) -> void:
+	# Given: The joypad's bindings belong to another component, as with Steam.
+	actions.claim_joy_input = false
+
+	# Given: The button's action is active, which is then unbound.
+	await _load([_ACTION_BUTTON])
+	assert_eq(InputMap.action_get_events(_ACTION_BUTTON).size(), 0, "precondition")
+
+	# Given: The action is pressed by an injected event, as Steam publishes it.
+	await _dispatch(_injected(_ACTION_BUTTON, true, 0.8))
+
+	# When: A set keeping the action is loaded.
+	await _load([_ACTION_BUTTON, _ACTION_OTHER])
+
+	# When: The action is published again, as Steam does when its strength changes.
+	await _dispatch(_injected(_ACTION_BUTTON, true, 0.9))
+
+	# Then: The hold goes on, with no second press.
+	assert_signal_emit_count(slot, "action_pressed", 1)
+	assert_signal_emit_count(slot, "action_released", 0)
+
+	# When: The injected press is released.
+	await _dispatch(_injected(_ACTION_BUTTON, false))
+
+	# Then: The hold ends.
+	assert_signal_emit_count(slot, "action_released", 1)
+
+
+func test_input_slot_key_repeat_after_a_set_keeps_its_action_is_no_new_press() -> void:
+	# Given: The key's action is active.
+	await _load([_ACTION_KEY])
+
+	# Given: The key is held.
+	await _dispatch(_key(true))
+
+	# Given: A set keeping the action is loaded.
+	await _load([_ACTION_KEY, _ACTION_OTHER])
+
+	# When: The key repeats.
+	input.send(_key(true, true))
+
+	# Then: A game polling `Input` sees no new press.
+	assert_false(Input.is_action_just_pressed(_ACTION_KEY))
 
 
 func test_input_slot_key_loses_its_hold_when_a_layer_takes_it() -> void:
@@ -278,6 +424,7 @@ func before_all() -> void:
 
 	_bind(_ACTION_BUTTON, button)
 	_bind(_ACTION_KEY, _make_key_binding(_KEY))
+	_bind(_ACTION_LAYER, _make_key_binding(KEY_L))
 	_bind(_ACTION_LEFT, _motion(JOY_AXIS_LEFT_X, -1.0))
 	_bind(_ACTION_OTHER, _make_key_binding(KEY_U))
 	_bind(_ACTION_RIGHT, _motion(JOY_AXIS_LEFT_X, 1.0))
@@ -344,6 +491,19 @@ func _button(pressed: bool) -> InputEventJoypadButton:
 func _dispatch(event: InputEvent) -> void:
 	input.send(event)
 	await wait_process_frames(1)
+
+
+## _injected returns an injected press, or a release when `pressed` is `false`, of
+## `action` on joypad `0`.
+func _injected(
+	action: StringName, pressed: bool, strength: float = 1.0
+) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = action
+	event.device = 0
+	event.pressed = pressed
+	event.strength = strength if pressed else 0.0
+	return event
 
 
 ## _key returns a press, or a release when `pressed` is `false`, of `_KEY`.

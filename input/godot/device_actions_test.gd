@@ -26,6 +26,14 @@ const _DEFAULTS := {
 	&"test_move_down": KEY_K,
 }
 
+## _JOY_ACTION is bound only to a joypad button, so a keyboard-only component leaves it
+## unbound, as with an action which only Steam reports.
+const _JOY_ACTION := &"test_joy"
+
+## _LOCATED_ACTION is bound to the left and the right shift keys, which the input map
+## keeps as one event.
+const _LOCATED_ACTION := &"test_shift"
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _actions: StdInputDeviceActions = null
@@ -135,16 +143,232 @@ func test_device_actions_layer_disable_does_not_report_a_bindings_change() -> vo
 	assert_signal_emit_count(_actions, "bindings_changed", 1)
 
 
+func test_device_actions_unchanged_action_stays_pressed_through_binding_changes(
+) -> void:
+	# Given: An action set and a layer of it, which leaves the action's binding alone.
+	var set_a := _make_action_set(&"A", [&"test_set_a"])
+	var layer := _make_layer(&"L", set_a, [&"test_layer"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+
+	# Given: The action's key is held.
+	_send_key(KEY_A, true)
+	assert_true(Input.is_action_pressed(&"test_set_a"), "precondition: pressed")
+
+	# When: A layer is enabled.
+	assert_true(_actions.enable_action_set_layer(DEVICE_ID_ALL, layer))
+
+	# Then: The action is still pressed.
+	assert_true(Input.is_action_pressed(&"test_set_a"))
+
+	# When: The layer is disabled.
+	assert_true(_actions.disable_action_set_layer(DEVICE_ID_ALL, layer))
+
+	# Then: The action is still pressed.
+	assert_true(Input.is_action_pressed(&"test_set_a"))
+
+	# When: The bindings are reloaded.
+	_actions.reload()
+
+	# Then: The action is still pressed.
+	assert_true(Input.is_action_pressed(&"test_set_a"))
+
+	# When: A set keeping the action is loaded.
+	var set_b := _make_action_set(&"B", [&"test_set_a", &"test_set_b"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_b))
+
+	# Then: The action is still pressed.
+	assert_true(Input.is_action_pressed(&"test_set_a"))
+
+	# When: The key is released.
+	_send_key(KEY_A, false)
+
+	# Then: The action is released.
+	assert_false(Input.is_action_pressed(&"test_set_a"))
+
+
+func test_device_actions_action_bound_at_two_key_locations_stays_pressed() -> void:
+	# Given: An action set declaring an action bound to both shift keys.
+	var set_a := _make_action_set(&"A", [_LOCATED_ACTION])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+	assert_eq(
+		InputMap.action_get_events(_LOCATED_ACTION).size(), 1, "precondition: one event"
+	)
+
+	# Given: The left shift key is held.
+	_send_key(KEY_SHIFT, true, KEY_LOCATION_LEFT)
+	assert_true(Input.is_action_pressed(_LOCATED_ACTION), "precondition: pressed")
+
+	# When: A set keeping the action is loaded.
+	var set_b := _make_action_set(&"B", [_LOCATED_ACTION, &"test_set_b"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_b))
+
+	# Then: The action is still pressed.
+	assert_true(Input.is_action_pressed(_LOCATED_ACTION))
+
+	# When: The key is released.
+	_send_key(KEY_SHIFT, false, KEY_LOCATION_LEFT)
+
+	# Then: The action is released.
+	assert_false(Input.is_action_pressed(_LOCATED_ACTION))
+
+
+func test_device_actions_action_losing_its_origin_is_released() -> void:
+	# Given: An action set and a layer of it whose action shares the set's key.
+	var set_a := _make_action_set(&"A", [&"test_set_a"])
+	var layer := _make_layer(&"L", set_a, [&"test_layer_stomp"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+
+	# Given: The key is held.
+	_send_key(KEY_A, true)
+	assert_true(Input.is_action_pressed(&"test_set_a"), "precondition: pressed")
+
+	# When: The layer takes the key.
+	assert_true(_actions.enable_action_set_layer(DEVICE_ID_ALL, layer))
+
+	# Then: The set's action is released.
+	assert_false(Input.is_action_pressed(&"test_set_a"))
+
+
+func test_device_actions_dropped_action_is_released() -> void:
+	# Given: An action set is loaded.
+	var set_a := _make_action_set(&"A", [&"test_set_a"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+
+	# Given: The action's key is held.
+	_send_key(KEY_A, true)
+	assert_true(Input.is_action_pressed(&"test_set_a"), "precondition: pressed")
+
+	# When: A set without the action is loaded.
+	var set_b := _make_action_set(&"B", [&"test_set_b"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_b))
+
+	# Then: The action is released.
+	assert_false(Input.is_action_pressed(&"test_set_a"))
+
+
+func test_device_actions_injected_press_ends_after_its_action_gains_a_binding() -> void:
+	# Given: The keyboard isn't claimed, so the action is unbound.
+	_actions.claim_kbm_input = false
+
+	# Given: An action set is loaded.
+	var set_a := _make_action_set(&"A", [&"test_set_a"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+	assert_eq(
+		InputMap.action_get_events(&"test_set_a").size(), 0, "precondition: unbound"
+	)
+
+	# Given: The action is pressed by an injected event.
+	_send_action(&"test_set_a", true)
+	assert_true(Input.is_action_pressed(&"test_set_a"), "precondition: pressed")
+
+	# Given: The action gains a binding.
+	_actions.claim_kbm_input = true
+
+	# When: The injected press is released.
+	_send_action(&"test_set_a", false)
+
+	# Then: The action is released.
+	assert_false(Input.is_action_pressed(&"test_set_a"))
+
+
+func test_device_actions_injected_press_on_a_kept_unbound_action_stays_pressed(
+) -> void:
+	# Given: An action set declaring an action which is left unbound.
+	var set_a := _make_action_set(&"A", [_JOY_ACTION])
+	var layer := _make_layer(&"L", set_a, [&"test_layer"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+	assert_eq(
+		InputMap.action_get_events(_JOY_ACTION).size(), 0, "precondition: unbound"
+	)
+
+	# Given: The action is pressed by an injected event, as Steam publishes it.
+	_send_action(_JOY_ACTION, true)
+	assert_true(Input.is_action_pressed(_JOY_ACTION), "precondition: pressed")
+
+	# When: A layer is enabled and then disabled.
+	assert_true(_actions.enable_action_set_layer(DEVICE_ID_ALL, layer))
+	assert_true(_actions.disable_action_set_layer(DEVICE_ID_ALL, layer))
+
+	# Then: The action is still pressed.
+	assert_true(Input.is_action_pressed(_JOY_ACTION))
+
+	# When: A set keeping the action is loaded.
+	var set_b := _make_action_set(&"B", [_JOY_ACTION, &"test_set_b"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_b))
+
+	# Then: The action is still pressed.
+	assert_true(Input.is_action_pressed(_JOY_ACTION))
+
+	# When: The injected press is released.
+	_send_action(_JOY_ACTION, false)
+
+	# Then: The action is released.
+	assert_false(Input.is_action_pressed(_JOY_ACTION))
+
+
+func test_device_actions_injected_press_on_a_dropped_unbound_action_is_released(
+) -> void:
+	# Given: An action set declaring an action which is left unbound.
+	var set_a := _make_action_set(&"A", [_JOY_ACTION])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+
+	# Given: The action is pressed by an injected event, as Steam publishes it.
+	_send_action(_JOY_ACTION, true)
+	assert_true(Input.is_action_pressed(_JOY_ACTION), "precondition: pressed")
+
+	# When: A set without the action is loaded.
+	var set_b := _make_action_set(&"B", [&"test_set_b"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_b))
+
+	# Then: The action is released.
+	assert_false(Input.is_action_pressed(_JOY_ACTION))
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
 func after_all() -> void:
+	# NOTE: The component's static set names these actions, so it's forgotten too.
+	DeviceActions._action_set = null
+	DeviceActions._action_set_layers = []
+
+	for action in [_JOY_ACTION, _LOCATED_ACTION]:
+		InputMap.erase_action(action)
+		ProjectSettings.set_setting(&"input/" + action, null)
+
 	for action in _DEFAULTS:
 		InputMap.erase_action(action)
 		ProjectSettings.set_setting(&"input/" + action, null)
 
 
+func after_each() -> void:
+	# NOTE: `Input` outlives each test, so a press left down would carry into the next.
+	for action in InputMap.get_actions():
+		if Input.is_action_pressed(action):
+			Input.action_release(action)
+
+
 func before_all() -> void:
+	var button := InputEventJoypadButton.new()
+	button.button_index = JOY_BUTTON_A
+
+	InputMap.add_action(_JOY_ACTION)
+	ProjectSettings.set_setting(
+		&"input/" + _JOY_ACTION, {"deadzone": 0.5, "events": [button]}
+	)
+
+	var shifts: Array[InputEvent] = []
+	for location in [KEY_LOCATION_LEFT, KEY_LOCATION_RIGHT]:
+		var shift := InputEventKey.new()
+		shift.keycode = KEY_SHIFT
+		shift.location = location
+		shifts.append(shift)
+
+	InputMap.add_action(_LOCATED_ACTION)
+	ProjectSettings.set_setting(
+		&"input/" + _LOCATED_ACTION, {"deadzone": 0.5, "events": shifts}
+	)
+
 	for action in _DEFAULTS:
 		InputMap.add_action(action)
 
@@ -193,3 +417,28 @@ func _make_layer(
 	layer.parent = parent
 	layer.actions_digital = actions
 	return layer
+
+
+## _send_action sends `Input` an injected press or release of `action`.
+func _send_action(action: StringName, pressed: bool) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = pressed
+	event.strength = 1.0 if pressed else 0.0
+
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()
+
+
+## _send_key sends `Input` a press or release of `key`, at `location` on the keyboard.
+func _send_key(
+	key: Key, pressed: bool, location: KeyLocation = KEY_LOCATION_UNSPECIFIED
+) -> void:
+	var event := InputEventKey.new()
+	event.keycode = key
+	event.physical_keycode = key
+	event.location = location
+	event.pressed = pressed
+
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()

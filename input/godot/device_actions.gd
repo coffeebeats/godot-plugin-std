@@ -116,13 +116,10 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 	if action_set == _action_set:
 		return false
 
-	_reset(DEVICE_ID_ALL)
 	_action_set = action_set
+	_action_set_layers = []
 
-	if claim_kbm_input:
-		_apply_action_set(DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set)
-	if claim_joy_input:
-		_apply_action_set(DEVICE_ID_ALL, DeviceType.GENERIC, action_set)
+	_rebuild(DEVICE_ID_ALL)
 
 	return true
 
@@ -152,9 +149,6 @@ func _disable_action_set_layer(
 
 	_action_set_layers.erase(action_set_layer)
 	assert(action_set_layer not in _action_set_layers, "found duplicate layer")
-
-	# TODO: Rather than completely rebuilding the action map, only bind/unbind the
-	# necessary origins.
 
 	# NOTE: The caller reports the layer change itself, so `bindings_changed` is not
 	# emitted here; it would reach the slot while the layer is still listed as active.
@@ -189,6 +183,8 @@ func _enable_action_set_layer(
 		_apply_action_set(DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set_layer)
 	if claim_joy_input:
 		_apply_action_set(DEVICE_ID_ALL, DeviceType.GENERIC, action_set_layer)
+
+	_sync_input_map()
 
 	return true
 
@@ -241,10 +237,6 @@ func _bind_action_to_origin(
 				)
 			)
 
-		InputMap.action_erase_event(previous, event)
-		assert(not InputMap.action_has_event(action, event), "failed to erase binding")
-
-	InputMap.action_add_event(action, event)
 	_bindings[origin] = action
 
 
@@ -282,36 +274,75 @@ func _get_action_origins(
 	return origins
 
 
-## _rebuild rebinds the active action set and layers for `device` from scratch, without
-## reporting a change.
-func _rebuild(device: int) -> void:
-	var action_set := get_action_set(device)
-	var layers := list_action_set_layers(device)
-
-	_reset(device)
-
-	if not action_set:
-		assert(not layers, "invalid state; found dangling layers")
-		return
-
-	_load_action_set(device, action_set)
-
-	for layer in layers:
-		_enable_action_set_layer(device, layer)
-
-
-func _reset(_device: int) -> void:
-	# Clear all existing bindings.
-	for action in InputMap.get_actions():
-		InputMap.action_erase_events(action)
+## _list_active_sets returns the active action set, if any, followed by its layers.
+func _list_active_sets() -> Array[StdInputActionSet]:
+	var action_sets: Array[StdInputActionSet] = []
 
 	if _action_set:
-		_action_set = null
+		action_sets.append(_action_set)
 
-	if _action_set_layers:
-		_action_set_layers = []
+	action_sets.append_array(_action_set_layers)
+
+	return action_sets
+
+
+## _rebuild recomputes the bindings of the active set and layers, without reporting a
+## change, and applies them to the input map.
+func _rebuild(_device: int) -> void:
+	assert(
+		_action_set or not _action_set_layers, "invalid state; found dangling layers"
+	)
 
 	_bindings = {}
+
+	for action_set in _list_active_sets():
+		if claim_kbm_input:
+			_apply_action_set(DEVICE_ID_ALL, DeviceType.KEYBOARD, action_set)
+		if claim_joy_input:
+			_apply_action_set(DEVICE_ID_ALL, DeviceType.GENERIC, action_set)
+
+	_sync_input_map()
+
+
+## _sync_input_map makes the input map match `_bindings`, leaving an action whose
+## bindings are unchanged alone so that `Input` keeps its state.
+##
+## NOTE: A changed action is rebound whole, which releases it. Adding a binding alone
+## would strand a held injected press, whose state is indexed by the binding count.
+func _sync_input_map() -> void:
+	var wanted: Dictionary[StringName, Array] = {}
+
+	for action_set in _list_active_sets():
+		for action in action_set.list_action_names(true):
+			wanted[StringName(action)] = []
+
+	for origin: int in _bindings:
+		var event := Origin.decode(origin)
+		event.device = DEVICE_ID_ALL
+
+		wanted[_bindings[origin]].append(event)
+
+	for action: StringName in InputMap.get_actions():
+		# NOTE: Nothing reports the release of a press on an action outside the sets. One
+		# inside them may be unbound here and still be held on another component's device.
+		if action not in wanted and Input.is_action_pressed(action):
+			Input.action_release(action)
+
+		var events: Array = wanted.get(action, [])
+		var existing := InputMap.action_get_events(action)
+
+		# NOTE: The map keeps one of two events which match, such as a key at two
+		# locations, so the events are compared as the map does rather than counted.
+		if (
+			events.all(func(e): return InputMap.action_has_event(action, e))
+			and existing.all(func(e): return events.any(func(w): return w.is_match(e)))
+		):
+			continue
+
+		InputMap.action_erase_events(action)
+
+		for event: InputEvent in events:
+			InputMap.action_add_event(action, event)
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
