@@ -261,11 +261,12 @@ func test_render_gives_an_action_a_label_per_set() -> void:
 
 
 func test_render_ignores_holds() -> void:
-	# Given: A set and a layer of it, with a digital action each.
+	# Given: A set with a digital action.
 	var menu := StdInputActionSet.new()
 	menu.name = &"Menu"
 	menu.actions_digital = [&"ui_accept"]
 
+	# Given: A layer of that set with a digital action.
 	var tabbed := StdInputActionSetLayer.new()
 	tabbed.name = &"MenuTabbed"
 	tabbed.parent = menu

@@ -2,9 +2,7 @@
 ## std/input/action_hold.gd
 ##
 ## StdInputActionHold declares that an action runs as a hold, a gesture over the
-## action's press and release. A set or layer lists it in `holds`, and it's live exactly
-## while that set is loaded or that layer enabled. The action stays an ordinary action,
-## so a hold has no `InputMap` entry, binding or Steam manifest entry of its own.
+## action's press and release. A set or layer lists it in `holds`.
 ##
 
 @tool
@@ -17,7 +15,7 @@ extends Resource
 ##
 ## NOTE: A settings property stores these values, so they must not be renumbered.
 enum Mode {
-	## INHERIT makes no choice. A settings property holding it defers to the hold's next
+	## INHERIT makes no choice, so a settings property holding it defers to the hold's next
 	## source of a mode, and `mode` holding it runs as `HOLD`. It's `0` because that's
 	## what a `StdSettingsPropertyInt` reads when no default is set and nothing is stored.
 	INHERIT = 0,
@@ -58,22 +56,17 @@ const MODE_PRESS := Mode.PRESS
 ## `MODE_INHERIT`, decides the hold's `Mode` in place of `mode`. It lets one group of
 ## holds offer the player its own choice.
 ##
-## NOTE: The property should default to `MODE_INHERIT` and list it among its options,
-## which an option button requires of the value it shows. The game's default belongs in
-## `mode`, since any other default here overrides the general setting a player chose.
+## NOTE: The property should default to `MODE_INHERIT` and offer it, since any other
+## default overrides a player's general setting. The game's default goes in `mode`.
 ##
-## NOTE: The property's options must keep `MODE_TOGGLE`, the alternative to a sustained
-## hold that the accessibility guidelines ask for. Nothing checks this, since the
-## options sit in a separate property the hold can't see. Leaving `MODE_PRESS` out of
-## them doesn't stop a stored value from running; `allow_press` does.
+## NOTE: The options must keep `MODE_TOGGLE`, the alternative to a sustained hold that
+## Game Accessibility Guidelines and Xbox XAG 107 ask for. Nothing checks this.
 @export var mode_override: StdSettingsPropertyInt = null
 
 ## allow_press defines whether the hold can run in `MODE_PRESS`. A destructive confirm
-## sets this to `false` so a tap can't skip its `duration`. `MODE_PRESS` then runs as
-## `MODE_TOGGLE`, whichever source chose it, which keeps the hold within reach of a
-## player who can't sustain one.
+## sets this to `false`, so `MODE_PRESS` runs as `MODE_TOGGLE`, whichever source chose
+## it, and a tap can't skip `duration`.
 ##
-## NOTE: This doesn't stop a stray tap triggering the hold. The tap starts the fill,
-## which finishes on its own unless a second tap of `action` or a press of
-## `cancel_action` ends it.
+## NOTE: In `MODE_TOGGLE`, a stray tap still triggers the hold once it fills, unless a
+## second tap of `action` or a press of `cancel_action` ends it first.
 @export var allow_press: bool = true
