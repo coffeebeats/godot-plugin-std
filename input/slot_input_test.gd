@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## std/input/slot_input_test.gd
 ##
@@ -31,6 +32,7 @@ const _TEST_KEY := KEY_T
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+var input: StdTestInput = null
 var slot: StdInputSlot = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
@@ -99,7 +101,7 @@ func test_input_slot_mouse_motion_reveals_cursor_without_activating_kbm() -> voi
 	# Given: The slot is added to the scene with a joypad preferred.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = true
-	add_child_autofree(slot)
+	input = await StdTestInput.mount(self, slot)
 	autofree(slot.get_active_device())
 
 	# Given: A joypad connects, which activates it.
@@ -170,15 +172,12 @@ func test_cursor_held_hide_action_is_released_by_input_state() -> void:
 
 
 func after_all() -> void:
-	for action in [_TEST_ACTION, _TEST_AXIS_ACTION, _TEST_HIDE_ACTION]:
+	for action in [
+		_TEST_ACTION,
+		_TEST_AXIS_ACTION,
+		_TEST_HIDE_ACTION,
+	]:
 		InputMap.erase_action(action)
-
-
-func after_each() -> void:
-	# NOTE: Every test action is released, so a held stick can't leak into the next.
-	for action in [_TEST_ACTION, _TEST_AXIS_ACTION, _TEST_HIDE_ACTION]:
-		Input.action_release(action)
-	await wait_process_frames(1)
 
 
 func before_all() -> void:
@@ -206,7 +205,7 @@ func before_each() -> void:
 func _activate_kbm_with_joypad_connected() -> void:
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = false
-	add_child_autofree(slot)
+	input = await StdTestInput.mount(self, slot)
 	autofree(slot.get_active_device())
 
 	slot.joypad_monitor.connected = [0] as Array[int]
@@ -223,11 +222,11 @@ func _active_type() -> StdInputDevice.DeviceType:
 	return slot.get_active_device().device_type
 
 
-## _dispatch parses `event` through `Input` and lets two frames pass so the engine
-## delivers it to the scene.
+## _dispatch sends `event` as a player's input and lets a frame pass, so anything
+## polling `Input` in `_process` reads it.
 func _dispatch(event: InputEvent) -> void:
-	Input.parse_input_event(event)
-	await wait_process_frames(2)
+	input.send(event)
+	await wait_process_frames(1)
 
 
 ## _key returns a press, or a release when `pressed` is `false`, of the test key.
