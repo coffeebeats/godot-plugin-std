@@ -18,35 +18,29 @@ signal finished
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 
-## _RectBlocker is a control that takes the mouse over its parent control's rect. It's
-## `top_level` so that a container never lays it out, and it still inherits visibility,
-## so it takes nothing while the parent is hidden.
-##
-## NOTE: Neither the parent's scale nor an ancestor's move emits `item_rect_changed`, so
-## a transition animating either leaves this at the last rect.
-##
-## NOTE: The engine doesn't mark an event handled for a `top_level` control whose filter
-## stops the mouse, so this accepts it, or the click would reach `_unhandled_input`.
+## _RectBlocker takes the mouse over its parent control's rect. Its control follows the
+## parent's transform, clipping, visibility and input order as a descendant, and sits
+## under this `Node2D` because a container lays out only its direct `Control` children.
 class _RectBlocker:
-	extends Control
+	extends Node2D
 
-	func _gui_input(_event: InputEvent) -> void:
-		accept_event()
+	var _cover := Control.new()
 
 	func _init() -> void:
 		name = &"TransitionInputBlocker"
-		mouse_filter = MOUSE_FILTER_STOP
-		top_level = true
+
+		# NOTE: A control that stops the mouse still passes a wheel turn to its parent.
+		_cover.mouse_force_pass_scroll_events = false
+
+		add_child(_cover)
 
 	func _ready() -> void:
-		get_parent().item_rect_changed.connect(_fit)
+		get_parent().resized.connect(_fit)
 		_fit()
 
-	## _fit places this over the parent's global rect.
+	## _fit sizes the cover to the parent.
 	func _fit() -> void:
-		var rect: Rect2 = get_parent().get_global_rect()
-		global_position = rect.position
-		size = rect.size
+		_cover.size = get_parent().size
 
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -60,7 +54,7 @@ var exiting: Node = null
 ## host is the node that gives this context a tree and that its tweens are bound to.
 var host: Node
 
-var _blockers: Array[Control] = []
+var _blockers: Array[Node2D] = []
 var _did_finish: bool = false
 var _did_mount: bool = false
 var _did_unmount: bool = false

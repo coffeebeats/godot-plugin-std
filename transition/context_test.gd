@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## std/transition/context_test.gd
 ##
@@ -178,6 +179,85 @@ func test_block_input_when_panel_slides_stays_over_panel():
 	assert_eq(_find_blocker(_panel).get_global_rect(), _panel.get_global_rect())
 
 
+func test_block_input_when_panel_scales_takes_click_on_grown_panel():
+	# Given: A panel at half size.
+	var input := await StdTestInput.mount(self, _root)
+	watch_signals(_button)
+	_panel.scale = Vector2(0.5, 0.5)
+
+	# Given: The panel entering with a transition that blocks input.
+	_enter_held(_create_context(_panel))
+
+	# When: The panel grows to full size.
+	_panel.scale = Vector2.ONE
+
+	# When: The mouse clicks a point only the grown panel covers.
+	input.click_at(_panel.get_global_rect().end - Vector2(10, 10))
+
+	# Then: The button isn't pressed.
+	assert_signal_not_emitted(_button, "pressed")
+
+
+func test_block_input_with_control_over_panel_leaves_click_to_control():
+	# Given: A button drawn over the panel, under the same parent.
+	var over := Button.new()
+	over.position = _panel.position
+	over.size = _panel.size / 2.0
+	_root.add_child(over)
+
+	var input := await StdTestInput.mount(self, _root)
+	watch_signals(over)
+
+	# Given: The panel entering with a transition that blocks input.
+	_enter_held(_create_context(_panel))
+
+	# When: The mouse clicks the button.
+	input.click(over)
+
+	# Then: The button is pressed.
+	assert_signal_emit_count(over, "pressed", 1)
+
+
+func test_block_input_with_clipped_panel_leaves_clipped_part_unhandled():
+	# Given: A parent that clips a panel to half its width.
+	var clip := Control.new()
+	clip.clip_contents = true
+	clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clip.size = Vector2(100, 100)
+	_root.add_child(clip)
+
+	var panel := Control.new()
+	panel.size = Vector2(200, 100)
+	clip.add_child(panel)
+
+	var input := await StdTestInput.mount(self, _root)
+
+	# Given: The panel entering with a transition that blocks input.
+	_enter_held(_create_context(panel))
+
+	# When: The mouse clicks where the panel is clipped.
+	input.click_at(Vector2(150, 50))
+
+	# Then: Nothing took the click.
+	assert_eq(_recorder.presses, 1)
+
+
+func test_block_input_with_wheel_inside_rect_takes_wheel():
+	# Given: A panel entering with a transition that blocks input.
+	var input := await StdTestInput.mount(self, _root)
+	watch_signals(_panel)
+	_enter_held(_create_context(_panel))
+
+	# When: The wheel turns over the panel.
+	input.click(_panel, MOUSE_BUTTON_WHEEL_UP)
+
+	# Then: The panel never sees it.
+	assert_signal_not_emitted(_panel, "gui_input")
+
+	# Then: The wheel turn isn't left for the world.
+	assert_eq(_recorder.presses, 0)
+
+
 func test_block_input_when_control_laid_out_after_mount_refits():
 	# Given: A hidden panel in a container, which skips it while it's hidden.
 	var outer := VBoxContainer.new()
@@ -248,10 +328,10 @@ func test_block_input_when_control_reenters_tree_stays_connected_once():
 	# Then: Nothing connected twice.
 	assert_engine_error_count(0)
 
-	# When: The panel moves.
-	_panel.position += Vector2(50, 25)
+	# When: The panel resizes.
+	_panel.size += Vector2(20, 10)
 
-	# Then: The blocker still follows it.
+	# Then: The blocker still covers it.
 	assert_eq(_find_blocker(_panel).get_global_rect(), _panel.get_global_rect())
 
 
@@ -439,13 +519,14 @@ func _enter_held(ctx: StdTransitionContext) -> MockTransition:
 	return tx
 
 
-## _find_blocker returns the blocker on `node`, which is internal and so not listed.
+## _find_blocker returns the control covering `node`, under a blocker that's internal
+## and so not listed.
 func _find_blocker(node: Node) -> Control:
 	for child: Node in node.get_children(true):
 		if (
 			child.name == &"TransitionInputBlocker"
 			and not child.is_queued_for_deletion()
 		):
-			return child
+			return child.get_child(0)
 
 	return null
