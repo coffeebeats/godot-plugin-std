@@ -66,6 +66,10 @@ const Signals := preload("../event/signal.gd")
 
 static var _anchors: Array[StdInputCursorFocusHandler] = []  # gdlint:ignore=class-definitions-order,max-line-length
 
+## _blocked is whether the target `Control` node was blocked at its last draw, so that
+## the draw which enables it is reported as a show is.
+var _blocked: bool = false
+
 var _control_focus_mode: FocusMode = FOCUS_NONE
 var _control_mouse_filter: MouseFilter = MOUSE_FILTER_IGNORE
 var _cursor: StdInputCursor = null
@@ -158,6 +162,7 @@ func _ready() -> void:
 	# Monitor disabled state changes for BaseButtons via the draw signal; see
 	# https://github.com/godotengine/godot-proposals/issues/8889.
 	if _control is BaseButton:
+		_blocked = _is_blocked()
 		Signals.connect_safe(_control.draw, _on_control_draw)
 
 	_cursor = StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
@@ -303,7 +308,15 @@ func _update_input_state(is_cursor_visible: bool) -> void:
 
 
 func _on_control_draw() -> void:
+	var was_blocked := _blocked
+	_blocked = _is_blocked()
+
 	_update_input_state(_cursor.get_is_visible())
+
+	# NOTE: An enabled button takes focus as a shown one does, deferred since this runs
+	# while drawing.
+	if was_blocked and not _blocked:
+		_cursor.report_focus_handler_visible.call_deferred(self)
 
 
 func _on_control_focus_entered() -> void:

@@ -26,8 +26,8 @@ func _execute(_manager: StdScreenManager, _done: Callable) -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _emit_entered emits the entered signal and restores focus on the given scene. If the
-## scene is null (failed load), this is a no-op.
+## _emit_entered emits the entered signal for the given scene. If the scene is null
+## (failed load), this is a no-op.
 func _emit_entered(
 	manager: StdScreenManager,
 	screen: StdScreen,
@@ -36,10 +36,8 @@ func _emit_entered(
 	if scene == null:
 		return
 
-	manager._set_pending_focus(scene)
 	screen.entered.emit(scene)
 	manager.screen_entered.emit(screen, scene)
-	manager._restore_focus(scene)
 
 
 ## _run_transition sets up and dispatches a transition for the given operation method.
