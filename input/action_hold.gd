@@ -58,6 +58,10 @@ const MODE_PRESS := Mode.PRESS
 ## `MODE_INHERIT`, decides the hold's `Mode` in place of `mode`. It lets one group of
 ## holds offer the player its own choice.
 ##
+## NOTE: The property should default to `MODE_INHERIT` and list it among its options,
+## which an option button requires of the value it shows. The game's default belongs in
+## `mode`, since any other default here overrides the general setting a player chose.
+##
 ## NOTE: The property's options must keep `MODE_TOGGLE`, the alternative to a sustained
 ## hold that the accessibility guidelines ask for. Nothing checks this, since the
 ## options sit in a separate property the hold can't see. Leaving `MODE_PRESS` out of
@@ -65,7 +69,7 @@ const MODE_PRESS := Mode.PRESS
 @export var mode_override: StdSettingsPropertyInt = null
 
 ## allow_press defines whether the hold can run in `MODE_PRESS`. A destructive confirm
-## sets this to `false` so a tap can't confirm it at once. `MODE_PRESS` then runs as
+## sets this to `false` so a tap can't skip its `duration`. `MODE_PRESS` then runs as
 ## `MODE_TOGGLE`, whichever source chose it, which keeps the hold within reach of a
 ## player who can't sustain one.
 @export var allow_press: bool = true
