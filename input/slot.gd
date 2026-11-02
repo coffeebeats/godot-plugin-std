@@ -1,3 +1,4 @@
+# gdlint:disable=max-file-lines
 ##
 ## std/input/slot.gd
 ##
