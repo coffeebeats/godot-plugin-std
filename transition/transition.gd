@@ -6,8 +6,8 @@
 ## change has a dedicated virtual method, and the transition controls the timeline via
 ## explicit methods on the context it's given.
 ##
-## NOTE: A run stores state on the instance, so a caller runs a duplicate of a
-## configured resource and keeps it until `finished`, as a tween's callback won't.
+## NOTE: A run stores state on the instance, so a caller runs a duplicate of a resource
+## and holds it until `finished`; `stop` needs it and it may not stay alive otherwise.
 ##
 
 class_name StdTransition
@@ -16,8 +16,8 @@ extends Resource
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## block_input controls whether input is automatically blocked during transitions. The
-## context decides what's blocked: the viewport for a screen, otherwise the rect of the
-## entering or exiting control.
+## context decides what's blocked, which is the viewport for a screen and otherwise the
+## rect of the entering or exiting control.
 @export var block_input: bool = true
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
