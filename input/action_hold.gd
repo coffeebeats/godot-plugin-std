@@ -17,16 +17,21 @@ extends Resource
 ##
 ## NOTE: A settings property stores these values, so they must not be renumbered.
 enum Mode {
+	## INHERIT makes no choice. A settings property holding it defers to the hold's next
+	## source of a mode, and `mode` holding it runs as `HOLD`. It's `0` because that's
+	## what a `StdSettingsPropertyInt` reads when no default is set and nothing is stored.
+	INHERIT = 0,
 	## HOLD is active while the input is held, and cancels on a release before the fill.
-	HOLD = 0,
+	HOLD = 1,
 	## TOGGLE becomes active on a tap and stays active until a second tap of `action`, or
 	## a press of `cancel_action`. With a duration it's a charge that completes on its
 	## own, and with a duration of `0` it's an on/off toggle.
-	TOGGLE = 1,
+	TOGGLE = 2,
 	## PRESS triggers on the press.
-	PRESS = 2,
+	PRESS = 3,
 }
 
+const MODE_INHERIT := Mode.INHERIT
 const MODE_HOLD := Mode.HOLD
 const MODE_TOGGLE := Mode.TOGGLE
 const MODE_PRESS := Mode.PRESS
@@ -49,11 +54,18 @@ const MODE_PRESS := Mode.PRESS
 ## mode is the `Mode` the hold runs in when no settings property chooses one.
 @export var mode: Mode = MODE_HOLD
 
-## mode_override is an optional settings property which, when set, decides the hold's
-## `Mode` in place of `mode`. It lets one group of holds offer the player its own
-## choice.
+## mode_override is an optional settings property which, while it holds anything but
+## `MODE_INHERIT`, decides the hold's `Mode` in place of `mode`. It lets one group of
+## holds offer the player its own choice.
 ##
-## NOTE: A destructive confirm forbids `MODE_PRESS` by naming a property whose options
-## leave it out. The options must keep `MODE_TOGGLE`, the alternative to a sustained
-## hold that the accessibility guidelines ask for.
+## NOTE: The property's options must keep `MODE_TOGGLE`, the alternative to a sustained
+## hold that the accessibility guidelines ask for. Nothing checks this, since the
+## options sit in a separate property the hold can't see. Leaving `MODE_PRESS` out of
+## them doesn't stop a stored value from running; `allow_press` does.
 @export var mode_override: StdSettingsPropertyInt = null
+
+## allow_press defines whether the hold can run in `MODE_PRESS`. A destructive confirm
+## sets this to `false` so a tap can't confirm it at once. `MODE_PRESS` then runs as
+## `MODE_TOGGLE`, whichever source chose it, which keeps the hold within reach of a
+## player who can't sustain one.
+@export var allow_press: bool = true
