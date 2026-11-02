@@ -160,6 +160,86 @@ func test_anchor_is_removed_on_exit_tree() -> void:
 	assert_null(StdInputCursorFocusHandler.get_focus_target())
 
 
+func test_anchor_beside_its_control_follows_the_controls_visibility() -> void:
+	# Given: A cursor in the scene, hidden.
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A hidden panel holding a focusable button.
+	var panel := Control.new()
+	panel.name = &"Panel"
+	panel.hide()
+	add_child_autofree(panel)
+	var button := Button.new()
+	button.name = &"Button"
+	button.focus_mode = Control.FOCUS_ALL
+	panel.add_child(button)
+
+	# Given: An anchor handler for the button beside the panel rather than under it.
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("../Panel/Button")
+	handler.use_as_anchor = true
+	add_child_autofree(handler)
+	await get_tree().process_frame
+	assert_null(cursor.get_viewport().gui_get_focus_owner(), "precondition: no focus")
+
+	# When: The panel is shown, and the frame ends.
+	panel.show()
+	await get_tree().process_frame
+
+	# Then: The button has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_handler_under_a_container_takes_no_slot_and_covers_no_sibling() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A box container holding a button.
+	var scene := Control.new()
+	var box := VBoxContainer.new()
+	scene.add_child(box)
+	var first := Button.new()
+	first.name = &"Button"
+	box.add_child(first)
+
+	# Given: A panel container holding another button, below the box.
+	var panel := PanelContainer.new()
+	panel.position = Vector2(0, 100)
+	scene.add_child(panel)
+	var second := Button.new()
+	second.name = &"Button"
+	second.custom_minimum_size = Vector2(100, 40)
+	panel.add_child(second)
+
+	# Given: The scene is mounted and laid out.
+	var input := await StdTestInput.mount(self, scene)
+	var minimum := box.get_combined_minimum_size()
+
+	# When: A handler for each button enters its container beside it.
+	var handlers: Array[StdInputCursorFocusHandler] = []
+	for container in [box, panel]:
+		var handler := StdInputCursorFocusHandler.new()
+		handler.control = NodePath("../Button")
+		container.add_child(handler)
+		handlers.append(handler)
+	await wait_idle_frames(1)
+
+	# Then: The box's minimum size is unchanged.
+	assert_eq(box.get_combined_minimum_size(), minimum)
+
+	# When: The panel's button is clicked.
+	watch_signals(second)
+	input.click(second)
+
+	# Then: The click reaches it.
+	assert_signal_emitted(second, "pressed")
+
+	for handler in handlers:
+		handler.get_parent().remove_child(handler)
+		handler.free()
+
+
 func test_cursor_visibility_change_toggles_focus_mode() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
