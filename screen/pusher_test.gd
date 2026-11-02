@@ -408,7 +408,7 @@ func _create_pusher_scene(
 
 
 func _create_screen(
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 	block_input_below: bool = true,
 ) -> StdScreen:
 	var screen := StdScreen.new()

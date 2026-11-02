@@ -24,18 +24,18 @@ class _CallbackScene:
 
 ## _DelayedTransition mounts at once and finishes a moment later.
 class _DelayedTransition:
-	extends StdScreenTransition
+	extends StdTransition
 
-	func _push(context: StdScreenTransitionContext) -> void:
+	func _enter(context: StdTransitionContext) -> void:
 		context.mount()
 		context.create_tween().tween_callback(context.done).set_delay(0.05)
 
 
 ## _LateMountTransition mounts a moment later and never finishes.
 class _LateMountTransition:
-	extends StdScreenTransition
+	extends StdTransition
 
-	func _push(context: StdScreenTransitionContext) -> void:
+	func _enter(context: StdTransitionContext) -> void:
 		context.create_tween().tween_callback(context.mount).set_delay(0.01)
 
 
@@ -49,9 +49,9 @@ class _PausingScene:
 
 ## _UnfinishedTransition mounts at once and never finishes.
 class _UnfinishedTransition:
-	extends StdScreenTransition
+	extends StdTransition
 
-	func _push(context: StdScreenTransitionContext) -> void:
+	func _enter(context: StdTransitionContext) -> void:
 		context.mount()
 
 
@@ -86,7 +86,7 @@ func test_push_and_wait_with_bare_transition_skips_screen_transition():
 	var manager := _add_manager()
 
 	# When: The screen is pushed with a bare transition.
-	await manager.push_and_wait(screen, Control.new(), StdScreenTransition.new())
+	await manager.push_and_wait(screen, Control.new(), StdTransition.new())
 
 	# Then: The push returned with the screen on top.
 	assert_true(manager.is_current(screen))

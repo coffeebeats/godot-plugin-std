@@ -86,7 +86,7 @@ static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=c
 
 var _active_context: StdScreenTransitionContext = null
 var _active_op: Operation = null
-var _active_transition: StdScreenTransition = null
+var _active_transition: StdTransition = null
 var _attachments: Dictionary[StdScreen, Array] = {}
 var _cache: Dictionary[StdScreen, Node] = {}
 var _cursor: StdInputCursor = null
@@ -148,7 +148,7 @@ func load_screen(screen: StdScreen, include_dependencies: bool = true) -> Dictio
 func pop(
 	result: Variant = null,
 	force: bool = false,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
@@ -187,7 +187,7 @@ func pop_to(screen: StdScreen) -> void:
 func push(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> void:
 	assert(
 		screen != null,
@@ -202,7 +202,7 @@ func push(
 func replace(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> void:
 	assert(
 		screen != null,
@@ -221,7 +221,7 @@ func replace(
 func reset(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> void:
 	assert(
 		screen != null,
@@ -298,7 +298,7 @@ func _create_blocker() -> Control:
 ## screen. The resolver, when called, sync-blocks on any in-progress background loads
 ## and returns the instantiated scene node. The second element is non-null when the
 ## scene is immediately available (instance or cache) — operations pass it as
-## `entering_scene` for force-stop cleanup.
+## `entering` for force-stop cleanup.
 func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 	var sync_scene: Node = null
 	var scene_path := ""
@@ -434,8 +434,8 @@ func _force_hover_recalculation() -> void:
 	viewport.push_input(event, true)
 
 
-## _force_stop stops the active transition, force-finishes the context, and releases
-## its input blocker.
+## _force_stop stops the active transition, which ends its context and releases its
+## input blocker.
 func _force_stop() -> void:
 	if _active_transition == null:
 		return
@@ -446,20 +446,15 @@ func _force_stop() -> void:
 	_active_transition = null
 	_active_context = null
 
-	transition.stop()
-
-	if ctx:
-		ctx._did_finish = true
-
 	# NOTE: The blocker belongs to the transition discarded here. The next operation
 	# re-arms one in the same call stack if its transition blocks input.
-	_unblock_input()
+	transition.stop()
 
 	# Free entering scenes that were never mounted to prevent orphaned nodes. The scene
 	# is not in the tree and would otherwise leak. For async cases (resolver-based),
-	# entering_scene is null until mount() completes — nothing to free.
-	if ctx and not ctx._did_mount and is_instance_valid(ctx.entering_scene):
-		ctx.entering_scene.free()
+	# `entering` is null until mount() completes — nothing to free.
+	if ctx and not ctx._did_mount and is_instance_valid(ctx.entering):
+		ctx.entering.free()
 
 
 ## _free_attachments detaches and queue-frees the given screen's attachment nodes.
@@ -640,9 +635,9 @@ func _request_close_top(event: InputEvent) -> void:
 ## _resolve_transition returns the transition to use for an operation.
 func _resolve_transition(
 	screen: StdScreen,
-	explicit: StdScreenTransition,
+	explicit: StdTransition,
 	operation: StringName = &"",
-) -> StdScreenTransition:
+) -> StdTransition:
 	if explicit:
 		return explicit
 	if operation == &"push" and screen.transition_push:

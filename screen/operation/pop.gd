@@ -14,7 +14,7 @@ const Pop := preload("pop.gd")
 
 var _depth: int
 var _result: Variant
-var _transition: StdScreenTransition
+var _transition: StdTransition
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -22,7 +22,7 @@ var _transition: StdScreenTransition
 ## create constructs a pop operation to the given target depth.
 static func create(
 	depth: int,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 	result: Variant = null,
 ) -> RefCounted:
 	var op = Pop.new()
@@ -76,7 +76,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	_run_transition(
 		manager,
 		transition,
-		&"pop",
+		&"exit",
 		scene,
 		null,
 		Callable(),

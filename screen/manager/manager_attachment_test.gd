@@ -198,7 +198,7 @@ func before_each():
 
 
 func _create_screen(
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 	block_input_below: bool = true,
 ) -> Screen:
 	var screen := Screen.new()

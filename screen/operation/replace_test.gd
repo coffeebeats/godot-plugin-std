@@ -9,7 +9,7 @@ extends GutTest
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Manager := preload("../manager/manager.gd")
-const TransitionTests := preload("../transition_test.gd")
+const TransitionTests := preload("../../transition/transition_test.gd")
 const Overlay := preload("../overlay.gd")
 const Screen := preload("../screen.gd")
 
@@ -173,7 +173,7 @@ func test_replace_with_transition_delays_entered():
 	)
 	await wait_idle_frames(1)
 	var active := _get_active_transition()
-	assert_true(active.replace_started)
+	assert_true(active.swap_started)
 	assert_signal_not_emitted(_manager, "screen_entered")
 
 	# When: The transition swaps and completes.
@@ -201,7 +201,7 @@ func test_replace_with_transition_blocks_input():
 	)
 	await wait_idle_frames(1)
 	var active := _get_active_transition()
-	assert_true(active.replace_started)
+	assert_true(active.swap_started)
 
 	# Then: An input blocker is present.
 	var blocker := (
@@ -344,7 +344,7 @@ func before_each():
 
 
 func _create_screen(
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 	block_input_below: bool = true,
 ) -> Screen:
 	var screen := Screen.new()
