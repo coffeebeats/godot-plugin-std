@@ -247,6 +247,41 @@ func test_loader_keeps_a_shared_layer_under_a_screen_with_the_same_sets() -> voi
 	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
 
 
+func test_loader_under_a_container_takes_no_slot_and_covers_no_sibling() -> void:
+	# Given: A box container holding a button.
+	var scene := Control.new()
+	var box := VBoxContainer.new()
+	scene.add_child(box)
+	box.add_child(Button.new())
+
+	# Given: A panel container holding another button, below the box.
+	var panel := PanelContainer.new()
+	panel.position = Vector2(0, 100)
+	scene.add_child(panel)
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(100, 40)
+	panel.add_child(button)
+
+	# Given: The scene is mounted and laid out.
+	var input := await StdTestInput.mount(self, scene)
+	var minimum := box.get_combined_minimum_size()
+
+	# When: A loader enters each container beside its button.
+	box.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE))
+	panel.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE))
+	await wait_idle_frames(1)
+
+	# Then: The box's minimum size is unchanged.
+	assert_eq(box.get_combined_minimum_size(), minimum)
+
+	# When: The panel's button is clicked.
+	watch_signals(button)
+	input.click(button)
+
+	# Then: The click reaches it.
+	assert_signal_emitted(button, "pressed")
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

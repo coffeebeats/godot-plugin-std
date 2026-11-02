@@ -4,21 +4,21 @@
 ## StdInputActionSetLoader is a node which keeps an action set loaded and action set
 ## layers enabled while the rule in `active_while` holds and its screen is uncovered.
 ## It first acts at the end of the frame it enters the tree in, once its parents have
-## set it up.
+## set it up. The `VISIBLE` rule follows the nearest `CanvasItem` above it.
 ##
 ## NOTE: Loaders may share a layer. One disables it only when no other active loader
 ## for the same player lists it.
 ##
 
 class_name StdInputActionSetLoader
-extends Control
+extends Node
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## ActiveWhile names the rule deciding when the action set and layers are active.
 enum ActiveWhile {
-	IN_TREE,  ## While this `Control` is in the scene tree.
-	VISIBLE,  ## While this `Control` is visible in the scene tree.
+	IN_TREE,  ## While this node is in the scene tree.
+	VISIBLE,  ## While the nearest `CanvasItem` above this node is visible in the tree.
 	NEVER,  ## Not at all; the loader holds its sets and does nothing with them.
 }
 
@@ -44,6 +44,10 @@ const _GROUP_INPUT_LOADER := &"std/input:loader"
 @export var action_set_layers: Array[StdInputActionSetLayer] = []
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
+
+## _canvas_item is the nearest `CanvasItem` above this loader, whose visibility the
+## `VISIBLE` rule follows, or `null` when there is none and the rule holds.
+var _canvas_item: CanvasItem = null
 
 ## _covered is whether another screen covers the one holding this loader.
 var _covered: bool = false
@@ -104,6 +108,12 @@ func load_action_set() -> void:
 func _enter_tree() -> void:
 	StdGroup.with_id(_GROUP_INPUT_LOADER).add_member(self)
 
+	_canvas_item = _find_canvas_item()
+	if _canvas_item:
+		_canvas_item.visibility_changed.connect(_on_canvas_item_visibility_changed)
+
+	_synced = false
+
 	# NOTE: Deferred so that a parent handing this loader its sets as it enters, and a
 	# parent's `_ready` hiding it, both run first.
 	_sync_on_enter.call_deferred()
@@ -112,9 +122,9 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	StdGroup.with_id(_GROUP_INPUT_LOADER).remove_member(self)
 
-	# NOTE: Reset here rather than in `_enter_tree`, since a visible `CanvasItem` is
-	# notified of its visibility as it enters, before its `_enter_tree` runs.
-	_synced = false
+	if _canvas_item:
+		_canvas_item.visibility_changed.disconnect(_on_canvas_item_visibility_changed)
+		_canvas_item = null
 
 	if active_while == ActiveWhile.NEVER or action_set_layers.is_empty():
 		return
@@ -136,12 +146,16 @@ func _notification(what) -> void:
 			_covered = false
 			_sync()
 
-		NOTIFICATION_VISIBILITY_CHANGED:
-			if active_while == ActiveWhile.VISIBLE:
-				_sync()
-
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _find_canvas_item returns the nearest `CanvasItem` above this loader, or `null`.
+func _find_canvas_item() -> CanvasItem:
+	var node := get_parent()
+	while node and not node is CanvasItem:
+		node = node.get_parent()
+	return node
 
 
 ## _is_active returns whether the rule holds, so this loader wants its action set
@@ -151,7 +165,11 @@ func _is_active() -> bool:
 		active_while != ActiveWhile.NEVER
 		and is_inside_tree()
 		and not _covered
-		and (active_while != ActiveWhile.VISIBLE or is_visible_in_tree())
+		and (
+			active_while != ActiveWhile.VISIBLE
+			or not _canvas_item
+			or _canvas_item.is_visible_in_tree()
+		)
 	)
 
 
@@ -197,3 +215,11 @@ func _sync() -> void:
 			enable_action_set_layers()
 	elif not action_set_layers.is_empty():
 		disable_action_set_layers()
+
+
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_canvas_item_visibility_changed() -> void:
+	if active_while == ActiveWhile.VISIBLE:
+		_sync()
