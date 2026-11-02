@@ -72,4 +72,8 @@ const MODE_PRESS := Mode.PRESS
 ## sets this to `false` so a tap can't skip its `duration`. `MODE_PRESS` then runs as
 ## `MODE_TOGGLE`, whichever source chose it, which keeps the hold within reach of a
 ## player who can't sustain one.
+##
+## NOTE: This doesn't stop a stray tap triggering the hold. The tap starts the fill,
+## which finishes on its own unless a second tap of `action` or a press of
+## `cancel_action` ends it.
 @export var allow_press: bool = true
