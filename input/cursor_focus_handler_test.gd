@@ -424,6 +424,33 @@ func test_disabled_button_input_state(
 	assert_eq(button.mouse_filter, params.expected_mouse_filter)
 
 
+func test_disabled_anchor_enabled_under_hidden_cursor_takes_focus() -> void:
+	# Given: A cursor in the scene, hidden.
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A disabled button with an anchor focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.disabled = true
+	add_child_autofree(button)
+	var handler := StdInputCursorFocusHandler.new()
+	handler.use_as_anchor = true
+	button.add_child(handler)
+	await get_tree().process_frame
+	assert_null(cursor.get_viewport().gui_get_focus_owner(), "precondition: no focus")
+
+	# When: The button is enabled.
+	button.disabled = false
+
+	# When: The button is drawn, and the frame ends.
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	# Then: The button has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
 func test_get_focus_target_with_disabled_anchor(
 	params = use_parameters(
 		(
@@ -928,7 +955,7 @@ func test_button_enabled_behind_overlay_is_hovered_once_overlay_closes() -> void
 	watch_signals(handler)
 
 	# When: The overlay closes.
-	cursor.set_focus_root(null)
+	cursor.release_focus(overlay)
 	overlay.free()
 	await get_tree().process_frame
 
@@ -962,7 +989,7 @@ func test_button_hovered_behind_overlay_is_drawn_hovered_once_overlay_closes() -
 	watch_signals(handler)
 
 	# When: The overlay closes.
-	cursor.set_focus_root(null)
+	cursor.release_focus(overlay)
 	overlay.free()
 	await get_tree().process_frame
 
@@ -1003,7 +1030,7 @@ func test_button_left_behind_overlay_stays_unhovered_once_overlay_closes() -> vo
 	watch_signals(handler)
 
 	# When: The overlay closes.
-	cursor.set_focus_root(null)
+	cursor.release_focus(overlay)
 	overlay.free()
 	await get_tree().process_frame
 
@@ -1170,12 +1197,12 @@ func _mount_button(disabled: bool) -> Array:
 
 
 ## _open_overlay adds a mouse-stopping overlay over `button`, covering the viewport,
-## makes it the focus root, and returns it.
+## claims it as the focus root, and returns it.
 func _open_overlay(button: Button) -> Control:
 	var overlay := Control.new()
 	overlay.size = button.get_viewport_rect().size
 	button.add_sibling(overlay)
-	cursor.set_focus_root(overlay)
+	cursor.claim_focus(overlay)
 	return overlay
 
 

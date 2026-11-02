@@ -18,6 +18,15 @@
 ## The cursor doesn't consume mouse events itself, which would starve `_unhandled_input`
 ## of mouse-look, so a control without a handler still hovers and clicks while hidden.
 ##
+## Focus is confined to a root derived from claims. A claimant, as the screen manager is
+## for each screen's overlay, registers its control with `claim_focus` and ends the
+## claim with `release_focus`. The root is the top claim's control. A claim inside
+## another claim's control sits above it, and claims which share a parent order by
+## priority, then by registration. A claim whose control isn't visible in the tree
+## doesn't count until it is again. Focus handlers keep their controls outside the root
+## from taking focus, and focus which Godot's neighbour search lands on an unmanaged
+## control outside it returns to the last control focused inside, else an anchor.
+##
 
 class_name StdInputCursor
 extends Node
@@ -34,7 +43,7 @@ signal about_to_grab_focus(node: Control, trigger: StringName)
 signal cursor_visibility_changed(visible: bool)
 
 ## focus_root_changed is emitted when the focus root changes. Note that `root` may be
-## `null` if the root focus was cleared.
+## `null` if no claim holds one.
 ##
 ## NOTE: This will be called *before* `StdInputCursor` recomputes the target focus node,
 ## allowing observers to select a specific focus target instead.
@@ -49,6 +58,34 @@ const Signals := preload("../event/signal.gd")
 
 const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
+
+## _Claim is a registration of a control as the focus root for as long as it's on top.
+class _Claim:
+	## control is the claimed control, which is the focus root while this claim is on top.
+	var control: Control = null
+
+	## priority orders this claim against the others which share its parent claim.
+	var priority: int = 0
+
+	## saved is the control focused, else hovered, inside `control` when a claim above this
+	## one last registered; it's focused again when a claim above releases.
+	var saved: Control = null
+
+	func _init(claimant: Control, order: int) -> void:
+		control = claimant
+		priority = order
+
+	## is_live returns whether this claim counts, which requires its control to be in the
+	## tree, visible and not about to be freed.
+	func is_live() -> bool:
+		return (
+			is_instance_valid(control)
+			and control.is_inside_tree()
+			and control.is_visible_in_tree()
+			and not control.is_queued_for_deletion()
+		)
+
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## confined_property is an optional settings property which, when set, decides whether
@@ -61,6 +98,7 @@ const GROUP_INPUT_CURSOR := &"std/input:cursor"
 # gdlint:ignore=class-definitions-order
 static var _logger := StdLogger.create("std/input/cursor")
 
+var _claims: Array[_Claim] = []
 var _cursor_captured: bool = false
 var _cursor_confined: bool = false
 var _cursor_visible: bool = false
@@ -73,6 +111,11 @@ var _hide_actions := PackedStringArray()
 var _hide_actions_if_hovered := PackedStringArray()
 var _hide_delay: float = 0.0
 var _hovered: Control = null
+
+## _last_focused is the control last focused inside the focus root, which focus returns
+## to after landing outside the root.
+var _last_focused: Control = null
+
 var _pending_focus: Control = null
 var _pressed: Array[String] = []
 var _reveal_motion := MotionFilter.new()
@@ -82,6 +125,32 @@ var _time_since_mouse_motion: float = 0.0
 var _was_cursor_visible: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## claim_focus registers `control` as a focus root candidate with `priority`, until
+## `release_focus` ends the claim. The control focused, else hovered, under the claim
+## this one displaces is saved, and takes focus again when this claim releases. Each
+## call adds a claim, so a caller which claims a control twice releases it twice.
+func claim_focus(control: Control, priority: int = 0) -> void:
+	assert(control is Control, "missing argument")
+
+	var top := _find_top(true)
+
+	_claims.append(_Claim.new(control, priority))
+
+	if top and _find_top(true) != top:
+		_save_focus(top)
+
+	var changed := _sync_root()
+	if is_inside_tree() and (_pending_focus or (changed and not _cursor_visible)):
+		_update_focus()
+
+
+## get_focus_root returns the control focus is confined to, or null if no claim holds
+## one.
+func get_focus_root() -> Control:
+	_sync_root()
+	return _focus_root
 
 
 ## get_hovered returns the control currently tracked as hovered, or null.
@@ -121,6 +190,42 @@ func hide_cursor() -> void:
 	_on_properties_changed()
 
 
+## release_focus ends the most recent claim of `control`. When that claim held the root,
+## the root passes to the claim beneath it, and the control saved there takes focus at
+## the end of the frame, unless a pending focus target is set before then.
+func release_focus(control: Control) -> void:
+	assert(control != null, "missing argument")
+
+	_prune_claims()
+
+	var index := _claims.size() - 1
+	while index >= 0 and _claims[index].control != control:
+		index -= 1
+
+	if index < 0:
+		return
+
+	# NOTE: The claim counts as on top even when its control has left the tree, since a
+	# popped screen's overlay is detached before the manager releases it.
+	var claim := _claims[index]
+	var was_top := claim == _find_top(false)
+
+	_claims.remove_at(index)
+
+	# NOTE: The record stays on its claim, since a screen replacing another releases
+	# before it claims, and the next claim above refreshes it anyway.
+	if was_top:
+		var next := _find_top(true)
+		if next and next.saved:
+			_pending_focus = next.saved
+
+	_sync_root()
+
+	# NOTE: Focus is resolved at the end of the frame, so a batch of releases, as a reset
+	# of the screen stack makes, moves focus once.
+	_deferred_update_focus.call_deferred(_focus_version)
+
+
 ## report_clicked notifies the `StdInputCursor` that `control` was clicked. While the
 ## cursor is visible, the next hide returns focus to it rather than to the control
 ## focused before the cursor was revealed; while hidden, the click is ignored.
@@ -134,37 +239,10 @@ func report_clicked(control: Control) -> void:
 
 
 ## report_focus_handler_visible is used to notify the `StdInputCursor` that a previously
-## hidden focus handler is now visible. This serves as a trigger to re-evaluate focus if
-## there isn't currently a focused node.
+## hidden, or disabled, focus handler is now visible and enabled. This serves as a
+## trigger to re-evaluate focus if there isn't currently a focused node.
 func report_focus_handler_visible(_handler: StdInputCursorFocusHandler) -> void:
 	if not _cursor_visible:
-		_update_focus()
-
-
-## set_focus_root restricts UI focus to be under the scene subtree rooted at `root`. If
-## set, current and future focus handlers will be ignored if they aren't descendants of
-## `root`. Call this with `null` to unset the focus root.
-func set_focus_root(root: Control = null) -> void:
-	assert(
-		root == null or root.is_visible_in_tree(),
-		"invalid argument; root node isn't visible",
-	)
-
-	(
-		_logger
-		. debug(
-			"Updating focus root.",
-			{&"root": root.get_path() if root else ^"/root"},
-		)
-	)
-
-	var changed := _focus_root != root
-	_focus_root = root
-
-	if changed:
-		focus_root_changed.emit(root)
-
-	if _pending_focus or (changed and not _cursor_visible):
 		_update_focus()
 
 
@@ -403,10 +481,50 @@ func _deferred_grab_focus(id: int, trigger: StringName, make_focusable: bool) ->
 
 
 func _deferred_update_focus(version: int) -> void:
-	if version != _focus_version:
+	# NOTE: A release at teardown can queue this after the cursor has left the tree.
+	if version != _focus_version or not is_inside_tree():
 		return
 
 	_update_focus()
+
+
+## _find_top returns the claim whose control is the focus root, or null without claims.
+## Claims nest by their controls, and at each level the highest priority wins, then the
+## most recent registration. With `live_only`, a claim which doesn't count is skipped.
+func _find_top(live_only: bool) -> _Claim:
+	var claims: Array[_Claim] = []
+	for claim in _claims:
+		if not live_only or claim.is_live():
+			claims.append(claim)
+
+	# Pair each claim with the nearest claim whose control is an ancestor of its own.
+	var parents: Dictionary[_Claim, _Claim] = {}
+	for claim in claims:
+		for other in claims:
+			if other == claim or not other.control.is_ancestor_of(claim.control):
+				continue
+			if (
+				not parents.has(claim)
+				or parents[claim].control.is_ancestor_of(other.control)
+			):
+				parents[claim] = other
+
+	var top: _Claim = null
+	var level := claims.filter(
+		func(claim: _Claim) -> bool: return not parents.has(claim)
+	)
+	while not level.is_empty():
+		top = level.reduce(
+			func(best: _Claim, claim: _Claim) -> _Claim:
+				return claim if claim.priority >= best.priority else best
+		)
+
+		var parent := top
+		level = claims.filter(
+			func(claim: _Claim) -> bool: return parents.get(claim) == parent
+		)
+
+	return top
 
 
 func _grab_focus(target: Control, trigger: StringName) -> void:
@@ -429,11 +547,56 @@ func _grab_focus_deferred(
 	_deferred_grab_focus.call_deferred(_deferred_focus_id, trigger, make_focusable)
 
 
+## _prune_claims drops the claims whose control was freed without a release.
+func _prune_claims() -> void:
+	for index in range(_claims.size() - 1, -1, -1):
+		if not is_instance_valid(_claims[index].control):
+			_claims.remove_at(index)
+
+
 func _resolve_confined() -> bool:
 	if confined_property:
 		return confined_property.get_value()
 
 	return _sets_confined
+
+
+## _save_focus records on `claim` the control focused, else hovered, inside its control,
+## leaving an earlier record in place when there is none.
+##
+## NOTE: The hovered control stands in while the cursor shows, when the mouse is still
+## over the control clicked to make the claim above.
+func _save_focus(claim: _Claim) -> void:
+	var focused := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	if not focused:
+		focused = _hovered
+
+	if focused and claim.control.is_ancestor_of(focused):
+		claim.saved = focused
+
+
+## _sync_root derives the focus root from the claims and emits `focus_root_changed` if
+## it differs from the last one derived, returning whether it changed.
+func _sync_root() -> bool:
+	_prune_claims()
+
+	var top := _find_top(true)
+	var root := top.control if top else null
+	if root == _focus_root:
+		return false
+
+	(
+		_logger
+		. debug(
+			"Updating focus root.",
+			{&"root": root.get_path() if root else ^"/root"},
+		)
+	)
+
+	_focus_root = root
+	focus_root_changed.emit(root)
+
+	return true
 
 
 ## _track_hide_actions records every hide action `event` newly presses and returns the
@@ -462,9 +625,8 @@ func _track_hide_actions(event: InputEvent) -> StringName:
 func _update_focus(trigger: StringName = &"") -> void:
 	_focus_version += 1
 
-	# Ensure the cached focus root is still valid.
-	if _focus_root and not is_instance_valid(_focus_root):
-		set_focus_root(null)
+	_sync_root()
+	var root := _focus_root
 
 	# NOTE: The first hidden resolution consumes the control to restore, even when it
 	# keeps the current focus, so a stale one can't resurface.
@@ -478,7 +640,7 @@ func _update_focus(trigger: StringName = &"") -> void:
 
 	# Keep current focus if it's valid and under the focus root.
 	var current_focus := get_viewport().gui_get_focus_owner()
-	if current_focus and (not _focus_root or _focus_root.is_ancestor_of(current_focus)):
+	if current_focus and (not root or root.is_ancestor_of(current_focus)):
 		_pending_focus = null
 		return
 
@@ -488,7 +650,7 @@ func _update_focus(trigger: StringName = &"") -> void:
 		not _cursor_visible
 		and is_instance_valid(deferred)
 		and deferred.is_visible_in_tree()
-		and (not _focus_root or _focus_root.is_ancestor_of(deferred))
+		and (not root or root.is_ancestor_of(deferred))
 	):
 		_deferred_focus = deferred
 		_pending_focus = null
@@ -502,6 +664,8 @@ func _update_focus(trigger: StringName = &"") -> void:
 		and not _cursor_visible
 		and is_instance_valid(pending)
 		and pending.is_visible_in_tree()
+		and not pending.is_queued_for_deletion()
+		and (not root or root.is_ancestor_of(pending))
 		and not (pending is BaseButton and pending.disabled)
 	):
 		_grab_focus(pending, trigger)
@@ -511,16 +675,6 @@ func _update_focus(trigger: StringName = &"") -> void:
 	if _cursor_visible:
 		get_viewport().gui_release_focus()
 		return
-
-	# NOTE: If the focus root is queued for deletion, treat it as null to avoid
-	# restricting the fallback search to a dying subtree. This is intentionally
-	# separate from the validity check above — `set_focus_root(null)` would
-	# prematurely re-enable controls still under the dying root.
-	var root := (
-		_focus_root
-		if _focus_root and not _focus_root.is_queued_for_deletion()
-		else null
-	)
 
 	# NOTE: Only use _hovered if it's under the focus root (or there is no
 	# root). This handles the case where a modal opens over a hovered element —
@@ -575,6 +729,20 @@ func _on_gui_focus_changed(control: Control) -> void:
 		func(): _deferred_update_focus.call_deferred(_focus_version),
 		CONNECT_ONE_SHOT,
 	)
+
+	# NOTE: Godot's neighbour search still finds an unmanaged focusable control outside
+	# the root, so focus is taken back at the end of the frame, or released while the
+	# cursor shows. Taking it back here would reach the control's focus-enter after its
+	# focus-exit, since this signal precedes the enter notification.
+	_sync_root()
+	if _focus_root and not _focus_root.is_ancestor_of(control):
+		if not _pending_focus:
+			_pending_focus = _last_focused
+
+		_deferred_update_focus.call_deferred(_focus_version)
+		return
+
+	_last_focused = control
 
 
 func _on_properties_changed(
