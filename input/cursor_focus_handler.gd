@@ -67,7 +67,7 @@ const Signals := preload("../event/signal.gd")
 static var _anchors: Array[StdInputCursorFocusHandler] = []  # gdlint:ignore=class-definitions-order,max-line-length
 
 ## _blocked is whether the target `Control` node was blocked at its last draw, so that
-## an enable is reported as a hidden handler's show is.
+## the draw which enables it is reported as a show is.
 var _blocked: bool = false
 
 var _control_focus_mode: FocusMode = FOCUS_NONE

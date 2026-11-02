@@ -42,8 +42,8 @@ signal about_to_grab_focus(node: Control, trigger: StringName)
 ## changes.
 signal cursor_visibility_changed(visible: bool)
 
-## focus_root_changed is emitted when the focus root changes. Note that `root` may be
-## `null` if no claim holds one.
+## focus_root_changed is emitted when the focus root changes. `root` is `null` when no
+## claim holds one.
 ##
 ## NOTE: This will be called *before* `StdInputCursor` recomputes the target focus node,
 ## allowing observers to select a specific focus target instead.
