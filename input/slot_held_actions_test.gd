@@ -266,19 +266,33 @@ func test_input_slot_backstop_runs_only_while_an_action_is_tracked() -> void:
 	_load_actions([_TEST_ACTION])
 
 	# Then: The slot isn't processing.
-	assert_false(slot._held_actions.is_processing())
+	assert_false(slot.is_processing())
 
 	# When: The key is pressed.
 	await _dispatch(_key(true))
 
 	# Then: The slot is processing.
-	assert_true(slot._held_actions.is_processing())
+	assert_true(slot.is_processing())
 
 	# When: The key is released.
 	await _dispatch(_key(false))
 
 	# Then: The slot isn't processing.
-	assert_false(slot._held_actions.is_processing())
+	assert_false(slot.is_processing())
+
+
+func test_input_slot_backstop_stays_off_for_an_event_which_holds_nothing() -> void:
+	# Given: The keyboard is active with a joypad connected.
+	await _activate_kbm_with_joypad_connected()
+
+	# Given: The key's action is active.
+	_load_actions([_TEST_ACTION])
+
+	# When: A stick no active action binds moves, with no frame passing.
+	input.send(_stick(JOY_AXIS_RIGHT_X, 0.2))
+
+	# Then: The slot doesn't start processing.
+	assert_false(slot.is_processing())
 
 
 func test_input_slot_action_pressed_below_the_activation_threshold_is_tracked() -> void:
@@ -573,7 +587,7 @@ func test_input_slot_absolute_mouse_action_activates_without_holding() -> void:
 	assert_false(_is_tracked(_TEST_UNMAPPED_ACTION))
 
 	# Then: Nothing is left to poll.
-	assert_false(slot._held_actions.is_processing())
+	assert_false(slot.is_processing())
 
 
 func test_input_slot_action_missing_from_input_map_ends_on_the_last_release() -> void:
@@ -609,7 +623,7 @@ func test_input_slot_action_missing_from_input_map_ends_on_the_last_release() ->
 	assert_signal_emit_count(slot, "action_released", 1)
 
 
-func test_input_slot_swap_blocks_a_held_stick_until_it_is_released() -> void:
+func test_input_slot_stick_held_through_a_swap_starts_no_hold_until_released() -> void:
 	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
 
@@ -643,7 +657,7 @@ func test_input_slot_swap_blocks_a_held_stick_until_it_is_released() -> void:
 	assert_gt(slot.get_action_held_seconds(_TEST_AXIS_ACTION), 0.0)
 
 
-func test_input_slot_swap_blocks_a_held_trigger_below_the_activation_threshold(
+func test_input_slot_trigger_held_through_a_swap_below_the_threshold_starts_no_hold(
 ) -> void:
 	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
@@ -700,7 +714,7 @@ func test_input_slot_injected_repeat_after_swap_starts_no_hold() -> void:
 	assert_false(_is_tracked(_TEST_ACTION))
 
 
-func test_input_slot_set_bringing_in_a_held_trigger_blocks_it() -> void:
+func test_input_slot_set_bringing_in_a_held_trigger_starts_no_hold() -> void:
 	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
 
@@ -732,7 +746,7 @@ func test_input_slot_set_bringing_in_a_held_trigger_blocks_it() -> void:
 	assert_signal_emit_count(slot, "action_pressed", 1)
 
 
-func test_input_slot_action_returning_to_the_sets_stays_blocked_while_down() -> void:
+func test_input_slot_action_returning_to_the_sets_starts_no_hold_while_down() -> void:
 	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
 
@@ -761,7 +775,7 @@ func test_input_slot_action_returning_to_the_sets_stays_blocked_while_down() -> 
 	assert_signal_emit_count(slot, "action_pressed", 0)
 
 
-func test_input_slot_blocked_action_released_and_pressed_within_a_frame_holds() -> void:
+func test_input_slot_stick_let_go_and_pushed_in_a_frame_after_a_swap_holds() -> void:
 	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
 
@@ -787,7 +801,7 @@ func test_input_slot_blocked_action_released_and_pressed_within_a_frame_holds() 
 	assert_signal_emit_count(slot, "action_pressed", 1)
 
 
-func test_input_slot_blocked_action_is_cleared_by_the_backstop() -> void:
+func test_input_slot_key_held_through_a_swap_leaves_nothing_to_poll() -> void:
 	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
 
@@ -812,7 +826,7 @@ func test_input_slot_blocked_action_is_cleared_by_the_backstop() -> void:
 	await wait_process_frames(1)
 
 	# Then: Nothing is left to poll.
-	assert_false(slot._held_actions.is_processing())
+	assert_false(slot.is_processing())
 
 	# Given: The node stops swallowing releases.
 	remove_child(swallower)
@@ -824,7 +838,7 @@ func test_input_slot_blocked_action_is_cleared_by_the_backstop() -> void:
 	assert_signal_emit_count(slot, "action_pressed", 1)
 
 
-func test_input_slot_blocked_action_ignores_a_press_on_another_binding() -> void:
+func test_input_slot_press_on_another_binding_holds_after_a_swap() -> void:
 	# Given: The keyboard is active with a joypad connected.
 	await _activate_kbm_with_joypad_connected()
 
@@ -843,20 +857,20 @@ func test_input_slot_blocked_action_ignores_a_press_on_another_binding() -> void
 	# When: The joypad button is pressed.
 	await _dispatch(_button(true))
 
-	# Then: No hold starts.
-	assert_signal_emit_count(slot, "action_pressed", 0)
+	# Then: A hold starts.
+	assert_signal_emit_count(slot, "action_pressed", 1)
 
 	# When: The key is released.
 	await _dispatch(_key(false))
 
+	# Then: The joypad button keeps the hold going.
+	assert_signal_emit_count(slot, "action_released", 0)
+
 	# When: The joypad button is released.
 	await _dispatch(_button(false))
 
-	# When: The key is pressed again.
-	await _dispatch(_key(true))
-
-	# Then: A hold starts.
-	assert_signal_emit_count(slot, "action_pressed", 1)
+	# Then: The hold ends.
+	assert_signal_emit_count(slot, "action_released", 1)
 
 
 func test_input_slot_listener_dropping_an_action_stops_its_hold_starting() -> void:
@@ -1065,7 +1079,7 @@ func _dispatch(event: InputEvent) -> void:
 	await wait_process_frames(1)
 
 
-## _is_tracked returns whether the slot records `action` as held or blocked.
+## _is_tracked returns whether the slot records `action` as held.
 func _is_tracked(action: StringName) -> bool:
 	return slot._held_actions._held_since.has(action)
 

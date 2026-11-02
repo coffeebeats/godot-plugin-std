@@ -30,10 +30,9 @@ extends StdInputDevice
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-## action_pressed is emitted on an active action's first press from any device. `device`
-## is the event's `device`, such as `InputEvent.DEVICE_ID_KEYBOARD` for a key. An action
-## already down when it became active, or when a joypad swap ended its hold, isn't
-## pressed again until it's released on every device.
+## action_pressed is emitted on an active action's first press from any device, with the
+## event's `device`, such as `InputEvent.DEVICE_ID_KEYBOARD` for a key. An input already
+## down when its action became active, or when a swap ended its hold, needs a new press.
 signal action_pressed(action: StringName, device: int)
 
 ## action_released is emitted when that hold ends, with the ID on the ending event, or
@@ -112,7 +111,7 @@ class JoypadMonitor:
 ## NOTE: If `true`, the keyboard and mouse device will be activated initially.
 ##
 ## NOTE: If `false`, a key or mouse button starts no hold, but `Input` still counts one
-## that's down, so it prolongs a joypad's hold and blocks an action a set brings in.
+## that's down, so it prolongs a joypad's hold.
 @export var claim_kbm_input: bool = true
 
 ## prefer_activate_joypad_on_ready defines whether a joypad connected before the
@@ -505,7 +504,6 @@ func _exit_tree() -> void:
 
 func _init() -> void:
 	_held_actions = StdInputSlotHeldActions.new()
-	add_child(_held_actions, false, INTERNAL_MODE_BACK)
 
 	Signals.connect_safe(_held_actions.action_pressed, action_pressed.emit)
 	Signals.connect_safe(_held_actions.action_released, action_released.emit)
@@ -530,6 +528,12 @@ func _input(event: InputEvent) -> void:
 	# NOTE: This follows activation, so a listener reads the device which just pressed.
 	if claim_kbm_input or not is_kbm:
 		_held_actions.update(event, _pressed)
+		set_process(_held_actions.is_tracking())
+
+
+func _process(_delta: float) -> void:
+	_held_actions.poll()
+	set_process(_held_actions.is_tracking())
 
 
 func _ready() -> void:
@@ -923,6 +927,7 @@ func _on_Self_action_configuration_changed() -> void:
 	# NOTE: This comes last, since a listener can load a set, whose configuration must
 	# then outlive this one.
 	_held_actions.set_actions(hold_actions)
+	set_process(_held_actions.is_tracking())
 
 
 func _on_Self_device_activated(device: StdInputDevice) -> void:
