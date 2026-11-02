@@ -134,11 +134,11 @@ var _was_cursor_visible: bool = false
 func claim_focus(control: Control, priority: int = 0) -> void:
 	assert(control is Control, "missing argument")
 
-	var top := _find_top(true)
+	var top := _find_top()
 
 	_claims.append(_Claim.new(control, priority))
 
-	if top and _find_top(true) != top:
+	if top and _find_top() != top:
 		_save_focus(top)
 
 	var changed := _sync_root()
@@ -205,17 +205,17 @@ func release_focus(control: Control) -> void:
 	if index < 0:
 		return
 
-	# NOTE: The claim counts as on top even when its control has left the tree, since a
-	# popped screen's overlay is detached before the manager releases it.
+	# NOTE: The claim counts whether or not its control is still live, so hiding or
+	# detaching it before the release doesn't change which control is restored.
 	var claim := _claims[index]
-	var was_top := claim == _find_top(false)
+	var was_top := claim == _find_top(claim)
 
 	_claims.remove_at(index)
 
 	# NOTE: The record stays on its claim, since a screen replacing another releases
 	# before it claims, and the next claim above refreshes it anyway.
 	if was_top:
-		var next := _find_top(true)
+		var next := _find_top()
 		if next and next.saved:
 			_pending_focus = next.saved
 
@@ -490,28 +490,27 @@ func _deferred_update_focus(version: int) -> void:
 
 ## _find_top returns the claim whose control is the focus root, or null without claims.
 ## Claims nest by their controls, and at each level the highest priority wins, then the
-## most recent registration. With `live_only`, a claim which doesn't count is skipped.
-func _find_top(live_only: bool) -> _Claim:
+## most recent registration. A claim which doesn't count is skipped, unless it's `keep`.
+func _find_top(keep: _Claim = null) -> _Claim:
 	var claims: Array[_Claim] = []
 	for claim in _claims:
-		if not live_only or claim.is_live():
+		if claim == keep or claim.is_live():
 			claims.append(claim)
 
-	# Pair each claim with the nearest claim whose control is an ancestor of its own.
-	var parents: Dictionary[_Claim, _Claim] = {}
+	# Each claimed control is paired with the nearest claimed control above it. Nesting
+	# is a relation between controls, so claims which share one share a parent.
+	var parents: Dictionary[Control, Control] = {}
 	for claim in claims:
 		for other in claims:
-			if other == claim or not other.control.is_ancestor_of(claim.control):
+			if not other.control.is_ancestor_of(claim.control):
 				continue
-			if (
-				not parents.has(claim)
-				or parents[claim].control.is_ancestor_of(other.control)
-			):
-				parents[claim] = other
+			var parent: Control = parents.get(claim.control)
+			if not parent or parent.is_ancestor_of(other.control):
+				parents[claim.control] = other.control
 
 	var top: _Claim = null
 	var level := claims.filter(
-		func(claim: _Claim) -> bool: return not parents.has(claim)
+		func(claim: _Claim) -> bool: return not parents.has(claim.control)
 	)
 	while not level.is_empty():
 		top = level.reduce(
@@ -519,9 +518,9 @@ func _find_top(live_only: bool) -> _Claim:
 				return claim if claim.priority >= best.priority else best
 		)
 
-		var parent := top
+		var parent := top.control
 		level = claims.filter(
-			func(claim: _Claim) -> bool: return parents.get(claim) == parent
+			func(claim: _Claim) -> bool: return parents.get(claim.control) == parent
 		)
 
 	return top
@@ -580,7 +579,7 @@ func _save_focus(claim: _Claim) -> void:
 func _sync_root() -> bool:
 	_prune_claims()
 
-	var top := _find_top(true)
+	var top := _find_top()
 	var root := top.control if top else null
 	if root == _focus_root:
 		return false

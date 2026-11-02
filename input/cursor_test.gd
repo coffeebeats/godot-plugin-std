@@ -364,6 +364,95 @@ func test_claim_focus_hidden_claim_does_not_hold_root() -> void:
 	assert_eq(cursor.get_focus_root(), second)
 
 
+func test_claim_focus_claim_inside_a_twice_claimed_control_holds_root() -> void:
+	# Given: A cursor added to the scene.
+	add_child_autofree(cursor)
+
+	# Given: A control claimed twice, as an overlay shared by two screens is.
+	var outer := Control.new()
+	add_child_autofree(outer)
+	cursor.claim_focus(outer)
+	cursor.claim_focus(outer)
+	assert_eq(cursor.get_focus_root(), outer, "precondition: outer on top")
+
+	# When: A control inside it is claimed.
+	var inner := Control.new()
+	outer.add_child(inner)
+	cursor.claim_focus(inner)
+
+	# Then: The inner claim holds the root.
+	assert_eq(cursor.get_focus_root(), inner)
+
+
+func test_release_focus_beside_a_hidden_later_claim_restores_saved_control() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A claimed control holding a focused button.
+	var base := Control.new()
+	add_child_autofree(base)
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	base.add_child(button)
+	cursor.claim_focus(base)
+	button.grab_focus()
+
+	# Given: A claimed sibling control, which saves the button under the first claim.
+	var first := Control.new()
+	add_child_autofree(first)
+	cursor.claim_focus(first)
+
+	# Given: A later claimed sibling, hidden while its claim stays registered.
+	var second := Control.new()
+	add_child_autofree(second)
+	cursor.claim_focus(second)
+	second.hide()
+	assert_eq(cursor.get_focus_root(), first, "precondition: first on top")
+
+	# When: The first claim is released.
+	cursor.release_focus(first)
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The base claim holds the root, and its saved button has focus.
+	assert_eq(cursor.get_focus_root(), base)
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_release_focus_after_hiding_the_claimant_restores_saved_control() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A claimed control holding a focused button.
+	var base := Control.new()
+	add_child_autofree(base)
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	base.add_child(button)
+	cursor.claim_focus(base)
+	button.grab_focus()
+
+	# Given: A claimed sibling control, which saves the button under the base claim.
+	var panel := Control.new()
+	add_child_autofree(panel)
+	cursor.claim_focus(panel)
+	assert_eq(cursor.get_focus_root(), panel, "precondition: panel on top")
+
+	# When: The panel is hidden, then its claim is released.
+	panel.hide()
+	cursor.release_focus(panel)
+
+	# When: The frame ends.
+	await wait_process_frames(1)
+
+	# Then: The base claim holds the root, and its saved button has focus.
+	assert_eq(cursor.get_focus_root(), base)
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
 func test_release_focus_saved_control_freed_falls_to_anchor() -> void:
 	# Given: A cursor added to the scene with hidden cursor (focus mode).
 	add_child_autofree(cursor)
