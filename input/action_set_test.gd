@@ -77,6 +77,23 @@ func test_list_action_names_returns_empty_for_empty_action_set() -> void:
 	assert_eq(got, PackedStringArray())
 
 
+func test_list_action_names_leaves_out_what_only_a_hold_names() -> void:
+	# Given: An action set with a digital action.
+	action_set.actions_digital = [&"jump"]
+
+	# Given: A hold over an action the set doesn't declare, cancelled by another.
+	var hold := StdInputActionHold.new()
+	hold.action = &"charge"
+	hold.cancel_action = &"cancel"
+	action_set.holds = [hold]
+
+	# When: Action names are listed.
+	var got := action_set.list_action_names()
+
+	# Then: Only the declared action is listed.
+	assert_eq(got, PackedStringArray([&"jump"]))
+
+
 func test_get_analog_2d_action_resolves_each_direction() -> void:
 	# Given: An action set with a 2D analog action and its directional actions.
 	action_set.actions_analog_2d = [&"move"]

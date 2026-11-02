@@ -64,6 +64,15 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 ## (i.e. on/off) input origins.
 @export var actions_digital: Array[StringName] = []
 
+@export_group("Holds")
+
+## holds is a list of the actions which run as holds, live while this set is loaded or
+## this layer enabled.
+##
+## NOTE: A hold doesn't declare its actions, which stay in the lists above. The Steam
+## manifest and the rebinder read only those lists.
+@export var holds: Array[StdInputActionHold] = []
+
 @export_group("Cursor")
 
 @export_subgroup("Mode")

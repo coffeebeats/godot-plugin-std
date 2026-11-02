@@ -260,6 +260,39 @@ func test_render_gives_an_action_a_label_per_set() -> void:
 	assert_true(got.contains('"action_Splash_ui_accept"\t\t\t\t\t"Splash ui_accept"'))
 
 
+func test_render_ignores_holds() -> void:
+	# Given: A set and a layer of it, with a digital action each.
+	var menu := StdInputActionSet.new()
+	menu.name = &"Menu"
+	menu.actions_digital = [&"ui_accept"]
+
+	var tabbed := StdInputActionSetLayer.new()
+	tabbed.name = &"MenuTabbed"
+	tabbed.parent = menu
+	tabbed.actions_digital = [&"ui_tab_next"]
+
+	# Given: The manifest rendered before either declares a hold.
+	var want := manifest.render([menu, tabbed], {"english": "en"})
+
+	# Given: A hold on the set, cancelled by an action neither declares.
+	var confirm := StdInputActionHold.new()
+	confirm.action = &"ui_accept"
+	confirm.duration = 0.5
+	confirm.cancel_action = &"ui_cancel"
+	menu.holds = [confirm]
+
+	# Given: A hold on the layer, over an action neither declares.
+	var charge := StdInputActionHold.new()
+	charge.action = &"ui_charge"
+	tabbed.holds = [charge]
+
+	# When: The manifest is rendered again.
+	var got := manifest.render([menu, tabbed], {"english": "en"})
+
+	# Then: The holds change nothing.
+	assert_eq(got, want)
+
+
 func test_render_skips_null_action_sets() -> void:
 	# Given: A list holding only a null entry.
 	var action_sets: Array[StdInputActionSet] = [null]

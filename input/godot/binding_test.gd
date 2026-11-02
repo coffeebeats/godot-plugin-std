@@ -549,6 +549,65 @@ class TestBindAction:
 			event_user,
 		)
 
+	func test_ignores_an_undeclared_action_a_hold_names(
+		params = use_parameters(_parameters),
+	) -> void:
+		# Given: A device type.
+		var device_type: StdInputDevice.DeviceType = params[0]
+
+		# Given: A binding index.
+		var index: BindingIndex = params[1]
+
+		# Given: An action set with one digital action.
+		var action := &"test-action"
+		action_set.actions_digital.append(action)
+
+		# Given: A hold on it, cancelled by an action the set doesn't declare.
+		var cancel_action := &"test-cancel-action"
+		var hold := StdInputActionHold.new()
+		hold.action = action
+		hold.cancel_action = cancel_action
+		action_set.holds.append(hold)
+
+		# Given: The held action has no default events.
+		_set_events_as_default(action, [])
+
+		# Given: Default events for each binding index of the undeclared action.
+		var events_default := BindingIndex.values().map(
+			func(i):
+				return (
+					_create_kbm_event(KEY_A + i)
+					if device_type == StdInputDevice.DEVICE_TYPE_KEYBOARD
+					else _create_joypad_event(JOY_BUTTON_A + i)
+				)
+		)
+		_set_events_as_default(cancel_action, events_default)
+
+		# When: The held action is bound to the undeclared action's origin.
+		var changed := (
+			Bindings
+			. bind_action(
+				scope,
+				action_set,
+				action,
+				events_default[index],
+				device_type,
+				index,
+			)
+		)
+
+		# Then: The held action takes the origin.
+		assert_true(changed)
+		_assert_events_eq(
+			Bindings.get_action_binding(scope, action_set, action, device_type, index),
+			events_default[index],
+		)
+
+		# Then: The undeclared action isn't unbound from it, as a declared one would be.
+		var category := Bindings.get_action_set_category(action_set, device_type)
+		var key := Bindings.get_action_key(cancel_action, index)
+		assert_eq(scope.config.get_int(category, key, Bindings.UNSET), Bindings.UNSET)
+
 
 class TestResetAction:
 	extends TestBindingBase
