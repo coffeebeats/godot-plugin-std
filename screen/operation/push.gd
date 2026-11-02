@@ -53,8 +53,6 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	var resolver: Callable = result[0]
 	var sync_scene: Node = result[1]
 
-	manager._save_focus(previous)
-
 	var transition := (
 		manager
 		. _resolve_transition(

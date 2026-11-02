@@ -188,6 +188,193 @@ func test_focus_saved_from_hovered_when_cursor_visible():
 	)
 
 
+func test_focus_root_follows_the_overlay_through_push_pop_replace_and_reset() -> void:
+	# Given: Focus mode (cursor hidden).
+	var cursor := _get_cursor()
+	cursor.hide_cursor()
+
+	# Given: A first screen with a focused button.
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(null, first_scene)
+	button.grab_focus()
+	var first_root := cursor.get_focus_root()
+	assert_true(first_root.is_ancestor_of(button), "precondition: root over the scene")
+
+	# When: A second screen is pushed.
+	var second_scene := Control.new()
+	await _do_push(null, second_scene)
+
+	# Then: The root is the second screen's overlay.
+	assert_true(cursor.get_focus_root().is_ancestor_of(second_scene))
+	assert_ne(cursor.get_focus_root(), first_root)
+
+	# When: The second screen is replaced.
+	var third_scene := Control.new()
+	_manager.replace(_create_screen(), third_scene)
+	await wait_idle_frames(1)
+
+	# Then: The root is over the replacing screen.
+	assert_true(cursor.get_focus_root().is_ancestor_of(third_scene))
+
+	# When: The replacing screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The root and the focus return to the first screen.
+	assert_eq(cursor.get_focus_root(), first_root)
+	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+
+	# When: The stack is reset to a new screen.
+	var base_scene := Control.new()
+	_manager.reset(_create_screen(), base_scene)
+	await wait_idle_frames(1)
+
+	# Then: The root is the new base's overlay, the only claim left.
+	assert_true(cursor.get_focus_root().is_ancestor_of(base_scene))
+	assert_eq(cursor._claims.size(), 1)
+
+
+func test_manager_leaving_the_tree_releases_every_claim() -> void:
+	# Given: Focus mode (cursor hidden).
+	var cursor := _get_cursor()
+	cursor.hide_cursor()
+
+	# Given: Two screens, the first with a focused button.
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(null, first_scene)
+	button.grab_focus()
+	await _do_push()
+	assert_eq(cursor._claims.size(), 2, "precondition: one claim per screen")
+
+	# Given: A count of the button's focus grabs, which outlives the button.
+	var grabs := [0]
+	button.focus_entered.connect(func() -> void: grabs[0] += 1)
+
+	# When: The manager leaves the tree.
+	remove_child(_manager)
+	await wait_idle_frames(1)
+
+	# Then: No claim and no root remain.
+	assert_null(cursor.get_focus_root())
+	assert_eq(cursor._claims.size(), 0)
+
+	# Then: The button saved under the first screen wasn't focused on the way out.
+	assert_eq(grabs, [0])
+
+
+func test_pop_to_restores_focus_of_the_target_screen_once() -> void:
+	# Given: Focus mode (cursor hidden).
+	var cursor := _get_cursor()
+	cursor.hide_cursor()
+
+	# Given: A first screen with a focused button.
+	var first := _create_screen()
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(first, first_scene)
+	button.grab_focus()
+
+	# Given: Two more screens, each with a focused button, pushed over it.
+	var focused: Array[Control] = []
+	for i in 2:
+		var scene := Control.new()
+		var other := Button.new()
+		other.focus_mode = Control.FOCUS_ALL
+		other.focus_entered.connect(func() -> void: focused.append(other))
+		scene.add_child(other)
+		await _do_push(null, scene)
+		other.grab_focus()
+	focused.clear()
+
+	# When: The stack is popped back to the first screen.
+	_manager.pop_to(first)
+	await wait_idle_frames(1)
+
+	# Then: The first screen's button has focus.
+	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+
+	# Then: No popped button was focused on the way.
+	assert_eq(focused, [])
+
+
+func test_pop_restores_focus_under_a_shared_overlay() -> void:
+	# Given: Focus mode (cursor hidden).
+	_get_cursor().hide_cursor()
+
+	# Given: A first screen with a focused button.
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(null, first_scene)
+	button.grab_focus()
+
+	# Given: A second screen which shares the first's overlay, with a focused button.
+	var second_scene := Control.new()
+	var other := Button.new()
+	other.focus_mode = Control.FOCUS_ALL
+	second_scene.add_child(other)
+	await _do_push(_create_screen(null, false), second_scene)
+	other.grab_focus()
+
+	# When: The second screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: Focus is restored to the first screen's button.
+	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+
+
+func test_pop_over_a_claim_hidden_by_a_live_scene_restores_the_scene_focus() -> void:
+	# Given: Focus mode (cursor hidden).
+	var cursor := _get_cursor()
+	cursor.hide_cursor()
+
+	# Given: A first screen which keeps running under others, with a focused button.
+	var first := _create_screen()
+	first.pause_when_covered = false
+	var first_scene := Control.new()
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	first_scene.add_child(button)
+	await _do_push(first, first_scene)
+	button.grab_focus()
+
+	# Given: A panel in that scene claims focus, and its button takes it.
+	var panel := Control.new()
+	first_scene.add_child(panel)
+	var panel_button := Button.new()
+	panel_button.focus_mode = Control.FOCUS_ALL
+	panel.add_child(panel_button)
+	cursor.claim_focus(panel)
+	panel_button.grab_focus()
+	assert_eq(cursor.get_focus_root(), panel, "precondition: panel on top")
+
+	# Given: A second screen pushed over the scene.
+	await _do_push()
+
+	# Given: The scene hides the panel while covered.
+	panel.hide()
+	await wait_idle_frames(1)
+
+	# When: The second screen is popped.
+	_manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: The root is the scene's overlay, and its saved button has focus.
+	assert_true(cursor.get_focus_root().is_ancestor_of(first_scene))
+	assert_ne(cursor.get_focus_root(), panel)
+	assert_eq(_manager.get_viewport().gui_get_focus_owner(), button)
+
+
 func test_pop_recalculates_hover_at_mouse_away_from_origin() -> void:
 	# Given: A manager mounted by the helper.
 	var manager := Manager.new()

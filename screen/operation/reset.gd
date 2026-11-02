@@ -49,7 +49,6 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 
 	manager._stack.clear()
 	manager._scenes.clear()
-	manager._focus.clear()
 	manager._overlays.clear()
 	manager._preloads.clear()
 
