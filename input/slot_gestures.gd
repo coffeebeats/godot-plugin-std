@@ -205,10 +205,15 @@ func press(action: StringName) -> void:
 
 
 ## release handles the end of `action`'s hold on the slot, which ends a `MODE_HOLD`
-## gesture. It completes if it's filled, even if no frame has yet reported that.
-func release(action: StringName) -> void:
+## gesture. It completes if it's filled, even if no frame has yet reported that, and
+## cancels if `is_interrupted`, since the player didn't let go.
+func release(action: StringName, is_interrupted: bool) -> void:
 	var gesture: _Gesture = _gestures.get(action)
 	if not gesture or gesture.mode != MODE_HOLD:
+		return
+
+	if is_interrupted:
+		_end(gesture, false)
 		return
 
 	_advance(gesture)

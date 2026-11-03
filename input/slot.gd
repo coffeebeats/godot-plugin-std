@@ -33,7 +33,8 @@ extends StdInputDevice
 
 ## action_hold_cancelled is emitted when a hold ends without completing, on a release or
 ## second tap before its fill. A device swap, leaving the tree, a set or layer change
-## which drops the hold, or a setting change which alters it also cancels a filled hold.
+## which drops the hold, a setting change which alters it, or a release with no event,
+## as when a joypad disconnects or the window loses focus, also cancels a filled hold.
 signal action_hold_cancelled(action: StringName)
 
 ## action_hold_completed is emitted when a filled hold ends, on its release, on the tap
@@ -595,12 +596,14 @@ func _init() -> void:
 	_held_actions = StdInputSlotHeldActions.new()
 
 	Signals.connect_safe(_held_actions.action_pressed, action_pressed.emit)
-	Signals.connect_safe(_held_actions.action_released, action_released.emit)
+	Signals.connect_safe(_held_actions.action_released, action_released.emit.unbind(1))
 
 	# NOTE: These follow the connections above, so a gesture's signal follows the raw
 	# press or release it comes from.
 	Signals.connect_safe(_held_actions.action_pressed, _gestures.press.unbind(1))
-	Signals.connect_safe(_held_actions.action_released, _gestures.release.unbind(2))
+	Signals.connect_safe(
+		_held_actions.action_released, _on_held_actions_action_released
+	)
 
 	Signals.connect_safe(_gestures.action_hold_cancelled, action_hold_cancelled.emit)
 	Signals.connect_safe(_gestures.action_hold_completed, action_hold_completed.emit)
@@ -997,6 +1000,12 @@ func _on_component_bindings_changed() -> void:
 
 func _on_cursor_visibility_changed(visible: bool) -> void:
 	cursor_visibility_changed.emit(visible)
+
+
+func _on_held_actions_action_released(
+	action: StringName, _device: int, _held_seconds: float, is_interrupted: bool
+) -> void:
+	_gestures.release(action, is_interrupted)
 
 
 func _on_Self_action_configuration_changed() -> void:

@@ -241,7 +241,7 @@ func test_hold_runs_from_a_key_as_from_any_other_press() -> void:
 	assert_signal_emit_count(slot, "action_hold_completed", 1)
 
 
-func test_hold_release_swallowed_upstream_ends_through_the_backstop() -> void:
+func test_hold_released_with_no_event_cancels_though_filled() -> void:
 	# Given: A hold is declared.
 	await _mount(_make_hold(MODE_HOLD))
 
@@ -249,12 +249,49 @@ func test_hold_release_swallowed_upstream_ends_through_the_backstop() -> void:
 	input.press_action(_ACTION)
 	await _elapse(_DURATION)
 
-	# When: `Input` reads the action as up, with no event reaching the slot.
+	# When: `Input` reads the action as up with no event, as after a loss of focus.
 	Input.action_release(_ACTION)
 	await wait_process_frames(1)
 
-	# Then: The hold completes.
-	assert_signal_emit_count(slot, "action_hold_completed", 1)
+	# Then: The hold cancels rather than completing.
+	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
+	assert_signal_emit_count(slot, "action_hold_completed", 0)
+	assert_false(slot.is_action_hold_active(_ACTION))
+
+
+func test_hold_released_with_no_event_doesnt_trigger_an_unreported_fill() -> void:
+	# Given: A hold is declared.
+	await _mount(_make_hold(MODE_HOLD))
+
+	# Given: The action is pressed, and the duration passes with no frame to report it.
+	input.press_action(_ACTION)
+	_set_elapsed(_DURATION + 0.5)
+
+	# When: `Input` reads the action as up with no event.
+	Input.action_release(_ACTION)
+	await wait_process_frames(1)
+
+	# Then: The hold cancels without triggering.
+	assert_signal_emit_count(slot, "action_hold_triggered", 0)
+	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
+
+
+func test_toggle_released_with_no_event_stays_active() -> void:
+	# Given: A toggle at duration 0 is declared.
+	await _mount(_make_hold(MODE_TOGGLE, 0.0))
+
+	# Given: The action is pressed, which starts the toggle.
+	input.press_action(_ACTION)
+	assert_true(slot.is_action_hold_active(_ACTION), "precondition: active")
+
+	# When: `Input` reads the action as up with no event.
+	Input.action_release(_ACTION)
+	await wait_process_frames(1)
+
+	# Then: The toggle stays active, since it ignores its release.
+	assert_true(slot.is_action_hold_active(_ACTION))
+	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
+	assert_signal_emit_count(slot, "action_hold_completed", 0)
 
 
 # TOGGLE
