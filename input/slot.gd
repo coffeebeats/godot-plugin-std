@@ -32,9 +32,12 @@ extends StdInputDevice
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## action_hold_cancelled is emitted when a hold ends without completing, on a release or
-## second tap before its fill. A device swap, leaving the tree, a set or layer change
-## which drops the hold, a setting change which alters it, or a release with no event,
-## as when a joypad disconnects or the window loses focus, also cancels a filled hold.
+## second tap before its fill. A device swap, a joypad disconnecting, the app losing
+## focus, leaving the tree, a set or layer change which drops the hold, or a setting
+## change which alters it also cancels a filled hold, as does a release with no event.
+##
+## NOTE: A release another node marks as handled in `_input` never reaches the slot, so
+## it cancels the hold.
 signal action_hold_cancelled(action: StringName)
 
 ## action_hold_completed is emitted when a filled hold ends, on its release, on the tap
@@ -376,7 +379,9 @@ func swap_joypad_components(
 			_disconnect_joy_device(joypad.device_id)
 
 		Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
-		Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+		Signals.disconnect_safe(
+			joypad_monitor.joy_disconnected, _on_joypad_monitor_joy_disconnected
+		)
 
 	# NOTE: An action held on a joypad the old monitor never reported may never release,
 	# and would block a press from the joypad the next monitor gives its device ID.
@@ -395,7 +400,9 @@ func swap_joypad_components(
 	joypad_monitor = next_joypad_monitor
 
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
-	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+	Signals.connect_safe(
+		joypad_monitor.joy_disconnected, _on_joypad_monitor_joy_disconnected
+	)
 	Signals.ensure_connected(
 		actions_joy.bindings_changed, _on_component_bindings_changed
 	)
@@ -524,7 +531,9 @@ func _enter_tree() -> void:
 
 	assert(joypad_monitor is JoypadMonitor, "invalid config; missing component")
 	Signals.connect_safe(joypad_monitor.joy_connected, _connect_joy_device)
-	Signals.connect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+	Signals.connect_safe(
+		joypad_monitor.joy_disconnected, _on_joypad_monitor_joy_disconnected
+	)
 
 	# NOTE: The keyboard and joypads may share one actions component, which is then
 	# connected once.
@@ -561,7 +570,9 @@ func _exit_tree() -> void:
 	Signals.disconnect_safe(device_connected, _on_Self_device_connected)
 	Signals.disconnect_safe(device_disconnected, _on_Self_device_disconnected)
 	Signals.disconnect_safe(joypad_monitor.joy_connected, _connect_joy_device)
-	Signals.disconnect_safe(joypad_monitor.joy_disconnected, _disconnect_joy_device)
+	Signals.disconnect_safe(
+		joypad_monitor.joy_disconnected, _on_joypad_monitor_joy_disconnected
+	)
 
 	for component in [actions_kbm, actions_joy]:
 		if component is StdInputDeviceActions:
@@ -634,6 +645,13 @@ func _input(event: InputEvent) -> void:
 	if claim_kbm_input or not is_kbm:
 		_held_actions.update(event, _pressed)
 		_update_processing()
+
+
+func _notification(what: int) -> void:
+	# NOTE: Losing focus interrupts every gesture, including a toggle, which ignores the
+	# releases Godot makes as it happens.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_gestures.cancel_all()
 
 
 func _process(_delta: float) -> void:
@@ -1006,6 +1024,15 @@ func _on_held_actions_action_released(
 	action: StringName, _device: int, _held_seconds: float, is_interrupted: bool
 ) -> void:
 	_gestures.release(action, is_interrupted)
+
+
+func _on_joypad_monitor_joy_disconnected(device: int) -> void:
+	if not _disconnect_joy_device(device):
+		return
+
+	# NOTE: Steam releases a lost joypad's actions with events, which would complete a
+	# filled gesture, so a disconnect interrupts every gesture.
+	_gestures.cancel_all()
 
 
 func _on_Self_action_configuration_changed() -> void:

@@ -294,6 +294,83 @@ func test_toggle_released_with_no_event_stays_active() -> void:
 	assert_signal_emit_count(slot, "action_hold_completed", 0)
 
 
+func test_hold_filled_is_cancelled_when_the_app_loses_focus() -> void:
+	# Given: A hold is declared.
+	await _mount(_make_hold(MODE_HOLD))
+
+	# Given: The hold has filled.
+	input.press_action(_ACTION)
+	await _elapse(_DURATION)
+
+	# When: The app loses focus, before Godot releases the action.
+	slot.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+
+	# Then: The hold cancels.
+	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
+	assert_false(slot.is_action_hold_active(_ACTION))
+
+	# When: Godot releases the action with no event.
+	Input.action_release(_ACTION)
+	await wait_process_frames(1)
+
+	# Then: Nothing completes.
+	assert_signal_emit_count(slot, "action_hold_completed", 0)
+	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
+
+
+func test_toggle_charge_is_cancelled_when_the_app_loses_focus() -> void:
+	# Given: A toggle with a duration is declared.
+	await _mount(_make_hold(MODE_TOGGLE))
+
+	# Given: The action was tapped, which starts the charge.
+	input.press_action(_ACTION)
+	input.release_action(_ACTION)
+
+	# When: The app loses focus.
+	slot.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+
+	# Then: The toggle cancels.
+	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
+	assert_false(slot.is_action_hold_active(_ACTION))
+
+	# When: The duration passes.
+	await _elapse(_DURATION)
+
+	# Then: Nothing triggers or completes.
+	assert_signal_emit_count(slot, "action_hold_triggered", 0)
+	assert_signal_emit_count(slot, "action_hold_completed", 0)
+
+
+func test_hold_filled_is_cancelled_when_the_slots_joypad_disconnects() -> void:
+	# Given: A hold is declared.
+	await _mount(_make_hold(MODE_HOLD))
+
+	# Given: The monitor reports a joypad.
+	slot.joypad_monitor.joy_connected.emit(1, StdInputDevice.DEVICE_TYPE_GENERIC)
+
+	# Given: The hold has filled.
+	input.press_action(_ACTION)
+	await _elapse(_DURATION)
+
+	# When: The monitor reports a joypad the slot never had disconnecting.
+	slot.joypad_monitor.joy_disconnected.emit(7)
+
+	# Then: The hold keeps running.
+	assert_true(slot.is_action_hold_active(_ACTION))
+
+	# When: The slot's joypad disconnects.
+	slot.joypad_monitor.joy_disconnected.emit(1)
+
+	# Then: The hold cancels.
+	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
+
+	# When: The release arrives as an event, as Steam sends it for a lost joypad.
+	input.release_action(_ACTION)
+
+	# Then: Nothing completes.
+	assert_signal_emit_count(slot, "action_hold_completed", 0)
+
+
 # TOGGLE
 
 

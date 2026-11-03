@@ -95,8 +95,8 @@ var _sustain_mode_property: StdSettingsPropertyInt = null
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## cancel_all cancels every running gesture. It's called before anything but the
-## player's release ends the actions' holds, which would complete a filled gesture.
+## cancel_all cancels every running gesture, as when something other than the player
+## interrupts them.
 func cancel_all() -> void:
 	for gesture: _Gesture in _gestures.values():
 		_end(gesture, false)
