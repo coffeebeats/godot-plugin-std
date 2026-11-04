@@ -13,6 +13,8 @@ const SlotTest := preload("slot_test.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+const _TEST_ATTACHMENT_PATH := "res://input/_test_attachment.tscn"
+
 var _slot: StdInputSlot = null
 var _action_set: StdInputActionSet = null
 var _layer: StdInputActionSetLayer = null
@@ -700,6 +702,100 @@ func test_loader_branch_leaving_with_a_panel_open_loads_the_remaining_set() -> v
 	assert_eq(
 		_slot.list_action_set_layers(), [lobby_layer] as Array[StdInputActionSetLayer]
 	)
+
+
+func test_loader_screen_popped_with_a_panel_open_loads_the_set_below_once() -> void:
+	# Given: A screen stack, which uses the slot's cursor.
+	var manager := StdTestScreenManager.new()
+	add_child_autofree(manager)
+
+	# Given: A scene with a map's loaders, pushed.
+	var scene := Node.new()
+	scene.add_child(_make_map())
+	await manager.push_and_wait(StdScreen.new(), scene)
+
+	# Given: A pause menu holding `Menu`, with an open panel after it, pushed over it.
+	var pause := Node.new()
+	var loader := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	loader.action_set = _menu
+	var pause_layer := _make_layer(&"PauseMenu")
+	loader.action_set_layers = [pause_layer] as Array[StdInputActionSetLayer]
+	pause.add_child(loader)
+	var panel := _make_panel()
+	panel.show()
+	pause.add_child(panel)
+	await manager.push_and_wait(StdScreen.new(), pause)
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[pause_layer, _panel_layer] as Array[StdInputActionSetLayer],
+	)
+	watch_signals(_slot)
+
+	# When: The pause menu is popped.
+	manager.pop()
+
+	# Then: The game's set is loaded once, with the map's layers in tree order.
+	assert_signal_emit_count(_slot, "action_set_loaded", 1)
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_layer, _build_layer] as Array[StdInputActionSetLayer],
+	)
+
+	# When: The frame ends.
+	await wait_idle_frames(1)
+
+	# Then: No other set has been loaded.
+	assert_signal_emit_count(_slot, "action_set_loaded", 1)
+
+
+func test_loader_screen_popped_with_an_attachment_loads_the_set_below_once() -> void:
+	# Given: A screen stack, which uses the slot's cursor.
+	var manager := StdTestScreenManager.new()
+	add_child_autofree(manager)
+
+	# Given: A scene with a map's loaders, pushed.
+	var scene := Node.new()
+	scene.add_child(_make_map())
+	await manager.push_and_wait(StdScreen.new(), scene)
+
+	# Given: An attachment scene whose loader holds `Menu`.
+	var attachment := PackedScene.new()
+	var menu := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	menu.action_set = _menu
+	menu.action_set_layers = [] as Array[StdInputActionSetLayer]
+	attachment.pack(menu)
+	menu.free()
+	attachment.take_over_path(_TEST_ATTACHMENT_PATH)
+
+	# Given: A screen with that attachment, whose own loader holds its own set, pushed.
+	var screen := StdScreen.new()
+	screen.attachment_scenes = PackedStringArray([_TEST_ATTACHMENT_PATH])
+	var driving := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	driving.action_set = _make_action_set(&"Driving")
+	driving.action_set_layers = [] as Array[StdInputActionSetLayer]
+	await manager.push_and_wait(screen, driving)
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _menu)
+	watch_signals(_slot)
+
+	# When: The screen is popped.
+	manager.pop()
+
+	# Then: The game's set is loaded once, with the map's layers in tree order.
+	assert_signal_emit_count(_slot, "action_set_loaded", 1)
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_layer, _build_layer] as Array[StdInputActionSetLayer],
+	)
+
+	# When: The frame ends.
+	await wait_idle_frames(1)
+
+	# Then: No other set has been loaded.
+	assert_signal_emit_count(_slot, "action_set_loaded", 1)
+
+	attachment.take_over_path("")
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
