@@ -1,10 +1,10 @@
 ##
 ## std/input/cursor_focus_handler.gd
 ##
-## StdInputCursorFocusHandler is a node which helps manage UI focus for the `Control`
-## node at `control`. It will work with a `StdInputCursor` singleton node to grab or
-## release focus depending on whether the UI navigation mode is cursor or focus-based.
-## It follows that control's visibility wherever it sits.
+## StdInputCursorFocusHandler is a node which manages UI focus for the `Control` node
+## at `control`. It works with a `StdInputCursor` singleton node to grab or release
+## focus depending on whether the UI navigation mode is cursor or focus-based. It
+## follows that control's visibility wherever it sits.
 ##
 ## A handler also makes its control ignore the mouse while the cursor is hidden. Godot
 ## still delivers mouse events to a hidden cursor, so give every interactive control a
