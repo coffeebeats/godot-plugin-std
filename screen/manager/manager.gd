@@ -457,6 +457,19 @@ func _force_stop() -> void:
 		ctx.entering.free()
 
 
+## _detach_scene removes the screen's scene and then its attachments from the tree.
+##
+## NOTE: They leave in tree order, so that a loader leaving re-syncs only peers whose
+## set is already loaded or which leave after it, never one about to leave.
+func _detach_scene(screen: StdScreen, scene: Node) -> void:
+	if is_instance_valid(scene) and scene.get_parent():
+		scene.get_parent().remove_child(scene)
+
+	for node: Node in _attachments.get(screen, []):
+		if is_instance_valid(node) and node.get_parent():
+			node.get_parent().remove_child(node)
+
+
 ## _free_attachments detaches and queue-frees the given screen's attachment nodes.
 ##
 ## NOTE: Detach first. The overlay may be shared and survive this screen, and a queued
@@ -720,6 +733,11 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 	screen_exited.emit(screen, scene)
 
 	_preloads.erase(screen)
+
+	# NOTE: Detach first. The overlay may be shared and survive this screen, and a
+	# queued free would leave the scene in it, still receiving input, until the end
+	# of the frame.
+	_detach_scene(screen, scene)
 	_free_attachments(screen)
 
 	var overlay := _overlays.get_overlay(screen)
@@ -729,17 +747,8 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 	# Cache or free the scene.
 	var should_cache := screen.cache_instance and is_instance_valid(scene)
 	if should_cache:
-		if scene.get_parent():
-			scene.get_parent().remove_child(scene)
-
 		_cache[screen] = scene
 	elif is_instance_valid(scene):
-		# NOTE: Detach first. The overlay may be shared and survive this screen, and a
-		# queued free would leave the scene in it, still receiving input, until the end
-		# of the frame.
-		if scene.get_parent():
-			scene.get_parent().remove_child(scene)
-
 		scene.queue_free()
 
 	_overlays.free_if_unused(overlay)
@@ -765,6 +774,10 @@ func _unmount_scene(screen: StdScreen, scene: Node) -> void:
 	_scenes.erase(screen)
 
 	_update_stack_state()
+
+	# NOTE: Detach before the uncover, while the screen beneath is still covered, so that
+	# its loaders sync once, at the uncover, and not again for each node leaving.
+	_detach_scene(screen, scene)
 	_notify_top_uncovered()
 	_teardown_scene(screen, scene)
 

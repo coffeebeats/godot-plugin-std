@@ -5,7 +5,12 @@
 ## layers enabled while the rule in `active_while` holds and its screen is uncovered.
 ## It first acts at the end of the frame it enters the tree in, once its parents have
 ## set it up. The `VISIBLE` rule follows the nearest `CanvasItem`, `CanvasLayer` or
-## `Window` above it.
+## `Window` above it, and on entering and on an uncover a loader under it syncs at the
+## end of the frame, after the player's plain loaders, so a panel lands above its scene.
+##
+## NOTE: The loaded set follows from the active loaders. When one holding a set goes
+## inactive or leaves the tree, the player's others re-sync in tree order, so the last
+## of them holding a set wins and their layers stack in that order.
 ##
 ## NOTE: Loaders may share a layer. One disables it only when no other active loader
 ## for the same player lists it.
@@ -36,8 +41,7 @@ const _GROUP_INPUT_LOADER := &"std/input:loader"
 ## enabled.
 @export var active_while: ActiveWhile = ActiveWhile.IN_TREE
 
-## action_set is an `StdInputActionSet` loaded while the rule holds. It is never
-## unloaded; a screen that takes over loads its own.
+## action_set is an `StdInputActionSet` loaded while the rule holds.
 @export var action_set: StdInputActionSet = null
 
 ## action_set_layers are `StdInputActionSetLayer` resources enabled while the rule
@@ -56,6 +60,10 @@ var _covered: bool = false
 ## _synced is whether the first sync since entering the tree has run. Notifications
 ## before it record what they report and leave the syncing to it.
 var _synced: bool = false
+
+## _held is whether the rule held at the last sync, so that the sync finding it no
+## longer holds is the one to re-sync the player's other loaders.
+var _held: bool = false
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -127,14 +135,19 @@ func _exit_tree() -> void:
 		_visibility_source.disconnect(&"visibility_changed", _on_visibility_changed)
 		_visibility_source = null
 
-	if active_while == ActiveWhile.NEVER or action_set_layers.is_empty():
+	# NOTE: At quit the slot may be gone already, leaving nothing to disable or re-sync.
+	if active_while == ActiveWhile.NEVER or not StdInputSlot.for_player(player_id):
 		return
 
-	# NOTE: At quit the slot may be gone already, and then nothing is left to disable.
-	if not StdInputSlot.for_player(player_id):
-		return
+	if not action_set_layers.is_empty():
+		disable_action_set_layers()
 
-	disable_action_set_layers()
+	# NOTE: The others re-sync once this loader has left the tree, when every loader
+	# leaving with it has left too, so that none still leaving loads its set.
+	if _held and action_set:
+		tree_exited.connect(_on_tree_exited, CONNECT_ONE_SHOT)
+
+	_held = false
 
 
 func _notification(what) -> void:
@@ -145,7 +158,7 @@ func _notification(what) -> void:
 
 		StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED:
 			_covered = false
-			_sync()
+			_sync_in_turn()
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
@@ -178,14 +191,8 @@ func _is_active() -> bool:
 ## _is_layer_wanted_elsewhere returns whether another active loader for the player
 ## lists `layer`.
 func _is_layer_wanted_elsewhere(layer: StdInputActionSetLayer) -> bool:
-	for member in StdGroup.with_id(_GROUP_INPUT_LOADER).list_members():
-		var other := member as StdInputActionSetLoader
-		if (
-			other != self
-			and other.player_id == player_id
-			and layer in other.action_set_layers
-			and other._is_active()
-		):
+	for other in _list_peers():
+		if layer in other.action_set_layers and other._is_active():
 			return true
 
 	return false
@@ -203,6 +210,25 @@ func _is_source_visible() -> bool:
 	return true
 
 
+## _list_peers returns the player's other loaders in the tree, in tree order.
+func _list_peers() -> Array[StdInputActionSetLoader]:
+	var peers: Array[StdInputActionSetLoader] = []
+	for member in StdGroup.with_id(_GROUP_INPUT_LOADER).list_members():
+		var other := member as StdInputActionSetLoader
+		if other != self and other.player_id == player_id:
+			peers.append(other)
+
+	peers.sort_custom(func(a: Node, b: Node) -> bool: return b.is_greater_than(a))
+	return peers
+
+
+## _resync_peers syncs the player's other active loaders in tree order.
+func _resync_peers() -> void:
+	for other in _list_peers():
+		if other._is_active():
+			other._sync_in_turn()
+
+
 ## _sync_on_enter runs the first sync since this loader entered the tree, after which
 ## notifications sync it too.
 func _sync_on_enter() -> void:
@@ -212,7 +238,7 @@ func _sync_on_enter() -> void:
 		return
 
 	_synced = true
-	_sync()
+	_sync_in_turn()
 
 
 ## _sync loads the action set and enables the layers if the rule holds, and disables
@@ -222,16 +248,41 @@ func _sync() -> void:
 	if active_while == ActiveWhile.NEVER or not is_inside_tree() or not _synced:
 		return
 
-	if _is_active():
+	var held := _held
+	_held = _is_active()
+
+	if _held:
 		if action_set:
 			load_action_set()
 		if not action_set_layers.is_empty():
 			enable_action_set_layers()
-	elif not action_set_layers.is_empty():
+		return
+
+	if not action_set_layers.is_empty():
 		disable_action_set_layers()
+
+	# NOTE: A covered loader's active peers are the covering screen's, which sync on
+	# their own, so only an uncovered loader re-syncs them.
+	if held and action_set and not _covered:
+		_resync_peers()
+
+
+## _sync_in_turn syncs this loader now under a plain rule, and at the end of the frame
+## under `VISIBLE`, once the player's plain loaders have run.
+func _sync_in_turn() -> void:
+	if active_while == ActiveWhile.VISIBLE:
+		_sync.call_deferred()
+	else:
+		_sync()
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_tree_exited() -> void:
+	# NOTE: The slot may have left the tree with this loader, leaving nothing to sync.
+	if StdInputSlot.for_player(player_id):
+		_resync_peers()
 
 
 func _on_visibility_changed() -> void:
