@@ -17,7 +17,10 @@ extends RefCounted
 signal action_pressed(action: StringName, device: int)
 
 ## action_released is emitted when a hold ends. See `StdInputSlot.action_released`.
-signal action_released(action: StringName, device: int, held_seconds: float)
+## `is_interrupted` is `true` when `poll` ended it, since no release event reached it.
+signal action_released(
+	action: StringName, device: int, held_seconds: float, is_interrupted: bool
+)
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -78,7 +81,7 @@ func is_tracking() -> bool:
 func poll() -> void:
 	for action: StringName in _held_since.keys():
 		if InputMap.has_action(action) and not Input.is_action_pressed(action):
-			_end_hold(action)
+			_end_hold(action, true)
 
 
 ## release_all ends every hold.
@@ -141,7 +144,7 @@ func _init() -> void:
 
 
 ## _end_hold ends the hold of `action`, if any, and reports it.
-func _end_hold(action: StringName) -> void:
+func _end_hold(action: StringName, is_interrupted: bool = false) -> void:
 	if not _held_since.has(action):
 		return
 
@@ -151,7 +154,7 @@ func _end_hold(action: StringName) -> void:
 	_held_devices.erase(action)
 	_held_since.erase(action)
 
-	action_released.emit(action, device, held_seconds)
+	action_released.emit(action, device, held_seconds, is_interrupted)
 
 
 ## _get_report_key returns the key under which `event`'s source is recorded in

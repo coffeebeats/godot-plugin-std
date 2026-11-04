@@ -67,7 +67,8 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 @export_group("Holds")
 
 ## holds is a list of the actions which run as holds, live while this set is loaded or
-## this layer enabled.
+## this layer enabled. A `StdInputSlot` runs them, and a layer's hold on an action
+## replaces one from the set or an earlier layer.
 ##
 ## NOTE: A hold doesn't declare its actions, which stay in the lists above. The Steam
 ## manifest and the rebinder read only those lists.

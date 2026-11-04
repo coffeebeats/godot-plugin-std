@@ -89,6 +89,38 @@ func test_input_slot_key_keeps_its_hold_when_a_set_keeps_its_action() -> void:
 	assert_signal_emit_count(slot, "action_released", 1)
 
 
+func test_input_slot_key_keeps_its_gesture_when_a_set_keeps_its_hold() -> void:
+	# Given: A hold is declared on the key's action.
+	var hold := StdInputActionHold.new()
+	hold.action = _ACTION_KEY
+	hold.duration = 1.0
+
+	# Given: A set declaring the hold is loaded.
+	var action_set := _make_set([_ACTION_KEY])
+	action_set.holds = [hold] as Array[StdInputActionHold]
+	slot.load_action_set(action_set)
+	await wait_process_frames(2)
+
+	# Given: The key is held.
+	await _dispatch(_key(true))
+
+	# When: Another set declaring the hold, whose bindings differ, is loaded.
+	var next := _make_set([_ACTION_KEY, _ACTION_OTHER])
+	next.holds = [hold] as Array[StdInputActionHold]
+	slot.load_action_set(next)
+	await wait_process_frames(2)
+
+	# Then: The gesture goes on.
+	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
+	assert_true(slot.is_action_hold_active(_ACTION_KEY))
+
+	# When: The key is released before the fill.
+	await _dispatch(_key(false))
+
+	# Then: The gesture ends with that release.
+	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
+
+
 func test_input_slot_key_keeps_its_hold_through_a_reload() -> void:
 	# Given: The key's action is active.
 	await _load([_ACTION_KEY])
