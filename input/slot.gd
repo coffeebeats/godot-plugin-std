@@ -31,31 +31,21 @@ extends StdInputDevice
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-## action_hold_cancelled is emitted when a hold ends without completing, on a release or
-## second tap before its fill. A device swap, a joypad disconnecting, the app losing
-## focus, leaving the tree, a set or layer change which drops the hold, or a setting
-## change which alters it also cancels a filled hold, as does a release with no event.
-##
-## NOTE: A release another node marks as handled in `_input` never reaches the slot, so
-## it cancels the hold.
+## action_hold_cancelled is emitted when a hold ends before its fill, through the
+## player's input or an interruption: a device swap, the loss of the joypad which
+## tapped a toggle, focus loss, leaving the tree, or a change which alters the hold.
 signal action_hold_cancelled(action: StringName)
-
-## action_hold_completed is emitted when a filled hold ends, on its release, on the tap
-## which ends a toggle, or on its own in `MODE_PRESS` and for a `MODE_TOGGLE` charge.
-## `held_seconds` is the time since it started, and it reads as triggered until this
-## returns.
-signal action_hold_completed(action: StringName, held_seconds: float)
 
 ## action_hold_progress_changed is emitted when `get_action_hold_progress` changes,
 ## which includes its drop to `0.0` as the hold ends.
 signal action_hold_progress_changed(action: StringName, progress: float)
 
-## action_hold_started is emitted when a hold starts. Either `action_hold_completed` or
+## action_hold_started is emitted when a hold starts. Either `action_hold_triggered` or
 ## `action_hold_cancelled` follows.
 signal action_hold_started(action: StringName)
 
-## action_hold_triggered is emitted when a hold fills, which is on its press in
-## `MODE_PRESS` or at a `duration` of `0`.
+## action_hold_triggered is emitted when a hold fills, which ends it. A handler acts on
+## the hold here. In `MODE_PRESS` it's emitted on the press.
 signal action_hold_triggered(action: StringName)
 
 ## action_pressed is emitted on an active action's first press from any device, with the
@@ -161,24 +151,23 @@ class JoypadMonitor:
 ## triggered haptic effects.
 @export var haptics_strength_property: StdSettingsPropertyFloatRange = null
 
-## hold_confirm_mode_property is an optional settings property which, while it holds
-## anything but `MODE_INHERIT`, chooses the `StdInputActionHold.Mode` of each hold with
-## a `duration`, unless that hold's `mode_override` chooses first.
-##
-## NOTE: It should default to `MODE_INHERIT` and offer it, since any other default
-## overrides each hold's `mode`.
-@export var hold_confirm_mode_property: StdSettingsPropertyInt = null
-
 ## hold_duration_scale_property is an optional settings property whose value multiplies
 ## each hold's `duration`. A value of `0` or less is ignored.
-@export var hold_duration_scale_property: StdSettingsPropertyFloatRange = null
+@export var hold_duration_scale_property: StdSettingsPropertyFloatRange = null:
+	set(value):
+		hold_duration_scale_property = value
+		_gestures.set_properties(hold_mode_property, hold_duration_scale_property)
 
-## hold_sustain_mode_property is `hold_confirm_mode_property` for each hold at a
-## `duration` of `0`.
+## hold_mode_property is an optional settings property which, while it holds anything
+## but `MODE_INHERIT`, chooses the `StdInputActionHold.Mode` of each hold, unless that
+## hold's `mode_override` chooses first.
 ##
 ## NOTE: It should default to `MODE_INHERIT` and offer it, since any other default
 ## overrides each hold's `mode`.
-@export var hold_sustain_mode_property: StdSettingsPropertyInt = null
+@export var hold_mode_property: StdSettingsPropertyInt = null:
+	set(value):
+		hold_mode_property = value
+		_gestures.set_properties(hold_mode_property, hold_duration_scale_property)
 
 @export_group("Components")
 
@@ -300,12 +289,6 @@ func is_action_hold_active(action: StringName) -> bool:
 	return _gestures.is_active(action)
 
 
-## is_action_hold_triggered returns whether `action`'s active hold has filled. This
-## reads `false` after the hold ends, but still `true` during `action_hold_completed`.
-func is_action_hold_triggered(action: StringName) -> bool:
-	return _gestures.is_triggered(action)
-
-
 # Devices
 
 
@@ -419,7 +402,7 @@ func swap_joypad_components(
 
 	# NOTE: These come last, since a listener can load a set, which every joypad must
 	# then keep rather than have `action_sets` replace. Gestures are cancelled first, so
-	# a filled one isn't completed by the release.
+	# the release can't trigger a fill no frame has reported.
 	_gestures.cancel_all()
 	_held_actions.release_all()
 
@@ -597,7 +580,7 @@ func _exit_tree() -> void:
 
 	_joypad_devices = []
 
-	# NOTE: Gestures are cancelled first, so a filled one isn't completed by the release.
+	# NOTE: Gestures are cancelled first, so the release can't trigger an unreported fill.
 	_gestures.cancel_all()
 	_held_actions.release_all()
 
@@ -611,13 +594,12 @@ func _init() -> void:
 
 	# NOTE: These follow the connections above, so a gesture's signal follows the raw
 	# press or release it comes from.
-	Signals.connect_safe(_held_actions.action_pressed, _gestures.press.unbind(1))
+	Signals.connect_safe(_held_actions.action_pressed, _gestures.press)
 	Signals.connect_safe(
 		_held_actions.action_released, _on_held_actions_action_released
 	)
 
 	Signals.connect_safe(_gestures.action_hold_cancelled, action_hold_cancelled.emit)
-	Signals.connect_safe(_gestures.action_hold_completed, action_hold_completed.emit)
 	Signals.connect_safe(
 		_gestures.action_hold_progress_changed, action_hold_progress_changed.emit
 	)
@@ -668,15 +650,6 @@ func _ready() -> void:
 	assert(
 		haptics_strength_property is StdSettingsPropertyFloatRange,
 		"invalid config; missing property",
-	)
-
-	(
-		_gestures
-		. set_properties(
-			hold_confirm_mode_property,
-			hold_sustain_mode_property,
-			hold_duration_scale_property,
-		)
 	)
 
 	if not actions:
@@ -1030,9 +1003,9 @@ func _on_joypad_monitor_joy_disconnected(device: int) -> void:
 	if not _disconnect_joy_device(device):
 		return
 
-	# NOTE: Steam releases a lost joypad's actions with events, which would complete a
-	# filled gesture, so a disconnect interrupts every gesture.
-	_gestures.cancel_all()
+	# NOTE: A hold ends once no device holds its action, but a toggle fills with nothing
+	# held, so the loss of the joypad which tapped it must end it.
+	_gestures.cancel_toggles(device)
 
 
 func _on_Self_action_configuration_changed() -> void:

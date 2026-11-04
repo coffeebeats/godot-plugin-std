@@ -2,18 +2,14 @@
 ## std/input/slot_gestures.gd
 ##
 ## StdInputSlotGestures runs the holds which a `StdInputSlot`'s loaded set and enabled
-## layers declare, as gestures over each action's press and release. It consumes no
-## input, so a game can still read the raw press.
+## layers declare. A hold consumes no input, so a game can still read the raw press.
 ##
-## A handler of a hold's action connects the slot's `action_hold_*` signals, filtered by
-## its action, and doesn't act on the raw press in `_unhandled_input`. A confirm at the
-## fill connects `action_hold_triggered`. A confirm on release or a charge connects
-## `action_hold_completed`. A sustained action starts on `action_hold_started` and stops
-## on `action_hold_completed` or `action_hold_cancelled`.
+## A handler of a hold's action connects the slot's `action_hold_triggered`, filtered
+## by its action, and doesn't act on the raw press in `_unhandled_input`. A prompt shows
+## the fill through `action_hold_progress_changed`.
 ##
-## NOTE: A hold fills on the wall clock, so it goes on filling in a paused tree, and a
-## paused handler misses its signals. A menu which wants a clean break leaves the action
-## out of its set.
+## NOTE: A hold fills on the wall clock, and the slot reads input in a paused tree, so a
+## hold goes on filling under a pause menu. Gameplay times its own holds.
 ##
 
 extends RefCounted
@@ -23,9 +19,6 @@ extends RefCounted
 ## action_hold_cancelled is emitted as a hold is cancelled. See `StdInputSlot`.
 signal action_hold_cancelled(action: StringName)
 
-## action_hold_completed is emitted as a filled hold ends. See `StdInputSlot`.
-signal action_hold_completed(action: StringName, held_seconds: float)
-
 ## action_hold_progress_changed is emitted as a hold's progress changes. See
 ## `StdInputSlot`.
 signal action_hold_progress_changed(action: StringName, progress: float)
@@ -33,7 +26,7 @@ signal action_hold_progress_changed(action: StringName, progress: float)
 ## action_hold_started is emitted as a hold starts. See `StdInputSlot`.
 signal action_hold_started(action: StringName)
 
-## action_hold_triggered is emitted as a hold fills. See `StdInputSlot`.
+## action_hold_triggered is emitted as a hold fills, which ends it. See `StdInputSlot`.
 signal action_hold_triggered(action: StringName)
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
@@ -48,8 +41,11 @@ const MODE_PRESS := StdInputActionHold.MODE_PRESS
 const MODE_TOGGLE := StdInputActionHold.MODE_TOGGLE
 
 
-## _Gesture is a hold running from its start until it's completed or cancelled.
+## _Gesture is a hold running from its start until it's triggered or cancelled.
 class _Gesture:
+	## device is the ID of the device whose press started the hold.
+	var device: int = 0
+
 	## fill_seconds is how long the hold takes to fill, which is `0.0` if it fills at once.
 	var fill_seconds: float = 0.0
 
@@ -76,11 +72,6 @@ class _Gesture:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## _completing lists the actions whose `action_hold_completed` is being emitted, so a
-## handler reads them as triggered though their gestures have ended.
-var _completing: Array[StringName] = []
-
-var _confirm_mode_property: StdSettingsPropertyInt = null
 var _duration_scale_property: StdSettingsPropertyFloatRange = null
 
 ## _gestures maps each action to its running gesture.
@@ -90,7 +81,7 @@ var _gestures: Dictionary[StringName, _Gesture] = {}
 var _holds: Dictionary[StringName, StdInputActionHold] = {}
 
 var _logger := StdLogger.create("std/input/slot_gestures")
-var _sustain_mode_property: StdSettingsPropertyInt = null
+var _mode_property: StdSettingsPropertyInt = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -99,7 +90,15 @@ var _sustain_mode_property: StdSettingsPropertyInt = null
 ## interrupts them.
 func cancel_all() -> void:
 	for gesture: _Gesture in _gestures.values():
-		_end(gesture, false)
+		_cancel(gesture)
+
+
+## cancel_toggles cancels each running `MODE_TOGGLE` gesture `device` started, as when
+## it disconnects, since a toggle fills on its own after the tap.
+func cancel_toggles(device: int) -> void:
+	for gesture: _Gesture in _gestures.values():
+		if gesture.mode == MODE_TOGGLE and gesture.device == device:
+			_cancel(gesture)
 
 
 ## configure reads the holds of `action_sets`, ordered from the base set up, so the last
@@ -124,7 +123,7 @@ func configure(action_sets: Array[StdInputActionSet]) -> void:
 			not hold.cancel_action or hold.cancel_action in names,
 			"invalid config; hold's cancel action isn't declared",
 		)
-		assert(hold.duration >= 0.0, "invalid config; hold's duration is negative")
+		assert(hold.duration > 0.0, "invalid config; hold's duration isn't positive")
 
 		if hold.mode_override:
 			Signals.ensure_connected(
@@ -136,7 +135,7 @@ func configure(action_sets: Array[StdInputActionSet]) -> void:
 	# NOTE: A listener can load a set, which replaces `_holds` but not this array.
 	for gesture: _Gesture in _gestures.values():
 		if _holds.get(gesture.hold.action) != gesture.hold:
-			_end(gesture, false)
+			_cancel(gesture)
 
 
 ## get_hold returns the hold which runs `action`, or `null` when `action` is no hold.
@@ -168,16 +167,6 @@ func is_tracking() -> bool:
 	return not _gestures.is_empty()
 
 
-## is_triggered returns whether `action`'s running gesture has filled, which stays true
-## through its `action_hold_completed`.
-func is_triggered(action: StringName) -> bool:
-	if action in _completing:
-		return true
-
-	var gesture: _Gesture = _gestures.get(action)
-	return gesture.is_filled() if gesture else false
-
-
 ## poll moves each running gesture on. It must be called each frame while `is_tracking`
 ## returns `true`.
 func poll() -> void:
@@ -185,66 +174,67 @@ func poll() -> void:
 		_advance(gesture)
 
 
-## press handles the start of `action`'s hold on the slot. It ends each active toggle
-## this taps, and otherwise starts `action`'s gesture.
-##
-## NOTE: A toggle filled at a duration of `0` is the player's to end, so it completes.
-func press(action: StringName) -> void:
-	var is_running := _gestures.has(action)
-
+## press handles `device`'s press of `action`. It cancels each toggle the press taps,
+## or else starts `action`'s gesture. A toggle which filled unreported before the tap
+## triggers first, so the tap starts a new one.
+func press(action: StringName, device: int) -> void:
+	var tapped: Array[_Gesture] = []
 	for gesture: _Gesture in _gestures.values():
 		if (
 			gesture.mode == MODE_TOGGLE
 			and action in [gesture.hold.action, gesture.hold.cancel_action]
 		):
-			_end(gesture, gesture.is_filled())
+			tapped.append(gesture)
+
+	for gesture in tapped:
+		_advance(gesture)
+
+	# NOTE: This follows the advance, since a toggle filled by it has already ended.
+	var is_running := _gestures.has(action)
+
+	for gesture in tapped:
+		_cancel(gesture)
 
 	var hold: StdInputActionHold = _holds.get(action)
 	if hold and not is_running:
-		_start(hold)
+		_start(hold, device)
 
 
-## release handles the end of `action`'s hold on the slot, which ends a `MODE_HOLD`
-## gesture. It completes if it's filled, even if no frame has yet reported that, and
-## cancels if `is_interrupted`, since the player didn't let go.
+## release handles the end of `action`'s hold on the slot, which cancels a `MODE_HOLD`
+## gesture that hasn't filled. A fill no frame has yet reported triggers it, unless
+## `is_interrupted`, since the input may have dropped before the fill.
 func release(action: StringName, is_interrupted: bool) -> void:
 	var gesture: _Gesture = _gestures.get(action)
 	if not gesture or gesture.mode != MODE_HOLD:
 		return
 
-	if is_interrupted:
-		_end(gesture, false)
-		return
+	if not is_interrupted:
+		_advance(gesture)
 
-	_advance(gesture)
-	_end(gesture, gesture.is_filled())
+	_cancel(gesture)
 
 
-## set_properties sets the settings properties which holds resolve against. Any of them
-## can be `null`.
+## set_properties sets the settings properties which holds resolve against. Either of
+## them can be `null`. It cancels each running gesture the replacement alters.
 func set_properties(
-	confirm_mode_property: StdSettingsPropertyInt,
-	sustain_mode_property: StdSettingsPropertyInt,
+	mode_property: StdSettingsPropertyInt,
 	duration_scale_property: StdSettingsPropertyFloatRange,
 ) -> void:
-	_confirm_mode_property = confirm_mode_property
 	_duration_scale_property = duration_scale_property
-	_sustain_mode_property = sustain_mode_property
+	_mode_property = mode_property
 
-	for property: StdSettingsProperty in [
-		confirm_mode_property,
-		sustain_mode_property,
-		duration_scale_property,
-	]:
+	for property: StdSettingsProperty in [mode_property, duration_scale_property]:
 		if property:
 			Signals.ensure_connected(property.value_changed, _on_property_value_changed)
+
+	# NOTE: This follows the connections, so a listener's change to a property is heard.
+	_cancel_altered()
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _advance reports `gesture`'s progress and, once it's filled, triggers it.
-## `MODE_PRESS` and a `MODE_TOGGLE` charge then complete on their own.
+## _advance reports `gesture`'s progress and, once it's filled, triggers and ends it.
 ##
 ## NOTE: A listener can load a set, which can end the gesture at any emission.
 func _advance(gesture: _Gesture) -> void:
@@ -266,35 +256,37 @@ func _advance(gesture: _Gesture) -> void:
 	if not gesture.is_filled() or not _is_running(gesture):
 		return
 
+	# NOTE: The gesture ends first, so a listener which loads a set can't cancel it.
+	_gestures.erase(action)
+
 	action_hold_triggered.emit(action)
-
-	if (
-		gesture.mode == MODE_PRESS
-		or (gesture.mode == MODE_TOGGLE and gesture.fill_seconds > 0.0)
-	):
-		_end(gesture, true)
+	action_hold_progress_changed.emit(action, 0.0)
 
 
-## _end ends `gesture`, if it's still running, and reports whether it completed.
-func _end(gesture: _Gesture, is_completed: bool) -> void:
+## _cancel cancels `gesture`, if it's still running.
+func _cancel(gesture: _Gesture) -> void:
 	if not _is_running(gesture):
 		return
 
 	var action := gesture.hold.action
-	var held_seconds := gesture.get_elapsed_seconds()
 
 	_gestures.erase(action)
 
 	if gesture.progress > 0.0:
 		action_hold_progress_changed.emit(action, 0.0)
 
-	if not is_completed:
-		action_hold_cancelled.emit(action)
-		return
+	action_hold_cancelled.emit(action)
 
-	_completing.append(action)
-	action_hold_completed.emit(action, held_seconds)
-	_completing.erase(action)
+
+## _cancel_altered cancels each running gesture whose mode or fill differs from how its
+## hold resolves now.
+func _cancel_altered() -> void:
+	for gesture: _Gesture in _gestures.values():
+		if (
+			gesture.mode != _resolve_mode(gesture.hold)
+			or gesture.fill_seconds != _resolve_fill_seconds(gesture.hold)
+		):
+			_cancel(gesture)
 
 
 ## _is_running returns whether `gesture` is still the one running for its action.
@@ -341,17 +333,12 @@ func _resolve_fill_seconds(hold: StdInputActionHold) -> float:
 
 
 ## _resolve_mode returns the mode `hold` runs in, as it resolves now. That's the first
-## choice among its `mode_override`, the property for its kind of hold, and its `mode`.
-##
-## NOTE: A sustained action has no press form, since it would start and stop at once, so
-## `MODE_PRESS` at a duration of `0` runs as `MODE_HOLD`.
+## choice among its `mode_override`, the slot's mode property, and its `mode`.
 func _resolve_mode(hold: StdInputActionHold) -> StdInputActionHold.Mode:
 	var mode := _read_mode(hold.mode_override)
 
 	if mode == MODE_INHERIT:
-		mode = _read_mode(
-			_confirm_mode_property if hold.duration > 0.0 else _sustain_mode_property
-		)
+		mode = _read_mode(_mode_property)
 
 	if mode == MODE_INHERIT:
 		mode = hold.mode
@@ -359,18 +346,16 @@ func _resolve_mode(hold: StdInputActionHold) -> StdInputActionHold.Mode:
 	if mode == MODE_INHERIT:
 		return MODE_HOLD
 
-	if mode != MODE_PRESS:
-		return mode
-
-	if not hold.allow_press:
+	if mode == MODE_PRESS and not hold.allow_press:
 		return MODE_TOGGLE
 
-	return MODE_PRESS if hold.duration > 0.0 else MODE_HOLD
+	return mode
 
 
-## _start runs `hold` from now.
-func _start(hold: StdInputActionHold) -> void:
+## _start runs `hold` from now, as `device` pressed it.
+func _start(hold: StdInputActionHold, device: int) -> void:
 	var gesture := _Gesture.new()
+	gesture.device = device
 	gesture.fill_seconds = _resolve_fill_seconds(hold)
 	gesture.hold = hold
 	gesture.mode = _resolve_mode(hold)
@@ -385,12 +370,6 @@ func _start(hold: StdInputActionHold) -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-## _on_property_value_changed cancels each running gesture the change alters, which
-## leaves one running if its resolved mode and fill are the same.
+## _on_property_value_changed cancels each running gesture the change alters.
 func _on_property_value_changed(_value: Variant) -> void:
-	for gesture: _Gesture in _gestures.values():
-		if (
-			gesture.mode != _resolve_mode(gesture.hold)
-			or gesture.fill_seconds != _resolve_fill_seconds(gesture.hold)
-		):
-			_end(gesture, false)
+	_cancel_altered()
