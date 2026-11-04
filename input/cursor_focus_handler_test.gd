@@ -251,10 +251,11 @@ func test_anchor_beside_its_control_detached_then_freed_is_no_target() -> void:
 	await get_tree().process_frame
 	assert_eq(StdInputCursorFocusHandler.get_focus_target(), button, "precondition")
 
-	# When: The panel is detached, then queued for deletion, as a screen manager frees
-	# a screen, and the frame ends.
+	# When: The panel is detached, then queued free, as a popped screen is.
 	remove_child(panel)
 	panel.queue_free()
+
+	# When: The frame ends.
 	await get_tree().process_frame
 
 	# Then: No focus target is found.
