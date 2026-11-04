@@ -165,6 +165,95 @@ func test_loader_visible_reentering_waits_for_the_end_of_the_frame() -> void:
 	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
 
 
+func test_loader_visible_under_a_window_follows_the_window() -> void:
+	# Given: A window under a visible host control.
+	var host := Control.new()
+	add_child_autofree(host)
+	var window := Window.new()
+	host.add_child(window)
+
+	# Given: A loader active while visible, in the window.
+	window.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE))
+
+	# Given: A control beside the loader, whose visibility is the engine's answer.
+	var probe := Control.new()
+	window.add_child(probe)
+	await wait_idle_frames(1)
+
+	# Then: The layer is enabled.
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+	# When: The window is hidden.
+	window.hide()
+
+	# Then: The layer is disabled, as the control beside the loader is hidden.
+	assert_false(probe.is_visible_in_tree())
+	assert_eq(_slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
+
+	# When: The window is shown and the host hidden.
+	window.show()
+	host.hide()
+
+	# Then: The layer is enabled, as the control beside the loader is visible.
+	assert_true(probe.is_visible_in_tree())
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
+func test_loader_visible_under_a_canvas_layer_follows_the_layer() -> void:
+	# Given: A canvas layer under a visible host control.
+	var host := Control.new()
+	add_child_autofree(host)
+	var layer := CanvasLayer.new()
+	host.add_child(layer)
+
+	# Given: A loader active while visible, in the canvas layer.
+	layer.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE))
+
+	# Given: A control beside the loader, whose visibility is the engine's answer.
+	var probe := Control.new()
+	layer.add_child(probe)
+	await wait_idle_frames(1)
+
+	# Then: The action set layer is enabled.
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+	# When: The canvas layer is hidden.
+	layer.hide()
+
+	# Then: The action set layer is disabled, as the control beside the loader is hidden.
+	assert_false(probe.is_visible_in_tree())
+	assert_eq(_slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
+
+	# When: The canvas layer is shown and the host hidden.
+	layer.show()
+	host.hide()
+
+	# Then: The action set layer is enabled, as the control beside the loader is visible.
+	assert_true(probe.is_visible_in_tree())
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
+func test_loader_visible_under_a_sub_viewport_holds() -> void:
+	# Given: A sub viewport under a hidden host control.
+	var host := Control.new()
+	host.hide()
+	add_child_autofree(host)
+	var viewport := SubViewport.new()
+	host.add_child(viewport)
+
+	# Given: A loader active while visible, in the sub viewport.
+	viewport.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE))
+
+	# Given: A control beside the loader, whose visibility is the engine's answer.
+	var probe := Control.new()
+	viewport.add_child(probe)
+	await wait_idle_frames(1)
+
+	# Then: The layer is enabled, as the control beside the loader is visible.
+	assert_true(probe.is_visible_in_tree())
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
 func test_loader_never_touches_nothing_and_needs_no_slot() -> void:
 	# Given: No input slot in the tree, and a loader that is never active.
 	_slot.queue_free()
@@ -245,6 +334,41 @@ func test_loader_keeps_a_shared_layer_under_a_screen_with_the_same_sets() -> voi
 
 	# Then: The layer is still enabled.
 	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
+func test_loader_under_a_container_takes_no_slot_and_covers_no_sibling() -> void:
+	# Given: A box container holding a button.
+	var scene := Control.new()
+	var box := VBoxContainer.new()
+	scene.add_child(box)
+	box.add_child(Button.new())
+
+	# Given: A panel container holding another button, below the box.
+	var panel := PanelContainer.new()
+	panel.position = Vector2(0, 100)
+	scene.add_child(panel)
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(100, 40)
+	panel.add_child(button)
+
+	# Given: The scene is mounted and laid out.
+	var input := await StdTestInput.mount(self, scene)
+	var minimum := box.get_combined_minimum_size()
+
+	# When: A loader enters each container beside its button.
+	box.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE))
+	panel.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE))
+	await wait_idle_frames(1)
+
+	# Then: The box's minimum size is unchanged.
+	assert_eq(box.get_combined_minimum_size(), minimum)
+
+	# When: The panel's button is clicked.
+	watch_signals(button)
+	input.click(button)
+
+	# Then: The click reaches it.
+	assert_signal_emitted(button, "pressed")
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
