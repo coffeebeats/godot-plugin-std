@@ -4,7 +4,8 @@
 ## StdInputActionSetLoader is a node which keeps an action set loaded and action set
 ## layers enabled while the rule in `active_while` holds and its screen is uncovered.
 ## It first acts at the end of the frame it enters the tree in, once its parents have
-## set it up. The `VISIBLE` rule follows the nearest `CanvasItem` above it.
+## set it up. The `VISIBLE` rule follows the nearest `CanvasItem`, `CanvasLayer` or
+## `Window` above it.
 ##
 ## NOTE: Loaders may share a layer. One disables it only when no other active loader
 ## for the same player lists it.
@@ -18,7 +19,7 @@ extends Node
 ## ActiveWhile names the rule deciding when the action set and layers are active.
 enum ActiveWhile {
 	IN_TREE,  ## While this node is in the scene tree.
-	VISIBLE,  ## While the nearest `CanvasItem` above this node is visible in the tree.
+	VISIBLE,  ## While the nearest `CanvasItem`, `CanvasLayer` or `Window` above is shown.
 	NEVER,  ## Not at all; the loader holds its sets and does nothing with them.
 }
 
@@ -45,9 +46,9 @@ const _GROUP_INPUT_LOADER := &"std/input:loader"
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## _canvas_item is the nearest `CanvasItem` above this loader, whose visibility the
-## `VISIBLE` rule follows, or `null` when there is none and the rule holds.
-var _canvas_item: CanvasItem = null
+## _visibility_source is the node whose visibility the `VISIBLE` rule follows, or
+## `null` when there is none and the rule holds.
+var _visibility_source: Node = null
 
 ## _covered is whether another screen covers the one holding this loader.
 var _covered: bool = false
@@ -108,9 +109,9 @@ func load_action_set() -> void:
 func _enter_tree() -> void:
 	StdGroup.with_id(_GROUP_INPUT_LOADER).add_member(self)
 
-	_canvas_item = _find_canvas_item()
-	if _canvas_item:
-		_canvas_item.visibility_changed.connect(_on_canvas_item_visibility_changed)
+	_visibility_source = _find_visibility_source()
+	if _visibility_source:
+		_visibility_source.connect(&"visibility_changed", _on_visibility_changed)
 
 	_synced = false
 
@@ -122,9 +123,9 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	StdGroup.with_id(_GROUP_INPUT_LOADER).remove_member(self)
 
-	if _canvas_item:
-		_canvas_item.visibility_changed.disconnect(_on_canvas_item_visibility_changed)
-		_canvas_item = null
+	if _visibility_source:
+		_visibility_source.disconnect(&"visibility_changed", _on_visibility_changed)
+		_visibility_source = null
 
 	if active_while == ActiveWhile.NEVER or action_set_layers.is_empty():
 		return
@@ -150,12 +151,17 @@ func _notification(what) -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _find_canvas_item returns the nearest `CanvasItem` above this loader, or `null`.
-func _find_canvas_item() -> CanvasItem:
+## _find_visibility_source returns the nearest `CanvasItem`, `CanvasLayer` or `Window`
+## above this loader, or `null` when there is none or another `Viewport` comes first.
+func _find_visibility_source() -> Node:
 	var node := get_parent()
-	while node and not node is CanvasItem:
+	while node:
+		if node is CanvasItem or node is CanvasLayer or node is Window:
+			return node
+		if node is Viewport:
+			return null
 		node = node.get_parent()
-	return node
+	return null
 
 
 ## _is_active returns whether the rule holds, so this loader wants its action set
@@ -165,11 +171,7 @@ func _is_active() -> bool:
 		active_while != ActiveWhile.NEVER
 		and is_inside_tree()
 		and not _covered
-		and (
-			active_while != ActiveWhile.VISIBLE
-			or not _canvas_item
-			or _canvas_item.is_visible_in_tree()
-		)
+		and (active_while != ActiveWhile.VISIBLE or _is_source_visible())
 	)
 
 
@@ -187,6 +189,18 @@ func _is_layer_wanted_elsewhere(layer: StdInputActionSetLayer) -> bool:
 			return true
 
 	return false
+
+
+## _is_source_visible returns whether the node the `VISIBLE` rule follows is shown, or
+## `true` when there is none.
+func _is_source_visible() -> bool:
+	if _visibility_source is CanvasItem:
+		return (_visibility_source as CanvasItem).is_visible_in_tree()
+	if _visibility_source is CanvasLayer:
+		return (_visibility_source as CanvasLayer).visible
+	if _visibility_source is Window:
+		return (_visibility_source as Window).visible
+	return true
 
 
 ## _sync_on_enter runs the first sync since this loader entered the tree, after which
@@ -220,6 +234,6 @@ func _sync() -> void:
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
-func _on_canvas_item_visibility_changed() -> void:
+func _on_visibility_changed() -> void:
 	if active_while == ActiveWhile.VISIBLE:
 		_sync()
