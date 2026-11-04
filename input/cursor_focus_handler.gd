@@ -4,7 +4,8 @@
 ## StdInputCursorFocusHandler is a node which manages UI focus for the `Control` node
 ## at `control`. It works with a `StdInputCursor` singleton node to grab or release
 ## focus depending on whether the UI navigation mode is cursor or focus-based. It
-## follows that control's visibility wherever it sits.
+## follows that control's visibility wherever it sits, and a handler beside its control
+## frees itself once it finds that control freed.
 ##
 ## A handler also makes its control ignore the mouse while the cursor is hidden. Godot
 ## still delivers mouse events to a hidden cursor, so give every interactive control a
@@ -109,6 +110,10 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 			assert(false, "invalid state; wrong node type")
 			continue
 
+		# NOTE: A handler beside its control outlives it until it next runs.
+		if not is_instance_valid(anchor._control):
+			continue
+
 		if not anchor._control is Control:
 			assert(false, "invalid state; invalid target node")
 			continue
@@ -204,6 +209,16 @@ func _clear_stale_button_visuals() -> void:
 		_control.notification(Control.NOTIFICATION_MOUSE_EXIT)
 
 
+## _free_if_control_freed frees this handler if its control was freed, as one beside
+## its control outlives it, and returns whether it did.
+func _free_if_control_freed() -> bool:
+	if is_instance_valid(_control):
+		return false
+
+	queue_free()
+	return true
+
+
 ## _is_blocked returns whether the target `Control` node is a disabled button that takes
 ## no focus or hover; see `block_focus_and_hover_on_disable`.
 func _is_blocked() -> bool:
@@ -241,6 +256,9 @@ func _register_hover() -> void:
 ## NOTE: The viewport keeps the mouse over a control that a new overlay covers until
 ## the mouse moves, so no hover is restored outside the focus root.
 func _restore_hover() -> void:
+	if _free_if_control_freed():
+		return
+
 	if not _is_hover_lost() or _is_blocked() or _is_outside_focus_root:
 		return
 
@@ -363,10 +381,16 @@ func _on_control_visibility_changed() -> void:
 
 
 func _on_cursor_visibility_changed(is_cursor_visible: bool) -> void:
+	if _free_if_control_freed():
+		return
+
 	_update_input_state(is_cursor_visible)
 
 
 func _on_focus_root_changed(root: Control) -> void:
+	if _free_if_control_freed():
+		return
+
 	var was_outside := _is_outside_focus_root
 	_is_outside_focus_root = root != null and not root.is_ancestor_of(_control)
 	_update_input_state(_cursor.get_is_visible())

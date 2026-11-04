@@ -191,6 +191,76 @@ func test_anchor_beside_its_control_follows_the_controls_visibility() -> void:
 	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
 
 
+func test_handler_beside_its_control_frees_itself_after_its_control_is_freed() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A panel holding a button.
+	var panel := Control.new()
+	panel.name = &"Panel"
+	add_child_autofree(panel)
+	var button := Button.new()
+	button.name = &"Button"
+	panel.add_child(button)
+
+	# Given: A handler for the button beside the panel rather than under it.
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("../Panel/Button")
+	add_child_autofree(handler)
+	await get_tree().process_frame
+
+	# When: The panel leaves the tree and enters it again.
+	remove_child(panel)
+	add_child(panel)
+	await get_tree().process_frame
+
+	# Then: The handler is kept.
+	assert_true(is_instance_valid(handler))
+
+	# When: The panel is queued for deletion, and the frame ends.
+	panel.queue_free()
+	await get_tree().process_frame
+
+	# When: The cursor hides.
+	cursor.hide_cursor()
+	await get_tree().process_frame
+
+	# Then: The handler is freed.
+	assert_false(is_instance_valid(handler))
+
+
+func test_anchor_beside_its_control_detached_then_freed_is_no_target() -> void:
+	# Given: A cursor in the scene, hidden.
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A panel holding a focusable button.
+	var panel := Control.new()
+	panel.name = &"Panel"
+	add_child_autofree(panel)
+	var button := Button.new()
+	button.name = &"Button"
+	button.focus_mode = Control.FOCUS_ALL
+	panel.add_child(button)
+
+	# Given: An anchor handler for the button beside the panel rather than under it.
+	var handler := StdInputCursorFocusHandler.new()
+	handler.control = NodePath("../Panel/Button")
+	handler.use_as_anchor = true
+	add_child_autofree(handler)
+	await get_tree().process_frame
+	assert_eq(StdInputCursorFocusHandler.get_focus_target(), button, "precondition")
+
+	# When: The panel is detached, then queued for deletion, as a screen manager frees
+	# a screen, and the frame ends.
+	remove_child(panel)
+	panel.queue_free()
+	await get_tree().process_frame
+
+	# Then: No focus target is found.
+	assert_null(StdInputCursorFocusHandler.get_focus_target())
+
+
 func test_handler_under_a_container_takes_no_slot_and_covers_no_sibling() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
