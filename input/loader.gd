@@ -5,8 +5,8 @@
 ## layers enabled while the rule in `active_while` holds and its screen is uncovered.
 ## It first acts at the end of the frame it enters the tree in, once its parents have
 ## set it up. The `VISIBLE` rule follows the nearest `CanvasItem`, `CanvasLayer` or
-## `Window` above it, and a loader under that rule is a panel's, so on entering and on
-## an uncover it syncs at the end of the frame, after the player's plain loaders.
+## `Window` above it, and on entering and on an uncover a loader under it syncs at the
+## end of the frame, after the player's plain loaders, so a panel lands above its scene.
 ##
 ## NOTE: The loaded set follows from the active loaders. When one holding a set goes
 ## inactive or leaves the tree, the player's others re-sync in tree order, so the last
@@ -41,9 +41,7 @@ const _GROUP_INPUT_LOADER := &"std/input:loader"
 ## enabled.
 @export var active_while: ActiveWhile = ActiveWhile.IN_TREE
 
-## action_set is an `StdInputActionSet` loaded while the rule holds. Once the rule
-## stops holding, the player's other active loaders re-sync in tree order, so the last
-## of them holding a set wins.
+## action_set is an `StdInputActionSet` loaded while the rule holds.
 @export var action_set: StdInputActionSet = null
 
 ## action_set_layers are `StdInputActionSetLayer` resources enabled while the rule
@@ -137,7 +135,7 @@ func _exit_tree() -> void:
 		_visibility_source.disconnect(&"visibility_changed", _on_visibility_changed)
 		_visibility_source = null
 
-	# NOTE: At quit the slot may be gone already, and then nothing is left to disable.
+	# NOTE: At quit the slot may be gone already, leaving nothing to disable or re-sync.
 	if active_while == ActiveWhile.NEVER or not StdInputSlot.for_player(player_id):
 		return
 
@@ -270,8 +268,7 @@ func _sync() -> void:
 
 
 ## _sync_in_turn syncs this loader now under a plain rule, and at the end of the frame
-## under `VISIBLE`, once the player's plain loaders have run, so a panel's set and
-## layers land above its scene's whatever the tree order.
+## under `VISIBLE`, once the player's plain loaders have run.
 func _sync_in_turn() -> void:
 	if active_while == ActiveWhile.VISIBLE:
 		_sync.call_deferred()

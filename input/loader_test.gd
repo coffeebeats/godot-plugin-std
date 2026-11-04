@@ -544,7 +544,7 @@ func test_loader_panel_before_the_map_in_the_tree_still_lands_above_it() -> void
 		_slot.list_action_set_layers(), [_panel_layer] as Array[StdInputActionSetLayer]
 	)
 
-	# When: A pause menu holding `Menu` covers the scene and is popped.
+	# Given: A pause menu holding `Menu` covers the scene.
 	scene.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
 	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	pause.action_set = _menu
@@ -553,6 +553,8 @@ func test_loader_panel_before_the_map_in_the_tree_still_lands_above_it() -> void
 	)
 	add_child_autofree(pause)
 	await wait_idle_frames(1)
+
+	# When: The pause menu is popped.
 	scene.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED)
 	remove_child(pause)
 	await wait_idle_frames(1)
