@@ -639,6 +639,69 @@ func test_loader_screen_popped_without_a_panel_restores_the_scene_at_once() -> v
 	)
 
 
+func test_loader_screen_popped_with_a_panel_open_loads_only_the_scenes_set() -> void:
+	# Given: A scene with a map's loaders, synced and covered.
+	var scene := Node.new()
+	scene.add_child(_make_map())
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+	scene.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
+
+	# Given: A screen above it whose loader holds its own set, before an open panel.
+	var screen := Node.new()
+	var driving := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	driving.action_set = _make_action_set(&"Driving")
+	screen.add_child(driving)
+	var panel := _make_panel()
+	screen.add_child(panel)
+	add_child_autofree(screen)
+	await wait_idle_frames(1)
+	panel.show()
+	watch_signals(_slot)
+
+	# When: The screen above is popped.
+	scene.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED)
+	remove_child(screen)
+	await wait_idle_frames(1)
+
+	# Then: Only the game's set is loaded, with the map's layers.
+	assert_signal_emit_count(_slot, "action_set_loaded", 1)
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_layer, _build_layer] as Array[StdInputActionSetLayer],
+	)
+
+
+func test_loader_branch_leaving_with_a_panel_open_loads_the_remaining_set() -> void:
+	# Given: A loader holding its own set and layer, synced.
+	var lobby := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	lobby.action_set = _make_action_set(&"Lobby")
+	var lobby_layer := _make_layer(&"Lobby")
+	lobby.action_set_layers = [lobby_layer] as Array[StdInputActionSetLayer]
+	add_child_autofree(lobby)
+
+	# Given: A scene after it with a map's loaders and an open panel, synced.
+	var scene := Node.new()
+	scene.add_child(_make_map())
+	var panel := _make_panel()
+	scene.add_child(panel)
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+	panel.show()
+	watch_signals(_slot)
+
+	# When: The scene leaves the tree.
+	remove_child(scene)
+
+	# Then: Only the remaining loader's set is loaded, with its layer.
+	assert_signal_emit_count(_slot, "action_set_loaded", 1)
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), lobby.action_set)
+	assert_eq(
+		_slot.list_action_set_layers(), [lobby_layer] as Array[StdInputActionSetLayer]
+	)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 

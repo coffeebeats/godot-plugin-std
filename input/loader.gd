@@ -144,8 +144,10 @@ func _exit_tree() -> void:
 	if not action_set_layers.is_empty():
 		disable_action_set_layers()
 
+	# NOTE: The others re-sync once this loader has left the tree, when every loader
+	# leaving with it has left too, so that none still leaving loads its set.
 	if _held and action_set:
-		_resync_peers()
+		tree_exited.connect(_on_tree_exited, CONNECT_ONE_SHOT)
 
 	_held = false
 
@@ -278,6 +280,12 @@ func _sync_in_turn() -> void:
 
 
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_tree_exited() -> void:
+	# NOTE: The slot may have left the tree with this loader, leaving nothing to sync.
+	if StdInputSlot.for_player(player_id):
+		_resync_peers()
 
 
 func _on_visibility_changed() -> void:
