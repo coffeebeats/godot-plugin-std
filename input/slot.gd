@@ -80,6 +80,11 @@ signal device_connected(device: StdInputDevice)
 ## disconnects.
 signal device_disconnected(device: StdInputDevice)
 
+## origin_labels_changed is emitted when the names of origins may have changed while
+## their bindings didn't. That happens on a keyboard layout switch, which relabels
+## keys, and on a locale change. A glyph which shows a label redraws on it.
+signal origin_labels_changed
+
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
 const Signals := preload("../event/signal.gd")
@@ -219,6 +224,10 @@ var _gestures: StdInputSlotGestures = null
 var _has_player_input: bool = false
 var _joypad_devices: Array[StdInputDevice] = []
 var _kbm_device: StdInputDevice = null
+
+## _keyboard_layout is the index of the keyboard layout at the last poll.
+var _keyboard_layout: int = DisplayServer.keyboard_get_current_layout()
+
 var _last_active_joypad: StdInputDevice = null
 
 ## _pressed maps each joypad's device ID to the active actions it holds, so a hold can't
@@ -638,10 +647,20 @@ func _input(event: InputEvent) -> void:
 
 
 func _notification(what: int) -> void:
-	# NOTE: Losing focus interrupts every gesture, including a toggle, which ignores the
-	# releases Godot makes as it happens.
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
-		_gestures.cancel_all()
+	match what:
+		NOTIFICATION_APPLICATION_FOCUS_OUT:
+			# NOTE: Losing focus interrupts every gesture, including a toggle, which
+			# ignores the releases Godot makes as it happens.
+			_gestures.cancel_all()
+
+		NOTIFICATION_INTERNAL_PROCESS:
+			_poll_keyboard_layout()
+
+		NOTIFICATION_TRANSLATION_CHANGED:
+			# NOTE: A node entering the tree gets this before it's ready, with no change
+			# of locale behind it.
+			if is_node_ready():
+				origin_labels_changed.emit()
 
 
 func _process(_delta: float) -> void:
@@ -687,6 +706,10 @@ func _ready() -> void:
 	)
 
 	joypad_monitor.broadcast_connected_joypads()
+
+	# NOTE: No engine signal reports a keyboard layout switch, so it's polled each frame.
+	# Internal processing keeps this apart from `_process`, which runs only during holds.
+	set_process_internal(true)
 
 	if claim_kbm_input:
 		var kbm := _make_kbm()
@@ -877,6 +900,20 @@ func _make_kbm(device: int = 0) -> StdInputDevice:
 	kbm.haptics = haptics_kbm
 
 	return kbm
+
+
+## _poll_keyboard_layout emits `origin_labels_changed` if the keyboard layout switched
+## since the last poll.
+##
+## NOTE: This compares the layout rather than its language, since a key's label comes
+## from the layout, and two layouts of one language can label keys differently.
+func _poll_keyboard_layout() -> void:
+	var layout := DisplayServer.keyboard_get_current_layout()
+	if layout == _keyboard_layout:
+		return
+
+	_keyboard_layout = layout
+	origin_labels_changed.emit()
 
 
 ## _try_activate_joypad activates the joypad which just pressed one of the active
