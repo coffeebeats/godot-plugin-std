@@ -411,6 +411,42 @@ func test_loader_panel_opening_and_closing_swaps_the_set_and_layers() -> void:
 	)
 
 
+func test_loader_under_a_std_panel_turns_off_as_the_panel_starts_closing() -> void:
+	# Given: A map's loaders and a hidden panel after them.
+	var scene := Node.new()
+	scene.add_child(_make_map())
+	var control := _make_panel()
+
+	# Given: A `StdPanel` which fades opens and closes the panel.
+	var panel := StdPanel.new()
+	panel.transition = StdTransitionFade.new()
+	panel.transition.curve = StdTweenCurve.new()
+	panel.transition.curve.duration = 0.2
+	control.add_child(panel)
+	scene.add_child(control)
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+
+	# Given: The panel is opening.
+	panel.open()
+
+	# Then: The slot holds `Menu` and the panel's layer.
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _menu)
+
+	# When: The panel has opened and starts to close.
+	await wait_for_signal(panel.opened, 1.0)
+	panel.close()
+
+	# Then: The slot holds the game's set again while the control still fades out.
+	assert_true(control.visible)
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_layer, _build_layer] as Array[StdInputActionSetLayer],
+	)
+	await wait_for_signal(panel.closed, 1.0)
+
+
 func test_loader_panel_closed_while_covered_leaves_the_screen_above_alone() -> void:
 	# Given: A scene with a map's loaders and an open panel, synced.
 	var scene := Node.new()
