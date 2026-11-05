@@ -202,6 +202,8 @@ func render(action_sets: Array[StdInputActionSet], languages: Dictionary) -> Str
 ## write writes `generate` to `get_filename`.
 func write() -> Error:
 	var contents := generate()
+	if contents.is_empty():
+		return ERR_INVALID_DATA
 
 	var file := FileAccess.open(get_filename(), FileAccess.ModeFlags.WRITE)
 	if not file:
