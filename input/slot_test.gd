@@ -396,6 +396,58 @@ func test_input_slot_get_joypad_device_type_prefers_last_active_joypad() -> void
 	assert_eq(slot.get_joypad_device_type(), StdInputDevice.DEVICE_TYPE_STEAM_DECK)
 
 
+func test_input_slot_entering_the_tree_does_not_emit_origin_labels_changed() -> void:
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# When: The input slot is added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# When: A frame passes.
+	await wait_process_frames(1)
+
+	# Then: The origin labels weren't reported as changed.
+	assert_signal_not_emitted(slot, "origin_labels_changed")
+
+
+func test_input_slot_keyboard_layout_switch_emits_origin_labels_changed() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: The slot last saw another keyboard layout.
+	slot._keyboard_layout = DisplayServer.keyboard_get_current_layout() + 1
+
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# When: Two frames pass.
+	await wait_process_frames(2)
+
+	# Then: The origin labels were reported as changed once.
+	assert_signal_emit_count(slot, "origin_labels_changed", 1)
+
+
+func test_input_slot_locale_change_emits_origin_labels_changed() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# When: The locale changes.
+	var locale := TranslationServer.get_locale()
+	TranslationServer.set_locale("fr" if locale != "fr" else "de")
+
+	# When: The locale changes back.
+	TranslationServer.set_locale(locale)
+
+	# Then: The origin labels were reported as changed for each change.
+	assert_signal_emit_count(slot, "origin_labels_changed", 2)
+
+
 func test_input_slot_actions_include_every_action_of_the_set_and_its_layers() -> void:
 	# Given: An input slot added to the scene.
 	add_child_autofree(slot)
@@ -990,12 +1042,18 @@ func test_input_slot_joypad_disconnect_keeps_another_joypads_tracked_action() ->
 
 
 func test_input_slot_swap_drops_an_unreported_joypads_tracked_action() -> void:
-	# Given: The keyboard is active after a bound key press, with no joypad connected.
+	# Given: An input slot claiming the keyboard, with no joypad connected.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = false
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
-	slot._actions = [&"aim", &"test_action"]
+
+	# Given: An action set declaring a joypad action and the test action is loaded.
+	var action_set := _make_action_set(&"Test")
+	action_set.actions_digital = [&"aim", &"test_action"]
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+
+	# Given: A bound key press activates the keyboard.
 	slot._input(_key())
 	slot._input(_key(false))
 
