@@ -59,7 +59,7 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 		# cycling, and starts or stops the processing which drives it.
 		_cycle_offset = 0
 		_cycle_time = 0.0
-		set_process(_slot.device_type == DeviceType.KEYBOARD or cycle_interval > 0.0)
+		set_process(cycle_interval > 0.0)
 		_handle_update()
 
 @export_subgroup("Player")
@@ -83,7 +83,6 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 
 var _cycle_offset: int = 0
 var _cycle_time: float = 0.0
-var _keyboard_language: String = _get_keyboard_language()
 var _origin_count: int = 0
 var _slot: StdInputSlot = null
 
@@ -139,13 +138,6 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 func _process(delta: float) -> void:
-	if _slot.device_type == DeviceType.KEYBOARD:
-		var keyboard_language := _get_keyboard_language()
-
-		if keyboard_language != _keyboard_language:
-			_keyboard_language = keyboard_language
-			_handle_update()
-
 	if cycle_interval <= 0.0 or _get_cycle_length() < 2:
 		return
 
@@ -165,11 +157,12 @@ func _ready() -> void:
 		set_process(false)
 		return
 
-	set_process(_slot.device_type == DeviceType.KEYBOARD or cycle_interval > 0.0)
+	set_process(cycle_interval > 0.0)
 
 	Signals.connect_safe(_slot.action_configuration_changed, _on_actions_changed)
 	Signals.connect_safe(_slot.cursor_visibility_changed, _on_cursor_visibility_changed)
 	Signals.connect_safe(_slot.device_activated, _on_device_activated)
+	Signals.connect_safe(_slot.origin_labels_changed, _handle_update)
 
 	# NOTE: A controller glyph locked by a `DEVICE_TYPE_GENERIC` override follows the
 	# connected joypads, so a connect or disconnect can change its family.
@@ -269,14 +262,6 @@ func _update_glyph(_device_type: DeviceType, _index: int) -> bool:
 	return false
 
 
-# -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-static func _get_keyboard_language() -> String:
-	var index := DisplayServer.keyboard_get_current_layout()
-	return DisplayServer.keyboard_get_layout_language(index)
-
-
 # -- SIGNAL HANDLERS ----------------------------------------------------------------- #
 
 
@@ -293,7 +278,6 @@ func _on_cursor_visibility_changed(cursor_visible: bool) -> void:
 
 
 func _on_device_activated(device: StdInputDevice) -> void:
-	set_process(device.device_type == DeviceType.KEYBOARD or cycle_interval > 0.0)
 	_cycle_offset = 0
 	_cycle_time = 0.0
 	_device_activated(device)
