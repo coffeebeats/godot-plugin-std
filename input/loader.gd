@@ -10,7 +10,9 @@
 ##
 ## NOTE: The loaded set follows from the active loaders. When one holding a set goes
 ## inactive or leaves the tree, the player's others re-sync in tree order, so the last
-## of them holding a set wins and their layers stack in that order.
+## of them holding a set wins and their layers stack in that order. A loader enables
+## only the layers under the loaded set, and one that changes the set enables those its
+## active peers list under the new one.
 ##
 ## NOTE: Loaders may share a layer. One disables it only when no other active loader
 ## for the same player lists it.
@@ -92,23 +94,18 @@ func enable_action_set_layers() -> void:
 		"invalid state; missing layers",
 	)
 
-	var slot := StdInputSlot.for_player(player_id)
-	assert(slot is StdInputSlot, "invalid state; missing input slot")
-
-	var enabled := slot.list_action_set_layers()
-	for layer in action_set_layers:
-		if layer not in enabled:
-			slot.enable_action_set_layer(layer)
+	_enable_action_set_layers(false)
 
 
-## load_action_set loads the configured action set for the the player.
-func load_action_set() -> void:
+## load_action_set loads the configured action set for the player, returning
+## whether that changed the loaded set.
+func load_action_set() -> bool:
 	assert(action_set is StdInputActionSet, "invalid state; missing action set")
 
 	var slot := StdInputSlot.for_player(player_id)
 	assert(slot is StdInputSlot, "invalid state; missing input slot")
 
-	slot.load_action_set(action_set)
+	return slot.load_action_set(action_set)
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -164,6 +161,43 @@ func _notification(what) -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _enable_action_set_layers enables the configured layers for the player. With
+## `only_loaded` set it skips a layer under another set, which the sync that loads that
+## set enables; a layer with no parent is still enabled, so it errors.
+func _enable_action_set_layers(only_loaded: bool) -> void:
+	var slot := StdInputSlot.for_player(player_id)
+	assert(slot is StdInputSlot, "invalid state; missing input slot")
+
+	var loaded := slot.actions.get_action_set(slot.device_id)
+	var enabled := slot.list_action_set_layers()
+	for layer in action_set_layers:
+		if only_loaded and layer.parent and layer.parent != loaded:
+			continue
+		if layer not in enabled:
+			slot.enable_action_set_layer(layer)
+
+
+## _enable_layers_after_load enables, in tree order, the layers under the set just
+## loaded that this and the player's other active loaders list. Under a plain rule,
+## `VISIBLE` loaders enable theirs at the end of the frame, so a panel lands on top.
+func _enable_layers_after_load() -> void:
+	var defer := active_while != ActiveWhile.VISIBLE
+	for loader in _list_peers(true):
+		if not loader._synced or not loader._is_active():
+			continue
+		if defer and loader.active_while == ActiveWhile.VISIBLE:
+			loader._enable_layers_if_active.call_deferred()
+		else:
+			loader._enable_action_set_layers(true)
+
+
+## _enable_layers_if_active enables the layers under the loaded set if this loader has
+## synced since entering the tree and the rule holds.
+func _enable_layers_if_active() -> void:
+	if _synced and _is_active():
+		_enable_action_set_layers(true)
+
+
 ## _find_visibility_source returns the nearest `CanvasItem`, `CanvasLayer` or `Window`
 ## above this loader, or `null` when there is none or another `Viewport` comes first.
 func _find_visibility_source() -> Node:
@@ -210,12 +244,13 @@ func _is_source_visible() -> bool:
 	return true
 
 
-## _list_peers returns the player's other loaders in the tree, in tree order.
-func _list_peers() -> Array[StdInputActionSetLoader]:
+## _list_peers returns the player's other loaders in the tree, in tree order, with this
+## one among them if `with_self` is set.
+func _list_peers(with_self: bool = false) -> Array[StdInputActionSetLoader]:
 	var peers: Array[StdInputActionSetLoader] = []
 	for member in StdGroup.with_id(_GROUP_INPUT_LOADER).list_members():
 		var other := member as StdInputActionSetLoader
-		if other != self and other.player_id == player_id:
+		if (with_self or other != self) and other.player_id == player_id:
 			peers.append(other)
 
 	peers.sort_custom(func(a: Node, b: Node) -> bool: return b.is_greater_than(a))
@@ -252,10 +287,10 @@ func _sync() -> void:
 	_held = _is_active()
 
 	if _held:
-		if action_set:
-			load_action_set()
-		if not action_set_layers.is_empty():
-			enable_action_set_layers()
+		if action_set and load_action_set():
+			_enable_layers_after_load()
+		elif not action_set_layers.is_empty():
+			_enable_action_set_layers(true)
 		return
 
 	if not action_set_layers.is_empty():

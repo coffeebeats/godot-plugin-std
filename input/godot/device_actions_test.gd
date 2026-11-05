@@ -41,38 +41,57 @@ var _actions: StdInputDeviceActions = null
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
-func test_device_actions_parentless_layer_enables_over_either_set() -> void:
-	# Given: Two action sets and a layer with no parent.
+func test_device_actions_parentless_layer_is_an_error() -> void:
+	# Given: An action set, loaded.
 	var set_a := _make_action_set(&"A", [&"test_set_a"])
-	var set_b := _make_action_set(&"B", [&"test_set_b"])
-	var layer := _make_layer(&"L", null, [&"test_layer"])
-
-	# Given: The first set is loaded.
 	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
 
-	# When: The layer is enabled over it.
-	assert_true(_actions.enable_action_set_layer(DEVICE_ID_ALL, layer))
+	# Given: A layer with no parent.
+	var layer := _make_layer(&"L", null, [&"test_layer"])
 
-	# Then: Both the set's and the layer's actions are bound.
-	assert_true(_is_bound(&"test_set_a", KEY_A))
-	assert_true(_is_bound(&"test_layer", KEY_L))
+	# When: The layer is enabled.
+	var enabled := _actions.enable_action_set_layer(DEVICE_ID_ALL, layer)
 
-	# When: The second set is loaded.
-	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_b))
+	# Then: The missing parent is reported.
+	assert_engine_error("missing parent action set")
 
-	# Then: The first set's and the layer's bindings are gone.
-	assert_false(_is_bound(&"test_set_a", KEY_A))
+	# Then: Nothing is enabled.
+	assert_false(enabled)
 	assert_false(_is_bound(&"test_layer", KEY_L))
 
-	# Then: No layer is enabled.
-	assert_eq(_actions.list_action_set_layers(DEVICE_ID_ALL).size(), 0)
+	# When: The layer is disabled.
+	var disabled := _actions.disable_action_set_layer(DEVICE_ID_ALL, layer)
 
-	# When: The same layer is enabled over the second set.
-	assert_true(_actions.enable_action_set_layer(DEVICE_ID_ALL, layer))
+	# Then: The missing parent is reported again.
+	assert_engine_error("missing parent action set")
+	assert_false(disabled)
 
-	# Then: The second set's and the layer's actions are bound.
-	assert_true(_is_bound(&"test_set_b", KEY_B))
-	assert_true(_is_bound(&"test_layer", KEY_L))
+
+func test_device_actions_layer_of_another_set_is_an_error() -> void:
+	# Given: Two action sets, the first loaded.
+	var set_a := _make_action_set(&"A", [&"test_set_a"])
+	var set_b := _make_action_set(&"B", [&"test_set_b"])
+	assert_true(_actions.load_action_set(DEVICE_ID_ALL, set_a))
+
+	# Given: A layer of the second set.
+	var layer := _make_layer(&"L", set_b, [&"test_layer"])
+
+	# When: The layer is enabled.
+	var enabled := _actions.enable_action_set_layer(DEVICE_ID_ALL, layer)
+
+	# Then: The wrong parent is reported.
+	assert_engine_error("wrong parent action set")
+
+	# Then: Nothing is enabled.
+	assert_false(enabled)
+	assert_false(_is_bound(&"test_layer", KEY_L))
+
+	# When: The layer is disabled.
+	var disabled := _actions.disable_action_set_layer(DEVICE_ID_ALL, layer)
+
+	# Then: The wrong parent is reported again.
+	assert_engine_error("wrong parent action set")
+	assert_false(disabled)
 
 
 func test_device_actions_layer_takes_an_origin_from_the_set() -> void:

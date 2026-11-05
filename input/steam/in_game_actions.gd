@@ -112,9 +112,14 @@ func get_filename() -> String:
 
 ## render returns the manifest text for the provided action sets, layers included, and
 ## `languages`, a mapping from Steam language names to Godot locales.
+##
+## NOTE: Sets which fail `StdInputActionSet.validate` are an error, and render nothing.
 func render(action_sets: Array[StdInputActionSet], languages: Dictionary) -> String:
 	_contents = ""
 	_indent = 0
+
+	if not StdInputActionSet.validate(action_sets):
+		return ""
 
 	var sets: Array[StdInputActionSet] = []
 	var layers: Array[StdInputActionSetLayer] = []
@@ -154,17 +159,8 @@ func render(action_sets: Array[StdInputActionSet], languages: Dictionary) -> Str
 	_write_string("action_layers")
 	_write_open_bracket()
 
-	# NOTE: A Steam layer belongs to one set, so a layer with no parent is written once
-	# under each set, as `<Layer>_<Set>`; the copies share the layer's display string.
 	for layer in layers:
-		if layer.parent:
-			_write_layer(layer, layer.name, layer.parent.name)
-			continue
-
-		for action_set in sets:
-			_write_layer(
-				layer, "%s_%s" % [layer.name, action_set.name], action_set.name
-			)
+		_write_layer(layer, layer.name, layer.parent.name)
 
 	_write_close_bracket()
 
@@ -197,6 +193,8 @@ func render(action_sets: Array[StdInputActionSet], languages: Dictionary) -> Str
 ## write writes `generate` to `get_filename`.
 func write() -> Error:
 	var contents := generate()
+	if contents.is_empty():
+		return ERR_INVALID_DATA
 
 	var file := FileAccess.open(get_filename(), FileAccess.ModeFlags.WRITE)
 	if not file:

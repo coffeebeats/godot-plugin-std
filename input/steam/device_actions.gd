@@ -171,22 +171,6 @@ static func get_digital_action_handle(action: StringName) -> int:
 	return handle
 
 
-## resolve_action_set_name returns the name the Steam Input manifest knows `action_set`
-## by for the joypad in `slot`. A layer with no parent resolves to its `<Layer>_<Set>`
-## copy under the set recorded for the joypad; anything else keeps its own name.
-static func resolve_action_set_name(
-	action_set: StdInputActionSet, slot: int
-) -> StringName:
-	if not action_set is StdInputActionSetLayer or action_set.parent:
-		return action_set.name
-
-	var stack: _ActionSetStack = _stacks.get(slot)
-	if not stack:
-		return action_set.name
-
-	return StringName("%s_%s" % [action_set.name, stack.action_set.name])
-
-
 ## split_analog_2d returns the four directional action events a stick's `motion` drives
 ## for the 2D analog `action`, in `StdInputActionSet.ANALOG_2D_DIRECTIONS` order, each
 ## at the strength of its half of the axis and pressed at any strength.
@@ -369,24 +353,12 @@ func _enable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool:
 		assert(false, "invalid argument; failed to find device for slot")
 		return false
 
-	assert(layer is StdInputActionSetLayer, "missing argument: layer")
-
 	var stack: _ActionSetStack = _stacks.get(slot)
-	if not stack:
-		assert(false, "invalid state: missing action set")
-		return false
-
-	assert(
-		layer.parent == null or layer.parent == stack.action_set,
-		"invalid argument: wrong parent action set",
-	)
-
 	if layer in stack.layers:
 		return false
 
-	var layer_name := resolve_action_set_name(layer, slot)
-	if not get_action_set_handle(layer_name):
-		_logger.warn("Steam Input has no such action set layer.", {&"name": layer_name})
+	if not get_action_set_handle(layer.name):
+		_logger.warn("Steam Input has no such action set layer.", {&"name": layer.name})
 		return false
 
 	stack.layers.append(layer)
@@ -406,10 +378,8 @@ func _disable_action_set_layer(slot: int, layer: StdInputActionSetLayer) -> bool
 		assert(false, "invalid argument; failed to find device for slot")
 		return false
 
-	assert(layer is StdInputActionSetLayer, "missing argument: layer")
-
 	var stack: _ActionSetStack = _stacks.get(slot)
-	if not stack or layer not in stack.layers:
+	if layer not in stack.layers:
 		return false
 
 	stack.layers.erase(layer)
@@ -523,7 +493,7 @@ static func _list_layer_handles(slot: int) -> Array:
 		return handles
 
 	for layer in stack.layers:
-		var handle := get_action_set_handle(resolve_action_set_name(layer, slot))
+		var handle := get_action_set_handle(layer.name)
 		if handle:
 			handles.append(handle)
 

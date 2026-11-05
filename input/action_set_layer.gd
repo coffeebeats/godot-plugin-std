@@ -1,8 +1,10 @@
 ##
-## std/input/action_set.gd
+## std/input/action_set_layer.gd
 ##
-## StdInputActionSet is a collection of input actions which, collectively, define
-## available player actions during a section of the game.
+## StdInputActionSetLayer adds to the mode of play its `parent` defines, keeping every
+## binding below it that it doesn't override. UI which takes over input loads a set and
+## lists a layer under it for what stays live; overriding a binding doesn't turn an
+## action off.
 ##
 
 @tool
@@ -11,10 +13,9 @@ extends StdInputActionSet
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## parent is the only `StdInputActionSet` this layer can be enabled over, and the set it
-## sits under in the Steam Input manifest. An enabled layer keeps every binding below it
-## that it does not override.
+## parent is the `StdInputActionSet` this layer is enabled over, and the set it sits
+## under in the Steam Input manifest. It's required, so a layer several sets enable is
+## one file per set, each with its own `name`.
 ##
-## NOTE: A layer with no parent fits any set, so the manifest writes a copy of it under
-## each one. Leave `parent` unset only for a layer every set may enable.
+## NOTE: Enabling or disabling a layer while its parent isn't loaded is an error.
 @export var parent: StdInputActionSet = null

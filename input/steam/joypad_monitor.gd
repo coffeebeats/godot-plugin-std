@@ -363,10 +363,9 @@ func _is_binding_opted_out(device: int) -> bool:
 		if not action_set:
 			continue
 
-		for action_set_name in _list_manifest_names(action_set, action_sets):
-			var handle := Steam.getActionSetHandle(action_set_name)
-			if handle and _has_bound_action(device, handle, action_set):
-				return false
+		var handle := Steam.getActionSetHandle(action_set.name)
+		if handle and _has_bound_action(device, handle, action_set):
+			return false
 
 	return true
 
@@ -388,23 +387,6 @@ func _is_virtual_gamepad(device: int) -> bool:
 	var handle := GodotJoypadMonitor.get_steam_handle(Input.get_joy_info(device))
 
 	return handle != 0 and handle in _connected
-
-
-## _list_manifest_names returns the names the Steam Input manifest gives `action_set`.
-## The manifest writes a layer with no parent under each set in `sets`, as
-## `<Layer>_<Set>`.
-static func _list_manifest_names(
-	action_set: StdInputActionSet, sets: Array[StdInputActionSet]
-) -> PackedStringArray:
-	if not action_set is StdInputActionSetLayer or action_set.parent:
-		return PackedStringArray([action_set.name])
-
-	var names := PackedStringArray()
-	for parent in sets:
-		if parent and not parent is StdInputActionSetLayer:
-			names.append("%s_%s" % [action_set.name, parent.name])
-
-	return names
 
 
 ## _poll_waiting_devices connects each waiting device Steam now lists. Steam's list is

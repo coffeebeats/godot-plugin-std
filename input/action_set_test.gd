@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## Tests pertaining to the `StdInputActionSet` and `StdInputActionSetLayer` classes.
 ##
@@ -258,6 +259,52 @@ func test_action_set_layer_has_parent_reference() -> void:
 
 	# Then: The parent reference is correct.
 	assert_eq(layer.parent, action_set)
+
+
+func test_validate_accepts_layers_with_parents_and_unique_names() -> void:
+	# Given: A set and a layer under it, each with its own name.
+	var layer: StdInputActionSetLayer = autofree(StdInputActionSetLayer.new())
+	layer.name = &"test-layer"
+	layer.parent = action_set
+
+	# When/Then: The sets are valid.
+	assert_true(StdInputActionSet.validate([action_set, layer, null]))
+
+
+func test_validate_rejects_a_layer_without_a_parent() -> void:
+	# Given: A layer with no parent.
+	var layer: StdInputActionSetLayer = autofree(StdInputActionSetLayer.new())
+	layer.name = &"test-layer"
+
+	# When: The sets are validated.
+	var got := StdInputActionSet.validate([action_set, layer])
+
+	# Then: The missing parent is reported.
+	assert_engine_error("missing parent action set: test-layer")
+
+	# Then: The sets are invalid.
+	assert_false(got)
+
+
+func test_validate_rejects_a_name_repeated_under_another_parent() -> void:
+	# Given: A second set, with a layer called `Nav` under each set.
+	var other: StdInputActionSet = autofree(StdInputActionSet.new())
+	other.name = &"other-action-set"
+	var nav: StdInputActionSetLayer = autofree(StdInputActionSetLayer.new())
+	nav.name = &"Nav"
+	nav.parent = action_set
+	var nav_other: StdInputActionSetLayer = autofree(StdInputActionSetLayer.new())
+	nav_other.name = &"Nav"
+	nav_other.parent = other
+
+	# When: The sets are validated.
+	var got := StdInputActionSet.validate([action_set, other, nav, nav_other])
+
+	# Then: The repeated name is reported.
+	assert_engine_error("duplicate name: Nav")
+
+	# Then: The sets are invalid.
+	assert_false(got)
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
