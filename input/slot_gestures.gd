@@ -4,10 +4,6 @@
 ## StdInputSlotGestures runs the holds which a `StdInputSlot`'s loaded set and enabled
 ## layers declare. A hold consumes no input, so a game can still read the raw press.
 ##
-## A handler of a hold's action connects the slot's `action_hold_triggered`, filtered
-## by its action, and doesn't act on the raw press in `_unhandled_input`. A prompt shows
-## the fill through `action_hold_progress_changed`.
-##
 ## NOTE: A hold fills on the wall clock, and the slot reads input in a paused tree, so a
 ## hold goes on filling under a pause menu. Gameplay times its own holds.
 ##
