@@ -244,6 +244,32 @@ func test_glyph_redraws_from_the_next_components_after_a_joypad_swap() -> void:
 	assert_eq(glyphs_next.devices.size(), 1)
 
 
+func test_glyph_redraws_when_the_slots_origin_labels_change() -> void:
+	# Given: A glyph for the primary binding.
+	var glyph := _make_glyph(0, 0.0)
+	glyph.update()
+	assert_eq(glyph.drawn.size(), 1, "precondition: drawn once")
+
+	# When: The slot reports that origin labels changed.
+	slot.origin_labels_changed.emit()
+
+	# Then: The glyph redrew the same binding.
+	assert_eq(glyph.drawn, [0, 0] as Array[int])
+
+
+func test_glyph_on_keyboard_without_cycle_interval_does_not_process() -> void:
+	# Given: A glyph for the primary binding which doesn't cycle.
+	var glyph := _make_glyph(0, 0.0)
+	assert_eq(
+		slot.device_type,
+		StdInputDevice.DEVICE_TYPE_KEYBOARD,
+		"precondition: keyboard active",
+	)
+
+	# Then: The glyph doesn't process.
+	assert_false(glyph.is_processing())
+
+
 func test_slot_glyphs_draw_the_first_connected_joypad_when_none_was_active() -> void:
 	# Given: A joypad connected while the keyboard stays active.
 	slot.prefer_activate_joypad_on_ready = false
