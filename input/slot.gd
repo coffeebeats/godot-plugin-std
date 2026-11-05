@@ -341,9 +341,9 @@ func get_joypad_device_type() -> DeviceType:
 	return DEVICE_TYPE_GENERIC
 
 
-## swap_joypad_components swaps the joypad monitor and device component implementations
-## to the ones provided. This will cause all connected joypads to disconnect, at which
-## point they should be once the new joypad monitor is ready.
+## swap_joypad_components swaps in the joypad monitor and device components provided,
+## which disconnects every joypad until the new monitor reports it. It then emits
+## `action_configuration_changed`, so glyphs redraw from the new components.
 ##
 ## NOTE: This method will *not* remove the prior `JoypadMonitor` from the scene nor add
 ## the new one to the scene.
@@ -411,6 +411,8 @@ func swap_joypad_components(
 	# the release can't trigger a fill no frame has reported.
 	_gestures.cancel_all()
 	_held_actions.release_all()
+
+	action_configuration_changed.emit()
 
 
 # -- PUBLIC METHODS (OVERRIDES) ------------------------------------------------------ #
