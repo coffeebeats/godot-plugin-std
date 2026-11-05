@@ -120,7 +120,7 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 
 		var target := anchor._control
 
-		if anchor._is_blocked():
+		if anchor._is_blocked() or _is_focus_disabled(target):
 			continue
 
 		if not target.is_visible_in_tree():
@@ -227,6 +227,21 @@ func _is_blocked() -> bool:
 		and _control is BaseButton
 		and _control.disabled
 	)
+
+
+## _is_focus_disabled returns whether `target` or a `Control` above it disables focus
+## through `focus_behavior_recursive`, as a `StdPanel` does while it opens or closes.
+static func _is_focus_disabled(target: Control) -> bool:
+	var node: Node = target
+	while node is Control:
+		match (node as Control).focus_behavior_recursive:
+			Control.FOCUS_BEHAVIOR_DISABLED:
+				return true
+			Control.FOCUS_BEHAVIOR_ENABLED:
+				return false
+		node = node.get_parent()
+
+	return false
 
 
 ## _is_hover_lost returns whether the mouse is over the target `Control` node while its

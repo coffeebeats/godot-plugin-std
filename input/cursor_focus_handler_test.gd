@@ -42,6 +42,32 @@ func test_get_focus_target_returns_visible_anchor() -> void:
 	assert_eq(StdInputCursorFocusHandler.get_focus_target(), button)
 
 
+func test_get_focus_target_skips_anchor_whose_focus_an_ancestor_disables() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: An anchor under a container which disables focus for its subtree.
+	var container := Control.new()
+	container.focus_behavior_recursive = Control.FOCUS_BEHAVIOR_DISABLED
+	add_child_autofree(container)
+
+	var button := Button.new()
+	container.add_child(button)
+
+	var handler := StdInputCursorFocusHandler.new()
+	handler.use_as_anchor = true
+	button.add_child(handler)
+
+	# Then: No focus target is returned.
+	assert_null(StdInputCursorFocusHandler.get_focus_target())
+
+	# When: The container lets its subtree take focus again.
+	container.focus_behavior_recursive = Control.FOCUS_BEHAVIOR_INHERITED
+
+	# Then: The anchor is returned.
+	assert_eq(StdInputCursorFocusHandler.get_focus_target(), button)
+
+
 func test_get_focus_target_respects_ancestor_filter() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
