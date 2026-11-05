@@ -417,21 +417,13 @@ func _execute_op(op: Operation) -> void:
 	)
 
 
-## _force_hover_recalculation dispatches a synthetic mouse motion event to force Godot
-## to re-evaluate hover state after a screen operation changes the scene tree.
+## _force_hover_recalculation recomputes hover at the mouse's position, so that a
+## control under a resting mouse is hovered after a screen operation changes the tree.
 func _force_hover_recalculation() -> void:
 	if not is_inside_tree():
 		return
 
-	var viewport := get_viewport()
-	var event := InputEventMouseMotion.new()
-	event.position = viewport.get_mouse_position()
-	event.relative = Vector2.ZERO
-	# NOTE: Pass `true` for local coordinates — `get_mouse_position()` returns viewport-
-	# local coordinates, but `push_input` defaults to OS coordinates. With a stretch
-	# transform (e.g. `canvas_items` mode), omitting this flag double-transforms the
-	# position, causing the hit test to miss controls.
-	viewport.push_input(event, true)
+	get_viewport().update_mouse_cursor_state()
 
 
 ## _force_stop stops the active transition, which ends its context and releases its
