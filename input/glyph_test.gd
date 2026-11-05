@@ -15,7 +15,8 @@ const SlotTest := preload("slot_test.gd")
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 
-## Glyph records the binding index and device type it's asked to draw on each update.
+## Glyph records the binding index and device type it's asked to draw on each update,
+## and fetches the glyph through the slot as a real glyph does.
 class Glyph:
 	extends StdInputGlyph
 
@@ -25,6 +26,7 @@ class Glyph:
 	func _update_glyph(device_type: DeviceType, index: int) -> bool:
 		device_types.append(device_type)
 		drawn.append(index)
+		_slot.get_action_glyph(action_set, action, index, Vector2.ZERO, device_type)
 		return true
 
 
@@ -211,6 +213,35 @@ func test_glyph_refreshes_when_a_joypad_connects_and_disconnects() -> void:
 
 	# Then: The glyph redrew again.
 	assert_eq(glyph.drawn.size(), 3)
+
+
+func test_glyph_redraws_from_the_next_components_after_a_joypad_swap() -> void:
+	# Given: A glyph locked to PlayStation 5 prompts.
+	var glyph := _make_glyph(0, 0.0)
+	glyph.device_type_override = _make_override(StdInputDevice.DEVICE_TYPE_PS_5)
+	glyph.update()
+
+	# Given: A connected joypad.
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_PS_5
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_connected_devices(false)[0])
+
+	# Given: A new glyph component.
+	var glyphs_next := Glyphs.new()
+	add_child_autofree(glyphs_next)
+
+	# Given: A joypad monitor which reports no joypads.
+	var joypad_monitor := SlotTest.JoypadMonitor.new()
+	add_child_autofree(joypad_monitor)
+
+	# When: The slot swaps its joypad components for them.
+	slot.swap_joypad_components(
+		joypad_monitor, slot.actions_joy, glyphs_next, slot.haptics_joy
+	)
+
+	# Then: The glyph redrew from the new glyph component.
+	assert_eq(glyphs_next.devices.size(), 1)
 
 
 func test_slot_glyphs_draw_the_first_connected_joypad_when_none_was_active() -> void:

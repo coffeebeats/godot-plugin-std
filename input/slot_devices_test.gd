@@ -88,11 +88,14 @@ func test_input_slot_shared_actions_component_forwards_bindings_changed_once() -
 		joypad_monitor, slot.actions_kbm, slot.glyphs_joy, slot.haptics_joy
 	)
 
+	# Then: The swap reports a changed action configuration.
+	assert_signal_emit_count(slot, "action_configuration_changed", 2)
+
 	# When: The shared component reports changed bindings again.
 	slot.actions_kbm.bindings_changed.emit()
 
 	# Then: The slot reports it once more.
-	assert_signal_emit_count(slot, "action_configuration_changed", 2)
+	assert_signal_emit_count(slot, "action_configuration_changed", 3)
 
 
 func test_input_slot_swap_from_shared_actions_forwards_kbm_bindings_changed() -> void:

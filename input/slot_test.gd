@@ -960,12 +960,18 @@ func test_input_slot_joypad_disconnect_keeps_another_joypads_tracked_action() ->
 
 
 func test_input_slot_swap_drops_an_unreported_joypads_tracked_action() -> void:
-	# Given: The keyboard is active after a bound key press, with no joypad connected.
+	# Given: An input slot claiming the keyboard, with no joypad connected.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = false
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
-	slot._actions = [&"aim", &"test_action"]
+
+	# Given: An action set declaring a joypad action and the test action is loaded.
+	var action_set := _make_action_set(&"Test")
+	action_set.actions_digital = [&"aim", &"test_action"]
+	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
+
+	# Given: A bound key press activates the keyboard.
 	slot._input(_key())
 	slot._input(_key(false))
 
