@@ -133,17 +133,6 @@ func _load_action_set(_device: int, action_set: StdInputActionSet) -> bool:
 func _disable_action_set_layer(
 	_device: int, action_set_layer: StdInputActionSetLayer
 ) -> bool:
-	assert(action_set_layer is StdInputActionSetLayer, "missing argument: layer")
-
-	if not _action_set is StdInputActionSet:
-		assert(false, "invalid state: missing action set")
-		return false
-
-	assert(
-		action_set_layer.parent == null or action_set_layer.parent == _action_set,
-		"invalid argument: wrong parent action set",
-	)
-
 	if action_set_layer not in _action_set_layers:
 		return false
 
@@ -163,17 +152,6 @@ func _disable_action_set_layer(
 func _enable_action_set_layer(
 	_device: int, action_set_layer: StdInputActionSetLayer
 ) -> bool:
-	assert(action_set_layer is StdInputActionSetLayer, "missing argument: layer")
-
-	if not _action_set is StdInputActionSet:
-		assert(false, "invalid state: missing action set")
-		return false
-
-	assert(
-		action_set_layer.parent == null or action_set_layer.parent == _action_set,
-		"invalid argument: wrong parent action set",
-	)
-
 	if action_set_layer in _action_set_layers:
 		return false
 

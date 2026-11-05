@@ -762,33 +762,6 @@ func test_joypad_monitor_cannot_read_a_binding_steam_has_not_loaded() -> void:
 	assert_engine_error(_STEAM_ERROR)
 
 
-func test_joypad_monitor_names_action_sets_as_the_manifest_does() -> void:
-	# Given: Two sets, a layer under one of them, and a layer with no parent.
-	var menu := _make_action_set(&"Menu")
-	var options := _make_action_set(&"MenuOptions", true) as StdInputActionSetLayer
-	options.parent = menu
-	var navigation := _make_action_set(&"MenuNavigation", true)
-	var action_sets: Array[StdInputActionSet] = [
-		menu, _make_action_set(&"Splash"), options, navigation
-	]
-
-	# When/Then: A set and a layer with a parent keep their names.
-	assert_eq(
-		_joypad_monitor._list_manifest_names(menu, action_sets),
-		PackedStringArray(["Menu"]),
-	)
-	assert_eq(
-		_joypad_monitor._list_manifest_names(options, action_sets),
-		PackedStringArray(["MenuOptions"]),
-	)
-
-	# When/Then: A layer with no parent is named under each set.
-	assert_eq(
-		_joypad_monitor._list_manifest_names(navigation, action_sets),
-		PackedStringArray(["MenuNavigation_Menu", "MenuNavigation_Splash"]),
-	)
-
-
 func test_joypad_monitor_does_not_match_a_virtual_gamepad_by_index() -> void:
 	# Given: A joypad monitor which connected one device.
 	var monitor: StdInputSlot.JoypadMonitor = autofree(_joypad_monitor.new())
@@ -837,14 +810,9 @@ func _make_godot_joypad_monitor() -> GodotJoypadMonitorTest.JoypadMonitor:
 	return autofree(GodotJoypadMonitorTest.JoypadMonitor.new())
 
 
-## _make_action_set returns an action set called `action_set_name`, or a layer if
-## `is_layer` is set.
-func _make_action_set(
-	action_set_name: StringName, is_layer: bool = false
-) -> StdInputActionSet:
-	var action_set: StdInputActionSet = (
-		StdInputActionSetLayer.new() if is_layer else StdInputActionSet.new()
-	)
+## _make_action_set returns an action set called `action_set_name`.
+func _make_action_set(action_set_name: StringName) -> StdInputActionSet:
+	var action_set := StdInputActionSet.new()
 	action_set.name = action_set_name
 	return action_set
 

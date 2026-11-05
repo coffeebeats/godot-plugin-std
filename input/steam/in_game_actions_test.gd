@@ -149,91 +149,36 @@ func test_render_writes_analog_sections() -> void:
 	assert_eq(got, want)
 
 
-func test_render_writes_a_parentless_layer_under_every_set() -> void:
-	# Given: Two sets with a digital action each.
-	var menu := StdInputActionSet.new()
-	menu.name = &"Menu"
-	menu.actions_digital = [&"ui_accept"]
+func test_render_with_a_layer_with_no_parent_is_an_error() -> void:
+	# Given: A set and a layer with no parent.
+	var menu := _make_action_set(&"Menu", [&"ui_accept"])
+	var nav := _make_layer(&"Nav", null, [&"ui_cancel"])
 
-	var gameplay := StdInputActionSet.new()
-	gameplay.name = &"Gameplay"
-	gameplay.actions_digital = [&"fire"]
+	# When: The manifest is rendered.
+	manifest.render([menu, nav], {"english": "en"})
 
-	# Given: A layer with no parent and its own digital action.
-	var nav := StdInputActionSetLayer.new()
-	nav.name = &"Nav"
-	nav.actions_digital = [&"ui_cancel"]
+	# Then: The missing parent is reported.
+	assert_engine_error("missing parent action set")
 
-	# When: The manifest is rendered for one language.
-	var got := manifest.render([menu, gameplay, nav], {"english": "en"})
 
-	# Then: Each set gets a copy of the layer, and its strings are written once.
-	var want := _lines(
-		[
-			'"In Game Actions"',
-			"{",
-			'\t"actions"',
-			"\t{",
-			'\t\t"Menu"',
-			"\t\t{",
-			'\t\t\t"title"\t\t\t\t\t"#set_Menu"',
-			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
-			'\t\t\t"Button"',
-			"\t\t\t{",
-			'\t\t\t\t"ui_accept"\t\t\t\t"#action_Menu_ui_accept"',
-			"\t\t\t}",
-			"\t\t}",
-			'\t\t"Gameplay"',
-			"\t\t{",
-			'\t\t\t"title"\t\t\t\t\t"#set_Gameplay"',
-			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
-			'\t\t\t"Button"',
-			"\t\t\t{",
-			'\t\t\t\t"fire"\t\t\t\t"#action_Gameplay_fire"',
-			"\t\t\t}",
-			"\t\t}",
-			"\t}",
-			'\t"action_layers"',
-			"\t{",
-			'\t\t"Nav_Menu"',
-			"\t\t{",
-			'\t\t\t"title"\t\t\t\t\t"#layer_Nav"',
-			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
-			'\t\t\t"set_layer"\t\t\t\t\t"1"',
-			'\t\t\t"parent_set_name"\t\t\t\t\t"Menu"',
-			'\t\t\t"Button"',
-			"\t\t\t{",
-			'\t\t\t\t"ui_cancel"\t\t\t\t"#action_Nav_ui_cancel"',
-			"\t\t\t}",
-			"\t\t}",
-			'\t\t"Nav_Gameplay"',
-			"\t\t{",
-			'\t\t\t"title"\t\t\t\t\t"#layer_Nav"',
-			'\t\t\t"legacy_set"\t\t\t\t\t"0"',
-			'\t\t\t"set_layer"\t\t\t\t\t"1"',
-			'\t\t\t"parent_set_name"\t\t\t\t\t"Gameplay"',
-			'\t\t\t"Button"',
-			"\t\t\t{",
-			'\t\t\t\t"ui_cancel"\t\t\t\t"#action_Nav_ui_cancel"',
-			"\t\t\t}",
-			"\t\t}",
-			"\t}",
-			'\t"localization"',
-			"\t{",
-			'\t\t"english"',
-			"\t\t{",
-			'\t\t\t"set_Menu"\t\t\t\t\t"Menu"',
-			'\t\t\t"action_Menu_ui_accept"\t\t\t\t\t"ui_accept"',
-			'\t\t\t"set_Gameplay"\t\t\t\t\t"Gameplay"',
-			'\t\t\t"action_Gameplay_fire"\t\t\t\t\t"fire"',
-			'\t\t\t"layer_Nav"\t\t\t\t\t"Nav"',
-			'\t\t\t"action_Nav_ui_cancel"\t\t\t\t\t"ui_cancel"',
-			"\t\t}",
-			"\t}",
-			"}",
-		]
-	)
-	assert_eq(got, want)
+func test_render_with_a_repeated_name_is_an_error() -> void:
+	# Given: A set with a `Nav` layer.
+	var menu := _make_action_set(&"Menu", [&"ui_accept"])
+	var nav := _make_layer(&"Nav", menu, [&"ui_cancel"])
+
+	# When: The manifest is rendered with a second set called `Menu`.
+	manifest.render([menu, nav, _make_action_set(&"Menu", [])], {"english": "en"})
+
+	# Then: The repeated set name is reported.
+	assert_engine_error("duplicate name: Menu")
+
+	# When: The manifest is rendered with a `Nav` layer under another set.
+	var gameplay := _make_action_set(&"Gameplay", [])
+	var nav_gameplay := _make_layer(&"Nav", gameplay, [])
+	manifest.render([menu, gameplay, nav, nav_gameplay], {"english": "en"})
+
+	# Then: The repeated layer name is reported, though the parents differ.
+	assert_engine_error("duplicate name: Nav")
 
 
 func test_render_gives_an_action_a_label_per_set() -> void:
@@ -439,6 +384,26 @@ func after_each() -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _make_action_set returns a set called `id` declaring the digital `actions`.
+func _make_action_set(id: StringName, actions: Array[StringName]) -> StdInputActionSet:
+	var action_set := StdInputActionSet.new()
+	action_set.name = id
+	action_set.actions_digital = actions
+	return action_set
+
+
+## _make_layer returns a layer called `id` under `parent`, declaring the digital
+## `actions`.
+func _make_layer(
+	id: StringName, parent: StdInputActionSet, actions: Array[StringName]
+) -> StdInputActionSetLayer:
+	var layer := StdInputActionSetLayer.new()
+	layer.name = id
+	layer.parent = parent
+	layer.actions_digital = actions
+	return layer
 
 
 ## _lines joins manifest lines with the newline the generator writes after each.

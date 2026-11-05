@@ -2,7 +2,8 @@
 ## std/input/action_set.gd
 ##
 ## StdInputActionSet is a collection of input actions which, collectively, define
-## available player actions during a section of the game.
+## available player actions during a section of the game. A set is a mode of play, and
+## loading one unbinds everything else.
 ##
 
 @tool

@@ -567,6 +567,36 @@ func test_input_slot_connected_joypad_gets_no_layers_when_its_set_is_refused() -
 	assert_eq(_actions_joy.layers, [] as Array[StdInputActionSetLayer])
 
 
+func test_input_slot_enables_no_layer_on_a_joypad_that_refused_the_set() -> void:
+	# Given: An input slot claiming no keyboard.
+	slot.claim_kbm_input = false
+	add_child_autofree(slot)
+
+	# Given: A joypad connected, whose component refuses every set.
+	_actions_joy.refuses_action_sets = true
+	slot.joypad_monitor.connected = [0] as Array[int]
+	slot.joypad_monitor.device_type = StdInputDevice.DEVICE_TYPE_GENERIC
+	slot.joypad_monitor.broadcast_connected_joypads()
+	autofree(slot.get_active_device())
+
+	# Given: An action set loaded, which the joypad refuses.
+	var action_set := _make_action_set(&"Test")
+	slot.load_action_set(action_set)
+
+	# When: A layer of the set is enabled.
+	var layer := _make_layer(&"TestLayer", action_set)
+	slot.enable_action_set_layer(layer)
+
+	# Then: The slot holds the layer.
+	assert_eq(slot.actions.list_action_set_layers(slot.device_id), [layer])
+
+	# Then: The joypad isn't asked to enable the layer.
+	assert_eq(_actions_joy.layers, [] as Array[StdInputActionSetLayer])
+
+	# Then: Nothing fails.
+	assert_engine_error_count(0)
+
+
 func test_input_slot_matches_events_as_its_active_joypads_component_does() -> void:
 	# Given: A joypad component which matches only injected actions, as Steam's does.
 	_actions_joy.matches_actions = true

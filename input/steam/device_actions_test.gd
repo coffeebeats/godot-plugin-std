@@ -27,8 +27,7 @@ const _TEST_SET_HANDLES := {
 	&"Menu": 1,
 	&"Gameplay": 2,
 	&"Tabs": 3,
-	&"Options_Menu": 4,
-	&"Options_Gameplay": 5,
+	&"Options": 4,
 }
 
 ## _TEST_ACTIONS are the directional actions of the `move` stick, registered in the
@@ -474,24 +473,43 @@ func test_load_action_set_drops_the_recorded_layers() -> void:
 	)
 
 
-func test_resolve_action_set_name_reads_the_recorded_set() -> void:
+func test_enable_action_set_layer_without_its_parent_loaded_is_an_error() -> void:
 	# Given: A controller connected in slot 0.
 	_connect_joypad()
 
-	# Given: The `Gameplay` set loaded for the controller.
-	_actions.load_action_set(0, _make_action_set(&"Gameplay"))
+	# Given: The `Menu` set loaded for the controller.
+	_actions.load_action_set(0, _make_action_set(&"Menu"))
 	_list_steam_calls()
 
-	# When/Then: A layer with no parent resolves to its copy under `Gameplay`.
-	var options := _make_layer(&"Options", null)
-	assert_eq(_device_actions.resolve_action_set_name(options, 0), &"Options_Gameplay")
+	# When: A layer with no parent is enabled.
+	var got: bool = _actions.enable_action_set_layer(0, _make_layer(&"Tabs", null))
 
-	# When/Then: A slot with nothing recorded keeps the layer's own name.
-	assert_eq(_device_actions.resolve_action_set_name(options, 1), &"Options")
+	# Then: The missing parent is reported.
+	assert_engine_error("missing parent action set")
 
-	# When/Then: A layer with a parent keeps its own name.
-	var tabs := _make_layer(&"Tabs", _make_action_set(&"Menu"))
-	assert_eq(_device_actions.resolve_action_set_name(tabs, 0), &"Tabs")
+	# Then: Nothing is enabled.
+	assert_false(got)
+
+	# When: A layer of another set is enabled.
+	var options := _make_layer(&"Options", _make_action_set(&"Gameplay"))
+	got = _actions.enable_action_set_layer(0, options)
+
+	# Then: The wrong parent is reported.
+	assert_engine_error("wrong parent action set")
+
+	# Then: Nothing is enabled.
+	assert_false(got)
+	assert_eq(_actions.list_action_set_layers(0), [] as Array[StdInputActionSetLayer])
+
+	# When: That layer is disabled.
+	got = _actions.disable_action_set_layer(0, options)
+
+	# Then: The wrong parent is reported again.
+	assert_engine_error("wrong parent action set")
+	assert_false(got)
+
+	# Then: Steam isn't called.
+	assert_eq(_list_steam_calls(), [])
 
 
 func test_is_applied_compares_the_reported_stack_in_order() -> void:
@@ -501,7 +519,7 @@ func test_is_applied_compares_the_reported_stack_in_order() -> void:
 	# Given: The `Menu` set loaded with two layers enabled.
 	var menu := _make_action_set(&"Menu")
 	_actions.load_action_set(0, menu)
-	_actions.enable_action_set_layer(0, _make_layer(&"Options", null))
+	_actions.enable_action_set_layer(0, _make_layer(&"Options", menu))
 	_actions.enable_action_set_layer(0, _make_layer(&"Tabs", menu))
 	_list_steam_calls()
 

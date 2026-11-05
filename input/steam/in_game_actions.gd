@@ -112,15 +112,29 @@ func get_filename() -> String:
 
 ## render returns the manifest text for the provided action sets, layers included, and
 ## `languages`, a mapping from Steam language names to Godot locales.
+##
+## NOTE: A layer with no `parent`, or a set or layer whose `name` another already has,
+## is an error.
 func render(action_sets: Array[StdInputActionSet], languages: Dictionary) -> String:
 	_contents = ""
 	_indent = 0
 
 	var sets: Array[StdInputActionSet] = []
 	var layers: Array[StdInputActionSetLayer] = []
+	var names: Dictionary[StringName, bool] = {}
 	for action_set in action_sets:
 		if not action_set:
 			continue
+
+		if action_set is StdInputActionSetLayer and not action_set.parent:
+			assert(false, "invalid config; missing parent action set")
+			continue
+
+		if action_set.name in names:
+			assert(false, "invalid config; duplicate name: %s" % action_set.name)
+			continue
+
+		names[action_set.name] = true
 
 		if action_set is StdInputActionSetLayer:
 			layers.append(action_set)
@@ -154,17 +168,8 @@ func render(action_sets: Array[StdInputActionSet], languages: Dictionary) -> Str
 	_write_string("action_layers")
 	_write_open_bracket()
 
-	# NOTE: A Steam layer belongs to one set, so a layer with no parent is written once
-	# under each set, as `<Layer>_<Set>`; the copies share the layer's display string.
 	for layer in layers:
-		if layer.parent:
-			_write_layer(layer, layer.name, layer.parent.name)
-			continue
-
-		for action_set in sets:
-			_write_layer(
-				layer, "%s_%s" % [layer.name, action_set.name], action_set.name
-			)
+		_write_layer(layer, layer.name, layer.parent.name)
 
 	_write_close_bracket()
 

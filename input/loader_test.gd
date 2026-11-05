@@ -300,16 +300,19 @@ func test_loader_shares_a_layer_with_another_loader() -> void:
 	assert_eq(_slot.list_action_set_layers(), [] as Array[StdInputActionSetLayer])
 
 
-func test_loader_keeps_a_shared_layer_through_a_pop() -> void:
+func test_loader_restores_its_layer_through_a_pop() -> void:
 	# Given: A map's loader enables the layer over its own set.
 	var map := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	add_child_autofree(map)
 	await wait_idle_frames(1)
 
-	# Given: A pause menu covers the map, loading its own set and the same layer.
+	# Given: A pause menu covers the map, loading its own set and layer.
 	map.notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
 	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
-	pause.action_set = _make_action_set(&"Menu")
+	pause.action_set = _menu
+	pause.action_set_layers = (
+		[_make_layer(&"PauseMenu", _menu)] as Array[StdInputActionSetLayer]
+	)
 	add_child_autofree(pause)
 	await wait_idle_frames(1)
 
@@ -421,7 +424,7 @@ func test_loader_panel_closed_while_covered_leaves_the_screen_above_alone() -> v
 	scene.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
 	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	pause.action_set = _menu
-	var pause_layer := _make_layer(&"PauseMenu")
+	var pause_layer := _make_layer(&"PauseMenu", _menu)
 	pause.action_set_layers = [pause_layer] as Array[StdInputActionSetLayer]
 	add_child_autofree(pause)
 	await wait_idle_frames(1)
@@ -467,7 +470,7 @@ func test_loader_panel_left_open_under_a_screen_returns_to_the_top_on_uncover() 
 	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	pause.action_set = _menu
 	pause.action_set_layers = (
-		[_make_layer(&"PauseMenu")] as Array[StdInputActionSetLayer]
+		[_make_layer(&"PauseMenu", _menu)] as Array[StdInputActionSetLayer]
 	)
 	add_child_autofree(pause)
 	await wait_idle_frames(1)
@@ -549,7 +552,7 @@ func test_loader_panel_before_the_map_in_the_tree_still_lands_above_it() -> void
 	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	pause.action_set = _menu
 	pause.action_set_layers = (
-		[_make_layer(&"PauseMenu")] as Array[StdInputActionSetLayer]
+		[_make_layer(&"PauseMenu", _menu)] as Array[StdInputActionSetLayer]
 	)
 	add_child_autofree(pause)
 	await wait_idle_frames(1)
@@ -589,7 +592,7 @@ func test_loader_covered_with_a_panel_open_reloads_nothing() -> void:
 	# Given: A pause menu holding `Menu` and its own layer has entered over it.
 	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	pause.action_set = _menu
-	var pause_layer := _make_layer(&"PauseMenu")
+	var pause_layer := _make_layer(&"PauseMenu", _menu)
 	pause.action_set_layers = [pause_layer] as Array[StdInputActionSetLayer]
 	add_child_autofree(pause)
 	await wait_idle_frames(1)
@@ -613,10 +616,13 @@ func test_loader_screen_popped_without_a_panel_restores_the_scene_at_once() -> v
 	add_child_autofree(scene)
 	await wait_idle_frames(1)
 
-	# Given: A pause menu holding `Menu` covers the scene.
+	# Given: A pause menu holding `Menu` and a layer under it covers the scene.
 	scene.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
 	var pause := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	pause.action_set = _menu
+	pause.action_set_layers = (
+		[_make_layer(&"PauseMenu", _menu)] as Array[StdInputActionSetLayer]
+	)
 	add_child_autofree(pause)
 	await wait_idle_frames(1)
 	assert_eq(_slot.actions.get_action_set(_slot.device_id), _menu)
@@ -655,6 +661,7 @@ func test_loader_screen_popped_with_a_panel_open_loads_only_the_scenes_set() -> 
 	var screen := Node.new()
 	var driving := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	driving.action_set = _make_action_set(&"Driving")
+	driving.action_set_layers = [] as Array[StdInputActionSetLayer]
 	screen.add_child(driving)
 	var panel := _make_panel()
 	screen.add_child(panel)
@@ -681,7 +688,7 @@ func test_loader_branch_leaving_with_a_panel_open_loads_the_remaining_set() -> v
 	# Given: A loader holding its own set and layer, synced.
 	var lobby := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	lobby.action_set = _make_action_set(&"Lobby")
-	var lobby_layer := _make_layer(&"Lobby")
+	var lobby_layer := _make_layer(&"Lobby", lobby.action_set)
 	lobby.action_set_layers = [lobby_layer] as Array[StdInputActionSetLayer]
 	add_child_autofree(lobby)
 
@@ -720,7 +727,7 @@ func test_loader_screen_popped_with_a_panel_open_loads_the_set_below_once() -> v
 	var pause := Node.new()
 	var loader := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
 	loader.action_set = _menu
-	var pause_layer := _make_layer(&"PauseMenu")
+	var pause_layer := _make_layer(&"PauseMenu", _menu)
 	loader.action_set_layers = [pause_layer] as Array[StdInputActionSetLayer]
 	pause.add_child(loader)
 	var panel := _make_panel()
@@ -805,10 +812,10 @@ func test_loader_screen_popped_with_an_attachment_loads_the_set_below_once() -> 
 
 func before_each() -> void:
 	_action_set = _make_action_set(&"Gameplay")
-	_layer = _make_layer(&"Options")
+	_layer = _make_layer(&"Options", _action_set)
 	_menu = _make_action_set(&"Menu")
-	_build_layer = _make_layer(&"Build")
-	_panel_layer = _make_layer(&"Pause")
+	_build_layer = _make_layer(&"Build", _action_set)
+	_panel_layer = _make_layer(&"Pause", _menu)
 
 	_slot = SlotTest.make_slot()
 	add_child_autofree(_slot)
@@ -825,10 +832,11 @@ func _make_action_set(id: StringName) -> StdInputActionSet:
 	return action_set
 
 
-## _make_layer returns an empty action set layer called `id`.
-func _make_layer(id: StringName) -> StdInputActionSetLayer:
+## _make_layer returns an empty action set layer called `id` under `parent`.
+func _make_layer(id: StringName, parent: StdInputActionSet) -> StdInputActionSetLayer:
 	var layer := StdInputActionSetLayer.new()
 	layer.name = id
+	layer.parent = parent
 	return layer
 
 
