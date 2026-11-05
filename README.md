@@ -49,7 +49,7 @@ The [scene](./scene) directory contains an implementation of a [`StateMachine`](
 
 The [screen](./screen) directory contains [`StdScreenManager`](./screen/manager/manager.gd), a stack of [`StdScreen`](./screen/screen.gd)s where each screen covers the one below it.
 
-A [`StdPanel`](./screen/panel.gd) instead opens UI, such as a build or context menu, over a running scene that a screen would cover. It runs its control's transition, closes on its close actions and on a press outside the control, and follows the control's visibility. A [`StdInputCursorFocusScope`](./input/cursor_focus_scope.gd) confines focus to the control, and a loader set to `VISIBLE` holds what stays live, both while the panel and every panel around it are opening or open.
+A [`StdPanel`](./screen/panel.gd) instead opens UI, such as a build or context menu, over a running scene that a screen would cover. It runs its control's transition, closes on its close actions and on a press outside the control, and follows the control's visibility.
 
 #### **`test`**
 
