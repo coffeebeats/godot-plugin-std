@@ -151,25 +151,7 @@ func _get_action_origin_label(
 	if not event is InputEventKey:
 		return ""
 
-	var physical_keycode: Key = event.physical_keycode
-	if physical_keycode == KEY_NONE:
-		assert(false, "invalid input; missing keycodes")
-		physical_keycode = event.keycode
-
-	var keycode := (
-		DisplayServer.keyboard_get_label_from_physical(physical_keycode)
-		if _has_keyboard_label_support()
-		else physical_keycode
-	)
-
-	if not OS.is_keycode_unicode(keycode):
-		return OS.get_keycode_string(keycode)
-
-	var label := char(keycode).strip_edges()
-	if not label:
-		return OS.get_keycode_string(keycode)
-
-	return label
+	return Origin.get_key_label(event)
 
 
 func _has_action_origin(
@@ -186,23 +168,6 @@ func _has_action_origin(
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
-
-
-## _has_keyboard_label_support returns whether the display server can map a physical
-## keycode to a localized key label.
-##
-## NOTE: The platform check covers web and mobile. The display server name additionally
-## covers a headless server on a supported platform, where the call logs an error
-## instead of returning a default.
-static func _has_keyboard_label_support() -> bool:
-	if DisplayServer.get_name() == &"headless":
-		return false
-
-	return (
-		OS.has_feature(&"windows")
-		or OS.has_feature(&"macos")
-		or OS.has_feature(&"linuxbsd")
-	)
 
 
 ## _list_glyph_sets returns the glyph sets matching `device_type`, in order.
