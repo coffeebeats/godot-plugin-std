@@ -8,11 +8,18 @@
 class_name StdInputDeviceGlyphs
 extends Node
 
+# -- CONFIGURATION ------------------------------------------------------------------- #
+
+## unknown_glyph is the glyph returned for an origin which is bound but has no art. Left
+## empty, such an origin returns `null`, so a host can show the origin's label instead.
+@export var unknown_glyph: Texture2D = null
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
 ## get_action_glyph returns the glyph icon for the origin bound to the specified
-## action and "binding index" (e.g. primary or secondary).
+## action and "binding index" (e.g. primary or secondary). A bound origin with no art
+## returns `unknown_glyph`, and an unbound index returns `null`.
 func get_action_glyph(
 	device: int,
 	device_type: StdInputDevice.DeviceType,
@@ -26,7 +33,7 @@ func get_action_glyph(
 		"invalid argument; unknown device type",
 	)
 
-	return _get_action_glyph(
+	var glyph := _get_action_glyph(
 		device,
 		device_type,
 		action_set,
@@ -34,6 +41,13 @@ func get_action_glyph(
 		index,
 		target_size,
 	)
+	if glyph:
+		return glyph
+
+	if _has_action_origin(device, device_type, action_set, action, index):
+		return unknown_glyph
+
+	return null
 
 
 ## get_action_origin_count returns how many origins are bound to the specified action,
@@ -103,3 +117,16 @@ func _get_action_origin_label(
 ) -> String:
 	assert(false, "unimplemented")
 	return ""
+
+
+## _has_action_origin returns whether an origin is bound to the action at binding
+## `index`. The default of `false` keeps `get_action_glyph` returning `null` for an
+## origin with no art.
+func _has_action_origin(
+	_device: int,
+	_device_type: StdInputDevice.DeviceType,
+	_action_set: StdInputActionSet,
+	_action: StringName,
+	_index: int,
+) -> bool:
+	return false
