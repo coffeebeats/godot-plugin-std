@@ -13,6 +13,11 @@ extends Resource
 ## device_types is a list of input device types to which these glyph icons pertain.
 @export var device_types: Array[StdInputDevice.DeviceType] = []
 
+## unknown_glyph is the glyph returned for a bound origin no matching set has art for,
+## taken from the first matching set which sets one. With it empty in every matching
+## set, the provider's `unknown_glyph` is returned instead.
+@export var unknown_glyph: Texture2D = null
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 

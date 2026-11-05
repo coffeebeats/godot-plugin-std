@@ -96,6 +96,18 @@ func _get_action_origin_label(
 	return ""
 
 
+func _has_action_origin(
+	slot: int,
+	device_type: StdInputDevice.DeviceType,
+	action_set: StdInputActionSet,
+	action: StringName,
+	index: int,
+) -> bool:
+	return not (
+		_list_action_origins(slot, device_type, action_set, action, index).is_empty()
+	)
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
