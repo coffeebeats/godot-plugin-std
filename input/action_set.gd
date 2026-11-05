@@ -283,6 +283,31 @@ func is_matching_event_origin(action: StringName, event: InputEvent) -> bool:
 	return false
 
 
+## validate returns whether every layer in `action_sets` has a `parent` and no two of
+## them share a `name`, failing an assertion on the first that breaks either rule.
+##
+## NOTE: Saved bindings are stored under a set's name, so two that share one would also
+## share a player's rebinds.
+static func validate(action_sets: Array[StdInputActionSet]) -> bool:
+	var names: Dictionary[StringName, bool] = {}
+	for action_set in action_sets:
+		if not action_set:
+			continue
+
+		var layer := action_set as StdInputActionSetLayer
+		if layer and not layer.parent:
+			assert(false, "invalid config; missing parent action set: %s" % layer.name)
+			return false
+
+		if action_set.name in names:
+			assert(false, "invalid config; duplicate name: %s" % action_set.name)
+			return false
+
+		names[action_set.name] = true
+
+	return true
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 

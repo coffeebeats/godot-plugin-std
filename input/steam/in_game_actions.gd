@@ -113,28 +113,19 @@ func get_filename() -> String:
 ## render returns the manifest text for the provided action sets, layers included, and
 ## `languages`, a mapping from Steam language names to Godot locales.
 ##
-## NOTE: A layer with no `parent`, or a set or layer whose `name` another already has,
-## is an error.
+## NOTE: Sets which fail `StdInputActionSet.validate` are an error, and render nothing.
 func render(action_sets: Array[StdInputActionSet], languages: Dictionary) -> String:
 	_contents = ""
 	_indent = 0
 
+	if not StdInputActionSet.validate(action_sets):
+		return ""
+
 	var sets: Array[StdInputActionSet] = []
 	var layers: Array[StdInputActionSetLayer] = []
-	var names: Dictionary[StringName, bool] = {}
 	for action_set in action_sets:
 		if not action_set:
 			continue
-
-		if action_set is StdInputActionSetLayer and not action_set.parent:
-			assert(false, "invalid config; missing parent action set")
-			continue
-
-		if action_set.name in names:
-			assert(false, "invalid config; duplicate name: %s" % action_set.name)
-			continue
-
-		names[action_set.name] = true
 
 		if action_set is StdInputActionSetLayer:
 			layers.append(action_set)
