@@ -33,6 +33,19 @@ const _JOY_DEFAULTS := {
 	&"test_glyph_joy": [JOY_BUTTON_A, JOY_BUTTON_B],
 }
 
+
+## SizedGlyphSet is a glyph set which records each size a glyph is asked for.
+class SizedGlyphSet:
+	extends StdInputGlyphSet
+
+	## target_sizes holds each size a glyph was asked for, in call order.
+	var target_sizes: Array[Vector2] = []
+
+	func _get_origin_glyph(_event: InputEvent, target_size: Vector2) -> Texture2D:
+		target_sizes.append(target_size)
+		return PlaceholderTexture2D.new()
+
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _glyphs: DeviceGlyphs = null
@@ -214,6 +227,29 @@ func test_device_glyphs_glyph_returns_the_unknown_glyph_for_a_lone_secondary() -
 
 	# Then: The provider's unknown glyph is returned.
 	assert_eq(got, _glyphs.unknown_glyph)
+
+
+func test_device_glyphs_glyph_asks_the_set_for_the_target_size() -> void:
+	# Given: A set for the joypad type which records the size it is asked for.
+	var glyph_set := SizedGlyphSet.new()
+	glyph_set.device_types = [DEVICE_TYPE_XBOX_ONE]
+	_glyphs.glyph_sets = [glyph_set]
+
+	# When: The glyph is fetched for a host drawing it at 48 by 48.
+	(
+		_glyphs
+		. get_action_glyph(
+			DEVICE_ID_ALL,
+			DEVICE_TYPE_XBOX_ONE,
+			_make_action_set([&"test_glyph_joy"]),
+			&"test_glyph_joy",
+			StdInputDeviceActions.BINDING_INDEX_PRIMARY,
+			Vector2(48, 48),
+		)
+	)
+
+	# Then: The set is asked for the glyph at that size.
+	assert_eq(glyph_set.target_sizes, [Vector2(48, 48)] as Array[Vector2])
 
 
 # -- TEST HOOKS ---------------------------------------------------------------------- #

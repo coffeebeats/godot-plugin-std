@@ -17,9 +17,9 @@ extends Node
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_action_glyph returns the glyph icon for the origin bound to the specified
-## action and "binding index" (e.g. primary or secondary). A bound origin with no art
-## returns `unknown_glyph`, and an unbound index returns `null`.
+## get_action_glyph returns the glyph for the origin bound to `action` at binding
+## `index`, for a host drawing it at `target_size` (zero lets the provider pick). A
+## bound origin with no art returns `unknown_glyph`; an unbound index returns `null`.
 func get_action_glyph(
 	device: int,
 	device_type: StdInputDevice.DeviceType,

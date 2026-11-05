@@ -22,6 +22,8 @@ extends Resource
 
 
 ## get_origin_glyph returns the configured resource for the provided input event.
+## `target_size` is the size the host draws the glyph at, so a set can pick or draw
+## art to fit it; zero leaves the size to the set.
 func get_origin_glyph(
 	event: InputEvent,
 	target_size: Vector2 = Vector2.ZERO,
