@@ -12,7 +12,20 @@ extends StdInputDeviceGlyphs
 const SteamDeviceActions := preload("device_actions.gd")
 const SteamJoypadMonitor := preload("joypad_monitor.gd")
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## GlyphStyle is the look of the glyph art Steam draws for an origin.
+enum GlyphStyle {  # gdlint:ignore=class-definitions-order
+	KNOCKOUT,  ## Coloured face buttons and white detail on a transparent background.
+	LIGHT,  ## Black detail on a white background.
+	DARK,  ## White detail on a black background.
+}
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
+
+## glyph_style is the look of the glyph art fetched from Steam, so a game's pad glyphs
+## can match the background they sit on.
+@export var glyph_style: GlyphStyle = GlyphStyle.KNOCKOUT
 
 ## joypad_monitor is a Steam-specific joypad monitor, used to look up slot-to-device ID
 ## translations.
@@ -20,7 +33,8 @@ const SteamJoypadMonitor := preload("joypad_monitor.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## _glyphs is a mapping from device origin to the loaded texture resource.
+## _glyphs maps each origin, glyph size and style flags, as a `Vector3i`, to the
+## texture loaded for it.
 static var _glyphs: Dictionary = {}  # gdlint:ignore=class-definitions-order
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
@@ -48,18 +62,20 @@ func _get_action_glyph(
 		action,
 		index,
 	):
-		if origin in _glyphs:
-			return _glyphs[origin]
-
 		var glyph_size := _map_target_size_to_glyph_size(target_size)
+		var flags := _get_glyph_flags(glyph_style)
+
+		var key := Vector3i(origin, glyph_size, flags)
+		if key in _glyphs:
+			return _glyphs[key]
 
 		@warning_ignore("INT_AS_ENUM_WITHOUT_CAST")
-		var path := Steam.getGlyphPNGForActionOrigin(origin, glyph_size, 0)
+		var path := Steam.getGlyphPNGForActionOrigin(origin, glyph_size, flags)
 		if not path:
 			continue
 
 		var texture := ImageTexture.create_from_image(Image.load_from_file(path))
-		_glyphs[origin] = texture
+		_glyphs[key] = texture
 
 		return texture
 
@@ -109,6 +125,17 @@ func _has_action_origin(
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _get_glyph_flags returns the Steam glyph style flags which draw `style`.
+static func _get_glyph_flags(style: GlyphStyle) -> int:
+	match style:
+		GlyphStyle.LIGHT:
+			return Steam.INPUT_GLYPH_STYLE_LIGHT
+		GlyphStyle.DARK:
+			return Steam.INPUT_GLYPH_STYLE_DARK
+
+	return Steam.INPUT_GLYPH_STYLE_KNOCKOUT
 
 
 ## _get_input_type returns the Steam Input type whose origins draw the glyphs of
