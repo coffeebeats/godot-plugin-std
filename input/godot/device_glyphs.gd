@@ -47,7 +47,7 @@ func _get_action_glyph(
 	action_set: StdInputActionSet,
 	action: StringName,
 	index: int,
-	_target_size: Vector2,
+	target_size: Vector2,
 ) -> Texture2D:
 	var event := (
 		Bindings
@@ -83,7 +83,7 @@ func _get_action_glyph(
 	var unknown: Texture2D = null
 
 	for glyph_set in sets:
-		var texture := glyph_set.get_origin_glyph(event)
+		var texture := glyph_set.get_origin_glyph(event, target_size)
 		if texture:
 			return texture
 
