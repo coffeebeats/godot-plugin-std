@@ -5,8 +5,9 @@
 ## layers enabled while the rule in `active_while` holds and its screen is uncovered.
 ## It first acts at the end of the frame it enters the tree in, once its parents have
 ## set it up. The `VISIBLE` rule follows the nearest `CanvasItem`, `CanvasLayer` or
-## `Window` above it, and on entering and on an uncover a loader under it syncs at the
-## end of the frame, after the player's plain loaders, so a panel lands above its scene.
+## `Window` above it, and the phase of every `StdPanel` owning an ancestor. On
+## entering and on an uncover a loader under it syncs at the end of the frame, after the
+## player's plain loaders, so a panel lands above its scene.
 ##
 ## NOTE: The loaded set follows from the active loaders. When one holding a set goes
 ## inactive or leaves the tree, the player's others re-sync in tree order, so the last
@@ -26,7 +27,9 @@ extends Node
 ## ActiveWhile names the rule deciding when the action set and layers are active.
 enum ActiveWhile {
 	IN_TREE,  ## While this node is in the scene tree.
-	VISIBLE,  ## While the nearest `CanvasItem`, `CanvasLayer` or `Window` above is shown.
+	## While the nearest `CanvasItem`, `CanvasLayer` or `Window` above is shown and, under
+	## a `StdPanel`'s control, while that panel is opening or open.
+	VISIBLE,
 	NEVER,  ## Not at all; the loader holds its sets and does nothing with them.
 }
 
@@ -157,6 +160,10 @@ func _notification(what) -> void:
 			_covered = false
 			_sync_in_turn()
 
+		StdPanel.NOTIFICATION_PANEL_PHASE_CHANGED:
+			if active_while == ActiveWhile.VISIBLE:
+				_sync()
+
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
@@ -218,7 +225,10 @@ func _is_active() -> bool:
 		active_while != ActiveWhile.NEVER
 		and is_inside_tree()
 		and not _covered
-		and (active_while != ActiveWhile.VISIBLE or _is_source_visible())
+		and (
+			active_while != ActiveWhile.VISIBLE
+			or (_is_source_visible() and _is_panel_open())
+		)
 	)
 
 
@@ -230,6 +240,12 @@ func _is_layer_wanted_elsewhere(layer: StdInputActionSetLayer) -> bool:
 			return true
 
 	return false
+
+
+## _is_panel_open returns whether every `StdPanel` owning an ancestor is opening or
+## open, or `true` when there is none.
+func _is_panel_open() -> bool:
+	return StdPanel.is_node_open(self)
 
 
 ## _is_source_visible returns whether the node the `VISIBLE` rule follows is shown, or
