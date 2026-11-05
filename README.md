@@ -35,8 +35,6 @@ The [input](./input) directory contains types for setting up an action set-based
 
 An [action set](./input/action_set.gd) is a mode of play, and loading one unbinds everything else. A [layer](./input/action_set_layer.gd) adds to the set named by its required `parent`, and keeps every binding below it that it doesn't override. UI that takes over input loads a set and lists a layer under it for what stays live; overriding a binding doesn't turn an action off. A layer several sets enable is one file per set, and every set and layer has its own name.
 
-A [`StdPanel`](./screen/panel.gd) opens UI over a running scene, such as a build or context menu, where a screen would cover the scene. It runs its control's transition, closes on its close actions and on a press outside the control, and follows the control's visibility. A [`StdInputCursorFocusScope`](./input/cursor_focus_scope.gd) confines focus to the control, and a loader set to `VISIBLE` holds what stays live, both while the panel is opening or open.
-
 Every connected device stays accepted at all times. The active device only picks which glyphs are shown. It changes on a key, button, or stick (past its deadzone) bound to a loaded action, or on a reveal-button click while `cursor_click_activates_kbm` is on. Mouse motion never changes it, following Valve's [Steam Deck guidance](https://partner.steamgames.com/doc/steamhardware/recommendations). The cursor is tracked separately. A reveal-button click or mouse motion past a threshold reveals it, and the hide actions hide it.
 
 #### **`iter`**
@@ -46,6 +44,12 @@ The [iter](./iter) directory contains helpful functions for interacting with seq
 #### **`scene`**
 
 The [scene](./scene) directory contains an implementation of a [`StateMachine`](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
+
+#### **`screen`**
+
+The [screen](./screen) directory contains [`StdScreenManager`](./screen/manager/manager.gd), a stack of [`StdScreen`](./screen/screen.gd)s where each screen covers the one below it.
+
+A [`StdPanel`](./screen/panel.gd) instead opens UI, such as a build or context menu, over a running scene that a screen would cover. It runs its control's transition, closes on its close actions and on a press outside the control, and follows the control's visibility. A [`StdInputCursorFocusScope`](./input/cursor_focus_scope.gd) confines focus to the control, and a loader set to `VISIBLE` holds what stays live, both while the panel and every panel around it are opening or open.
 
 #### **`test`**
 
