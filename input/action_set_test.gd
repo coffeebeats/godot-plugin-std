@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## Tests pertaining to the `StdInputActionSet` and `StdInputActionSetLayer` classes.
 ##
