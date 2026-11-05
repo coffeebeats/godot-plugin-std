@@ -250,17 +250,25 @@ func _list_all_action_origins(
 	return origins
 
 
-func _map_target_size_to_glyph_size(target_size: Vector2) -> int:
-	if target_size == Vector2.ZERO:
-		return 1
+## _map_target_size_to_glyph_size returns the smallest Steam glyph size which covers
+## `target_size`. A zero axis sets no limit, as in `custom_minimum_size`, and a zero
+## size takes the medium art.
+static func _map_target_size_to_glyph_size(target_size: Vector2) -> int:
+	if target_size.x <= 0 and target_size.y <= 0:
+		return Steam.INPUT_GLYPH_SIZE_MEDIUM
 
-	if target_size.x <= 32 or target_size.y <= 32:
-		return 0  # 32 x 32 px
+	var limit := minf(
+		target_size.x if target_size.x > 0 else INF,
+		target_size.y if target_size.y > 0 else INF,
+	)
 
-	if target_size.x <= 128 or target_size.y <= 128:
-		return 1  # 128 x 128 px
+	if limit <= 32:
+		return Steam.INPUT_GLYPH_SIZE_SMALL  # 32 x 32 px
 
-	return 2  # 256 x 256 px
+	if limit <= 128:
+		return Steam.INPUT_GLYPH_SIZE_MEDIUM  # 128 x 128 px
+
+	return Steam.INPUT_GLYPH_SIZE_LARGE  # 256 x 256 px
 
 
 ## _translate_origin maps the provided origin to the specified device type's glyphs.
