@@ -37,7 +37,10 @@ extends StdInputDevice
 signal action_hold_cancelled(action: StringName)
 
 ## action_hold_progress_changed is emitted when `get_action_hold_progress` changes,
-## which includes its drop to `0.0` as the hold ends.
+## which includes its drop to `0.0` as the hold ends. A prompt shows the fill here.
+##
+## NOTE: A prompt's button which raises the action through `StdInputActionTrigger` must
+## use `BaseButton.ACTION_MODE_BUTTON_PRESS`, or a click can't fill a `MODE_HOLD` hold.
 signal action_hold_progress_changed(action: StringName, progress: float)
 
 ## action_hold_started is emitted when a hold starts. Either `action_hold_triggered` or
@@ -46,6 +49,9 @@ signal action_hold_started(action: StringName)
 
 ## action_hold_triggered is emitted when a hold fills, which ends it. A handler acts on
 ## the hold here. In `MODE_PRESS` it's emitted on the press.
+##
+## NOTE: A hold consumes no input, so a handler connected here must not also act on the
+## raw press in `_unhandled_input`.
 signal action_hold_triggered(action: StringName)
 
 ## action_pressed is emitted on an active action's first press from any device, with the
