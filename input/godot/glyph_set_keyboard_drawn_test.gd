@@ -9,6 +9,8 @@ extends GutTest
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var _glyph_set: StdInputGlyphSetKeyboardDrawn = null
+var _locale := ""
+var _translations: Array[Translation] = []
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -57,6 +59,34 @@ func test_keyboard_drawn_glyph_applies_a_label_override() -> void:
 
 	# Then: The keycap draws the shorter label.
 	assert_eq(got.label, "Esc")
+
+
+func test_keyboard_drawn_glyph_translates_the_label() -> void:
+	# Given: A translation naming the shift key in German.
+	_add_translation(TranslationServer.get_locale(), "Umschalt")
+
+	# When: The shift key's glyph is fetched.
+	var got: Variant = _glyph_set.get_origin_glyph(_key(KEY_SHIFT))
+
+	# Then: The keycap draws the translated label.
+	assert_eq(got.label, "Umschalt")
+
+
+func test_keyboard_drawn_glyph_draws_a_new_keycap_after_a_language_change() -> void:
+	# Given: A translation naming the shift key in a second language.
+	_add_translation("de", "Umschalt")
+
+	# Given: The shift key's glyph, fetched in the first language.
+	var first := _glyph_set.get_origin_glyph(_key(KEY_SHIFT))
+
+	# When: The language changes.
+	TranslationServer.set_locale("de")
+
+	# When: The glyph is fetched again.
+	var got := _glyph_set.get_origin_glyph(_key(KEY_SHIFT))
+
+	# Then: A new keycap is returned.
+	assert_not_same(got, first)
 
 
 func test_keyboard_drawn_glyph_is_as_tall_as_the_target_size() -> void:
@@ -113,12 +143,32 @@ func test_keyboard_drawn_glyph_returns_null_for_a_mouse_button() -> void:
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
+func after_each() -> void:
+	for translation in _translations:
+		TranslationServer.remove_translation(translation)
+
+	_translations.clear()
+	TranslationServer.set_locale(_locale)
+
+
 func before_each() -> void:
+	_locale = TranslationServer.get_locale()
+
 	_glyph_set = StdInputGlyphSetKeyboardDrawn.new()
 	_glyph_set.device_types = [StdInputDevice.DEVICE_TYPE_KEYBOARD]
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _add_translation adds a translation for `locale` naming the shift key `label`.
+func _add_translation(locale: String, label: String) -> void:
+	var translation := Translation.new()
+	translation.locale = locale
+	translation.add_message("Shift", label)
+
+	TranslationServer.add_translation(translation)
+	_translations.append(translation)
 
 
 ## _key returns a binding to the physical key `keycode`.

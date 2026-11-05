@@ -44,6 +44,10 @@ const Origin := preload("origin.gd")
 @export var min_width: float = 0.0
 
 ## labels maps a key's label to the label drawn in its place, such as "Escape" to "Esc".
+##
+## NOTE: The label drawn is then translated, so a game's translations can name keys in
+## the player's language. Untranslated, a key with no printed character keeps its
+## English name.
 @export var labels: Dictionary[String, String] = {}
 
 ## icons maps a key to the icon drawn on its cap in place of its label, such as an
@@ -90,6 +94,8 @@ func _get_origin_glyph(
 
 		if not label:
 			return null
+
+		label = tr(label)
 
 	var height := roundi(target_size.y) if target_size.y > 0 else 0
 
