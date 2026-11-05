@@ -146,6 +146,19 @@ func _exit_tree() -> void:
 	_anchors.erase(self)
 
 
+func _notification(what: int) -> void:
+	# NOTE: A `StdPanel` turns focus back on at `opened` without notifying the cursor, so
+	# the handler reports its control as it does when the control is shown.
+	if (
+		what == StdPanel.NOTIFICATION_PANEL_PHASE_CHANGED
+		and is_node_ready()
+		and not _free_if_control_freed()
+		and _control.is_visible_in_tree()
+		and not _is_focus_disabled(_control)
+	):
+		_cursor.report_focus_handler_visible(self)
+
+
 func _ready() -> void:
 	assert(_control is Control, "invalid state; missing Control node")
 

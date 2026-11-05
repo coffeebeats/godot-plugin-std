@@ -349,7 +349,7 @@ func _enter_phase(phase: Phase) -> void:
 		Phase.OPENING:
 			opening.emit()
 		Phase.OPEN:
-			_refresh_cursor()
+			_refresh_hover()
 			opened.emit()
 		Phase.CLOSING:
 			closing.emit()
@@ -405,17 +405,11 @@ func _play_sound(event: StdSoundEvent) -> void:
 	player.play(event)
 
 
-## _refresh_cursor hovers the control under a resting mouse while the cursor shows, and
-## otherwise has the cursor resolve focus now that the controls inside can take it.
-func _refresh_cursor() -> void:
+## _refresh_hover hovers the control under a resting mouse while the cursor shows.
+func _refresh_hover() -> void:
 	var cursor := _find_cursor()
-	if not cursor:
-		return
-
-	if cursor.get_is_visible():
+	if cursor and cursor.get_is_visible():
 		_force_hover_recalculation.call_deferred()
-	else:
-		cursor.refresh_focus()
 
 
 ## _request_close emits `close_requested` and closes the panel unless a handler cancels.

@@ -190,14 +190,6 @@ func hide_cursor() -> void:
 	_on_properties_changed()
 
 
-## refresh_focus resolves focus again while the cursor is hidden, as after controls
-## under the focus root become able to take it. Focus inside the root stays; otherwise
-## it moves to the next candidate, as when the cursor hides.
-func refresh_focus() -> void:
-	if not _cursor_visible:
-		_update_focus()
-
-
 ## release_focus ends the most recent claim of `control`. When that claim held the root,
 ## the root passes to the claim beneath it, and the control saved there takes focus at
 ## the end of the frame, unless a pending focus target is set before then.
@@ -250,7 +242,8 @@ func report_clicked(control: Control) -> void:
 ## hidden, or disabled, focus handler is now visible and enabled. This serves as a
 ## trigger to re-evaluate focus if there isn't currently a focused node.
 func report_focus_handler_visible(_handler: StdInputCursorFocusHandler) -> void:
-	refresh_focus()
+	if not _cursor_visible:
+		_update_focus()
 
 
 ## set_hovered registers the provided `Control` node as the most recently hovered UI
