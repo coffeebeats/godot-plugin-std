@@ -162,8 +162,8 @@ func _notification(what) -> void:
 
 
 ## _enable_action_set_layers enables the configured layers for the player. With
-## `only_loaded` set it skips each whose `parent` isn't the loaded set, as the sync that
-## loads that set enables it, but still enables one with no parent, which then errors.
+## `only_loaded` set it skips a layer under another set, which the sync that loads that
+## set enables; a layer with no parent is still enabled, so it errors.
 func _enable_action_set_layers(only_loaded: bool) -> void:
 	var slot := StdInputSlot.for_player(player_id)
 	assert(slot is StdInputSlot, "invalid state; missing input slot")
