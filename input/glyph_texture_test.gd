@@ -1,3 +1,4 @@
+# gdlint:ignore=max-public-methods
 ##
 ## std/input/glyph_texture_test.gd
 ##
@@ -340,6 +341,179 @@ func test_glyph_texture_advance_cycles_through_the_bound_origins() -> void:
 	assert_eq(texture.get_width(), 32)
 
 
+func test_glyph_texture_cycles_from_the_binding_index_each_interval() -> void:
+	# Given: Key glyphs for the primary, secondary and tertiary bindings.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(48, 32))
+	_glyphs_kbm.glyphs[2] = _make_glyph(Vector2(64, 32))
+
+	# Given: A texture for the secondary binding which cycles every half second.
+	var texture := _make_cycling_texture(0.5)
+	texture.binding_index = 1
+
+	# When: Three intervals pass.
+	var widths: Array[int] = [texture.get_width()]
+	for i in 3:
+		texture._tick(0.5)
+		widths.append(texture.get_width())
+
+	# Then: The texture drew the secondary and tertiary bindings in turn.
+	assert_eq(widths, [48, 64, 48, 64] as Array[int])
+
+
+func test_glyph_texture_cycles_on_the_scene_trees_frames() -> void:
+	# Given: Key glyphs for the primary and secondary bindings.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(48, 32))
+
+	# Given: A measured texture which cycles every hundredth of a second.
+	var texture := _make_cycling_texture(0.01)
+	texture.get_width()
+
+	# Given: The texture's `changed` signal is watched.
+	watch_signals(texture)
+
+	# When: Frames pass for a tenth of a second.
+	await wait_seconds(0.1)
+
+	# Then: The texture advanced on its own.
+	assert_signal_emitted(texture, "changed")
+
+
+func test_glyph_texture_without_a_cycle_interval_does_not_tick() -> void:
+	# Given: Key glyphs for the primary and secondary bindings.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(48, 32))
+
+	# When: A texture which doesn't cycle is measured.
+	var texture := _make_cycling_texture(0.0)
+	texture.get_width()
+
+	# Then: The texture doesn't follow the scene tree's frames.
+	assert_false(get_tree().process_frame.is_connected(texture._on_process_frame))
+
+
+func test_glyph_texture_with_one_origin_does_not_tick() -> void:
+	# Given: A key glyph for the primary binding alone.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+
+	# When: A texture which cycles every half second is measured.
+	var texture := _make_cycling_texture(0.5)
+	texture.get_width()
+
+	# Then: The texture doesn't follow the scene tree's frames.
+	assert_false(get_tree().process_frame.is_connected(texture._on_process_frame))
+
+
+func test_glyph_texture_cycle_interval_set_later_starts_ticking() -> void:
+	# Given: Key glyphs for the primary and secondary bindings.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(48, 32))
+
+	# Given: A measured texture which doesn't cycle.
+	var texture := _make_cycling_texture(0.0)
+	texture.get_width()
+
+	# When: The texture is set to cycle and measured again.
+	texture.cycle_interval = 0.5
+	texture.get_width()
+
+	# Then: The texture follows the scene tree's frames.
+	assert_true(get_tree().process_frame.is_connected(texture._on_process_frame))
+
+
+func test_glyph_texture_cycle_advances_once_after_a_long_frame() -> void:
+	# Given: Key glyphs for the primary, secondary and tertiary bindings.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(48, 32))
+	_glyphs_kbm.glyphs[2] = _make_glyph(Vector2(64, 32))
+
+	# Given: A texture which cycles every half second.
+	var texture := _make_cycling_texture(0.5)
+
+	# When: A frame six intervals long passes, then a short one.
+	texture._tick(3.0)
+	texture._tick(0.1)
+
+	# Then: The texture advanced once, without catching up.
+	assert_eq(texture.get_width(), 48)
+
+	# When: The rest of an interval passes.
+	texture._tick(0.4)
+
+	# Then: The texture advanced again.
+	assert_eq(texture.get_width(), 64)
+
+
+func test_glyph_texture_update_restarts_the_cycle() -> void:
+	# Given: Key glyphs for the primary and secondary bindings.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(48, 32))
+
+	# Given: A texture which cycles every half second, advanced once.
+	var texture := _make_cycling_texture(0.5)
+	texture._tick(0.5)
+	assert_eq(texture.get_width(), 48, "precondition: advanced")
+
+	# Given: Part of the next interval passed.
+	texture._tick(0.25)
+
+	# When: The texture is updated.
+	texture.update()
+
+	# Then: The texture draws the primary binding again.
+	assert_eq(texture.get_width(), 32)
+
+	# When: The same part of an interval passes.
+	texture._tick(0.25)
+
+	# Then: The texture waits out a whole interval before advancing.
+	assert_eq(texture.get_width(), 32)
+
+
+func test_glyph_texture_cycle_freezes_while_the_tree_is_paused() -> void:
+	# Given: Key glyphs for the primary and secondary bindings.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(48, 32))
+
+	# Given: A texture which cycles every half second, but not while paused.
+	var texture := _make_cycling_texture(0.5)
+	texture.cycle_process_always = false
+
+	# Given: Half an interval passed.
+	texture._tick(0.25)
+
+	# When: An interval passes while the tree is paused.
+	get_tree().paused = true
+	texture._tick(0.5)
+
+	# Then: The texture didn't advance.
+	assert_eq(texture.get_width(), 32)
+
+	# When: The rest of the interval passes after the tree resumes.
+	get_tree().paused = false
+	texture._tick(0.25)
+
+	# Then: The texture advanced.
+	assert_eq(texture.get_width(), 48)
+
+
+func test_glyph_texture_cycle_runs_while_the_tree_is_paused() -> void:
+	# Given: Key glyphs for the primary and secondary bindings.
+	_glyphs_kbm.glyphs[0] = _make_glyph(Vector2(32, 32))
+	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(48, 32))
+
+	# Given: A texture which cycles every half second.
+	var texture := _make_cycling_texture(0.5)
+
+	# When: An interval passes while the tree is paused.
+	get_tree().paused = true
+	texture._tick(0.5)
+
+	# Then: The texture advanced.
+	assert_eq(texture.get_width(), 48)
+
+
 func test_glyph_texture_draws_a_secondary_binding_with_no_primary() -> void:
 	# Given: A key glyph for the secondary binding alone.
 	_glyphs_kbm.glyphs[1] = _make_glyph(Vector2(32, 32))
@@ -452,6 +626,10 @@ func test_glyph_texture_restricted_ignores_a_setting_in_the_other_category() -> 
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
+func after_each() -> void:
+	get_tree().paused = false
+
+
 func before_each() -> void:
 	_add_slot()
 
@@ -477,6 +655,14 @@ func _connect_joypad(device_type: StdInputDevice.DeviceType) -> void:
 	_slot.joypad_monitor.device_type = device_type
 	_slot.joypad_monitor.broadcast_connected_joypads()
 	autofree(_slot.get_connected_devices(false)[0])
+
+
+## _make_cycling_texture returns a texture for the test action's primary binding which
+## cycles every `interval` seconds.
+func _make_cycling_texture(interval: float) -> StdInputGlyphTexture:
+	var texture := _make_texture()
+	texture.cycle_interval = interval
+	return texture
 
 
 ## _make_glyph returns a glyph of `size`.

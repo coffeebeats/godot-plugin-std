@@ -116,10 +116,27 @@ const DEVICE_TYPE_UNKNOWN := StdInputDevice.DEVICE_TYPE_UNKNOWN
 		size = value
 		_restart()
 
+@export_group("Cycle")
+
+## cycle_interval is the time in seconds each distinct origin bound to the action is
+## shown before the glyph advances to the next, starting over from `binding_index` after
+## the last; `0` shows the first alone.
+@export var cycle_interval: float = 0.0:
+	set(value):
+		cycle_interval = value
+		_restart()
+
+## cycle_process_always is whether the cycle keeps running while the scene tree is
+## paused, as a prompt in a pause menu needs; `false` freezes it with the tree.
+@export var cycle_process_always: bool = true
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## _cycle is how many times `advance` moved the glyph on since the cycle restarted.
 var _cycle: int = 0
+
+## _cycle_time is the time in seconds since the glyph last advanced on its own.
+var _cycle_time: float = 0.0
 
 ## _dirty is whether the glyph must be resolved again before it's measured or drawn.
 var _dirty: bool = true
@@ -144,12 +161,8 @@ var _slot: StdInputSlot = null
 
 
 ## advance moves the glyph on to the next distinct origin bound to the action, starting
-## over from `binding_index` after the last. A host cycles through every binding by
-## calling it on a timer.
-##
-## NOTE: The cycle belongs to the texture, so every host calling this on one texture
-## moves the same cycle. Let only one host call it, or give each host its own copy with
-## `duplicate`. A texture made local to scene is copied once per scene, not per host.
+## over from `binding_index` after the last. The texture calls it every
+## `cycle_interval`, and a host may call it to step the glyph by hand.
 func advance() -> void:
 	_cycle += 1
 	_invalidate()
@@ -179,6 +192,7 @@ func has_glyph() -> bool:
 ## from `binding_index`.
 func update() -> void:
 	_cycle = 0
+	_cycle_time = 0.0
 	_dirty = true
 	_refresh()
 	emit_changed()
@@ -338,6 +352,7 @@ func _refresh() -> void:
 
 	var slot := _get_slot()
 	if not slot or not action_set or not action:
+		_set_ticking(false)
 		return
 
 	_dirty = false
@@ -362,6 +377,8 @@ func _refresh() -> void:
 			Fallback.HIDE:
 				_hidden = true
 
+	_set_ticking(cycle_interval > 0.0 and glyphs.size() > 1)
+
 	if glyphs:
 		var drawn: Array = glyphs[_cycle % glyphs.size()]
 		_drawn_index = drawn[0]
@@ -371,6 +388,7 @@ func _refresh() -> void:
 ## _restart restarts the cycle from `binding_index` and redraws the glyph.
 func _restart(_value: Variant = null) -> void:
 	_cycle = 0
+	_cycle_time = 0.0
 	_invalidate()
 
 
@@ -392,9 +410,49 @@ func _set_slot_connected(slot: StdInputSlot, connected: bool) -> void:
 			Signals.disconnect_safe(pair[0], pair[1])
 
 
+## _set_ticking connects the cycle to the scene tree's frames, or disconnects it.
+func _set_ticking(ticking: bool) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if not tree:
+		return
+
+	if ticking:
+		Signals.ensure_connected(tree.process_frame, _on_process_frame)
+	else:
+		Signals.disconnect_safe(tree.process_frame, _on_process_frame)
+
+
+## _tick moves the cycle on by `delta` seconds, advancing the glyph once each
+## `cycle_interval` passes.
+func _tick(delta: float) -> void:
+	# NOTE: The ticking connection is only updated on the next resolve, so the interval
+	# can have dropped to zero since.
+	if cycle_interval <= 0.0:
+		return
+
+	if not cycle_process_always and (Engine.get_main_loop() as SceneTree).paused:
+		return
+
+	_cycle_time += delta
+	if _cycle_time < cycle_interval:
+		return
+
+	# NOTE: A frame longer than the interval advances the glyph once and drops the
+	# surplus, rather than catching up a step per frame afterwards.
+	_cycle_time = fmod(_cycle_time, cycle_interval)
+	advance()
+
+
 ## _unbind disconnects the texture from its slot, so the next resolve looks it up.
 func _unbind() -> void:
 	if is_instance_valid(_slot):
 		_set_slot_connected(_slot, false)
 
 	_slot = null
+
+
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+func _on_process_frame() -> void:
+	_tick((Engine.get_main_loop() as SceneTree).root.get_process_delta_time())
