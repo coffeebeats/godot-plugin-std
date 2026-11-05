@@ -438,7 +438,7 @@ func test_pop_under_a_content_scale_recalculates_hover_at_the_mouse() -> void:
 	manager.push(_create_screen(), Control.new())
 	await wait_idle_frames(1)
 
-	# Given: The mouse rests over the button.
+	# Given: The mouse rests over the covered button.
 	input.move_mouse(button.get_global_rect().get_center())
 	assert_false(button.is_hovered(), "precondition: button not hovered")
 
