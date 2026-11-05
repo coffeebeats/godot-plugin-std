@@ -808,6 +808,176 @@ func test_loader_screen_popped_with_an_attachment_loads_the_set_below_once() -> 
 	attachment.take_over_path("")
 
 
+func test_loader_layer_entering_under_another_set_waits_for_its_parent() -> void:
+	# Given: A scene with the game's loader and an open panel, synced.
+	var scene := Node.new()
+	scene.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE))
+	var panel := _make_panel()
+	scene.add_child(panel)
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+	panel.show()
+
+	# When: A loader with only the `Build` layer enters while the panel holds `Menu`.
+	var build := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	build.action_set = null
+	build.action_set_layers = [_build_layer] as Array[StdInputActionSetLayer]
+	scene.add_child(build)
+	await wait_idle_frames(1)
+
+	# Then: Nothing fails.
+	assert_engine_error_count(0)
+
+	# Then: The slot still holds `Menu` and the panel's layer.
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _menu)
+	assert_eq(
+		_slot.list_action_set_layers(), [_panel_layer] as Array[StdInputActionSetLayer]
+	)
+
+	# When: The panel closes.
+	panel.hide()
+
+	# Then: The slot holds the game's set and both layers in tree order.
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_layer, _build_layer] as Array[StdInputActionSetLayer],
+	)
+
+
+func test_loader_layer_before_its_sets_loader_is_enabled_once_the_set_loads() -> void:
+	# Given: A loader with only the `Build` layer, before the game's loader.
+	var scene := Node.new()
+	var build := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	build.action_set = null
+	build.action_set_layers = [_build_layer] as Array[StdInputActionSetLayer]
+	scene.add_child(build)
+	scene.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE))
+
+	# When: Both enter the tree in the same frame and the frame ends.
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+
+	# Then: Nothing fails.
+	assert_engine_error_count(0)
+
+	# Then: The slot holds the game's set and both layers in tree order.
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_build_layer, _layer] as Array[StdInputActionSetLayer],
+	)
+
+
+func test_loader_layer_panel_before_the_map_lands_above_its_layers() -> void:
+	# Given: A scene with an open panel holding only a layer, before a map.
+	var scene := Node.new()
+	var overlay := _make_layer(&"Overlay", _action_set)
+	scene.add_child(_make_layer_panel(overlay))
+	scene.add_child(_make_map())
+
+	# When: The scene enters the tree and the frame ends.
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+
+	# Then: The panel's layer is above the map's.
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_layer, _build_layer, overlay] as Array[StdInputActionSetLayer],
+	)
+
+
+func test_loader_layer_panel_open_before_its_set_loads_lands_above_the_map() -> void:
+	# Given: An open panel holding only a layer under the game's set, synced alone.
+	var scene := Node.new()
+	var overlay := _make_layer(&"Overlay", _action_set)
+	scene.add_child(_make_layer_panel(overlay))
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+
+	# When: A map's loaders enter after it and the frame ends.
+	scene.add_child(_make_map())
+	await wait_idle_frames(1)
+
+	# Then: The panel's layer is enabled above the map's.
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_layer, _build_layer, overlay] as Array[StdInputActionSetLayer],
+	)
+
+
+func test_loader_layer_panel_reentering_on_an_uncover_lands_above_the_map() -> void:
+	# Given: A scene with an open panel holding only a layer, before a map, synced.
+	var scene := Node.new()
+	var overlay := _make_layer(&"Overlay", _action_set)
+	scene.add_child(_make_layer_panel(overlay))
+	scene.add_child(_make_map())
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+
+	# Given: Another screen covers the scene, loading its own set.
+	scene.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
+	_slot.load_action_set(_menu)
+
+	# When: The scene is uncovered, then leaves the tree and enters it again.
+	scene.propagate_notification(StdScreenManager.NOTIFICATION_SCREEN_UNCOVERED)
+	remove_child(scene)
+	add_child(scene)
+
+	# When: The frame ends.
+	await wait_idle_frames(1)
+
+	# Then: The panel's layer is above the map's.
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[_layer, _build_layer, overlay] as Array[StdInputActionSetLayer],
+	)
+
+
+func test_loader_panels_entering_together_stack_their_layers_in_tree_order() -> void:
+	# Given: An open panel holding only a layer under `Menu`, before one holding `Menu`.
+	var scene := Node.new()
+	var sub := _make_layer(&"Sub", _menu)
+	scene.add_child(_make_layer_panel(sub))
+	var panel := _make_panel()
+	panel.show()
+	scene.add_child(panel)
+
+	# When: Both enter the tree and the frame ends.
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+
+	# Then: The slot holds `Menu` and both panels' layers in tree order.
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _menu)
+	assert_eq(
+		_slot.list_action_set_layers(),
+		[sub, _panel_layer] as Array[StdInputActionSetLayer],
+	)
+
+
+func test_loader_layer_without_a_parent_is_an_error() -> void:
+	# Given: The game's loader, before a loader with only a layer that has no parent.
+	var scene := Node.new()
+	scene.add_child(_make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE))
+	var orphan := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	orphan.action_set = null
+	orphan.action_set_layers = (
+		[_make_layer(&"Orphan", null)] as Array[StdInputActionSetLayer]
+	)
+	scene.add_child(orphan)
+
+	# When: Both enter the tree and the frame ends.
+	add_child_autofree(scene)
+	await wait_idle_frames(1)
+
+	# Then: The missing parent is reported once.
+	assert_engine_error("missing parent action set")
+	assert_engine_error_count(1)
+
+	# Then: Only the game's layer is enabled.
+	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -839,6 +1009,17 @@ func _make_layer(id: StringName, parent: StdInputActionSet) -> StdInputActionSet
 	layer.name = id
 	layer.parent = parent
 	return layer
+
+
+## _make_layer_panel returns a visible control whose loader holds only `layer` while
+## the control is visible, not yet in the tree.
+func _make_layer_panel(layer: StdInputActionSetLayer) -> Control:
+	var panel := Control.new()
+	var loader := _make_loader(StdInputActionSetLoader.ActiveWhile.VISIBLE)
+	loader.action_set = null
+	loader.action_set_layers = [layer] as Array[StdInputActionSetLayer]
+	panel.add_child(loader)
+	return panel
 
 
 ## _make_loader returns a loader for the test's set and layer under `rule`, not yet in
