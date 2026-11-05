@@ -941,10 +941,42 @@ func test_report_clicked_while_hidden_is_ignored() -> void:
 	cursor.report_clicked(button)
 
 	# When: Focus is resolved again.
-	cursor.report_focus_handler_visible(null)
+	cursor.refresh_focus()
 
 	# When: The frame ends.
 	await wait_process_frames(1)
+
+	# Then: The button doesn't take focus.
+	assert_false(button.has_focus())
+
+
+func test_refresh_focus_while_hidden_focuses_the_hovered_control() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A focusable button registered as hovered, without focus.
+	var button := _make_focusable_button()
+	cursor.set_hovered(button)
+
+	# When: Focus is resolved again.
+	cursor.refresh_focus()
+
+	# Then: The hovered button has focus.
+	assert_true(button.has_focus())
+
+
+func test_refresh_focus_while_visible_leaves_focus_alone() -> void:
+	# Given: A cursor added to the scene with visible cursor.
+	add_child_autofree(cursor)
+	cursor.show_cursor()
+
+	# Given: A focusable button registered as hovered, without focus.
+	var button := _make_focusable_button()
+	cursor.set_hovered(button)
+
+	# When: Focus is resolved again.
+	cursor.refresh_focus()
 
 	# Then: The button doesn't take focus.
 	assert_false(button.has_focus())
