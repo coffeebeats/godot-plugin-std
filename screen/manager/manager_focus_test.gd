@@ -412,6 +412,46 @@ func test_pop_recalculates_hover_at_mouse_away_from_origin() -> void:
 	assert_true(button.is_hovered())
 
 
+func test_pop_under_a_content_scale_recalculates_hover_at_the_mouse() -> void:
+	# Given: A root drawn at twice its size.
+	var root := get_tree().root
+	var scale_before := root.content_scale_factor
+	root.content_scale_factor = 2.0
+
+	# Given: A manager mounted by the helper.
+	var manager := Manager.new()
+	var input := await StdTestInput.mount(self, manager)
+
+	# Given: The cursor is visible.
+	_get_cursor().show_cursor()
+
+	# Given: A base screen with a button away from the viewport's origin.
+	var base := Control.new()
+	var button := Button.new()
+	button.position = Vector2(200, 100)
+	button.size = Vector2(100, 40)
+	base.add_child(button)
+	manager.push(_create_screen(), base)
+	await wait_idle_frames(1)
+
+	# Given: A second screen covers it.
+	manager.push(_create_screen(), Control.new())
+	await wait_idle_frames(1)
+
+	# Given: The mouse rests over the covered button.
+	input.move_mouse(button.get_global_rect().get_center())
+	assert_false(button.is_hovered(), "precondition: button not hovered")
+
+	# When: The second screen is popped.
+	manager.pop()
+	await wait_idle_frames(1)
+
+	# Then: Hover is recalculated at the mouse, over the button.
+	assert_true(button.is_hovered())
+
+	root.content_scale_factor = scale_before
+
+
 func test_push_recalculates_hover_when_cursor_visible():
 	# Given: A manager mounted by the helper.
 	var manager := Manager.new()
