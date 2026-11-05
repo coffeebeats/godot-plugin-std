@@ -69,6 +69,14 @@ func test_device_glyphs_maps_each_glyph_style_to_its_steam_flag() -> void:
 	)
 
 
+func test_device_glyphs_sizes_art_by_the_height_alone_when_width_is_zero() -> void:
+	# When: The art size is picked for a host 48px tall with no width.
+	var got: int = _device_glyphs._map_target_size_to_glyph_size(Vector2(0, 48))
+
+	# Then: The medium art, which covers 48px, is picked.
+	assert_eq(got, Steam.INPUT_GLYPH_SIZE_MEDIUM)
+
+
 func test_device_glyphs_glyph_returns_the_origins_art() -> void:
 	# Given: The test action bound to an origin.
 	stub(_glyphs, "_list_all_action_origins").to_return(
