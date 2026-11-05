@@ -365,13 +365,13 @@ func _find_cursor() -> StdInputCursor:
 	return StdGroup.get_sole_member(StdInputCursor.GROUP_INPUT_CURSOR)
 
 
-## _force_hover_recalculation sends a motion at the mouse's position, so that a control
-## shown under a resting mouse is hovered without waiting for it to move.
+## _force_hover_recalculation recomputes hover at the mouse's position, so that a
+## control shown under a resting mouse is hovered without waiting for it to move.
 func _force_hover_recalculation() -> void:
 	if not is_inside_tree():
 		return
 
-	StdInputEvent.refresh_hover(get_viewport())
+	get_viewport().update_mouse_cursor_state()
 
 
 ## _is_over_control returns whether `event` lands inside the control's rect or on a

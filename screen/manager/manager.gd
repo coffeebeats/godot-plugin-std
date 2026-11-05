@@ -423,7 +423,15 @@ func _force_hover_recalculation() -> void:
 	if not is_inside_tree():
 		return
 
-	StdInputEvent.refresh_hover(get_viewport())
+	var viewport := get_viewport()
+	var event := InputEventMouseMotion.new()
+	event.position = viewport.get_mouse_position()
+	event.relative = Vector2.ZERO
+	# NOTE: Pass `true` for local coordinates — `get_mouse_position()` returns viewport-
+	# local coordinates, but `push_input` defaults to OS coordinates. With a stretch
+	# transform (e.g. `canvas_items` mode), omitting this flag double-transforms the
+	# position, causing the hit test to miss controls.
+	viewport.push_input(event, true)
 
 
 ## _force_stop stops the active transition, which ends its context and releases its

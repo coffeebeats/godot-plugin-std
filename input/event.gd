@@ -19,17 +19,6 @@ const DEVICE_ID_SYNTHETIC := 2 ** 31 - 1
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## refresh_hover pushes a mouse motion at the mouse's position into `viewport`, so that
-## a control shown under a resting mouse is hovered without waiting for it to move.
-static func refresh_hover(viewport: Viewport) -> void:
-	var event := InputEventMouseMotion.new()
-	event.position = viewport.get_mouse_position()
-
-	# NOTE: The position is in the viewport's coordinates, so it's pushed as local input
-	# or a stretch transform would apply twice.
-	viewport.push_input(event, true)
-
-
 ## trigger_action parses a synthetic action press event into the scene tree's input
 ## system. This allows UI elements like buttons to trigger input actions handled by
 ## other nodes (e.g. `StdScreenPusher`).
