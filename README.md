@@ -35,8 +35,6 @@ The [input](./input) directory contains types for setting up an action set-based
 
 Every connected device stays accepted at all times. The active device only picks which glyphs are shown. It changes on a key, button, or stick (past its deadzone) bound to a loaded action, or on a reveal-button click while `cursor_click_activates_kbm` is on. Mouse motion never changes it, following Valve's [Steam Deck guidance](https://partner.steamgames.com/doc/steamhardware/recommendations). The cursor is tracked separately. A reveal-button click or mouse motion past a threshold reveals it, and the hide actions hide it.
 
-Actions can also run as holds, timed UI actions such as hold to confirm, which a player who can't hold an input can switch to a tap. A set or layer declares a [`StdInputActionHold`](./input/action_hold.gd) in `holds`, and the [`StdInputSlot`](./input/slot.gd) runs it and reports it through its `action_hold_*` signals.
-
 #### **`iter`**
 
 The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
