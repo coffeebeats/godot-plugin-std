@@ -1,5 +1,13 @@
 # Changelog
 
+## 8.0.1 (2026-11-06)
+
+## What's Changed
+* fix(input): keep `StdInputCursor` focus off a control queued for deletion by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/612
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v8.0.0...v8.0.1
+
 ## 8.0.0 (2026-11-06)
 
 ## What's Changed
