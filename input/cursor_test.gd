@@ -1320,6 +1320,44 @@ func test_hide_cursor_freeing_prior_focus_in_the_same_frame_focuses_nothing() ->
 	assert_null(cursor.get_viewport().gui_get_focus_owner())
 
 
+func test_hide_cursor_queue_freeing_prior_focus_focuses_anchor() -> void:
+	# Given: A cursor added to the scene with hidden cursor (focus mode).
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: An anchor.
+	var anchor := _make_anchor_handler().get_parent() as Button
+
+	# Given: A focusable button that has focus.
+	var button := _make_focusable_button()
+	button.grab_focus()
+	await wait_process_frames(1)
+
+	# Given: Every control that takes focus is recorded.
+	var button_id := button.get_instance_id()
+	var visits: Array[int] = []
+	var record := func(control: Control) -> void:
+		visits.append(control.get_instance_id())
+	cursor.get_viewport().gui_focus_changed.connect(record)
+
+	# Given: The cursor is revealed.
+	cursor.show_cursor()
+
+	# Given: The cursor hides.
+	cursor.hide_cursor()
+
+	# When: The button is queued for deletion within the same frame.
+	button.queue_free()
+
+	# When: The frame ends.
+	await wait_process_frames(2)
+	cursor.get_viewport().gui_focus_changed.disconnect(record)
+
+	# Then: Focus never returned to the button, and the anchor has it.
+	assert_false(button_id in visits)
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), anchor)
+
+
 func test_hide_cursor_clears_summed_motion() -> void:
 	# Given: A hidden cursor whose action set sums motion over a second against (4, 4).
 	_hide_with_reveal_minimum(Vector2(4, 4), 1.0)

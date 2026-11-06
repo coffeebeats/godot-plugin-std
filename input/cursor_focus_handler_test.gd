@@ -293,6 +293,48 @@ func test_cursor_hidden_open_never_focuses_anchor_queued_for_deletion() -> void:
 	assert_eq(cursor.get_viewport().gui_get_focus_owner(), current)
 
 
+func test_cursor_hidden_open_then_rebuild_skips_anchor_queued_for_deletion() -> void:
+	# Given: A cursor in the scene, hidden.
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A hidden panel whose first row is an anchor.
+	var panel := Control.new()
+	panel.hide()
+	add_child_autofree(panel)
+	var old := Button.new()
+	old.focus_mode = Control.FOCUS_ALL
+	panel.add_child(old)
+	var old_handler := StdInputCursorFocusHandler.new()
+	old_handler.use_as_anchor = true
+	old.add_child(old_handler)
+	await get_tree().process_frame
+
+	# Given: Every control that takes focus is recorded.
+	var old_id := old.get_instance_id()
+	var visits: Array[int] = []
+	var record := func(control: Control) -> void:
+		visits.append(control.get_instance_id())
+	cursor.get_viewport().gui_focus_changed.connect(record)
+
+	# When: The panel opens, then its row is freed and a new one added, in one frame.
+	panel.show()
+	old.queue_free()
+	var current := Button.new()
+	current.focus_mode = Control.FOCUS_ALL
+	panel.add_child(current)
+	var current_handler := StdInputCursorFocusHandler.new()
+	current_handler.use_as_anchor = true
+	current.add_child(current_handler)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	cursor.get_viewport().gui_focus_changed.disconnect(record)
+
+	# Then: Focus never visited the freed row, and the new row has it.
+	assert_false(old_id in visits)
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), current)
+
+
 func test_handler_beside_its_control_frees_itself_after_its_control_is_freed() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)
