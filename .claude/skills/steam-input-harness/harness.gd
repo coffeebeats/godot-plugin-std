@@ -43,7 +43,6 @@ const CONFIRMED := [
 	"reveal_60",
 	"reveal_240",
 	"captured",
-	"origins",
 	"rebind",
 	"disconnect",
 ]
@@ -157,32 +156,6 @@ class NoGlyphs:
 		return ""
 
 
-## CycleGlyph records every binding index the glyph is asked to draw.
-class CycleGlyph:
-	extends StdInputGlyph
-	var seen: Array[int] = []
-
-	func _update_glyph(_device_type: DeviceType, index: int) -> bool:
-		seen.append(index)
-		return true
-
-
-## GenericGlyph records the family and the Steam texture size of each redraw, for a glyph
-## locked to controller prompts by a `DEVICE_TYPE_GENERIC` override.
-class GenericGlyph:
-	extends StdInputGlyph
-	var drawn: Array[String] = []
-
-	func _update_glyph(device_type: DeviceType, index: int) -> bool:
-		var texture := _slot.get_action_glyph(
-			action_set, action, index, Vector2(64, 64), device_type
-		)
-		var values: Array = StdInputDevice.DeviceType.values()
-		var family := str(StdInputDevice.DeviceType.keys()[values.find(device_type)])
-		drawn.append("%s:%s" % [family, str(texture.get_size()) if texture else "null"])
-		return texture != null
-
-
 var _app_id: int = DEFAULT_APP_ID
 var _std_input: String = ""
 var _scripts: Dictionary = {}
@@ -195,8 +168,11 @@ var _cursor: StdInputCursor
 var _monitor: StdInputSlot.JoypadMonitor
 var _steam_actions: StdInputDeviceActions
 var _steam_glyphs: StdInputDeviceGlyphs
-var _glyph: CycleGlyph
-var _generic_glyph: GenericGlyph
+var _glyph: StdInputGlyphTexture
+var _glyph_seen: Array[String] = []
+var _generic_glyph: StdInputGlyphTexture
+var _generic_drawn: Array[String] = []
+var _glyph_row: HBoxContainer
 var _origin_button: Button
 
 var _instruction: Label
@@ -378,6 +354,9 @@ func _build_ui() -> void:
 	help.text = "ENTER: skip step   F1: Steam binding panel   F2: toggle captured cursor"
 	root.add_child(help)
 
+	_glyph_row = HBoxContainer.new()
+	root.add_child(_glyph_row)
+
 	_log_view = RichTextLabel.new()
 	_log_view.scroll_following = true
 	_log_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -509,12 +488,12 @@ func _mount_slot() -> void:
 
 	_log("slot ready; loading set -> %s" % _slot.load_action_set(_set))
 
-	_glyph = CycleGlyph.new()
+	_glyph = StdInputGlyphTexture.new()
 	_glyph.action_set = _set
 	_glyph.action = &"jump"
-	_glyph.player_id = 1
+	_glyph.size = 64
 	_glyph.cycle_interval = 0.5
-	add_child(_glyph)
+	_watch_glyph(_glyph, _glyph_seen, _glyph.get_origin_label)
 
 
 # -- STEP ENGINE --------------------------------------------------------------------- #
@@ -1016,7 +995,7 @@ func _s_captured_exit() -> void:
 
 func _s_origins_enter() -> void:
 	_state = {"t": 0.0, "logged": false}
-	_glyph.seen.clear()
+	_glyph_seen.clear()
 	_glyph.update()
 
 
@@ -1090,12 +1069,21 @@ func _s_generic_override_enter() -> void:
 		override.scope = _scope
 		override.default = StdInputDevice.DEVICE_TYPE_GENERIC
 
-		_generic_glyph = GenericGlyph.new()
+		# NOTE: At size `0` the texture reports Steam's art size, which `drawn=` logs.
+		_generic_glyph = StdInputGlyphTexture.new()
 		_generic_glyph.action_set = _set
 		_generic_glyph.action = &"jump"
-		_generic_glyph.player_id = 1
+		_generic_glyph.size = 0
 		_generic_glyph.device_type_override = override
-		add_child(_generic_glyph)
+		_watch_glyph(
+			_generic_glyph,
+			_generic_drawn,
+			func():
+				return (
+					"%s:%s"
+					% [_generic_glyph.get_origin_label(), _generic_glyph.get_size()]
+				)
+		)
 
 	# NOTE: The harness types SPACE itself, so the keyboard is active when the pad
 	# reconnects and the slot, having seen player input, leaves the pad inactive.
@@ -1105,7 +1093,7 @@ func _s_generic_override_enter() -> void:
 		key.pressed = pressed
 		Input.parse_input_event(key)
 
-	_generic_glyph.drawn.clear()
+	_generic_drawn.clear()
 	_generic_glyph.update()
 
 
@@ -1113,7 +1101,7 @@ func _s_generic_override_tick(_delta: float) -> void:
 	var joypads := _slot.get_connected_devices(false)
 	if joypads.is_empty() and not _state["unplugged"]:
 		_state["unplugged"] = true
-		_log("generic_override: unplugged; drawn=%s" % [_generic_glyph.drawn])
+		_log("generic_override: unplugged; drawn=%s" % [_generic_drawn])
 	if _state["unplugged"] and joypads.size() > 0 and _state["replugged_at"] < 0.0:
 		_state["replugged_at"] = _step_time
 		var last := _slot.get_last_active_joypad_device()
@@ -1131,13 +1119,13 @@ func _s_generic_override_exit() -> void:
 	)
 	_log(
 		(
-			"generic_override: active=%s last active joypad at replug=%s (expect KEYBOARD, none); joypad type=%s glyph=%s; drawn=%s (expect a GENERIC redraw at unplug, then the pad's family with a size after replug); activations=%s"
+			"generic_override: active=%s last active joypad at replug=%s (expect KEYBOARD, none); joypad type=%s glyph=%s; drawn=%s (expect no label and (0, 0) at unplug, then a label and the pad's art size after replug; no label after replug means the lock followed the keyboard); activations=%s"
 			% [
 				_active_name(),
 				_state["last_active"],
 				_type_name(device_type),
 				str(texture.get_size()) if texture else "null",
-				_generic_glyph.drawn,
+				_generic_drawn,
 				_activations,
 			]
 		)
@@ -1367,15 +1355,15 @@ func _log_origins() -> void:
 		)
 	_log(
 		(
-			"origin count jump via device=%d via slot=%d; cycling glyph indices seen=%s"
+			"origin count jump via device=%d via slot=%d; cycling glyph origins seen=%s"
 			% [
 				device.get_action_origin_count(_set, &"jump"),
 				_slot.get_action_origin_count(_set, &"jump"),
-				_glyph.seen
+				_glyph_seen
 			]
 		)
 	)
-	_glyph.seen.clear()
+	_glyph_seen.clear()
 
 
 func _log(msg: String) -> void:
@@ -1385,3 +1373,21 @@ func _log(msg: String) -> void:
 	if _file:
 		_file.store_line(line)
 		_file.flush()
+
+
+## _watch_glyph shows `texture` in the glyph row and appends to `seen` what `describe`
+## returns each time the texture changes, unless it repeats the last entry.
+func _watch_glyph(
+	texture: StdInputGlyphTexture, seen: Array[String], describe: Callable
+) -> void:
+	var rect := TextureRect.new()
+	rect.texture = texture
+	_glyph_row.add_child(rect)
+
+	texture.changed.connect(
+		func():
+			var entry: String = describe.call()
+			if seen.is_empty() or seen.back() != entry:
+				seen.append(entry)
+	)
+	texture.update()

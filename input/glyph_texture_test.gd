@@ -623,6 +623,47 @@ func test_glyph_texture_restricted_ignores_a_setting_in_the_other_category() -> 
 	assert_eq(_glyphs_joy.device_types, [] as Array[StdInputDevice.DeviceType])
 
 
+func test_glyph_texture_unlocked_draws_the_players_controller_setting() -> void:
+	# Given: A connected Xbox joypad, with the keyboard kept active.
+	_connect_joypad(StdInputDevice.DEVICE_TYPE_XBOX_ONE)
+
+	# Given: A texture that follows the active device.
+	var texture := _make_texture()
+
+	# Given: The player chose PlayStation 5 glyphs.
+	texture.device_type_override = _make_override(StdInputDevice.DEVICE_TYPE_PS_5)
+
+	# When: The texture is measured.
+	texture.get_width()
+
+	# Then: The player's choice is drawn.
+	assert_eq(_glyphs_joy.device_types.back(), StdInputDevice.DEVICE_TYPE_PS_5)
+
+
+func test_glyph_texture_draws_from_the_next_components_after_a_joypad_swap() -> void:
+	# Given: A texture locked to PlayStation 5 glyphs, measured once.
+	var texture := _make_texture()
+	texture.device_type = StdInputDevice.DEVICE_TYPE_PS_5
+	texture.get_width()
+
+	# Given: A new glyph component with a wider glyph for the primary binding.
+	var glyphs_next := Glyphs.new()
+	glyphs_next.glyphs[0] = _make_glyph(Vector2(48, 32))
+	add_child_autofree(glyphs_next)
+
+	# Given: A joypad monitor which reports no joypads.
+	var joypad_monitor := SlotTest.JoypadMonitor.new()
+	add_child_autofree(joypad_monitor)
+
+	# When: The slot swaps its joypad components for them.
+	_slot.swap_joypad_components(
+		joypad_monitor, _slot.actions_joy, glyphs_next, _slot.haptics_joy
+	)
+
+	# Then: The texture draws the new glyph component's glyph.
+	assert_eq(texture.get_width(), 48)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
