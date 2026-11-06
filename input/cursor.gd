@@ -473,6 +473,12 @@ func _deferred_grab_focus(id: int, trigger: StringName, make_focusable: bool) ->
 	if not is_instance_valid(target) or not target.is_inside_tree():
 		return
 
+	# NOTE: A target queued for deletion would hold focus only until the frame ends, so
+	# focus is resolved again without it.
+	if target.is_queued_for_deletion():
+		_update_focus(trigger)
+		return
+
 	if make_focusable:
 		target.focus_mode = Control.FOCUS_ALL
 

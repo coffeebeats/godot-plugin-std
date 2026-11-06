@@ -120,6 +120,10 @@ static func get_focus_target(ancestor: Control = null) -> Control:
 
 		var target := anchor._control
 
+		# NOTE: A control queued for deletion would hold focus only until the frame ends.
+		if target.is_queued_for_deletion():
+			continue
+
 		if anchor._is_blocked() or _is_focus_disabled(target):
 			continue
 
