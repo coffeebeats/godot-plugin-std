@@ -67,7 +67,7 @@ Each step ends by itself when its condition is met; Enter skips one. When a step
 | `pointer`, `pointer_slow` | `absolute_mouse` warps the pointer, activates the joypad from the keyboard, reveals the cursor, and sub-pixel motion creeps through the warp remainder |
 | `reveal_60`, `reveal_240` | the pointer speed at which the cursor reveals is the same at both frame rates |
 | `captured` | captured mode delivers motion events at the pointer's position; the button at the origin never hovers |
-| `origins` | origin counts, labels, glyph sizes, and the index sequence a cycling glyph draws |
+| `origins` | origin counts, labels, glyph sizes, and the origin sequence a cycling `StdInputGlyphTexture` draws, shown on screen |
 | `rebind` | `action_configuration_changed` once after a change in Steam's panel |
 | `disconnect` | a held action releases when its pad disconnects; a reconnect activates it again only because no device was active |
 
