@@ -14,7 +14,7 @@ const Replace := preload("replace.gd")
 
 var _instance: Node
 var _screen: StdScreen
-var _transition: StdScreenTransition
+var _transition: StdTransition
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -23,7 +23,7 @@ var _transition: StdScreenTransition
 static func create(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> RefCounted:
 	var op = Replace.new()
 	op._screen = screen
@@ -84,7 +84,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	_run_transition(
 		manager,
 		transition,
-		&"replace",
+		&"swap",
 		scene_prev,
 		sync_scene,
 		func(scene: Node) -> void:
@@ -95,6 +95,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 			manager._stack.pop_back()
 			manager._scenes.erase(screen_prev)
 			if is_instance_valid(overlay_prev):
+				manager._release_focus(screen_prev)
 				manager._overlays.erase(screen_prev)
 			manager._teardown_scene(screen_prev, scene_prev)
 			screen_prev.popped.emit(null),
@@ -105,7 +106,6 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 				manager._update_stack_state()
 				if screen_prev not in manager._stack:
 					manager._notify_top_uncovered()
-					manager._restore_focus(manager._current_scene())
 				done.call()
 				return
 			var scene: Node = manager._scenes.get(_screen)

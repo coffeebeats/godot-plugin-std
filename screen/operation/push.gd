@@ -14,7 +14,7 @@ const Push := preload("push.gd")
 
 var _instance: Node
 var _screen: StdScreen
-var _transition: StdScreenTransition
+var _transition: StdTransition
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -23,7 +23,7 @@ var _transition: StdScreenTransition
 static func create(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> RefCounted:
 	var op = Push.new()
 	op._screen = screen
@@ -53,8 +53,6 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	var resolver: Callable = result[0]
 	var sync_scene: Node = result[1]
 
-	manager._save_focus(previous)
-
 	var transition := (
 		manager
 		. _resolve_transition(
@@ -67,7 +65,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	_run_transition(
 		manager,
 		transition,
-		&"push",
+		&"enter",
 		previous,
 		sync_scene,
 		func(scene: Node) -> void: manager._mount_scene(_screen, scene),

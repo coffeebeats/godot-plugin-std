@@ -1,99 +1,80 @@
 ##
-## screen/context.gd
+## std/screen/context.gd
 ##
-## StdScreenTransitionContext is a mediator between screen operations and transitions.
-## It provides lifecycle primitives (mount, unmount, swap), scene access, visual
-## helpers, and a completion callback; recreated for each transition invocation.
+## StdScreenTransitionContext is the transition context for operations on the screen
+## stack. Mounting resolves a scene and adds it under the manager, input blocking covers
+## the whole viewport, and a tween is bound to the manager rather than a scene.
 ##
 
 class_name StdScreenTransitionContext
-extends RefCounted
-
-# -- SIGNALS ------------------------------------------------------------------------- #
-
-## finished is emitted when the transition completes normally. Operations connect a one-
-## shot handler to receive completion; force-stop prevents emission by setting
-## `_did_finish`.
-signal finished
+extends StdTransitionContext
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-## current_scene is the scene on top before this operation (null if stack is empty).
+## current_scene is the scene on top before this operation (null if stack is empty). A
+## push leaves it mounted, so it's distinct from `exiting`.
 var current_scene: Node = null
 
-## entering_scene is the entering scene instance. Null for pop operations and null until
-## `mount()` completes for operations with async loading.
-var entering_scene: Node = null
-
 ## manager is the screen manager node that owns this transition context.
-var manager: Node
+var manager: StdScreenManager
 
-var _did_mount: bool = false
-var _did_unmount: bool = false
-var _did_finish: bool = false
 var _mount_fn: Callable = Callable()
 var _resolver: Callable = Callable()
 var _unmount_fn: Callable = Callable()
+
+# -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## mount_overlay adds a node over the manager's scenes, such as a curtain.
+func mount_overlay(overlay: Node) -> void:
+	manager.add_child(overlay, false, Node.INTERNAL_MODE_BACK)
+
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
 func _init(node: StdScreenManager) -> void:
 	assert(node is StdScreenManager, "invalid argument; missing manager")
+	super(node)
 	manager = node
 
 
-# -- PUBLIC METHODS ------------------------------------------------------------------ #
+# -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-## create_tween creates a new Tween via the scene tree.
-func create_tween() -> Tween:
-	return manager.get_tree().create_tween()
+## _block_input covers the viewport through the manager's blocker.
+func _block_input() -> void:
+	manager._block_input()
 
 
-## done signals that the transition completed normally. Emits the `finished` signal.
-func done() -> void:
-	if _did_finish:
-		return
-
-	_did_finish = true
-	finished.emit()
-
-
-## mount adds the entering scene to the scene tree. This is a no-op if already mounted
-## or if no mount function is set. If a resolver is set, it is called first to resolve
-## the scene (sync-blocking on any in-progress background load).
+## _mount adds the entering scene to the scene tree. This is a no-op if no mount
+## function is set. If a resolver is set, it is called first to resolve the scene
+## (sync-blocking on any in-progress background load).
 ##
 ## NOTE: If the resolver returns `null` (failed load), the mount is skipped, unmount is
 ## suppressed (to preserve the existing scene), and `done()` is called to abort the
 ## operation gracefully.
-func mount() -> void:
-	if _did_mount or not _mount_fn.is_valid():
+func _mount() -> void:
+	if not _mount_fn.is_valid():
 		return
 
-	_did_mount = true
-
 	if _resolver.is_valid():
-		entering_scene = _resolver.call()
-		if entering_scene == null:
+		entering = _resolver.call()
+		if entering == null:
 			_did_unmount = true
 			done()
 			return
 
-	_mount_fn.call(entering_scene)
+	_mount_fn.call(entering)
 
 
-## swap performs an atomic unmount and then mount.
-func swap() -> void:
-	unmount()
-	mount()
+## _unblock_input removes the manager's blocker.
+func _unblock_input() -> void:
+	manager._unblock_input()
 
 
-## unmount removes the exiting scene from the scene tree. This is a no-op if already
-## unmounted or if no unmount function is set.
-func unmount() -> void:
-	if _did_unmount or not _unmount_fn.is_valid():
-		return
-
-	_did_unmount = true
-	_unmount_fn.call()
+## _unmount removes the exiting scene from the scene tree. This is a no-op if no unmount
+## function is set.
+func _unmount() -> void:
+	if _unmount_fn.is_valid():
+		_unmount_fn.call()

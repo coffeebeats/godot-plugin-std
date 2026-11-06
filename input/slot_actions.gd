@@ -47,7 +47,7 @@ func _disable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> b
 		assert(false, "invalid state; missing input slot")
 		return false
 
-	for device in slot.get_connected_devices():
+	for device in _list_devices_holding_set():
 		device.disable_action_set_layer(layer)
 
 	if layer not in _action_set_layers:
@@ -63,11 +63,7 @@ func _enable_action_set_layer(_device: int, layer: StdInputActionSetLayer) -> bo
 		assert(false, "invalid state; missing input slot")
 		return false
 
-	if not _action_set:
-		assert(false, "invalid state; missing action set")
-		return false
-
-	for device in slot.get_connected_devices():
+	for device in _list_devices_holding_set():
 		device.enable_action_set_layer(layer)
 
 	if layer in _action_set_layers:
@@ -88,3 +84,17 @@ func _is_matching_event_origin(device: int, event: InputEvent) -> bool:
 		return false
 
 	return slot.actions_joy.is_matching_event_origin(device, event)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _list_devices_holding_set returns the slot's connected devices holding its set, since
+## a component can refuse one, as Steam's does for a set missing from its manifest.
+func _list_devices_holding_set() -> Array[StdInputDevice]:
+	var devices: Array[StdInputDevice] = []
+	for device in slot.get_connected_devices():
+		if device.actions.get_action_set(device.device_id) == _action_set:
+			devices.append(device)
+
+	return devices

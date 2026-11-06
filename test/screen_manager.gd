@@ -26,14 +26,14 @@ const _TIMEOUT_MSEC := 10000
 ## push_and_wait pushes `screen`, and returns its scene once that push has finished and
 ## the scene's layout has settled, or null if the scene has since left the stack.
 ##
-## NOTE: Passing a bare `StdScreenTransition.new()` skips the screen's own transition.
+## NOTE: Passing a bare `StdTransition.new()` skips the screen's own transition.
 ##
 ## NOTE: This doesn't wait for anything after the push, including a screen the scene
 ## itself pushes. That screen's `entered` signal reports when it's done.
 func push_and_wait(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> Node:
 	assert(is_node_ready(), "invalid state: not in the tree")
 	assert(screen != null, "invalid argument: missing screen")

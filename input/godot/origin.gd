@@ -2,7 +2,7 @@
 ## std/input/godot/origin.gd
 ##
 ## A shared library for encoding and decoding input events, suitable for action
-## bindings, within a 64-bit integer.
+## bindings, within a 64-bit integer, and for naming the keys they bind.
 ##
 ## TODO: Restructure how event data is stored by encoding "type" as an enum and using
 ## all of the remaining bits for each type (rather than sequentially arranging chunks
@@ -184,6 +184,30 @@ static func decode(value: int) -> InputEvent:
 	return null
 
 
+## get_key_label returns the name of the key `event` binds, as printed on that key in
+## the player's keyboard layout where the platform reports one.
+static func get_key_label(event: InputEventKey) -> String:
+	var physical_keycode: Key = event.physical_keycode
+	if physical_keycode == KEY_NONE:
+		assert(false, "invalid input; missing keycodes")
+		physical_keycode = event.keycode
+
+	var keycode := (
+		DisplayServer.keyboard_get_label_from_physical(physical_keycode)
+		if _has_keyboard_label_support()
+		else physical_keycode
+	)
+
+	if not OS.is_keycode_unicode(keycode):
+		return OS.get_keycode_string(keycode)
+
+	var label := char(keycode).strip_edges()
+	if not label:
+		return OS.get_keycode_string(keycode)
+
+	return label
+
+
 ## is_encoded_value_for_device returns whether `value` encodes an input event for a
 ## device of `device_type`.
 static func is_encoded_value_for_device(
@@ -220,4 +244,24 @@ func _init() -> void:
 	assert(
 		not OS.is_debug_build(),
 		"Invalid config; this 'Object' should not be instantiated!"
+	)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _has_keyboard_label_support returns whether the display server can map a physical
+## keycode to a localized key label.
+##
+## NOTE: The platform check covers web and mobile. The display server name additionally
+## covers a headless server on a supported platform, where the call logs an error
+## instead of returning a default.
+static func _has_keyboard_label_support() -> bool:
+	if DisplayServer.get_name() == &"headless":
+		return false
+
+	return (
+		OS.has_feature(&"windows")
+		or OS.has_feature(&"macos")
+		or OS.has_feature(&"linuxbsd")
 	)

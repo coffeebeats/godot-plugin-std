@@ -58,9 +58,12 @@ func load_action_set(device: int, action_set: StdInputActionSet) -> bool:
 ## disable_action_set_layer unbinds all of the actions defined within the layer. Does
 ## nothing if not activated.
 ##
-## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
-## taken.
+## NOTE: The layer's `parent` must be the loaded set; otherwise this is an error and
+## nothing changes.
 func disable_action_set_layer(device: int, layer: StdInputActionSetLayer) -> bool:
+	if not _is_parent_loaded(device, layer):
+		return false
+
 	return _disable_action_set_layer(device, layer)
 
 
@@ -69,9 +72,12 @@ func disable_action_set_layer(device: int, layer: StdInputActionSetLayer) -> boo
 ## overridden (unbound from prior actions and bound to the action in this layer). Does
 ## nothing if already activated.
 ##
-## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
-## taken.
+## NOTE: The layer's `parent` must be the loaded set; otherwise this is an error and
+## nothing changes.
 func enable_action_set_layer(device: int, layer: StdInputActionSetLayer) -> bool:
+	if not _is_parent_loaded(device, layer):
+		return false
+
 	return _enable_action_set_layer(device, layer)
 
 
@@ -132,3 +138,27 @@ func _is_matching_event_origin(device: int, event: InputEvent) -> bool:
 		event.device == device
 		and (event is InputEventJoypadButton or event is InputEventJoypadMotion)
 	)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _is_parent_loaded returns whether `layer`'s `parent` is the set loaded for `device`,
+## failing an assertion when it is not.
+func _is_parent_loaded(device: int, layer: StdInputActionSetLayer) -> bool:
+	assert(layer is StdInputActionSetLayer, "missing argument: layer")
+
+	if not layer.parent:
+		assert(false, "invalid argument: missing parent action set")
+		return false
+
+	var action_set := _get_action_set(device)
+	if not action_set:
+		assert(false, "invalid state: missing action set")
+		return false
+
+	if layer.parent != action_set:
+		assert(false, "invalid argument: wrong parent action set")
+		return false
+
+	return true

@@ -1,5 +1,32 @@
 # Changelog
 
+## 8.0.0 (2026-11-06)
+
+## What's Changed
+* chore(input): clean up `Steam`'s test skips and unused project settings by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/588
+* feat(screen)!: make transitions a protocol screens and panels share by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/592
+* feat(input): add `get_action_held_seconds` and `action_pressed`/`action_released` to `StdInputSlot` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/578
+* fix(input): keep an action pressed when a set change leaves its bindings alone by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/593
+* feat(input)!: derive the focus root from claims by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/595
+* feat(input): add `StdInputActionHold` and `holds` on action sets by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/596
+* refactor(input)!: make the loader and the focus handler nodes watching their control by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/597
+* feat(input)!: derive the loaded set from the active loaders by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/599
+* feat(input): run hold gestures on `StdInputSlot` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/598
+* docs(input): document the hold handler and prompt on `StdInputSlot` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/600
+* fix(input): redraw glyphs when `StdInputSlot` swaps joypad components by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/601
+* feat(input): emit `origin_labels_changed` from `StdInputSlot` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/603
+* feat(input)!: require a layer's `parent`, and give every set and layer its own name by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/602
+* feat(input): return an `unknown_glyph` for a bound origin with no art by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/604
+* feat(input): pass `target_size` to glyph sets and add Steam `glyph_style` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/605
+* feat(screen): add `StdPanel` and `StdInputCursorFocusScope` for UI over a running scene by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/606
+* feat(input): add `StdInputGlyphSetKeyboardDrawn`, which draws each key from one keycap style by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/608
+* fix(screen): recompute hover with `Viewport.update_mouse_cursor_state` in `StdScreenManager` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/609
+* feat(input): add `StdInputGlyphTexture`, which draws an action's glyph in any texture host by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/610
+* feat(input)!: remove `StdInputGlyph`, replaced by `StdInputGlyphTexture` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/611
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v7.2.0...v8.0.0
+
 ## 7.2.0 (2026-11-01)
 
 ## What's Changed

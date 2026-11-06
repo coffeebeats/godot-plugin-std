@@ -2,7 +2,8 @@
 ## std/input/action_set.gd
 ##
 ## StdInputActionSet is a collection of input actions which, collectively, define
-## available player actions during a section of the game.
+## available player actions during a section of the game. A set is a mode of play, and
+## loading one unbinds everything else.
 ##
 
 @tool
@@ -63,6 +64,16 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 ## actions_digital is a list of input actions names which can be bound to "digital"
 ## (i.e. on/off) input origins.
 @export var actions_digital: Array[StringName] = []
+
+@export_group("Holds")
+
+## holds is a list of the actions which run as holds, live while this set is loaded or
+## this layer enabled. A `StdInputSlot` runs them, and a layer's hold on an action
+## replaces one from the set or an earlier layer.
+##
+## NOTE: A hold doesn't declare its actions, which stay in the lists above. The Steam
+## manifest and the rebinder read only those lists.
+@export var holds: Array[StdInputActionHold] = []
 
 @export_group("Cursor")
 
@@ -271,6 +282,31 @@ func is_matching_event_origin(action: StringName, event: InputEvent) -> bool:
 		return action in actions_digital
 
 	return false
+
+
+## validate returns whether every layer in `action_sets` has a `parent` and no two of
+## them share a `name`, failing an assertion on the first that breaks either rule.
+##
+## NOTE: Saved bindings are stored under a set's name, so two that share one would also
+## share a player's rebinds.
+static func validate(action_sets: Array[StdInputActionSet]) -> bool:
+	var names: Dictionary[StringName, bool] = {}
+	for action_set in action_sets:
+		if not action_set:
+			continue
+
+		var layer := action_set as StdInputActionSetLayer
+		if layer and not layer.parent:
+			assert(false, "invalid config; missing parent action set: %s" % layer.name)
+			return false
+
+		if action_set.name in names:
+			assert(false, "invalid config; duplicate name: %s" % action_set.name)
+			return false
+
+		names[action_set.name] = true
+
+	return true
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #

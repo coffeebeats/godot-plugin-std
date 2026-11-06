@@ -86,11 +86,10 @@ static var _logger := StdLogger.create(&"std/screen/manager")  # gdlint:ignore=c
 
 var _active_context: StdScreenTransitionContext = null
 var _active_op: Operation = null
-var _active_transition: StdScreenTransition = null
+var _active_transition: StdTransition = null
 var _attachments: Dictionary[StdScreen, Array] = {}
 var _cache: Dictionary[StdScreen, Node] = {}
 var _cursor: StdInputCursor = null
-var _focus: Dictionary[Node, Control] = {}
 var _input_blocker: Control = null
 var _loader: StdScreenLoader = null
 var _overlays: Overlays = null
@@ -148,7 +147,7 @@ func load_screen(screen: StdScreen, include_dependencies: bool = true) -> Dictio
 func pop(
 	result: Variant = null,
 	force: bool = false,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
@@ -187,7 +186,7 @@ func pop_to(screen: StdScreen) -> void:
 func push(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> void:
 	assert(
 		screen != null,
@@ -202,7 +201,7 @@ func push(
 func replace(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> void:
 	assert(
 		screen != null,
@@ -221,7 +220,7 @@ func replace(
 func reset(
 	screen: StdScreen,
 	instance: Node = null,
-	transition: StdScreenTransition = null,
+	transition: StdTransition = null,
 ) -> void:
 	assert(
 		screen != null,
@@ -298,7 +297,7 @@ func _create_blocker() -> Control:
 ## screen. The resolver, when called, sync-blocks on any in-progress background loads
 ## and returns the instantiated scene node. The second element is non-null when the
 ## scene is immediately available (instance or cache) — operations pass it as
-## `entering_scene` for force-stop cleanup.
+## `entering` for force-stop cleanup.
 func _create_resolver(screen: StdScreen, instance: Node) -> Array:
 	var sync_scene: Node = null
 	var scene_path := ""
@@ -386,6 +385,7 @@ func _discard_screen(screen: StdScreen) -> void:
 	_free_attachments(screen)
 
 	var overlay := _overlays.get_overlay(screen)
+	_release_focus(screen)
 	_overlays.erase(screen)
 	_overlays.free_if_unused(overlay)
 
@@ -417,25 +417,17 @@ func _execute_op(op: Operation) -> void:
 	)
 
 
-## _force_hover_recalculation dispatches a synthetic mouse motion event to force Godot
-## to re-evaluate hover state after a screen operation changes the scene tree.
+## _force_hover_recalculation recomputes hover at the mouse's position, so that a
+## control under a resting mouse is hovered after a screen operation changes the tree.
 func _force_hover_recalculation() -> void:
 	if not is_inside_tree():
 		return
 
-	var viewport := get_viewport()
-	var event := InputEventMouseMotion.new()
-	event.position = viewport.get_mouse_position()
-	event.relative = Vector2.ZERO
-	# NOTE: Pass `true` for local coordinates — `get_mouse_position()` returns viewport-
-	# local coordinates, but `push_input` defaults to OS coordinates. With a stretch
-	# transform (e.g. `canvas_items` mode), omitting this flag double-transforms the
-	# position, causing the hit test to miss controls.
-	viewport.push_input(event, true)
+	get_viewport().update_mouse_cursor_state()
 
 
-## _force_stop stops the active transition, force-finishes the context, and releases
-## its input blocker.
+## _force_stop stops the active transition, which ends its context and releases its
+## input blocker.
 func _force_stop() -> void:
 	if _active_transition == null:
 		return
@@ -446,20 +438,28 @@ func _force_stop() -> void:
 	_active_transition = null
 	_active_context = null
 
-	transition.stop()
-
-	if ctx:
-		ctx._did_finish = true
-
 	# NOTE: The blocker belongs to the transition discarded here. The next operation
 	# re-arms one in the same call stack if its transition blocks input.
-	_unblock_input()
+	transition.stop()
 
 	# Free entering scenes that were never mounted to prevent orphaned nodes. The scene
 	# is not in the tree and would otherwise leak. For async cases (resolver-based),
-	# entering_scene is null until mount() completes — nothing to free.
-	if ctx and not ctx._did_mount and is_instance_valid(ctx.entering_scene):
-		ctx.entering_scene.free()
+	# `entering` is null until mount() completes — nothing to free.
+	if ctx and not ctx._did_mount and is_instance_valid(ctx.entering):
+		ctx.entering.free()
+
+
+## _detach_scene removes the screen's scene and then its attachments from the tree.
+##
+## NOTE: They leave in tree order, so that a loader leaving re-syncs only peers whose
+## set is already loaded or which leave after it, never one about to leave.
+func _detach_scene(screen: StdScreen, scene: Node) -> void:
+	if is_instance_valid(scene) and scene.get_parent():
+		scene.get_parent().remove_child(scene)
+
+	for node: Node in _attachments.get(screen, []):
+		if is_instance_valid(node) and node.get_parent():
+			node.get_parent().remove_child(node)
 
 
 ## _free_attachments detaches and queue-frees the given screen's attachment nodes.
@@ -519,6 +519,11 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 	_scenes[screen] = scene
 	_overlays.register(screen, overlay)
 
+	# NOTE: The overlay is claimed once per screen, so two screens sharing one each save
+	# and restore the focus beneath them.
+	if is_instance_valid(_cursor):
+		_cursor.claim_focus(overlay)
+
 	_update_stack_state()
 
 	_mount_attachments(screen, overlay)
@@ -565,9 +570,8 @@ func _mount_attachments(screen: StdScreen, overlay: StdScreenOverlay) -> void:
 		_attachments[screen] = nodes
 
 
-## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen
-## and sets pending focus for resolution. Called after a screen above is removed from
-## the stack.
+## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen.
+## Called after a screen above is removed from the stack.
 func _notify_top_uncovered() -> void:
 	var scene := _current_scene()
 	if scene:
@@ -577,13 +581,21 @@ func _notify_top_uncovered() -> void:
 		scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
 		for node: Node in _attachments.get(screen, []):
 			node.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
-	_set_pending_focus(scene)
 
 
 ## _play_screen_sound plays a fire-and-forget sound event via the global sound player.
 func _play_screen_sound(event: StdSoundEvent) -> void:
 	if event and _sound_player:
 		_sound_player.play(event)
+
+
+## _release_focus ends the focus claim the screen's overlay registered at mount, which
+## focuses the control saved beneath it. A screen whose overlay was handed to another
+## screen has no claim to end.
+func _release_focus(screen: StdScreen) -> void:
+	var overlay := _overlays.get_overlay(screen)
+	if is_instance_valid(overlay) and is_instance_valid(_cursor):
+		_cursor.release_focus(overlay)
 
 
 ## _request_close propagates close_requested to the topmost 'count' screens, top first.
@@ -640,9 +652,9 @@ func _request_close_top(event: InputEvent) -> void:
 ## _resolve_transition returns the transition to use for an operation.
 func _resolve_transition(
 	screen: StdScreen,
-	explicit: StdScreenTransition,
+	explicit: StdTransition,
 	operation: StringName = &"",
-) -> StdScreenTransition:
+) -> StdTransition:
 	if explicit:
 		return explicit
 	if operation == &"push" and screen.transition_push:
@@ -650,57 +662,6 @@ func _resolve_transition(
 	if operation == &"pop" and screen.transition_pop:
 		return screen.transition_pop
 	return screen.transition
-
-
-## _restore_focus sets the focus root for the given scene, triggering focus resolution.
-## The pending focus target (set by _set_pending_focus or consumer calls to
-## set_pending_focus) is consumed during resolution.
-func _restore_focus(scene: Node) -> void:
-	if not is_instance_valid(scene) or not scene is Control:
-		return
-
-	if not is_instance_valid(_cursor):
-		return
-
-	var overlay := _overlays.get_current(_stack)
-	var root: Control = overlay if overlay else scene as Control
-	if not root or not root.is_visible_in_tree():
-		return
-
-	_cursor.set_focus_root(root)
-
-
-## _save_focus records the currently focused control for a scene. When no control has
-## focus (mouse mode), the cursor's hovered control is used as a fallback — at push
-## time, the mouse is still over the clicked button.
-func _save_focus(scene: Node) -> void:
-	if not is_instance_valid(scene):
-		return
-
-	var viewport := get_viewport()
-	if not is_instance_valid(viewport):
-		return
-
-	var focused := viewport.gui_get_focus_owner()
-	if not focused and _cursor:
-		focused = _cursor.get_hovered()
-	if focused and scene.is_ancestor_of(focused):
-		_focus[scene] = focused
-
-
-## _set_pending_focus loads the previously-saved focus target for the given scene. The
-## target is validated and consumed during the next focus resolution triggered by
-## _restore_focus.
-func _set_pending_focus(scene: Node) -> void:
-	if not is_instance_valid(scene):
-		return
-
-	if not is_instance_valid(_cursor):
-		return
-
-	var saved: Control = _focus.get(scene)
-	if saved and is_instance_valid(saved) and saved.is_visible_in_tree():
-		_cursor.set_pending_focus(saved)
 
 
 ## _teardown force-stops any active transition and frees all resources.
@@ -728,11 +689,21 @@ func _teardown() -> void:
 	for s in stack:
 		_free_attachments(s)
 
+	# NOTE: The claims are released once the overlays are queued for deletion, so no
+	# focus is restored into a scene on its way out.
+	var overlays: Array[StdScreenOverlay] = []
+	for s in stack:
+		overlays.append(_overlays.get_overlay(s))
+
 	_scenes.clear()
 	_attachments.clear()
-	_focus.clear()
 	_overlays.clear()
 	_preloads.clear()
+
+	if is_instance_valid(_cursor):
+		for overlay in overlays:
+			if is_instance_valid(overlay):
+				_cursor.release_focus(overlay)
 
 	# Defer remove + free so they run after notification propagation unwinds
 	# (parent blocked) but before `print_orphan_nodes` (queue_free is too late).
@@ -752,28 +723,24 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 	screen.disconnect_signal_handlers(scene)
 	screen.exited.emit(scene)
 	screen_exited.emit(screen, scene)
-	_focus.erase(scene)
 
 	_preloads.erase(screen)
+
+	# NOTE: Detach first. The overlay may be shared and survive this screen, and a
+	# queued free would leave the scene in it, still receiving input, until the end
+	# of the frame.
+	_detach_scene(screen, scene)
 	_free_attachments(screen)
 
 	var overlay := _overlays.get_overlay(screen)
+	_release_focus(screen)
 	_overlays.erase(screen)
 
 	# Cache or free the scene.
 	var should_cache := screen.cache_instance and is_instance_valid(scene)
 	if should_cache:
-		if scene.get_parent():
-			scene.get_parent().remove_child(scene)
-
 		_cache[screen] = scene
 	elif is_instance_valid(scene):
-		# NOTE: Detach first. The overlay may be shared and survive this screen, and a
-		# queued free would leave the scene in it, still receiving input, until the end
-		# of the frame.
-		if scene.get_parent():
-			scene.get_parent().remove_child(scene)
-
 		scene.queue_free()
 
 	_overlays.free_if_unused(overlay)
@@ -799,6 +766,10 @@ func _unmount_scene(screen: StdScreen, scene: Node) -> void:
 	_scenes.erase(screen)
 
 	_update_stack_state()
+
+	# NOTE: Detach before the uncover, while the screen beneath is still covered, so that
+	# its loaders sync once, at the uncover, and not again for each node leaving.
+	_detach_scene(screen, scene)
 	_notify_top_uncovered()
 	_teardown_scene(screen, scene)
 

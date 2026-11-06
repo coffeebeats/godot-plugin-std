@@ -226,8 +226,8 @@ func load_action_set(action_set: StdInputActionSet) -> bool:
 ## disable_action_set_layer unbinds all of the actions defined within the layer. Does
 ## nothing if not activated.
 ##
-## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
-## taken.
+## NOTE: The layer's `parent` must be the loaded set; otherwise this is an error and
+## nothing changes.
 func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	assert(layer is StdInputActionSetLayer, "invalid argument: layer")
 	assert(actions is StdInputDeviceActions, "invalid state; missing component")
@@ -256,8 +256,8 @@ func disable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 ## overridden (unbound from prior actions and bound to the action in this layer). Does
 ## nothing if already activated.
 ##
-## NOTE: The parent action set of the layer *must* be activated, otherwise no action is
-## taken.
+## NOTE: The layer's `parent` must be the loaded set; otherwise this is an error and
+## nothing changes.
 func enable_action_set_layer(layer: StdInputActionSetLayer) -> bool:
 	assert(layer is StdInputActionSetLayer, "invalid argument: layer")
 	assert(actions is StdInputDeviceActions, "invalid state; missing component")
