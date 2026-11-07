@@ -1,5 +1,13 @@
 # Changelog
 
+## 8.1.0 (2026-11-07)
+
+## What's Changed
+* feat(input): apply `use_as_anchor` changes at once and report a `StdInputCursorFocusScope` with no anchor by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/614
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v8.0.1...v8.1.0
+
 ## 8.0.1 (2026-11-06)
 
 ## What's Changed
