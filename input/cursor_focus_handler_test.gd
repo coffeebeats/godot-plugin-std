@@ -218,6 +218,53 @@ func test_anchor_is_removed_on_exit_tree() -> void:
 	assert_null(StdInputCursorFocusHandler.get_focus_target())
 
 
+func test_use_as_anchor_changed_in_the_tree_takes_effect_at_once() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A button in the tree whose focus handler isn't an anchor.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	var handler := StdInputCursorFocusHandler.new()
+	button.add_child(handler)
+	assert_null(StdInputCursorFocusHandler.get_focus_target(), "precondition")
+
+	# When: The handler is made an anchor.
+	handler.use_as_anchor = true
+
+	# Then: The button is the focus target.
+	assert_eq(StdInputCursorFocusHandler.get_focus_target(), button)
+
+	# When: The handler stops being an anchor.
+	handler.use_as_anchor = false
+
+	# Then: No focus target is available.
+	assert_null(StdInputCursorFocusHandler.get_focus_target())
+
+
+func test_use_as_anchor_set_under_a_hidden_cursor_focuses_its_control() -> void:
+	# Given: A cursor in the scene, hidden.
+	add_child_autofree(cursor)
+	cursor.hide_cursor()
+
+	# Given: A button whose focus handler isn't an anchor, with nothing focused.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	var handler := StdInputCursorFocusHandler.new()
+	button.add_child(handler)
+	await get_tree().process_frame
+	assert_null(cursor.get_viewport().gui_get_focus_owner(), "precondition")
+
+	# When: The handler is made an anchor.
+	handler.use_as_anchor = true
+	await get_tree().process_frame
+
+	# Then: The button has focus.
+	assert_eq(cursor.get_viewport().gui_get_focus_owner(), button)
+
+
 func test_anchor_beside_its_control_follows_the_controls_visibility() -> void:
 	# Given: A cursor in the scene, hidden.
 	add_child_autofree(cursor)
