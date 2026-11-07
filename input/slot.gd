@@ -48,7 +48,7 @@ signal action_hold_progress_changed(action: StringName, progress: float)
 signal action_hold_started(action: StringName)
 
 ## action_hold_triggered is emitted when a hold fills, which ends it. A handler acts on
-## the hold here. In `MODE_PRESS` it's emitted on the press.
+## the hold here.
 ##
 ## NOTE: A hold consumes no input, so a handler connected here must not also act on the
 ## raw press in `_unhandled_input`.
@@ -162,13 +162,6 @@ class JoypadMonitor:
 ## triggered haptic effects.
 @export var haptics_strength_property: StdSettingsPropertyFloatRange = null
 
-## hold_duration_scale_property is an optional settings property whose value multiplies
-## each hold's `duration`. A value of `0` or less is ignored.
-@export var hold_duration_scale_property: StdSettingsPropertyFloatRange = null:
-	set(value):
-		hold_duration_scale_property = value
-		_gestures.set_properties(hold_mode_property, hold_duration_scale_property)
-
 ## hold_mode_property is an optional settings property which, while it holds anything
 ## but `MODE_INHERIT`, chooses the `StdInputActionHold.Mode` of each hold, unless that
 ## hold's `mode_override` chooses first.
@@ -178,7 +171,7 @@ class JoypadMonitor:
 @export var hold_mode_property: StdSettingsPropertyInt = null:
 	set(value):
 		hold_mode_property = value
-		_gestures.set_properties(hold_mode_property, hold_duration_scale_property)
+		_gestures.set_mode_property(hold_mode_property)
 
 @export_group("Components")
 
@@ -284,8 +277,8 @@ func get_action_hold(action: StringName) -> StdInputActionHold:
 	return _gestures.get_hold(action)
 
 
-## get_action_hold_mode returns the mode `action`'s hold runs in, which is never
-## `MODE_INHERIT`, or `MODE_PRESS` when `action` is no hold.
+## get_action_hold_mode returns the mode `action`'s hold runs in, or `MODE_INHERIT`
+## only when `action` is no hold.
 ##
 ## NOTE: A setting can change this while nothing is running, with no signal from here.
 func get_action_hold_mode(action: StringName) -> StdInputActionHold.Mode:

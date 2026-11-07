@@ -33,7 +33,6 @@ const Signals := preload("../event/signal.gd")
 
 const MODE_HOLD := StdInputActionHold.MODE_HOLD
 const MODE_INHERIT := StdInputActionHold.MODE_INHERIT
-const MODE_PRESS := StdInputActionHold.MODE_PRESS
 const MODE_TOGGLE := StdInputActionHold.MODE_TOGGLE
 
 
@@ -41,9 +40,6 @@ const MODE_TOGGLE := StdInputActionHold.MODE_TOGGLE
 class _Gesture:
 	## device is the ID of the device whose press started the hold.
 	var device: int = 0
-
-	## fill_seconds is how long the hold takes to fill, which is `0.0` if it fills at once.
-	var fill_seconds: float = 0.0
 
 	## hold is the declaration being run.
 	var hold: StdInputActionHold = null
@@ -68,15 +64,12 @@ class _Gesture:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _duration_scale_property: StdSettingsPropertyFloatRange = null
-
 ## _gestures maps each action to its running gesture.
 var _gestures: Dictionary[StringName, _Gesture] = {}
 
 ## _holds maps each action to the hold which runs it.
 var _holds: Dictionary[StringName, StdInputActionHold] = {}
 
-var _logger := StdLogger.create("std/input/slot_gestures")
 var _mode_property: StdSettingsPropertyInt = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
@@ -135,11 +128,11 @@ func get_hold(action: StringName) -> StdInputActionHold:
 	return _holds.get(action)
 
 
-## get_mode returns the mode `action`'s hold resolves to, or `MODE_PRESS` when `action`
-## is no hold, since it acts on the press.
+## get_mode returns the mode `action`'s hold resolves to, or `MODE_INHERIT` only when
+## `action` is no hold.
 func get_mode(action: StringName) -> StdInputActionHold.Mode:
 	var hold: StdInputActionHold = _holds.get(action)
-	return _resolve_mode(hold) if hold else MODE_PRESS
+	return _resolve_mode(hold) if hold else MODE_INHERIT
 
 
 ## get_progress returns how far `action`'s running gesture has filled, from `0.0` to
@@ -197,20 +190,15 @@ func release(action: StringName, is_interrupted: bool) -> void:
 	_cancel(gesture)
 
 
-## set_properties sets the settings properties which holds resolve against. Either of
-## them can be `null`. It cancels each running gesture the replacement alters.
-func set_properties(
-	mode_property: StdSettingsPropertyInt,
-	duration_scale_property: StdSettingsPropertyFloatRange,
-) -> void:
-	_duration_scale_property = duration_scale_property
-	_mode_property = mode_property
+## set_mode_property sets the settings property each hold's mode resolves against, or
+## none when `property` is `null`. It cancels each running gesture the change alters.
+func set_mode_property(property: StdSettingsPropertyInt) -> void:
+	_mode_property = property
 
-	for property: StdSettingsProperty in [mode_property, duration_scale_property]:
-		if property:
-			Signals.ensure_connected(property.value_changed, _on_property_value_changed)
+	if property:
+		Signals.ensure_connected(property.value_changed, _on_property_value_changed)
 
-	# NOTE: This follows the connections, so a listener's change to a property is heard.
+	# NOTE: This follows the connection, so a listener's change to the property is heard.
 	_cancel_altered()
 
 
@@ -225,8 +213,8 @@ func _advance(gesture: _Gesture) -> void:
 		return
 
 	var progress := 1.0
-	if gesture.fill_seconds > 0.0:
-		progress = minf(gesture.get_elapsed_seconds() / gesture.fill_seconds, 1.0)
+	if gesture.hold.duration > 0.0:
+		progress = minf(gesture.get_elapsed_seconds() / gesture.hold.duration, 1.0)
 
 	if progress == gesture.progress:
 		return
@@ -261,14 +249,11 @@ func _cancel(gesture: _Gesture) -> void:
 	action_hold_cancelled.emit(action)
 
 
-## _cancel_altered cancels each running gesture whose mode or fill differs from how its
-## hold resolves now.
+## _cancel_altered cancels each running gesture whose mode differs from how its hold
+## resolves now.
 func _cancel_altered() -> void:
 	for gesture: _Gesture in _gestures.values():
-		if (
-			gesture.mode != _resolve_mode(gesture.hold)
-			or gesture.fill_seconds != _resolve_fill_seconds(gesture.hold)
-		):
+		if gesture.mode != _resolve_mode(gesture.hold):
 			_cancel(gesture)
 
 
@@ -278,7 +263,8 @@ func _is_running(gesture: _Gesture) -> bool:
 
 
 ## _read_mode returns the mode `property` holds, or `MODE_INHERIT` when there's no
-## property or it holds no mode, since player settings can be edited by hand.
+## property or it holds no mode, since player settings can be edited by hand or hold a
+## retired mode.
 func _read_mode(property: StdSettingsPropertyInt) -> StdInputActionHold.Mode:
 	if not property:
 		return MODE_INHERIT
@@ -290,33 +276,9 @@ func _read_mode(property: StdSettingsPropertyInt) -> StdInputActionHold.Mode:
 	return value as StdInputActionHold.Mode
 
 
-## _resolve_duration_scale returns what a hold's `duration` is multiplied by.
-##
-## NOTE: A scale of `0` would make a tap act at once whatever `allow_press` says, and
-## nothing but this stops a game's own property from storing one.
-func _resolve_duration_scale() -> float:
-	if not _duration_scale_property:
-		return 1.0
-
-	var scale: float = _duration_scale_property.get_value()
-	if scale > 0.0:
-		return scale
-
-	_logger.warn("Ignoring a duration scale that isn't positive.", {&"scale": scale})
-
-	return 1.0
-
-
-## _resolve_fill_seconds returns how long `hold` takes to fill, as it resolves now.
-func _resolve_fill_seconds(hold: StdInputActionHold) -> float:
-	if _resolve_mode(hold) == MODE_PRESS:
-		return 0.0
-
-	return hold.duration * _resolve_duration_scale()
-
-
 ## _resolve_mode returns the mode `hold` runs in, as it resolves now. That's the first
-## choice among its `mode_override`, the slot's mode property, and its `mode`.
+## choice among its `mode_override`, the slot's mode property and its `mode`, or else
+## `MODE_HOLD`.
 func _resolve_mode(hold: StdInputActionHold) -> StdInputActionHold.Mode:
 	var mode := _read_mode(hold.mode_override)
 
@@ -326,11 +288,9 @@ func _resolve_mode(hold: StdInputActionHold) -> StdInputActionHold.Mode:
 	if mode == MODE_INHERIT:
 		mode = hold.mode
 
-	if mode == MODE_INHERIT:
+	# NOTE: A resource can store a value which is no mode, such as a retired one.
+	if mode not in [MODE_HOLD, MODE_TOGGLE]:
 		return MODE_HOLD
-
-	if mode == MODE_PRESS and not hold.allow_press:
-		return MODE_TOGGLE
 
 	return mode
 
@@ -339,7 +299,6 @@ func _resolve_mode(hold: StdInputActionHold) -> StdInputActionHold.Mode:
 func _start(hold: StdInputActionHold, device: int) -> void:
 	var gesture := _Gesture.new()
 	gesture.device = device
-	gesture.fill_seconds = _resolve_fill_seconds(hold)
 	gesture.hold = hold
 	gesture.mode = _resolve_mode(hold)
 	gesture.started_usec = Time.get_ticks_usec()
