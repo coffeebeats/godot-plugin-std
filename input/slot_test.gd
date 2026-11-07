@@ -448,6 +448,46 @@ func test_input_slot_locale_change_emits_origin_labels_changed() -> void:
 	assert_signal_emit_count(slot, "origin_labels_changed", 2)
 
 
+func test_input_slot_hold_mode_property_assignment_is_reported() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# When: A property is assigned as the hold mode property.
+	slot.hold_mode_property = StdSettingsPropertyInt.new()
+
+	# Then: The change was reported once.
+	assert_signal_emit_count(slot, "hold_mode_property_changed", 1)
+
+	# When: The property is cleared.
+	slot.hold_mode_property = null
+
+	# Then: That change was reported too.
+	assert_signal_emit_count(slot, "hold_mode_property_changed", 2)
+
+
+func test_input_slot_hold_mode_property_reassignment_is_not_reported() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: The slot has a hold mode property.
+	var property := StdSettingsPropertyInt.new()
+	slot.hold_mode_property = property
+
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# When: The same property is assigned again.
+	slot.hold_mode_property = property
+
+	# Then: Nothing was reported.
+	assert_signal_not_emitted(slot, "hold_mode_property_changed")
+
+
 func test_input_slot_actions_include_every_action_of_the_set_and_its_layers() -> void:
 	# Given: An input slot added to the scene.
 	add_child_autofree(slot)

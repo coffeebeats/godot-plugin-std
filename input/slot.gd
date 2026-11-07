@@ -80,6 +80,11 @@ signal device_connected(device: StdInputDevice)
 ## disconnects.
 signal device_disconnected(device: StdInputDevice)
 
+## hold_mode_property_changed is emitted when another property, or none, replaces
+## `hold_mode_property`. Each hold's mode may change with it, which no hold signal
+## reports while nothing is running.
+signal hold_mode_property_changed
+
 ## origin_labels_changed is emitted when the names of origins may have changed while
 ## their bindings didn't. That happens on a keyboard layout switch, which relabels
 ## keys, and on a locale change. A glyph which shows a label redraws on it.
@@ -171,8 +176,12 @@ class JoypadMonitor:
 ## overrides each hold's `mode`.
 @export var hold_mode_property: StdSettingsPropertyInt = null:
 	set(value):
+		var is_changed := value != hold_mode_property
 		hold_mode_property = value
 		_gestures.set_mode_property(hold_mode_property)
+
+		if is_changed:
+			hold_mode_property_changed.emit()
 
 @export_group("Components")
 
