@@ -220,11 +220,10 @@ func test_render_ignores_holds() -> void:
 	# Given: The manifest rendered before either declares a hold.
 	var want := manifest.render([menu, tabbed], {"english": "en"})
 
-	# Given: A hold on the set, cancelled by an action neither declares.
+	# Given: A hold on the set's action.
 	var confirm := StdInputActionHold.new()
 	confirm.action = &"ui_accept"
 	confirm.duration = 0.5
-	confirm.cancel_action = &"ui_cancel"
 	menu.holds = [confirm]
 
 	# Given: A hold on the layer, over an action neither declares.

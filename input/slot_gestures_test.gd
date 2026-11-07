@@ -19,9 +19,6 @@ const SlotTest := preload("slot_test.gd")
 ## _ACTION is the action most tests run as a hold.
 const _ACTION := &"probe_gesture"
 
-## _ACTION_CANCEL is an action a hold names as its `cancel_action`.
-const _ACTION_CANCEL := &"probe_gesture_cancel"
-
 ## _ACTION_OTHER is an action declared beside `_ACTION`.
 const _ACTION_OTHER := &"probe_gesture_other"
 
@@ -29,9 +26,7 @@ const _ACTION_OTHER := &"probe_gesture_other"
 const _ACTION_STICK := &"probe_gesture_stick"
 
 ## _ACTIONS lists every action this file defines.
-const _ACTIONS: Array[StringName] = [
-	_ACTION, _ACTION_CANCEL, _ACTION_OTHER, _ACTION_STICK
-]
+const _ACTIONS: Array[StringName] = [_ACTION, _ACTION_OTHER, _ACTION_STICK]
 
 ## _DURATION is the `duration` of each hold, in seconds.
 const _DURATION := 1.0
@@ -175,23 +170,6 @@ func test_hold_has_ended_when_its_trigger_is_handled() -> void:
 
 	# Then: The progress dropped to none after the fill.
 	assert_eq(get_signal_parameters(slot, "action_hold_progress_changed")[1], 0.0)
-
-
-func test_hold_ignores_its_cancel_action() -> void:
-	# Given: A hold naming a cancel action is declared.
-	var hold := _make_hold(MODE_HOLD)
-	hold.cancel_action = _ACTION_CANCEL
-	await _mount(hold)
-
-	# Given: The action is held.
-	input.press_action(_ACTION)
-
-	# When: The cancel action is pressed.
-	input.press_action(_ACTION_CANCEL)
-
-	# Then: The hold goes on, since only a toggle has one to cancel.
-	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
-	assert_true(slot.is_action_hold_active(_ACTION))
 
 
 func test_hold_runs_from_a_key_as_from_any_other_press() -> void:
@@ -719,23 +697,20 @@ func test_toggle_second_tap_cancels() -> void:
 	assert_signal_emit_count(slot, "action_hold_triggered", 0)
 
 
-func test_toggle_cancel_action_cancels() -> void:
-	# Given: A toggle naming a cancel action is declared.
-	var hold := _make_hold(MODE_TOGGLE)
-	hold.cancel_action = _ACTION_CANCEL
-	await _mount(hold)
+func test_toggle_press_of_another_action_leaves_it_running() -> void:
+	# Given: A toggle is declared.
+	await _mount(_make_hold(MODE_TOGGLE))
 
 	# Given: The action was tapped.
 	input.press_action(_ACTION)
 	input.release_action(_ACTION)
 
-	# When: The cancel action is pressed.
-	input.press_action(_ACTION_CANCEL)
+	# When: Another action is pressed.
+	input.press_action(_ACTION_OTHER)
 
-	# Then: The hold cancels.
-	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
-	assert_signal_emitted_with_parameters(slot, "action_hold_cancelled", [_ACTION])
-	assert_false(slot.is_action_hold_active(_ACTION))
+	# Then: The toggle goes on, since only a second tap of its own action cancels it.
+	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
+	assert_true(slot.is_action_hold_active(_ACTION))
 
 
 func test_toggle_tap_after_triggering_starts_again() -> void:
@@ -778,28 +753,6 @@ func test_toggle_tapped_past_its_fill_before_a_frame_reports_it_triggers() -> vo
 	# Then: The tap starts a new toggle.
 	assert_signal_emit_count(slot, "action_hold_started", 2)
 	assert_true(slot.is_action_hold_active(_ACTION))
-
-
-func test_toggle_cancel_action_past_its_fill_before_a_frame_reports_it_triggers(
-) -> void:
-	# Given: A toggle naming a cancel action is declared.
-	var hold := _make_hold(MODE_TOGGLE)
-	hold.cancel_action = _ACTION_CANCEL
-	await _mount(hold)
-
-	# Given: The action was tapped.
-	input.press_action(_ACTION)
-	input.release_action(_ACTION)
-
-	# Given: The duration has passed, in a frame that hasn't ended.
-	_set_elapsed(_DURATION + 0.5)
-
-	# When: The cancel action is pressed.
-	input.press_action(_ACTION_CANCEL)
-
-	# Then: The toggle triggers rather than cancelling.
-	assert_signal_emit_count(slot, "action_hold_triggered", 1)
-	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
 
 
 # PRESS

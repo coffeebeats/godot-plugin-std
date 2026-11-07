@@ -23,8 +23,8 @@ enum Mode {
 	INHERIT = 0,
 	## HOLD fills while the input is held, and cancels on a release before the fill.
 	HOLD = 1,
-	## TOGGLE starts on a tap and fills on its own, unless a second tap of `action` or a
-	## press of `cancel_action` cancels it first.
+	## TOGGLE starts on a tap and fills on its own, unless a second tap of `action`
+	## cancels it first.
 	TOGGLE = 2,
 	## PRESS triggers on the press, for a player who wants no holds.
 	PRESS = 3,
@@ -44,12 +44,6 @@ const MODE_PRESS := Mode.PRESS
 ## duration is how long (in seconds) the hold takes to fill, which must be above `0`.
 ## An action with no wait isn't a hold, so its handler reads its press instead.
 @export var duration: float = 1.0
-
-## cancel_action is the name of an action whose press also ends an active `MODE_TOGGLE`
-## hold, beside a second tap of `action`. When empty, only that second tap ends it.
-##
-## NOTE: The sets active with this hold must declare it, or nothing can press it.
-@export var cancel_action: StringName = &""
 
 @export_group("Mode")
 
@@ -73,5 +67,5 @@ const MODE_PRESS := Mode.PRESS
 ## it, and a tap can't skip `duration`.
 ##
 ## NOTE: In `MODE_TOGGLE`, a stray tap still triggers the hold once it fills, unless a
-## second tap of `action` or a press of `cancel_action` ends it first.
+## second tap of `action` ends it first.
 @export var allow_press: bool = true

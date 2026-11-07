@@ -115,10 +115,6 @@ func configure(action_sets: Array[StdInputActionSet]) -> void:
 
 	for hold: StdInputActionHold in holds.values():
 		assert(hold.action in names, "invalid config; hold's action isn't declared")
-		assert(
-			not hold.cancel_action or hold.cancel_action in names,
-			"invalid config; hold's cancel action isn't declared",
-		)
 		assert(hold.duration > 0.0, "invalid config; hold's duration isn't positive")
 
 		if hold.mode_override:
@@ -170,29 +166,20 @@ func poll() -> void:
 		_advance(gesture)
 
 
-## press handles `device`'s press of `action`. It cancels each toggle the press taps,
+## press handles `device`'s press of `action`. It cancels the toggle the press taps,
 ## or else starts `action`'s gesture. A toggle which filled unreported before the tap
 ## triggers first, so the tap starts a new one.
 func press(action: StringName, device: int) -> void:
-	var tapped: Array[_Gesture] = []
-	for gesture: _Gesture in _gestures.values():
-		if (
-			gesture.mode == MODE_TOGGLE
-			and action in [gesture.hold.action, gesture.hold.cancel_action]
-		):
-			tapped.append(gesture)
-
-	for gesture in tapped:
+	var gesture: _Gesture = _gestures.get(action)
+	if gesture and gesture.mode == MODE_TOGGLE:
 		_advance(gesture)
 
-	# NOTE: This follows the advance, since a toggle filled by it has already ended.
-	var is_running := _gestures.has(action)
-
-	for gesture in tapped:
-		_cancel(gesture)
+		if _is_running(gesture):
+			_cancel(gesture)
+			return
 
 	var hold: StdInputActionHold = _holds.get(action)
-	if hold and not is_running:
+	if hold and not _gestures.has(action):
 		_start(hold, device)
 
 

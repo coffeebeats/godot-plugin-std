@@ -82,10 +82,9 @@ func test_list_action_names_leaves_out_what_only_a_hold_names() -> void:
 	# Given: An action set with a digital action.
 	action_set.actions_digital = [&"jump"]
 
-	# Given: A hold over an action the set doesn't declare, cancelled by another.
+	# Given: A hold over an action the set doesn't declare.
 	var hold := StdInputActionHold.new()
 	hold.action = &"charge"
-	hold.cancel_action = &"cancel"
 	action_set.holds = [hold]
 
 	# When: Action names are listed.
