@@ -101,7 +101,7 @@ const PROPERTY_STATUS_ON := StdInputActionSet.PROPERTY_STATUS_ON
 const PROPERTY_STATUS_OFF := StdInputActionSet.PROPERTY_STATUS_OFF
 
 
-## JoypadMonitor is an abstract inferface for a `Node` which tracks joypad activity
+## JoypadMonitor is an abstract interface for a `Node` which tracks joypad activity
 ## (i.e. connects and disconnects).
 ##
 ## This should be implemented according to the library used for managing input devices
@@ -109,9 +109,11 @@ const PROPERTY_STATUS_OFF := StdInputActionSet.PROPERTY_STATUS_OFF
 class JoypadMonitor:
 	extends Node
 
+	## joy_connected is emitted when the joypad `device_id` connects, as `device_type`.
 	@warning_ignore("UNUSED_SIGNAL")
 	signal joy_connected(device_id: int, device_type: DeviceType)
 
+	## joy_disconnected is emitted when the joypad `device_id` disconnects.
 	@warning_ignore("UNUSED_SIGNAL")
 	signal joy_disconnected(device_id: int)
 
@@ -133,10 +135,9 @@ class JoypadMonitor:
 
 @export_group("Configuration")
 
-## claim_kbm_input defines whether this `StdInputSlot` will consider keyboard and mouse
-## input as belonging to itself. Depending on certain factors, this will generally
-## activate the `StdInputDevice` belonging to the keyboard and mouse when that input is
-## received.
+## claim_kbm_input defines whether this `StdInputSlot` takes keyboard and mouse input
+## as its own, so a key or mouse button bound to an active action activates the
+## keyboard and mouse `StdInputDevice`.
 ##
 ## NOTE: If `true`, the keyboard and mouse device will be activated initially.
 ##
@@ -247,8 +248,8 @@ static func all() -> Array[StdInputSlot]:
 	return members
 
 
-## for_player finds the `StdInputSlot` in the scene tree that's assigned to the
-## specified player. Note that there can be only one `StdInputSlot` per player.
+## for_player finds the `StdInputSlot` in the scene tree that's assigned to `player`,
+## or `null` when there's none. A player has at most one `StdInputSlot`.
 static func for_player(player: int) -> StdInputSlot:
 	for member in StdGroup.with_id(GROUP_INPUT_SLOT).list_members():
 		assert(member is StdInputSlot, "invalid state; wrong member type")
@@ -868,11 +869,9 @@ func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
 
 	var joy := StdInputDevice.new()
 
-	# Device info
 	joy.device_id = device
 	joy.device_type = device_type
 
-	# Components
 	joy.actions = actions_joy
 	joy.glyphs = glyphs_joy
 	joy.haptics = haptics_joy
@@ -883,11 +882,9 @@ func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
 func _make_kbm(device: int = 0) -> StdInputDevice:
 	var kbm := StdInputDevice.new()
 
-	# Device info
 	kbm.device_id = device
 	kbm.device_type = DEVICE_TYPE_KEYBOARD
 
-	# Components
 	kbm.actions = actions_kbm
 	kbm.glyphs = glyphs_kbm
 	kbm.haptics = haptics_kbm
@@ -1123,4 +1120,4 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
-	pass  # No need to disable action sets/layers here - the device may reconnect.
+	pass  # The device keeps its sets and layers, since it may reconnect.

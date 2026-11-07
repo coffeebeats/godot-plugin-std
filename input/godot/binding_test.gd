@@ -198,7 +198,7 @@ class TestBindAction:
 			)
 		)
 
-		# Then: The binding is successfully changed.
+		# Then: The binding changes.
 		assert_true(changed)
 		_assert_events_eq(
 			Bindings.get_action_binding(scope, action_set, action, device_type, index),
@@ -788,7 +788,7 @@ class TestResetAllActions:
 		var changed := Bindings.reset_all_actions(scope, action_set, device_type)
 		assert_false(changed)
 
-		# Then: The action's are still bound to their defaults.
+		# Then: The actions are still bound to their defaults.
 		_assert_events_eq(
 			events_default1[index],
 			(

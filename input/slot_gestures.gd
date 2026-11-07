@@ -70,6 +70,7 @@ var _gestures: Dictionary[StringName, _Gesture] = {}
 ## _holds maps each action to the hold which runs it.
 var _holds: Dictionary[StringName, StdInputActionHold] = {}
 
+## _mode_property is the slot's settings property each hold's mode resolves against.
 var _mode_property: StdSettingsPropertyInt = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
