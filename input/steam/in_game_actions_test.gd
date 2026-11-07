@@ -89,21 +89,23 @@ func test_render_writes_sets_layers_and_localization() -> void:
 
 
 func test_render_writes_analog_sections() -> void:
-	# Given: A set with analog actions, a stick's directional actions beside another
-	# digital action, and an absolute mouse action.
+	# Given: A set with a trigger and a stick.
 	var gameplay := StdInputActionSet.new()
 	gameplay.name = &"Gameplay"
 	gameplay.actions_analog_1d = [&"throttle"]
 	gameplay.actions_analog_2d = [&"look"]
+
+	# Given: The stick's directional actions beside another digital action.
 	gameplay.actions_digital = StdInputActionSet.list_analog_2d_actions(&"look")
 	gameplay.actions_digital.append(&"fire")
+
+	# Given: An absolute mouse action.
 	gameplay.action_absolute_mouse = &"aim"
 
 	# When: The manifest is rendered with no languages.
 	var got := manifest.render([gameplay], {})
 
-	# Then: The stick, trigger, and button sections precede the empty localization
-	# block, and the stick's directional actions are left out of the buttons.
+	# Then: The sections precede the localization, and buttons skip the directions.
 	var want := _lines(
 		[
 			'"In Game Actions"',
@@ -220,11 +222,10 @@ func test_render_ignores_holds() -> void:
 	# Given: The manifest rendered before either declares a hold.
 	var want := manifest.render([menu, tabbed], {"english": "en"})
 
-	# Given: A hold on the set, cancelled by an action neither declares.
+	# Given: A hold on the set's action.
 	var confirm := StdInputActionHold.new()
 	confirm.action = &"ui_accept"
 	confirm.duration = 0.5
-	confirm.cancel_action = &"ui_cancel"
 	menu.holds = [confirm]
 
 	# Given: A hold on the layer, over an action neither declares.

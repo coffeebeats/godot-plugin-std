@@ -48,7 +48,7 @@ signal action_hold_progress_changed(action: StringName, progress: float)
 signal action_hold_started(action: StringName)
 
 ## action_hold_triggered is emitted when a hold fills, which ends it. A handler acts on
-## the hold here. In `MODE_PRESS` it's emitted on the press.
+## the hold here.
 ##
 ## NOTE: A hold consumes no input, so a handler connected here must not also act on the
 ## raw press in `_unhandled_input`.
@@ -101,7 +101,7 @@ const PROPERTY_STATUS_ON := StdInputActionSet.PROPERTY_STATUS_ON
 const PROPERTY_STATUS_OFF := StdInputActionSet.PROPERTY_STATUS_OFF
 
 
-## JoypadMonitor is an abstract inferface for a `Node` which tracks joypad activity
+## JoypadMonitor is an abstract interface for a `Node` which tracks joypad activity
 ## (i.e. connects and disconnects).
 ##
 ## This should be implemented according to the library used for managing input devices
@@ -109,9 +109,11 @@ const PROPERTY_STATUS_OFF := StdInputActionSet.PROPERTY_STATUS_OFF
 class JoypadMonitor:
 	extends Node
 
+	## joy_connected is emitted when the joypad `device_id` connects, as `device_type`.
 	@warning_ignore("UNUSED_SIGNAL")
 	signal joy_connected(device_id: int, device_type: DeviceType)
 
+	## joy_disconnected is emitted when the joypad `device_id` disconnects.
 	@warning_ignore("UNUSED_SIGNAL")
 	signal joy_disconnected(device_id: int)
 
@@ -133,10 +135,9 @@ class JoypadMonitor:
 
 @export_group("Configuration")
 
-## claim_kbm_input defines whether this `StdInputSlot` will consider keyboard and mouse
-## input as belonging to itself. Depending on certain factors, this will generally
-## activate the `StdInputDevice` belonging to the keyboard and mouse when that input is
-## received.
+## claim_kbm_input defines whether this `StdInputSlot` takes keyboard and mouse input
+## as its own, so a key or mouse button bound to an active action activates the
+## keyboard and mouse `StdInputDevice`.
 ##
 ## NOTE: If `true`, the keyboard and mouse device will be activated initially.
 ##
@@ -162,13 +163,6 @@ class JoypadMonitor:
 ## triggered haptic effects.
 @export var haptics_strength_property: StdSettingsPropertyFloatRange = null
 
-## hold_duration_scale_property is an optional settings property whose value multiplies
-## each hold's `duration`. A value of `0` or less is ignored.
-@export var hold_duration_scale_property: StdSettingsPropertyFloatRange = null:
-	set(value):
-		hold_duration_scale_property = value
-		_gestures.set_properties(hold_mode_property, hold_duration_scale_property)
-
 ## hold_mode_property is an optional settings property which, while it holds anything
 ## but `MODE_INHERIT`, chooses the `StdInputActionHold.Mode` of each hold, unless that
 ## hold's `mode_override` chooses first.
@@ -178,7 +172,7 @@ class JoypadMonitor:
 @export var hold_mode_property: StdSettingsPropertyInt = null:
 	set(value):
 		hold_mode_property = value
-		_gestures.set_properties(hold_mode_property, hold_duration_scale_property)
+		_gestures.set_mode_property(hold_mode_property)
 
 @export_group("Components")
 
@@ -254,8 +248,8 @@ static func all() -> Array[StdInputSlot]:
 	return members
 
 
-## for_player finds the `StdInputSlot` in the scene tree that's assigned to the
-## specified player. Note that there can be only one `StdInputSlot` per player.
+## for_player finds the `StdInputSlot` in the scene tree that's assigned to `player`,
+## or `null` when there's none. A player has at most one `StdInputSlot`.
 static func for_player(player: int) -> StdInputSlot:
 	for member in StdGroup.with_id(GROUP_INPUT_SLOT).list_members():
 		assert(member is StdInputSlot, "invalid state; wrong member type")
@@ -284,8 +278,8 @@ func get_action_hold(action: StringName) -> StdInputActionHold:
 	return _gestures.get_hold(action)
 
 
-## get_action_hold_mode returns the mode `action`'s hold runs in, which is never
-## `MODE_INHERIT`, or `MODE_PRESS` when `action` is no hold.
+## get_action_hold_mode returns the mode `action`'s hold runs in, or `MODE_INHERIT`
+## only when `action` is no hold.
 ##
 ## NOTE: A setting can change this while nothing is running, with no signal from here.
 func get_action_hold_mode(action: StringName) -> StdInputActionHold.Mode:
@@ -875,11 +869,9 @@ func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
 
 	var joy := StdInputDevice.new()
 
-	# Device info
 	joy.device_id = device
 	joy.device_type = device_type
 
-	# Components
 	joy.actions = actions_joy
 	joy.glyphs = glyphs_joy
 	joy.haptics = haptics_joy
@@ -890,11 +882,9 @@ func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
 func _make_kbm(device: int = 0) -> StdInputDevice:
 	var kbm := StdInputDevice.new()
 
-	# Device info
 	kbm.device_id = device
 	kbm.device_type = DEVICE_TYPE_KEYBOARD
 
-	# Components
 	kbm.actions = actions_kbm
 	kbm.glyphs = glyphs_kbm
 	kbm.haptics = haptics_kbm
@@ -1130,4 +1120,4 @@ func _on_Self_device_connected(device: StdInputDevice) -> void:
 
 
 func _on_Self_device_disconnected(_device: StdInputDevice) -> void:
-	pass  # No need to disable action sets/layers here - the device may reconnect.
+	pass  # The device keeps its sets and layers, since it may reconnect.

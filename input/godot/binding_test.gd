@@ -198,7 +198,7 @@ class TestBindAction:
 			)
 		)
 
-		# Then: The binding is successfully changed.
+		# Then: The binding changes.
 		assert_true(changed)
 		_assert_events_eq(
 			Bindings.get_action_binding(scope, action_set, action, device_type, index),
@@ -562,14 +562,13 @@ class TestBindAction:
 		var action := &"test-action"
 		action_set.actions_digital.append(action)
 
-		# Given: A hold on it, cancelled by an action the set doesn't declare.
-		var cancel_action := &"test-cancel-action"
+		# Given: A hold over an action the set doesn't declare.
+		var held_action := &"test-held-action"
 		var hold := StdInputActionHold.new()
-		hold.action = action
-		hold.cancel_action = cancel_action
+		hold.action = held_action
 		action_set.holds.append(hold)
 
-		# Given: The held action has no default events.
+		# Given: The declared action has no default events.
 		_set_events_as_default(action, [])
 
 		# Given: Default events for each binding index of the undeclared action.
@@ -581,9 +580,9 @@ class TestBindAction:
 					else _create_joypad_event(JOY_BUTTON_A + i)
 				)
 		)
-		_set_events_as_default(cancel_action, events_default)
+		_set_events_as_default(held_action, events_default)
 
-		# When: The held action is bound to the undeclared action's origin.
+		# When: The declared action is bound to the undeclared action's origin.
 		var changed := (
 			Bindings
 			. bind_action(
@@ -596,7 +595,7 @@ class TestBindAction:
 			)
 		)
 
-		# Then: The held action takes the origin.
+		# Then: The declared action takes the origin.
 		assert_true(changed)
 		_assert_events_eq(
 			Bindings.get_action_binding(scope, action_set, action, device_type, index),
@@ -605,7 +604,7 @@ class TestBindAction:
 
 		# Then: The undeclared action isn't unbound from it, as a declared one would be.
 		var category := Bindings.get_action_set_category(action_set, device_type)
-		var key := Bindings.get_action_key(cancel_action, index)
+		var key := Bindings.get_action_key(held_action, index)
 		assert_eq(scope.config.get_int(category, key, Bindings.UNSET), Bindings.UNSET)
 
 
@@ -789,7 +788,7 @@ class TestResetAllActions:
 		var changed := Bindings.reset_all_actions(scope, action_set, device_type)
 		assert_false(changed)
 
-		# Then: The action's are still bound to their defaults.
+		# Then: The actions are still bound to their defaults.
 		_assert_events_eq(
 			events_default1[index],
 			(

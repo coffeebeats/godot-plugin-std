@@ -19,9 +19,6 @@ const SlotTest := preload("slot_test.gd")
 ## _ACTION is the action most tests run as a hold.
 const _ACTION := &"probe_gesture"
 
-## _ACTION_CANCEL is an action a hold names as its `cancel_action`.
-const _ACTION_CANCEL := &"probe_gesture_cancel"
-
 ## _ACTION_OTHER is an action declared beside `_ACTION`.
 const _ACTION_OTHER := &"probe_gesture_other"
 
@@ -29,9 +26,7 @@ const _ACTION_OTHER := &"probe_gesture_other"
 const _ACTION_STICK := &"probe_gesture_stick"
 
 ## _ACTIONS lists every action this file defines.
-const _ACTIONS: Array[StringName] = [
-	_ACTION, _ACTION_CANCEL, _ACTION_OTHER, _ACTION_STICK
-]
+const _ACTIONS: Array[StringName] = [_ACTION, _ACTION_OTHER, _ACTION_STICK]
 
 ## _DURATION is the `duration` of each hold, in seconds.
 const _DURATION := 1.0
@@ -44,18 +39,20 @@ const _HOLD_SIGNALS: Array[String] = [
 	"action_hold_triggered",
 ]
 
+## _MODE_RETIRED is the value of a retired mode that player settings and resources may
+## still hold.
+const _MODE_RETIRED := 3
+
 ## _STICK_DEADZONE is the deadzone of `_ACTION_STICK`, below the `0.5` at which a
 ## joypad motion reads as a press.
 const _STICK_DEADZONE := 0.2
 
 const MODE_HOLD := StdInputActionHold.MODE_HOLD
 const MODE_INHERIT := StdInputActionHold.MODE_INHERIT
-const MODE_PRESS := StdInputActionHold.MODE_PRESS
 const MODE_TOGGLE := StdInputActionHold.MODE_TOGGLE
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var duration_scale: StdSettingsPropertyFloatRange = null
 var hold_mode: StdSettingsPropertyInt = null
 var input: StdTestInput = null
 var slot: StdInputSlot = null
@@ -175,23 +172,6 @@ func test_hold_has_ended_when_its_trigger_is_handled() -> void:
 
 	# Then: The progress dropped to none after the fill.
 	assert_eq(get_signal_parameters(slot, "action_hold_progress_changed")[1], 0.0)
-
-
-func test_hold_ignores_its_cancel_action() -> void:
-	# Given: A hold naming a cancel action is declared.
-	var hold := _make_hold(MODE_HOLD)
-	hold.cancel_action = _ACTION_CANCEL
-	await _mount(hold)
-
-	# Given: The action is held.
-	input.press_action(_ACTION)
-
-	# When: The cancel action is pressed.
-	input.press_action(_ACTION_CANCEL)
-
-	# Then: The hold goes on, since only a toggle has one to cancel.
-	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
-	assert_true(slot.is_action_hold_active(_ACTION))
 
 
 func test_hold_runs_from_a_key_as_from_any_other_press() -> void:
@@ -719,23 +699,20 @@ func test_toggle_second_tap_cancels() -> void:
 	assert_signal_emit_count(slot, "action_hold_triggered", 0)
 
 
-func test_toggle_cancel_action_cancels() -> void:
-	# Given: A toggle naming a cancel action is declared.
-	var hold := _make_hold(MODE_TOGGLE)
-	hold.cancel_action = _ACTION_CANCEL
-	await _mount(hold)
+func test_toggle_press_of_another_action_leaves_it_running() -> void:
+	# Given: A toggle is declared.
+	await _mount(_make_hold(MODE_TOGGLE))
 
 	# Given: The action was tapped.
 	input.press_action(_ACTION)
 	input.release_action(_ACTION)
 
-	# When: The cancel action is pressed.
-	input.press_action(_ACTION_CANCEL)
+	# When: Another action is pressed.
+	input.press_action(_ACTION_OTHER)
 
-	# Then: The hold cancels.
-	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
-	assert_signal_emitted_with_parameters(slot, "action_hold_cancelled", [_ACTION])
-	assert_false(slot.is_action_hold_active(_ACTION))
+	# Then: The toggle goes on, since only a second tap of its own action cancels it.
+	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
+	assert_true(slot.is_action_hold_active(_ACTION))
 
 
 func test_toggle_tap_after_triggering_starts_again() -> void:
@@ -780,51 +757,6 @@ func test_toggle_tapped_past_its_fill_before_a_frame_reports_it_triggers() -> vo
 	assert_true(slot.is_action_hold_active(_ACTION))
 
 
-func test_toggle_cancel_action_past_its_fill_before_a_frame_reports_it_triggers(
-) -> void:
-	# Given: A toggle naming a cancel action is declared.
-	var hold := _make_hold(MODE_TOGGLE)
-	hold.cancel_action = _ACTION_CANCEL
-	await _mount(hold)
-
-	# Given: The action was tapped.
-	input.press_action(_ACTION)
-	input.release_action(_ACTION)
-
-	# Given: The duration has passed, in a frame that hasn't ended.
-	_set_elapsed(_DURATION + 0.5)
-
-	# When: The cancel action is pressed.
-	input.press_action(_ACTION_CANCEL)
-
-	# Then: The toggle triggers rather than cancelling.
-	assert_signal_emit_count(slot, "action_hold_triggered", 1)
-	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
-
-
-# PRESS
-
-
-func test_press_triggers_at_once() -> void:
-	# Given: A hold is declared to run on the press.
-	await _mount(_make_hold(MODE_PRESS))
-
-	# When: The action is pressed.
-	input.press_action(_ACTION)
-
-	# Then: The hold starts, triggers and ends without waiting.
-	assert_signal_emit_count(slot, "action_hold_started", 1)
-	assert_signal_emit_count(slot, "action_hold_triggered", 1)
-	assert_false(slot.is_action_hold_active(_ACTION))
-
-	# When: The action is released.
-	input.release_action(_ACTION)
-
-	# Then: Nothing more is reported.
-	assert_signal_emit_count(slot, "action_hold_triggered", 1)
-	assert_signal_emit_count(slot, "action_hold_cancelled", 0)
-
-
 # Mode resolution
 
 
@@ -859,7 +791,7 @@ func test_mode_slots_property_beats_the_holds_own_mode() -> void:
 
 func test_mode_override_beats_the_slots_property() -> void:
 	# Given: A hold with a mode override.
-	var hold := _make_hold(MODE_HOLD)
+	var hold := _make_hold(MODE_TOGGLE)
 	hold.mode_override = _make_mode_property(&"override")
 	await _mount(hold)
 
@@ -867,10 +799,10 @@ func test_mode_override_beats_the_slots_property() -> void:
 	hold_mode.set_value(MODE_TOGGLE)
 
 	# When: The player chooses another for this hold's group.
-	hold.mode_override.set_value(MODE_PRESS)
+	hold.mode_override.set_value(MODE_HOLD)
 
 	# Then: The override decides.
-	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_PRESS)
+	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_HOLD)
 
 
 func test_mode_override_at_inherit_defers_to_the_slots_property() -> void:
@@ -897,48 +829,47 @@ func test_mode_stored_value_that_is_no_mode_defers_to_the_next_source() -> void:
 	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_TOGGLE)
 
 
-func test_mode_press_without_allow_press_runs_as_toggle_from_its_own_mode() -> void:
-	# Given: A hold which rules out the press, declared to run on the press.
-	var hold := _make_hold(MODE_PRESS)
-	hold.allow_press = false
+func test_mode_stored_retired_value_defers_to_the_next_source() -> void:
+	# Given: A hold's own mode.
+	await _mount(_make_hold(MODE_TOGGLE))
+
+	# When: The player's settings store the retired mode.
+	hold_mode.set_value(_MODE_RETIRED)
+
+	# Then: The hold's own mode runs.
+	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_TOGGLE)
+
+
+func test_mode_holds_own_retired_value_runs_as_hold() -> void:
+	# Given: A hold whose own mode stores the retired mode, as a saved resource can.
+	var hold := _make_hold(MODE_TOGGLE)
+	hold.set(&"mode", _MODE_RETIRED)
 	await _mount(hold)
 
-	# Then: It resolves to a toggle.
-	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_TOGGLE)
+	# Then: It resolves to a hold.
+	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_HOLD)
 
 	# When: The action is pressed.
 	input.press_action(_ACTION)
 
-	# Then: A tap doesn't skip the duration.
+	# Then: A press doesn't skip the duration.
 	assert_signal_emit_count(slot, "action_hold_triggered", 0)
+	assert_true(slot.is_action_hold_active(_ACTION))
 
-	# When: The duration passes.
+	# When: The press lasts past the duration.
 	await _elapse(_DURATION)
 
 	# Then: The hold triggers.
 	assert_signal_emit_count(slot, "action_hold_triggered", 1)
 
 
-func test_mode_press_without_allow_press_runs_as_toggle_from_a_stored_value() -> void:
-	# Given: A hold which rules out the press.
-	var hold := _make_hold(MODE_HOLD)
-	hold.allow_press = false
-	await _mount(hold)
-
-	# When: The player's settings store the press.
-	hold_mode.set_value(MODE_PRESS)
-
-	# Then: It resolves to a toggle.
-	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_TOGGLE)
-
-
-func test_mode_reads_as_press_for_an_action_that_is_no_hold() -> void:
+func test_mode_reads_as_inherit_for_an_action_that_is_no_hold() -> void:
 	# Given: An action no hold names.
 	await _mount(_make_hold(MODE_HOLD))
 
-	# Then: It reads as what it does, with nothing to run.
+	# Then: It reads as making no choice, with nothing to run.
 	assert_null(slot.get_action_hold(_ACTION_OTHER))
-	assert_eq(slot.get_action_hold_mode(_ACTION_OTHER), MODE_PRESS)
+	assert_eq(slot.get_action_hold_mode(_ACTION_OTHER), MODE_INHERIT)
 	assert_eq(slot.get_action_hold_progress(_ACTION_OTHER), 0.0)
 	assert_false(slot.is_action_hold_active(_ACTION_OTHER))
 
@@ -962,13 +893,12 @@ func test_slot_answers_before_it_is_ready() -> void:
 
 	# Then: A widget asking about a hold gets an answer, as nothing is declared yet.
 	assert_null(slot.get_action_hold(_ACTION))
-	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_PRESS)
+	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_INHERIT)
 	assert_false(slot.is_action_hold_active(_ACTION))
 
 
 func test_slot_without_properties_runs_each_holds_own_mode() -> void:
-	# Given: A slot which wires no settings properties.
-	slot.hold_duration_scale_property = null
+	# Given: A slot which wires no settings property.
 	slot.hold_mode_property = null
 
 	# Given: A toggle is declared.
@@ -981,73 +911,9 @@ func test_slot_without_properties_runs_each_holds_own_mode() -> void:
 	# When: The duration passes.
 	await _elapse(_DURATION)
 
-	# Then: The hold ran in its own mode at its own duration.
+	# Then: The hold ran in its own mode.
 	assert_eq(slot.get_action_hold_mode(_ACTION), MODE_TOGGLE)
 	assert_signal_emit_count(slot, "action_hold_triggered", 1)
-
-
-# Duration scale
-
-
-func test_duration_scale_stretches_the_fill() -> void:
-	# Given: A hold is declared.
-	await _mount(_make_hold(MODE_HOLD))
-
-	# Given: The player doubled the time holds take.
-	duration_scale.set_value(2.0)
-
-	# When: The press lasts past the declared duration, short of the scaled one.
-	input.press_action(_ACTION)
-	await _elapse(_DURATION + 0.5)
-
-	# Then: The hold hasn't filled.
-	assert_signal_emit_count(slot, "action_hold_triggered", 0)
-
-	# When: The press lasts past the scaled duration.
-	await _elapse(_DURATION * 2.0)
-
-	# Then: The hold fills.
-	assert_signal_emit_count(slot, "action_hold_triggered", 1)
-
-
-func test_duration_scale_of_zero_is_rejected() -> void:
-	# Given: A property whose range lets it store zero.
-	duration_scale.minimum = 0.0
-	duration_scale.default = 0.0
-
-	# Given: A hold which rules out the press.
-	var hold := _make_hold(MODE_PRESS)
-	hold.allow_press = false
-	await _mount(hold)
-
-	# When: The action is pressed.
-	input.press_action(_ACTION)
-	await wait_process_frames(1)
-
-	# Then: A tap doesn't act at once.
-	assert_signal_emit_count(slot, "action_hold_triggered", 0)
-
-	# When: The declared duration passes.
-	await _elapse(_DURATION)
-
-	# Then: The hold fills at it.
-	assert_signal_emit_count(slot, "action_hold_triggered", 1)
-
-
-func test_duration_scale_below_zero_is_rejected() -> void:
-	# Given: A property whose range lets it store a negative value.
-	duration_scale.minimum = -1.0
-	duration_scale.default = -0.5
-
-	# Given: A hold is declared.
-	await _mount(_make_hold(MODE_HOLD))
-
-	# When: The action is pressed.
-	input.press_action(_ACTION)
-	await wait_process_frames(1)
-
-	# Then: The hold hasn't filled.
-	assert_signal_emit_count(slot, "action_hold_triggered", 0)
 
 
 # Setting changes
@@ -1086,20 +952,6 @@ func test_setting_change_through_a_mode_override_cancels() -> void:
 
 	# When: The player changes the override.
 	hold.mode_override.set_value(MODE_TOGGLE)
-
-	# Then: The hold cancels.
-	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
-
-
-func test_setting_change_to_the_duration_scale_cancels() -> void:
-	# Given: A hold is declared.
-	await _mount(_make_hold(MODE_HOLD))
-
-	# Given: The action is held.
-	input.press_action(_ACTION)
-
-	# When: The player changes the time holds take.
-	duration_scale.set_value(2.0)
 
 	# Then: The hold cancels.
 	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
@@ -1346,9 +1198,9 @@ func test_set_loaded_by_a_cancel_listener_outlives_the_change_it_interrupts() ->
 	assert_true(slot.is_action_hold_active(_ACTION_OTHER))
 
 
-func test_set_loaded_by_a_started_listener_ends_the_press_it_interrupts() -> void:
-	# Given: A press-mode hold is declared.
-	await _mount(_make_hold(MODE_PRESS))
+func test_set_loaded_by_a_started_listener_cancels_the_hold_it_starts() -> void:
+	# Given: A hold is declared.
+	await _mount(_make_hold(MODE_HOLD))
 
 	# Given: A listener loads a set dropping the hold as it starts.
 	slot.action_hold_started.connect(
@@ -1359,14 +1211,19 @@ func test_set_loaded_by_a_started_listener_ends_the_press_it_interrupts() -> voi
 	# When: The action is pressed.
 	input.press_action(_ACTION)
 
-	# Then: The hold cancels without triggering.
+	# Then: The hold cancels without reporting progress or triggering.
 	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
+	assert_signal_emit_count(slot, "action_hold_progress_changed", 0)
 	assert_signal_emit_count(slot, "action_hold_triggered", 0)
 
 
 func test_set_loaded_by_a_progress_listener_stops_the_trigger() -> void:
-	# Given: A press-mode hold is declared.
-	await _mount(_make_hold(MODE_PRESS))
+	# Given: A hold is declared.
+	await _mount(_make_hold(MODE_HOLD))
+
+	# Given: The press lasted past the duration, in a frame that hasn't ended.
+	input.press_action(_ACTION)
+	_set_elapsed(_DURATION + 0.5)
 
 	# Given: A listener loads a set dropping the hold as its progress changes.
 	slot.action_hold_progress_changed.connect(
@@ -1375,8 +1232,8 @@ func test_set_loaded_by_a_progress_listener_stops_the_trigger() -> void:
 		CONNECT_ONE_SHOT,
 	)
 
-	# When: The action is pressed.
-	input.press_action(_ACTION)
+	# When: A frame reports the fill.
+	await wait_process_frames(1)
 
 	# Then: The hold cancels without triggering.
 	assert_signal_emit_count(slot, "action_hold_cancelled", 1)
@@ -1384,8 +1241,8 @@ func test_set_loaded_by_a_progress_listener_stops_the_trigger() -> void:
 
 
 func test_set_loaded_by_a_trigger_listener_leaves_the_hold_triggered() -> void:
-	# Given: A press-mode hold is declared.
-	await _mount(_make_hold(MODE_PRESS))
+	# Given: A hold is declared.
+	await _mount(_make_hold(MODE_HOLD))
 
 	# Given: A listener loads a set dropping the hold as it triggers.
 	slot.action_hold_triggered.connect(
@@ -1393,8 +1250,9 @@ func test_set_loaded_by_a_trigger_listener_leaves_the_hold_triggered() -> void:
 		CONNECT_ONE_SHOT,
 	)
 
-	# When: The action is pressed.
+	# When: The press lasts past the duration.
 	input.press_action(_ACTION)
+	await _elapse(_DURATION)
 
 	# Then: The hold triggers once, and doesn't also cancel.
 	assert_signal_emit_count(slot, "action_hold_triggered", 1)
@@ -1539,16 +1397,7 @@ func before_all() -> void:
 func before_each() -> void:
 	hold_mode = _make_mode_property(&"mode")
 
-	duration_scale = StdSettingsPropertyFloatRange.new()
-	duration_scale.category = &"probe"
-	duration_scale.name = &"scale"
-	duration_scale.scope = StdSettingsScope.new()
-	duration_scale.minimum = 0.5
-	duration_scale.maximum = 2.0
-	duration_scale.default = 1.0
-
 	slot = SlotTest.make_slot()
-	slot.hold_duration_scale_property = duration_scale
 	slot.hold_mode_property = hold_mode
 
 

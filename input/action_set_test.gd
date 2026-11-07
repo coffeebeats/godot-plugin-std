@@ -82,10 +82,9 @@ func test_list_action_names_leaves_out_what_only_a_hold_names() -> void:
 	# Given: An action set with a digital action.
 	action_set.actions_digital = [&"jump"]
 
-	# Given: A hold over an action the set doesn't declare, cancelled by another.
+	# Given: A hold over an action the set doesn't declare.
 	var hold := StdInputActionHold.new()
 	hold.action = &"charge"
-	hold.cancel_action = &"cancel"
 	action_set.holds = [hold]
 
 	# When: Action names are listed.
@@ -106,10 +105,11 @@ func test_get_analog_2d_action_resolves_each_direction() -> void:
 
 
 func test_get_analog_2d_action_returns_empty_for_other_actions() -> void:
-	# Given: An action set with a 2D analog action, its directional actions, and another
-	# digital action.
+	# Given: An action set with a 2D analog action and its directional actions.
 	action_set.actions_analog_2d = [&"move"]
 	action_set.actions_digital = StdInputActionSet.list_analog_2d_actions(&"move")
+
+	# Given: Another digital action in the set.
 	action_set.actions_digital.append(&"jump")
 
 	# When/Then: Neither the other action nor the stick itself resolves to a stick.
@@ -254,7 +254,7 @@ func test_action_set_layer_has_parent_reference() -> void:
 	# Given: An action set and a layer.
 	var layer: StdInputActionSetLayer = autofree(StdInputActionSetLayer.new())
 
-	# Given: The layer's parent is set.
+	# When: The layer's parent is set.
 	layer.parent = action_set
 
 	# Then: The parent reference is correct.

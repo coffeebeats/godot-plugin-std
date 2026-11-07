@@ -15,7 +15,8 @@ extends Resource
 
 ## Mode is how a player performs a hold.
 ##
-## NOTE: A settings property stores these values, so they must not be renumbered.
+## NOTE: A settings property stores these values, so none may be renumbered, and `3`,
+## a retired mode that player settings may still hold, may not be reused.
 enum Mode {
 	## INHERIT makes no choice, so a settings property holding it defers to the hold's next
 	## source of a mode, and `mode` holding it runs as `HOLD`. It's `0` because that's
@@ -23,17 +24,14 @@ enum Mode {
 	INHERIT = 0,
 	## HOLD fills while the input is held, and cancels on a release before the fill.
 	HOLD = 1,
-	## TOGGLE starts on a tap and fills on its own, unless a second tap of `action` or a
-	## press of `cancel_action` cancels it first.
+	## TOGGLE starts on a tap and fills on its own, unless a second tap of `action`
+	## cancels it first.
 	TOGGLE = 2,
-	## PRESS triggers on the press, for a player who wants no holds.
-	PRESS = 3,
 }
 
 const MODE_INHERIT := Mode.INHERIT
 const MODE_HOLD := Mode.HOLD
 const MODE_TOGGLE := Mode.TOGGLE
-const MODE_PRESS := Mode.PRESS
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
@@ -45,16 +43,11 @@ const MODE_PRESS := Mode.PRESS
 ## An action with no wait isn't a hold, so its handler reads its press instead.
 @export var duration: float = 1.0
 
-## cancel_action is the name of an action whose press also ends an active `MODE_TOGGLE`
-## hold, beside a second tap of `action`. When empty, only that second tap ends it.
-##
-## NOTE: The sets active with this hold must declare it, or nothing can press it.
-@export var cancel_action: StringName = &""
-
 @export_group("Mode")
 
 ## mode is the `Mode` the hold runs in when no settings property chooses one, neither
-## its `mode_override` nor the `StdInputSlot`'s `hold_mode_property`.
+## its `mode_override` nor the `StdInputSlot`'s `hold_mode_property`. A stored value
+## that's no `Mode` runs as `MODE_HOLD`.
 @export var mode: Mode = MODE_HOLD
 
 ## mode_override is an optional settings property which, while it holds anything but
@@ -67,11 +60,3 @@ const MODE_PRESS := Mode.PRESS
 ## NOTE: The options must keep `MODE_TOGGLE`, the alternative to holding that Game
 ## Accessibility Guidelines and Xbox XAG 107 ask for. Nothing checks this.
 @export var mode_override: StdSettingsPropertyInt = null
-
-## allow_press defines whether the hold can run in `MODE_PRESS`. A destructive confirm
-## sets this to `false`, so `MODE_PRESS` runs as `MODE_TOGGLE`, whichever source chose
-## it, and a tap can't skip `duration`.
-##
-## NOTE: In `MODE_TOGGLE`, a stray tap still triggers the hold once it fills, unless a
-## second tap of `action` or a press of `cancel_action` ends it first.
-@export var allow_press: bool = true
