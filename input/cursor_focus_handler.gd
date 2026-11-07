@@ -105,6 +105,12 @@ var _is_outside_focus_root: bool = false
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
+## is_focusable returns whether the target `Control` node could take focus when this
+## handler became ready. A control which couldn't takes no hover or click.
+func is_focusable() -> bool:
+	return _control_focus_mode != Control.FOCUS_NONE
+
+
 ## is_focused returns whether the target `Control` node currently has focus.
 func is_focused() -> bool:
 	return _focused

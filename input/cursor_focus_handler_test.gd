@@ -665,6 +665,33 @@ func test_handler_emits_signal_on_control_event(
 	assert_signal_emitted(handler, params.expected_signal)
 
 
+func test_is_focusable_follows_the_controls_focus_mode_when_ready() -> void:
+	# Given: A cursor in the scene.
+	add_child_autofree(cursor)
+
+	# Given: A focusable button with a focus handler.
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	add_child_autofree(button)
+	var button_handler := StdInputCursorFocusHandler.new()
+	button.add_child(button_handler)
+
+	# Given: An unfocusable label with a focus handler.
+	var label := Label.new()
+	label.focus_mode = Control.FOCUS_NONE
+	add_child_autofree(label)
+	var label_handler := StdInputCursorFocusHandler.new()
+	label.add_child(label_handler)
+
+	# When: The cursor is shown, which turns off the button's focus.
+	cursor.show_cursor()
+	assert_eq(button.focus_mode, Control.FOCUS_NONE, "precondition")
+
+	# Then: Only the button's handler is focusable.
+	assert_true(button_handler.is_focusable())
+	assert_false(label_handler.is_focusable())
+
+
 func test_is_focused_returns_correct_state() -> void:
 	# Given: A cursor in the scene.
 	add_child_autofree(cursor)

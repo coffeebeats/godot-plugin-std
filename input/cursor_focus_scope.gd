@@ -4,8 +4,8 @@
 ## StdInputCursorFocusScope is a node which confines focus to the `Control` at `control`
 ## by claiming it with the `StdInputCursor` while active. It's active while the control
 ## is visible in the tree, every `StdPanel` owning it or an ancestor is opening or open,
-## and no screen covers it. A control holding a focus handler must hold an anchor, so
-## focus has somewhere to land when the cursor hides.
+## and no screen covers it. A control holding a focusable handler must hold an anchor,
+## so focus has somewhere to land when the cursor hides.
 ##
 ## NOTE: Godot's neighbour search reaches every focusable control in the viewport, so
 ## without a scope a panel over a running scene lets focus leave it for what's behind.
@@ -92,8 +92,8 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
-## _check_anchor reports the control, once per claim, if it holds a focus handler but
-## no anchor, which leaves focus nowhere to land when the cursor hides.
+## _check_anchor reports the control, once per claim, if it holds a focusable handler
+## but no anchor, which leaves focus nowhere to land when the cursor hides.
 ##
 ## NOTE: A handler counts only if its control is visible as the claim's frame ends and
 ## isn't under a nested scope's control, which confines focus to itself.
@@ -110,6 +110,10 @@ func _check_anchor() -> void:
 	for node in _control.find_children("*", "", true, false):
 		var handler := node as StdInputCursorFocusHandler
 		if not handler:
+			continue
+
+		# NOTE: A handler on a control which can't take focus has nothing to anchor.
+		if not handler.is_focusable():
 			continue
 
 		var target := handler.get_node_or_null(handler.control) as Control

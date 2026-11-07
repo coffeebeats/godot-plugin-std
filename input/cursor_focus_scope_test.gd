@@ -203,6 +203,22 @@ func test_scope_whose_only_anchor_is_in_an_open_sub_panel_reports_it() -> void:
 	assert_engine_error("missing focus anchor")
 
 
+func test_scope_holding_only_an_unfocusable_handler_reports_nothing() -> void:
+	# Given: A control with a scope, holding an unfocusable label with a focus handler.
+	var label := Label.new()
+	label.focus_mode = Control.FOCUS_NONE
+	_control.add_child(label)
+	label.add_child(StdInputCursorFocusHandler.new())
+	_control.add_child(StdInputCursorFocusScope.new())
+
+	# When: It enters the tree, and the frame ends.
+	add_child_autofree(_control)
+	await wait_process_frames(1)
+
+	# Then: Nothing is reported.
+	assert_engine_error_count(0)
+
+
 func test_scope_without_focus_handlers_reports_nothing() -> void:
 	# Given: A control with a scope, holding only a label.
 	_control.add_child(Label.new())
