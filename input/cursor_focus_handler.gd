@@ -43,8 +43,28 @@ const Signals := preload("../event/signal.gd")
 
 ## use_as_anchor determines whether the target `Control` node is eligible for focus if
 ## no better UI elements are eligible upon switching to focus-based navigation. In
-## effect, the target node will be focused when the cursor is hidden.
-@export var use_as_anchor: bool = false
+## effect, the target node will be focused when the cursor is hidden. A change takes
+## effect at once.
+@export var use_as_anchor: bool = false:
+	set(value):
+		if value == use_as_anchor:
+			return
+
+		use_as_anchor = value
+
+		if not is_inside_tree():
+			return
+
+		if not value:
+			_anchors.erase(self)
+			return
+
+		_anchors.append(self)
+
+		# NOTE: The new anchor may be the only control focus can land on.
+		if is_node_ready() and is_instance_valid(_control):
+			if _control.is_visible_in_tree():
+				_cursor.report_focus_handler_visible.call_deferred(self)
 
 ## priority determines which anchor receives focus when multiple anchor-enabled focus
 ## handlers are visible in the scene. The highest priority anchor wins. If multiple
@@ -83,6 +103,12 @@ var _is_outside_focus_root: bool = false
 @onready var _control: Control = get_node(control)
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
+
+
+## is_focusable returns whether the target `Control` node could take focus when this
+## handler became ready. A control which couldn't takes no hover or click.
+func is_focusable() -> bool:
+	return _control_focus_mode != Control.FOCUS_NONE
 
 
 ## is_focused returns whether the target `Control` node currently has focus.
