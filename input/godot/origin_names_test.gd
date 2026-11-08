@@ -59,7 +59,7 @@ func test_origin_names_key_resolves_a_mouse_button() -> void:
 func test_origin_names_key_resolves_a_physical_key() -> void:
 	# Given: Names with an entry for a key.
 	var names := StdInputOriginNames.new()
-	names.keys = {KEY_ENTER: &"test_key_enter"}
+	names.keyboard_keys = {KEY_ENTER: &"test_key_enter"}
 
 	# Given: An event for that physical key.
 	var event := InputEventKey.new()
@@ -75,7 +75,7 @@ func test_origin_names_key_resolves_a_physical_key() -> void:
 func test_origin_names_key_resolves_a_keycode_only_key() -> void:
 	# Given: Names with an entry for a key.
 	var names := StdInputOriginNames.new()
-	names.keys = {KEY_ENTER: &"test_key_enter"}
+	names.keyboard_keys = {KEY_ENTER: &"test_key_enter"}
 
 	# Given: An event naming that key by keycode alone, as project settings do.
 	var event := InputEventKey.new()

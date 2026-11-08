@@ -158,11 +158,17 @@ func _get_action_origin_label(
 		if not key:
 			continue
 
-		var label := tr(key)
+		var label := tr(key, names.translation_context)
 		if label != key:
 			return label
 
-		assert(false, "invalid config; untranslated origin name: %s" % key)
+		assert(
+			false,
+			(
+				"invalid config; untranslated origin name: %s (context: '%s')"
+				% [key, names.translation_context]
+			),
+		)
 
 	if event is InputEventKey:
 		return Origin.get_key_label(event)
