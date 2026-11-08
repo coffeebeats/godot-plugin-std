@@ -37,6 +37,8 @@ An [action set](./input/action_set.gd) is a mode of play, and loading one unbind
 
 Every connected device stays accepted at all times. The active device only picks which glyphs are shown. It changes on a key, button, or stick (past its deadzone) bound to a loaded action, or on a reveal-button click while `cursor_click_activates_kbm` is on. Mouse motion never changes it, following Valve's [Steam Deck guidance](https://partner.steamgames.com/doc/steamhardware/recommendations). The cursor is tracked separately. A reveal-button click or mouse motion past a threshold reveals it, and the hide actions hide it.
 
+Off Steam, the [Godot glyph provider](./input/godot/device_glyphs.gd) draws origins from its `glyph_sets` and names them from its `origin_names`, a list of [`StdInputOriginNames`](./input/godot/origin_names.gd) that map joypad buttons, each direction of a joypad axis, mouse buttons and keys to translation keys. Both lists are searched in order among the entries whose `device_types` match the device, so a specific resource placed first overrides a general one, and a joypad type that nothing matches uses the `GENERIC` entries. std ships no names. Without an entry, a key is named by its label in the player's keyboard layout, and a joypad or mouse origin has no name. A key that has no translation asserts in debug builds and counts as no entry in release builds. Steam names the origins it drives itself.
+
 #### **`iter`**
 
 The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
