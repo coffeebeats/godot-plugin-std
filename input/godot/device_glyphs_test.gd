@@ -64,7 +64,10 @@ class SizedGlyphSet:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+## _glyphs is the provider under test.
 var _glyphs: DeviceGlyphs = null
+
+## _translation holds `_MESSAGES` while the tests run.
 var _translation: Translation = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
@@ -350,8 +353,7 @@ func test_device_glyphs_label_returns_empty_for_a_joypad_origin_without_one() ->
 
 
 func test_device_glyphs_label_reports_an_untranslated_name() -> void:
-	# Given: Names for the joypad type whose entry for the bound button has no
-	# translation.
+	# Given: Names for the joypad type with an untranslated entry for the bound button.
 	_glyphs.origin_names = [
 		_make_names([DEVICE_TYPE_PS_5], &"test_origin_untranslated"),
 	]

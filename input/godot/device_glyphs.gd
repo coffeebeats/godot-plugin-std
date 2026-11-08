@@ -1,7 +1,7 @@
 ##
 ## std/input/godot/device_glyphs.gd
 ##
-## An implemention of `StdInputDeviceGlyphs` which maps joypad names and origins to
+## An implementation of `StdInputDeviceGlyphs` which maps joypad names and origins to
 ## custom glyphs and display names using Godot's built-in `Input` class/SDL controller
 ## database.
 ##
@@ -25,19 +25,16 @@ const DEVICE_TYPE_KEYBOARD := StdInputDevice.DEVICE_TYPE_KEYBOARD
 
 ## glyph_sets defines the list of supported glyph icon sets for any device type.
 ##
-## NOTE: Multiple sets can be provided for the same device type; this component searches
-## them in order and returns the first glyph found. A joypad type which no set matches
-## uses the sets matching `DEVICE_TYPE_GENERIC` instead.
+## NOTE: Sets are searched in order and the first glyph found wins. A joypad type which
+## no set matches uses the sets matching `DEVICE_TYPE_GENERIC` instead.
 @export var glyph_sets: Array[StdInputGlyphSet] = []
 
-## origin_names defines the translation keys naming origins for any device type. std
-## ships no names, so without an entry a key is named by its keyboard label, and a
-## joypad or mouse origin has no name.
+## origin_names defines the translation keys naming origins for any device type,
+## searched as `glyph_sets` are. Without an entry a key is named by its keyboard label,
+## and a joypad or mouse origin has no name.
 ##
-## NOTE: These are searched as `glyph_sets` are, and the first entry found is
-## translated. Each value must be a translation key whose translation differs from the
-## key itself, since an untranslated key asserts in debug builds and is skipped in
-## release builds, so the player never reads a raw key.
+## NOTE: An entry whose translation equals its key asserts in debug builds and is
+## skipped in release builds, so each value must be a key rather than source text.
 @export var origin_names: Array[StdInputOriginNames] = []
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -190,11 +187,11 @@ func _has_action_origin(
 
 
 ## _list_matching returns the items of `resources`, each a `StdInputGlyphSet` or a
-## `StdInputOriginNames`, which match `device_type`, in order.
+## `StdInputOriginNames`, which match `device_type`, in order, or for a joypad type none
+## matches, those matching `DEVICE_TYPE_GENERIC`.
 ##
-## NOTE: Only a joypad type no item matches falls back to the items matching
-## `DEVICE_TYPE_GENERIC`. A matched item lacking an origin doesn't, since another pad's
-## icon or name would refer to a button the player doesn't have.
+## NOTE: A matched item lacking an origin never falls back to a generic one, since
+## another pad's icon or name would refer to a button the player doesn't have.
 func _list_matching(
 	resources: Array,
 	device_type: StdInputDevice.DeviceType,
