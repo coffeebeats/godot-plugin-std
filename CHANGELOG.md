@@ -1,5 +1,13 @@
 # Changelog
 
+## 9.2.0 (2026-11-08)
+
+## What's Changed
+* feat(input): add `translation_context` to `StdInputOriginNames` and rename its `keys` to `keyboard_keys` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/623
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v9.1.0...v9.2.0
+
 ## 9.1.0 (2026-11-08)
 
 ## What's Changed
