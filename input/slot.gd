@@ -20,9 +20,9 @@
 ## for gyro and trackpad input; see
 ## https://partner.steamgames.com/doc/steamhardware/recommendations.
 ##
-## TODO: For now, this class only supports single player because there's no way to
-## filter out device indices. Given that Godot has limited-at-best support for local
-## multiplayer, this is not a priority.
+## NOTE: Only one slot per game is supported, since each binding applies to every
+## device. Tracking input and focus per player in the engine is proposed in
+## https://github.com/godotengine/godot-proposals/issues/10070.
 ##
 
 class_name StdInputSlot
