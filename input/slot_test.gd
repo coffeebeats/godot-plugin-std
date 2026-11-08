@@ -11,6 +11,7 @@ extends GutTest
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+## _TEST_ACTIONS are the actions every test set declares.
 const _TEST_ACTIONS: Array[StringName] = [&"test_action"]
 
 ## _TEST_AXIS_ACTIONS are two actions bound to the same joypad axis direction.
@@ -136,7 +137,7 @@ static func make_slot(
 
 
 func test_input_slot_activates_keyboard_on_ready() -> void:
-	# Given: The input slot is configured to claim keyboard + mouseinput.
+	# Given: The input slot is configured to claim keyboard and mouse input.
 	slot.claim_kbm_input = true
 
 	# Given: Signals are monitored.
@@ -164,8 +165,10 @@ func test_input_slot_activates_keyboard_on_ready() -> void:
 
 
 func test_input_slot_does_not_swap_device_for_synthetic_action() -> void:
-	# Given: The input slot claims keyboard + mouse input.
+	# Given: The input slot claims keyboard and mouse input.
 	slot.claim_kbm_input = true
+
+	# Given: A joypad isn't preferred over the keyboard.
 	slot.prefer_activate_joypad_on_ready = false
 
 	# Given: The input slot is added to the scene.
@@ -180,14 +183,13 @@ func test_input_slot_does_not_swap_device_for_synthetic_action() -> void:
 	var kbm: StdInputDevice = autofree(slot.get_active_device())
 	assert_eq(kbm.device_type, StdInputDevice.DEVICE_TYPE_KEYBOARD)
 
-	# Given: A joypad device reference for cleanup.
+	# Given: The connected joypad is freed after the test.
 	autofree(slot.get_connected_devices(false)[0])
 
 	# Given: A test action is registered as an active action.
 	slot._actions = [&"test_action"]
 
-	# When: A synthetic InputEventAction with DEVICE_ID_SYNTHETIC
-	# is dispatched.
+	# When: A synthetic action event is dispatched.
 	var event := InputEventAction.new()
 	event.action = &"test_action"
 	event.device = StdInputEvent.DEVICE_ID_SYNTHETIC
@@ -201,8 +203,10 @@ func test_input_slot_does_not_swap_device_for_synthetic_action() -> void:
 
 
 func test_input_slot_swaps_device_for_action_with_matching_id() -> void:
-	# Given: The input slot claims keyboard + mouse input.
+	# Given: The input slot claims keyboard and mouse input.
 	slot.claim_kbm_input = true
+
+	# Given: A joypad isn't preferred over the keyboard.
 	slot.prefer_activate_joypad_on_ready = false
 
 	# Given: The input slot is added to the scene.
@@ -220,8 +224,7 @@ func test_input_slot_swaps_device_for_action_with_matching_id() -> void:
 	# Given: A test action is registered as an active action.
 	slot._actions = [&"test_action"]
 
-	# When: An InputEventAction with a device ID matching the
-	# connected joypad is dispatched (e.g. from Steam Input).
+	# When: An action event for the joypad, as Steam Input injects one, is dispatched.
 	var event := InputEventAction.new()
 	event.action = &"test_action"
 	event.device = 0
@@ -448,6 +451,46 @@ func test_input_slot_locale_change_emits_origin_labels_changed() -> void:
 	assert_signal_emit_count(slot, "origin_labels_changed", 2)
 
 
+func test_input_slot_hold_mode_property_assignment_is_reported() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# When: A property is assigned as the hold mode property.
+	slot.hold_mode_property = StdSettingsPropertyInt.new()
+
+	# Then: The change was reported once.
+	assert_signal_emit_count(slot, "hold_mode_property_changed", 1)
+
+	# When: The property is cleared.
+	slot.hold_mode_property = null
+
+	# Then: That change was reported too.
+	assert_signal_emit_count(slot, "hold_mode_property_changed", 2)
+
+
+func test_input_slot_hold_mode_property_reassignment_is_not_reported() -> void:
+	# Given: An input slot added to the scene.
+	add_child_autofree(slot)
+	autofree(slot.get_active_device())
+
+	# Given: The slot has a hold mode property.
+	var property := StdSettingsPropertyInt.new()
+	slot.hold_mode_property = property
+
+	# Given: Signals are monitored.
+	watch_signals(slot)
+
+	# When: The same property is assigned again.
+	slot.hold_mode_property = property
+
+	# Then: Nothing was reported.
+	assert_signal_not_emitted(slot, "hold_mode_property_changed")
+
+
 func test_input_slot_actions_include_every_action_of_the_set_and_its_layers() -> void:
 	# Given: An input slot added to the scene.
 	add_child_autofree(slot)
@@ -664,10 +707,11 @@ func test_input_slot_matches_events_as_its_active_joypads_component_does() -> vo
 
 
 func test_input_slot_joypad_connected_before_player_input_activates() -> void:
-	# Given: An input slot added to the scene with the keyboard active and a joypad
-	# preferred.
+	# Given: The input slot claims the keyboard and prefers a joypad.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = true
+
+	# Given: The input slot is added to the scene with the keyboard active.
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
 
@@ -682,13 +726,18 @@ func test_input_slot_joypad_connected_before_player_input_activates() -> void:
 
 
 func test_input_slot_joypad_connected_after_player_input_stays_inactive() -> void:
-	# Given: An input slot added to the scene with the keyboard active and a joypad
-	# preferred.
+	# Given: The input slot claims the keyboard and prefers a joypad.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = true
+
+	# Given: The input slot is added to the scene with the keyboard active.
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
+
+	# Given: The test action is active.
 	slot._actions = [&"test_action"]
+
+	# Given: Signals are monitored.
 	watch_signals(slot)
 
 	# Given: The player presses and releases a key bound to an action.
@@ -708,12 +757,15 @@ func test_input_slot_joypad_connected_after_player_input_stays_inactive() -> voi
 
 
 func test_input_slot_emulated_mouse_button_is_not_player_input() -> void:
-	# Given: An input slot added to the scene with the keyboard active and a joypad
-	# preferred, under a set where a click activates the keyboard.
+	# Given: The input slot claims the keyboard and prefers a joypad.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = true
+
+	# Given: The input slot is added to the scene with the keyboard active.
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
+
+	# Given: A set where a click activates the keyboard is loaded.
 	var action_set := _make_action_set(&"Test")
 	action_set.cursor_click_activates_kbm = StdInputActionSet.PROPERTY_STATUS_ON
 	assert_true(slot.load_action_set(action_set), "precondition: action set loaded")
@@ -735,11 +787,12 @@ func test_input_slot_emulated_mouse_button_is_not_player_input() -> void:
 
 
 func test_input_slot_unbound_key_is_not_player_input() -> void:
-	# Given: An input slot added to the scene with the keyboard active and the test
-	# action active.
+	# Given: An input slot claiming the keyboard added to the scene.
 	slot.claim_kbm_input = true
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
+
+	# Given: The test action is active.
 	slot._actions = [&"test_action"]
 
 	# When: A key bound to no action is pressed.
@@ -787,8 +840,7 @@ func test_input_slot_joypad_motion_inside_deadzone_is_not_player_input() -> void
 	# Given: The test axis actions are active.
 	slot._actions = [&"test_axis_a", &"test_axis_b"]
 
-	# When: The bound stick moves far enough to read as a press but stays inside the
-	# actions' deadzone.
+	# When: The bound stick moves past a press but stays inside the actions' deadzone.
 	slot._input(_joypad_motion(0, (0.5 + _TEST_DEADZONE) / 2.0))
 
 	# Then: The slot has seen no player input.
@@ -796,12 +848,15 @@ func test_input_slot_joypad_motion_inside_deadzone_is_not_player_input() -> void
 
 
 func test_input_slot_joypad_pressed_before_connecting_activates_on_connect() -> void:
-	# Given: An input slot added to the scene with the keyboard active, a joypad
-	# preferred, and the test axis actions active.
+	# Given: The input slot claims the keyboard and prefers a joypad.
 	slot.claim_kbm_input = true
 	slot.prefer_activate_joypad_on_ready = true
+
+	# Given: The input slot is added to the scene with the keyboard active.
 	add_child_autofree(slot)
 	autofree(slot.get_active_device())
+
+	# Given: The test axis actions are active.
 	slot._actions = [&"test_axis_a", &"test_axis_b"]
 
 	# Given: A joypad its monitor hasn't reported yet moves the bound stick.
@@ -1158,7 +1213,7 @@ func before_each() -> void:
 
 ## _activate_joypad_under_set adds the slot to the scene with the keyboard claimed, a
 ## joypad connected and active, an action set loaded whose `cursor_click_activates_kbm`
-## is `status`, and the cursor hidden. Returns the joypad.
+## is `status`, and the cursor hidden, then returns the joypad.
 func _activate_joypad_under_set(
 	status: StdInputActionSet.PropertyStatus,
 ) -> StdInputDevice:

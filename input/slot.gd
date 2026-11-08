@@ -2,14 +2,13 @@
 ##
 ## std/input/slot.gd
 ##
-## StdInputSlot is an abstraction for managing the input of a single player within the
-## game. Each `StdInputSlot` can be customized to control what input falls within its
-## scope and which input devices are assigned to it.
+## StdInputSlot manages the input of a single player within the game, including what
+## input falls within its scope and which input devices are assigned to it.
 ##
 ## For a local multiplayer game, one `StdInputSlot` would be created for each possible
 ## player (and possibly one additional slot for keyboard and mouse controls if those
 ## aren't tied to one player). Single player games should have a single `StdInputSlot`
-## which defines how to swap between various connected `StdInputDevice`s.
+## which swaps between the connected `StdInputDevice`s.
 ##
 ## The slot accepts input from every connected device at all times; the active device
 ## only decides which glyphs are shown and which device haptics target. A press bound to
@@ -63,22 +62,25 @@ signal action_pressed(action: StringName, device: int)
 ## the ID which started the hold when no event ended it.
 signal action_released(action: StringName, device: int, held_seconds: float)
 
-## cursor_visibility_changed is emitted when this slot's cursor visibility changes. This
-## is only used if a `cursor` property is set.
+## cursor_visibility_changed is emitted when the slot's `cursor` shows or hides.
 signal cursor_visibility_changed(visible: bool)
 
-## device_activated is emitted when a new `StdInputDevice` becomes active.
+## device_activated is emitted when another `StdInputDevice` becomes active.
 signal device_activated(device: StdInputDevice)
 
 ## device_connected is emitted when a new `StdInputDevice` is connected.
 ##
-## NOTE: This might not be emitted for devices already connected when the game starts.
-## To change this behavior, alter the `JoypadMonitor` component's behavior.
+## NOTE: A joypad already connected is reported only if `joypad_monitor` broadcasts it.
 signal device_connected(device: StdInputDevice)
 
 ## device_disconnected is emitted when a previously connected `StdInputDevice`
 ## disconnects.
 signal device_disconnected(device: StdInputDevice)
+
+## hold_mode_property_changed is emitted when another property, or none, replaces
+## `hold_mode_property`. Each hold's mode may change with it, which no hold signal
+## reports while nothing is running.
+signal hold_mode_property_changed
 
 ## origin_labels_changed is emitted when the names of origins may have changed while
 ## their bindings didn't. That happens on a keyboard layout switch, which relabels
@@ -96,16 +98,16 @@ const StdInputSlotHeldActions := preload("slot_held_actions.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+## GROUP_INPUT_SLOT is the `StdGroup` ID which each `StdInputSlot` in the tree joins.
 const GROUP_INPUT_SLOT := &"std/input:slot"
+
 const PROPERTY_STATUS_ON := StdInputActionSet.PROPERTY_STATUS_ON
 const PROPERTY_STATUS_OFF := StdInputActionSet.PROPERTY_STATUS_OFF
 
 
-## JoypadMonitor is an abstract interface for a `Node` which tracks joypad activity
-## (i.e. connects and disconnects).
-##
-## This should be implemented according to the library used for managing input devices
-## (e.g. Steam Input or Godot) and set on the `StdInputSlot`.
+## JoypadMonitor is an abstract `Node` which reports joypads connecting and
+## disconnecting. A game sets one on the `StdInputSlot`, implemented for the library
+## which manages its input devices, such as Steam Input or Godot.
 class JoypadMonitor:
 	extends Node
 
@@ -122,6 +124,7 @@ class JoypadMonitor:
 	func broadcast_connected_joypads() -> void:
 		return _broadcast_connected_joypads()
 
+	## _broadcast_connected_joypads emits `joy_connected` for each connected joypad.
 	func _broadcast_connected_joypads() -> void:
 		assert(false, "unimplemented")
 
@@ -139,8 +142,6 @@ class JoypadMonitor:
 ## as its own, so a key or mouse button bound to an active action activates the
 ## keyboard and mouse `StdInputDevice`.
 ##
-## NOTE: If `true`, the keyboard and mouse device will be activated initially.
-##
 ## NOTE: If `false`, a key or mouse button starts no hold, but `Input` still counts one
 ## that's down, so it prolongs a joypad's hold.
 @export var claim_kbm_input: bool = true
@@ -150,7 +151,7 @@ class JoypadMonitor:
 ## loads. That input is a bound key press, a click which activates the keyboard, or a
 ## bound press on a connected joypad. Joypad monitors can report controllers a few
 ## frames after `_ready`, so the preference lasts until that input rather than until the
-## slot is ready. A joypad connected later is only connected.
+## slot is ready.
 @export var prefer_activate_joypad_on_ready: bool = true
 
 @export_group("Properties")
@@ -171,17 +172,20 @@ class JoypadMonitor:
 ## overrides each hold's `mode`.
 @export var hold_mode_property: StdSettingsPropertyInt = null:
 	set(value):
+		var is_changed := value != hold_mode_property
 		hold_mode_property = value
 		_gestures.set_mode_property(hold_mode_property)
 
+		if is_changed:
+			hold_mode_property_changed.emit()
+
 @export_group("Components")
 
-## cursor is a node which manages the visibility state of the game's cursor. This is an
-## optional component, but only one `StdInputSlot` at most may have one.
+## cursor is the node which manages the visibility of the game's cursor. Slots sharing a
+## tree share one, since only one may exist.
 @export var cursor: StdInputCursor = null
 
-## joypad_monitor is a node which monitors joypad activity. This `StdInputSlot` node
-## will manage active input devices based on the monitor's signals.
+## joypad_monitor is the node which reports joypads connecting and disconnecting.
 @export var joypad_monitor: JoypadMonitor = null
 
 @export_subgroup("Keyboard and mouse")
@@ -208,20 +212,35 @@ class JoypadMonitor:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
+## _actions lists the names of the active sets' actions, the absolute mouse action
+## included, whose presses activate a device.
 var _actions: Array[String] = []
+
+## _active is the active device, or `null` when none is.
 var _active: StdInputDevice = null
+
+## _cursor_click_activates_kbm is whether the active sets let a click of a cursor reveal
+## button activate the keyboard and mouse device.
 var _cursor_click_activates_kbm: bool = false
 
 ## _gestures runs the holds the active sets declare.
 var _gestures: StdInputSlotGestures = null
 
+## _has_player_input is whether the player has made a first input, which ends the
+## preference of `prefer_activate_joypad_on_ready`.
 var _has_player_input: bool = false
+
+## _joypad_devices lists the connected joypads' devices, in the order they connected.
 var _joypad_devices: Array[StdInputDevice] = []
+
+## _kbm_device is the keyboard and mouse device, or `null` while the slot has none.
 var _kbm_device: StdInputDevice = null
 
 ## _keyboard_layout is the index of the keyboard layout at the last poll.
 var _keyboard_layout: int = DisplayServer.keyboard_get_current_layout()
 
+## _last_active_joypad is the joypad most recently active, or `null` when no connected
+## joypad has been.
 var _last_active_joypad: StdInputDevice = null
 
 ## _pressed maps each joypad's device ID to the active actions it holds, so a hold can't
@@ -301,21 +320,19 @@ func is_action_hold_active(action: StringName) -> bool:
 # Devices
 
 
-## get_active_device returns the currently (i.e. most recently) active input device. If
-## no device is active, the returned value will be `null`.
+## get_active_device returns the active input device, or `null` when none is.
 func get_active_device() -> StdInputDevice:
 	return _active
 
 
-## get_last_active_joypad_device returns the last joypad device that was used. If no
-## joypad device has been activated, then this will return `null`.
+## get_last_active_joypad_device returns the joypad most recently active, or `null` when
+## no connected joypad has been.
 func get_last_active_joypad_device() -> StdInputDevice:
 	return _last_active_joypad
 
 
-## get_connected_devices returns a list of all connected devices. If `include_keyboard`
-## is `true` (the default), then the keyboard and mouse `StdInputDevice` will be
-## included.
+## get_connected_devices returns every connected device, the keyboard and mouse first
+## unless `include_keyboard` is `false`.
 func get_connected_devices(include_keyboard: bool = true) -> Array[StdInputDevice]:
 	var devices := _joypad_devices.duplicate()
 
@@ -331,9 +348,9 @@ func get_connected_devices(include_keyboard: bool = true) -> Array[StdInputDevic
 	return devices
 
 
-## get_joypad_device_type returns the type of joypad whose glyphs should stand for "a
-## controller": the last active joypad's, else the first connected joypad's, else
-## `DEVICE_TYPE_GENERIC` when none is connected.
+## get_joypad_device_type returns the type of joypad whose glyphs stand for "a
+## controller", which is the last active joypad's, else the first connected joypad's,
+## else `DEVICE_TYPE_GENERIC` when none is connected.
 func get_joypad_device_type() -> DeviceType:
 	if _last_active_joypad:
 		return _last_active_joypad.device_type
@@ -348,8 +365,7 @@ func get_joypad_device_type() -> DeviceType:
 ## which disconnects every joypad until the new monitor reports it. It then emits
 ## `action_configuration_changed`, so glyphs redraw from the new components.
 ##
-## NOTE: This method will *not* remove the prior `JoypadMonitor` from the scene nor add
-## the new one to the scene.
+## NOTE: The caller adds `next_joypad_monitor` to the tree and removes the prior one.
 func swap_joypad_components(
 	next_joypad_monitor: JoypadMonitor,
 	next_device_actions: StdInputDeviceActions,
@@ -409,9 +425,8 @@ func swap_joypad_components(
 
 			joypad.load_action_set(action_set)
 
-	# NOTE: These come last, since a listener can load a set, which every joypad must
-	# then keep rather than have `action_sets` replace. Gestures are cancelled first, so
-	# the release can't trigger a fill no frame has reported.
+	# NOTE: These come last, since a listener can load a set every joypad must then keep.
+	# Gestures are cancelled first, so the release can't trigger an unreported fill.
 	_gestures.cancel_all()
 	_held_actions.release_all()
 
@@ -544,7 +559,6 @@ func _enter_tree() -> void:
 	Signals.connect_safe(device_connected, _on_Self_device_connected)
 	Signals.connect_safe(device_disconnected, _on_Self_device_disconnected)
 
-	# NOTE: Connect after initializing devices to avoid inadvertent device activation.
 	assert(cursor is StdInputCursor, "invalid config; missing component")
 	Signals.connect_safe(
 		cursor.cursor_visibility_changed, _on_cursor_visibility_changed
@@ -688,8 +702,7 @@ func _ready() -> void:
 		haptics.slot = self
 		add_child(haptics, false, INTERNAL_MODE_BACK)
 
-	# NOTE: This must be called after adding components, otherwise no-op components will
-	# be created by the super's implementation.
+	# NOTE: This follows the components above, or the super creates no-op ones.
 	super._ready()
 
 	_logger = _logger.named(&"std/input/slot")
@@ -722,6 +735,8 @@ func _ready() -> void:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _activate_device makes `device`, the keyboard and mouse device or a connected joypad,
+## the active device, and returns whether that changed the active device.
 func _activate_device(device: StdInputDevice) -> bool:
 	assert(device is StdInputDevice, "missing argument: device")
 
@@ -771,12 +786,15 @@ func _activate_device(device: StdInputDevice) -> bool:
 	return false
 
 
+## _connect_joy_device adds a device for joypad `device` as `joy_device_type`, and
+## returns whether it wasn't connected. It's activated while no device is, or over the
+## keyboard until the player's first input when `prefer_activate_joypad_on_ready` is on.
 func _connect_joy_device(
 	device: int, joy_device_type: DeviceType = DEVICE_TYPE_GENERIC
 ) -> bool:
 	assert(device >= 0, "invalid argument; device must be >= 0")
 
-	# NOTE: Shadowing here prevents using wrong type.
+	# NOTE: This shadows `device_type`, so the slot's own type can't be used by mistake.
 	@warning_ignore("SHADOWED_VARIABLE_BASE_CLASS")
 	var device_type := joy_device_type
 
@@ -808,6 +826,7 @@ func _connect_joy_device(
 	return true
 
 
+## _disconnect_joy_device removes joypad `device` and returns whether it was connected.
 func _disconnect_joy_device(device: int) -> bool:
 	assert(device >= 0, "invalid argument; device must be >= 0")
 
@@ -841,6 +860,8 @@ func _disconnect_joy_device(device: int) -> bool:
 	return false
 
 
+## _list_action_sets returns the set loaded for `device` and then its layers, or with
+## `reverse`, the layers from last to first and then the set.
 func _list_action_sets(
 	device: int = DEVICE_ID_ALL, reverse: bool = false
 ) -> Array[StdInputActionSet]:
@@ -862,8 +883,9 @@ func _list_action_sets(
 	return out as Array[StdInputActionSet]
 
 
+## _make_joy returns a new joypad device for `device` as `joy_device_type`.
 func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
-	# NOTE: Shadowing here prevents using wrong type.
+	# NOTE: This shadows `device_type`, so the slot's own type can't be used by mistake.
 	@warning_ignore("SHADOWED_VARIABLE_BASE_CLASS")
 	var device_type := joy_device_type
 
@@ -879,6 +901,7 @@ func _make_joy(device: int, joy_device_type: DeviceType) -> StdInputDevice:
 	return joy
 
 
+## _make_kbm returns a new keyboard and mouse device with the ID `device`.
 func _make_kbm(device: int = 0) -> StdInputDevice:
 	var kbm := StdInputDevice.new()
 
@@ -1015,9 +1038,8 @@ func _update_processing() -> void:
 
 
 func _on_component_bindings_changed() -> void:
-	# NOTE: A component can reload before the slot is ready, such as when a scene change
-	# creates a new component while the active set survives in its static state, and
-	# the slot has no configuration to recompute until it loads a set itself.
+	# NOTE: A component a scene change creates can reload its surviving set before the
+	# slot is ready, and the slot has nothing to recompute until it loads a set itself.
 	if not is_node_ready():
 		return
 
@@ -1058,7 +1080,6 @@ func _on_Self_action_configuration_changed() -> void:
 	# NOTE: These must be iterated in forward order so that later action set layers can
 	# override properties set in earlier action sets.
 	for action_set in action_sets:
-		# Update cursor properties.
 		_cursor_click_activates_kbm = (
 			false
 			if action_set.cursor_click_activates_kbm == PROPERTY_STATUS_OFF
@@ -1067,8 +1088,6 @@ func _on_Self_action_configuration_changed() -> void:
 				or action_set.cursor_click_activates_kbm == PROPERTY_STATUS_ON
 			)
 		)
-
-		# Update active actions.
 
 		# NOTE: Steam publishes the absolute mouse action as joypad activity, so a
 		# trackpad or gyro in use counts as the joypad being used.
