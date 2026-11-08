@@ -291,7 +291,7 @@ func _get_locked_device_type(slot: StdInputSlot) -> DeviceType:
 
 
 ## _get_slot returns the slot of `player_id`, connecting to its signals when first
-## found, or `null` while no slot for the player is in the scene and in the editor.
+## found, or `null` in the editor or while no slot for the player is in the scene.
 func _get_slot() -> StdInputSlot:
 	if is_instance_valid(_slot) and _slot.is_inside_tree():
 		return _slot

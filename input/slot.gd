@@ -438,8 +438,8 @@ func swap_joypad_components(
 # Glyphs
 
 
-## get_action_glyph returns a `Texture2D` containing the glyph of the primary (i.e.
-## first) controller origin which will actuate the specified action.
+## get_action_glyph returns the glyph of the origin bound to `action` at binding
+## `index`, for a host drawing it at `target_size` (zero lets the provider pick).
 func get_action_glyph(
 	action_set: StdInputActionSet,
 	action: StringName,
