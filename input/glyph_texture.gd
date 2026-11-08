@@ -168,7 +168,7 @@ func advance() -> void:
 	_invalidate()
 
 
-## get_origin_label returns the localized name of the origin drawn, or of the one at
+## get_origin_label returns the display name of the origin drawn, or of the one at
 ## `binding_index` when none is.
 func get_origin_label() -> String:
 	_refresh()
