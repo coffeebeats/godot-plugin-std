@@ -29,6 +29,13 @@ const _MESSAGES := {
 	&"test_origin_named_key": "Named Key",
 }
 
+## _CONTEXT_MESSAGES maps each translation context the tests name origins in to its
+## keys and their translations in that context.
+const _CONTEXT_MESSAGES := {
+	&"test_playstation": {&"test_origin_share": "PlayStation Share"},
+	&"test_xbox": {&"test_origin_share": "Xbox Share"},
+}
+
 ## _DEFAULTS maps each test action to the keys it is bound to by default, in binding
 ## index order.
 const _DEFAULTS := {
@@ -67,7 +74,7 @@ class SizedGlyphSet:
 ## _glyphs is the provider under test.
 var _glyphs: DeviceGlyphs = null
 
-## _translation holds `_MESSAGES` while the tests run.
+## _translation holds `_MESSAGES` and `_CONTEXT_MESSAGES` while the tests run.
 var _translation: Translation = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
@@ -338,6 +345,23 @@ func test_device_glyphs_label_uses_the_generic_names_when_none_match() -> void:
 	assert_eq(got, "A Button")
 
 
+func test_device_glyphs_label_translates_a_key_in_its_names_context() -> void:
+	# Given: Names for two joypad types sharing a key, each in its own context.
+	var xbox := _make_names([DEVICE_TYPE_XBOX_ONE], &"test_origin_share")
+	xbox.translation_context = &"test_xbox"
+	var playstation := _make_names([DEVICE_TYPE_PS_5], &"test_origin_share")
+	playstation.translation_context = &"test_playstation"
+	_glyphs.origin_names = [xbox, playstation]
+
+	# When: The label is fetched for each joypad type.
+	var got_xbox := _label(DEVICE_TYPE_XBOX_ONE)
+	var got_playstation := _label(DEVICE_TYPE_PS_5)
+
+	# Then: Each joypad type's key is translated in its names' context.
+	assert_eq(got_xbox, "Xbox Share")
+	assert_eq(got_playstation, "PlayStation Share")
+
+
 func test_device_glyphs_label_returns_empty_for_a_joypad_origin_without_one() -> void:
 	# Given: Names for the joypad type with no entry for the bound button.
 	var names := StdInputOriginNames.new()
@@ -354,15 +378,17 @@ func test_device_glyphs_label_returns_empty_for_a_joypad_origin_without_one() ->
 
 func test_device_glyphs_label_reports_an_untranslated_name() -> void:
 	# Given: Names for the joypad type with an untranslated entry for the bound button.
-	_glyphs.origin_names = [
-		_make_names([DEVICE_TYPE_PS_5], &"test_origin_untranslated"),
-	]
+	var names := _make_names([DEVICE_TYPE_PS_5], &"test_origin_untranslated")
+	names.translation_context = &"test_context"
+	_glyphs.origin_names = [names]
 
 	# When: The label is fetched for the joypad type.
 	var got := _label(DEVICE_TYPE_PS_5)
 
-	# Then: The untranslated key is reported.
-	assert_engine_error("untranslated origin name: test_origin_untranslated")
+	# Then: The untranslated key is reported with the context it was looked up in.
+	assert_engine_error(
+		"untranslated origin name: test_origin_untranslated (context: 'test_context')"
+	)
 
 	# Then: The raw key is not returned.
 	assert_ne(got, "test_origin_untranslated")
@@ -491,6 +517,10 @@ func before_all() -> void:
 	_translation.locale = TranslationServer.get_locale()
 	for key in _MESSAGES:
 		_translation.add_message(key, _MESSAGES[key])
+
+	for context in _CONTEXT_MESSAGES:
+		for key in _CONTEXT_MESSAGES[context]:
+			_translation.add_message(key, _CONTEXT_MESSAGES[context][key], context)
 
 	TranslationServer.add_translation(_translation)
 

@@ -13,6 +13,11 @@ extends Resource
 ## device_types is a list of input device types to which these names pertain.
 @export var device_types: Array[StdInputDevice.DeviceType] = []
 
+## translation_context is the context each key is translated in, which tells apart
+## names whose source text matches but whose meaning differs, such as two platforms'
+## Share buttons. Left empty, keys are translated without a context.
+@export var translation_context: StringName = &""
+
 ## joy_buttons maps joypad buttons to the translation keys of their names.
 @export var joy_buttons: Dictionary[JoyButton, StringName] = {}
 
