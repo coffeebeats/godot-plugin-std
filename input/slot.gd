@@ -5,10 +5,7 @@
 ## StdInputSlot manages the input of a single player within the game, including what
 ## input falls within its scope and which input devices are assigned to it.
 ##
-## For a local multiplayer game, one `StdInputSlot` would be created for each possible
-## player (and possibly one additional slot for keyboard and mouse controls if those
-## aren't tied to one player). Single player games should have a single `StdInputSlot`
-## which swaps between the connected `StdInputDevice`s.
+## A game has one `StdInputSlot`, which swaps between the connected `StdInputDevice`s.
 ##
 ## The slot accepts input from every connected device at all times; the active device
 ## only decides which glyphs are shown and which device haptics target. A press bound to
