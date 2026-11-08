@@ -423,7 +423,7 @@ func test_device_glyphs_label_keeps_a_keys_label_without_a_name() -> void:
 	# Given: Names for the keyboard with no entry for the bound key.
 	var names := StdInputOriginNames.new()
 	names.device_types = [DEVICE_TYPE_KEYBOARD]
-	names.keys = {KEY_ENTER: &"test_origin_named_key"}
+	names.keyboard_keys = {KEY_ENTER: &"test_origin_named_key"}
 	_glyphs.origin_names = [names]
 
 	# When: The label of an action bound to a key is fetched.
@@ -437,7 +437,7 @@ func test_device_glyphs_label_prefers_a_keys_name_over_its_label() -> void:
 	# Given: Names for the keyboard with an entry for the bound key.
 	var names := StdInputOriginNames.new()
 	names.device_types = [DEVICE_TYPE_KEYBOARD]
-	names.keys = {KEY_A: &"test_origin_named_key"}
+	names.keyboard_keys = {KEY_A: &"test_origin_named_key"}
 	_glyphs.origin_names = [names]
 
 	# When: The label of an action bound to the key is fetched.

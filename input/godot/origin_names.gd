@@ -18,6 +18,8 @@ extends Resource
 ## Share buttons. Left empty, keys are translated without a context.
 @export var translation_context: StringName = &""
 
+@export_group("Joypad")
+
 ## joy_buttons maps joypad buttons to the translation keys of their names.
 @export var joy_buttons: Dictionary[JoyButton, StringName] = {}
 
@@ -29,13 +31,15 @@ extends Resource
 ## toward positive values, such as a stick pushed down or right, or a pulled trigger.
 @export var joy_axes_positive: Dictionary[JoyAxis, StringName] = {}
 
+@export_group("Keyboard and mouse")
+
 ## mouse_buttons maps mouse buttons to the translation keys of their names.
 @export var mouse_buttons: Dictionary[MouseButton, StringName] = {}
 
-## keys maps physical keycodes to the translation keys of their names. A key with no
-## entry is named by its label in the player's keyboard layout, so entries suit named
-## keys such as Enter rather than letters and symbols.
-@export var keys: Dictionary[Key, StringName] = {}
+## keyboard_keys maps physical keycodes to the translation keys of their names. A key
+## with no entry is named by its label in the player's keyboard layout, so entries suit
+## named keys such as Enter rather than letters and symbols.
+@export var keyboard_keys: Dictionary[Key, StringName] = {}
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -62,7 +66,7 @@ func get_origin_name_key(event: InputEvent) -> StringName:
 		if keycode == KEY_NONE:
 			keycode = event.keycode
 
-		return keys.get(keycode, &"")
+		return keyboard_keys.get(keycode, &"")
 
 	return &""
 
