@@ -66,8 +66,8 @@ func get_action_origin_count(
 	return _get_action_origin_count(device, device_type, action_set, action)
 
 
-## get_action_origin_label returns the localized display name for the first origin bound
-## to the specified action.
+## get_action_origin_label returns the display name of the origin bound to `action` at
+## binding `index`, or `""` if none is bound or the provider has no name for it.
 func get_action_origin_label(
 	device: int,
 	device_type: StdInputDevice.DeviceType,

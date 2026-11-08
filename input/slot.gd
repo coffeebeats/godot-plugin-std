@@ -20,9 +20,9 @@
 ## for gyro and trackpad input; see
 ## https://partner.steamgames.com/doc/steamhardware/recommendations.
 ##
-## TODO: For now, this class only supports single player because there's no way to
-## filter out device indices. Given that Godot has limited-at-best support for local
-## multiplayer, this is not a priority.
+## NOTE: Only one slot per game is supported, since each binding applies to every
+## device. Tracking input and focus per player in the engine is proposed in
+## https://github.com/godotengine/godot-proposals/issues/10070.
 ##
 
 class_name StdInputSlot
@@ -438,8 +438,8 @@ func swap_joypad_components(
 # Glyphs
 
 
-## get_action_glyph returns a `Texture2D` containing the glyph of the primary (i.e.
-## first) controller origin which will actuate the specified action.
+## get_action_glyph returns the glyph of the origin bound to `action` at binding
+## `index`, for a host drawing it at `target_size` (zero lets the provider pick).
 func get_action_glyph(
 	action_set: StdInputActionSet,
 	action: StringName,
@@ -457,8 +457,8 @@ func get_action_glyph(
 	)
 
 
-## get_action_origin_label returns the localized display name for the first origin bound
-## to the specified action.
+## get_action_origin_label returns the display name of the origin bound to `action` at
+## binding `index`, or `""` if none is bound or the provider has no name for it.
 func get_action_origin_label(
 	action_set: StdInputActionSet,
 	action: StringName,
