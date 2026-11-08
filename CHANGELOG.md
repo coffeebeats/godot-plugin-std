@@ -1,5 +1,14 @@
 # Changelog
 
+## 9.0.0 (2026-11-08)
+
+## What's Changed
+* feat(input)!: drop a hold's press mode, `allow_press`, `cancel_action` and `hold_duration_scale_property` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/618
+* feat(input): add `StdInputActionHoldMonitor`, which publishes the hold state an action's prompt shows by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/620
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v8.1.0...v9.0.0
+
 ## 8.1.0 (2026-11-07)
 
 ## What's Changed
