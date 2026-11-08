@@ -1,5 +1,13 @@
 # Changelog
 
+## 9.1.0 (2026-11-08)
+
+## What's Changed
+* feat(input): name Godot origins through a game's translation keys with `StdInputOriginNames` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/621
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v9.0.0...v9.1.0
+
 ## 9.0.0 (2026-11-08)
 
 ## What's Changed
