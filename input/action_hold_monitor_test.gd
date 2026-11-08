@@ -366,8 +366,10 @@ func test_monitor_leaving_the_tree_stops_listening_until_it_returns() -> void:
 
 
 func test_monitor_slot_leaving_the_tree_reads_inherit() -> void:
-	# Given: A set declaring a toggle, tapped so it runs.
+	# Given: A set declaring a toggle.
 	await _mount(_make_set([_make_hold(MODE_TOGGLE)]))
+
+	# Given: The action was tapped.
 	input.press_action(_ACTION)
 	input.release_action(_ACTION)
 
