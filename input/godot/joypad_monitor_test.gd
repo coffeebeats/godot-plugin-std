@@ -165,6 +165,36 @@ func test_joypad_monitor_broadcast_skips_held_joypads() -> void:
 	)
 
 
+func test_joypad_monitor_get_device_type_tells_joy_con_sides_apart(
+	params = use_parameters(
+		[
+			[
+				"Nintendo Switch Joy-Con (L)",
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT
+			],
+			[
+				"Nintendo Switch Joy-Con (R)",
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT
+			],
+			["Left Joy-Con", StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT],
+			["Right Joy-Con", StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT],
+			["Joy-Con (L/R)", StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR],
+			["Nintendo Switch Pro Controller", StdInputDevice.DEVICE_TYPE_SWITCH_PRO],
+		]
+	),
+) -> void:
+	# Given: A joypad monitor.
+	#
+	# NOTE: The "Nintendo Switch" names are as hardware reported them on 2026-11-09.
+	var monitor: GodotJoypadMonitor = autofree(GodotJoypadMonitor.new())
+
+	# When: The device type is read for the joypad's name.
+	var got := monitor.get_device_type(params[0])
+
+	# Then: Each Joy-Con's side, or the pair, is its own type.
+	assert_eq(got, params[1])
+
+
 func test_joypad_monitor_reads_a_virtual_gamepads_steam_handle() -> void:
 	# When/Then: The Steam handle SDL records for a virtual gamepad is read back.
 	#

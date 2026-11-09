@@ -40,6 +40,8 @@ enum DeviceType {
 	TOUCH = 10,
 	XBOX_360 = 11,
 	XBOX_ONE = 12,
+	SWITCH_JOY_CON_LEFT = 13,
+	SWITCH_JOY_CON_RIGHT = 14,
 }
 
 ## DEVICE_TYPE_UNKNOWN defines an unknown device type.
@@ -67,8 +69,18 @@ const DEVICE_TYPE_STEAM_DECK := DeviceType.STEAM_DECK
 ## DEVICE_TYPE_SWITCH_JOY_CON_PAIR defines a pair of Nintendo Switch Joy-Con devices.
 const DEVICE_TYPE_SWITCH_JOY_CON_PAIR := DeviceType.SWITCH_JOY_CON_PAIR
 
-## DEVICE_TYPE_SWITCH_JOY_CON_SINGLE defines a single Nintendo Switch Joy-Con device.
+## DEVICE_TYPE_SWITCH_JOY_CON_SINGLE defines a single Nintendo Switch Joy-Con device of
+## either side. Steam Input reports a single Joy-Con as this type, and a glyph set or
+## names listing it match `DEVICE_TYPE_SWITCH_JOY_CON_LEFT` and `_RIGHT` too.
 const DEVICE_TYPE_SWITCH_JOY_CON_SINGLE := DeviceType.SWITCH_JOY_CON_SINGLE
+
+## DEVICE_TYPE_SWITCH_JOY_CON_LEFT defines a single left Nintendo Switch Joy-Con, whose
+## Start button is minus and whose Guide button is Capture.
+const DEVICE_TYPE_SWITCH_JOY_CON_LEFT := DeviceType.SWITCH_JOY_CON_LEFT
+
+## DEVICE_TYPE_SWITCH_JOY_CON_RIGHT defines a single right Nintendo Switch Joy-Con,
+## whose stick Godot reports as the left stick.
+const DEVICE_TYPE_SWITCH_JOY_CON_RIGHT := DeviceType.SWITCH_JOY_CON_RIGHT
 
 ## DEVICE_TYPE_SWITCH_PRO defines a Nintendo Switch Pro controller.
 const DEVICE_TYPE_SWITCH_PRO := DeviceType.SWITCH_PRO
@@ -140,6 +152,18 @@ static func get_device_category(
 		return DEVICE_TYPE_KEYBOARD
 
 	return DEVICE_TYPE_GENERIC
+
+
+## is_device_type_listed returns whether `type` is in `types`. A single Joy-Con of a
+## known side is also listed by `DEVICE_TYPE_SWITCH_JOY_CON_SINGLE`.
+static func is_device_type_listed(type: DeviceType, types: Array[DeviceType]) -> bool:
+	if type in types:
+		return true
+
+	return (
+		type in [DEVICE_TYPE_SWITCH_JOY_CON_LEFT, DEVICE_TYPE_SWITCH_JOY_CON_RIGHT]
+		and DEVICE_TYPE_SWITCH_JOY_CON_SINGLE in types
+	)
 
 
 # Events

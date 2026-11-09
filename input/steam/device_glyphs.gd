@@ -156,6 +156,10 @@ static func _get_input_type(device_type: StdInputDevice.DeviceType) -> int:
 			return Steam.INPUT_TYPE_SWITCH_JOYCON_PAIR
 		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE:
 			return Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE
+		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT:
+			return Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE
+		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT:
+			return Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE
 		StdInputDevice.DEVICE_TYPE_SWITCH_PRO:
 			return Steam.INPUT_TYPE_SWITCH_PRO_CONTROLLER
 		StdInputDevice.DEVICE_TYPE_TOUCH:
