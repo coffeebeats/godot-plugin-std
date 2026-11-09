@@ -1,5 +1,13 @@
 # Changelog
 
+## 9.3.0 (2026-11-09)
+
+## What's Changed
+* feat(input): tell a left Joy-Con from a right one by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/626
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v9.2.0...v9.3.0
+
 ## 9.2.0 (2026-11-08)
 
 ## What's Changed
