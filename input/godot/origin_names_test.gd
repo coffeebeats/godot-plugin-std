@@ -104,6 +104,17 @@ func test_origin_names_key_returns_empty_without_an_entry() -> void:
 	assert_eq(got, &"")
 
 
+func test_origin_names_matches_either_joy_con_side_when_listing_single() -> void:
+	# Given: Names listing only a single Joy-Con of unknown side.
+	var names := StdInputOriginNames.new()
+	names.device_types = [StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE]
+
+	# When/Then: Each side matches, and an unlisted type does not.
+	assert_true(names.matches(StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT))
+	assert_true(names.matches(StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT))
+	assert_false(names.matches(StdInputDevice.DEVICE_TYPE_SWITCH_PRO))
+
+
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
