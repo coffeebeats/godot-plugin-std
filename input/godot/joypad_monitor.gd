@@ -1,7 +1,7 @@
 ##
 ## std/input/godot/joypad_monitor.gd
 ##
-## An implemention of `StdInputSlot.JoypadMonitor` which uses Godot's built-in device
+## An implementation of `StdInputSlot.JoypadMonitor` which uses Godot's built-in device
 ## input system to notify the `StdInputSlot` on joypad connection changes.
 ##
 
@@ -31,8 +31,11 @@ static var _regex_steam_deck := RegEx.create_from_string(
 static var _regex_switch_joy_con_pair := RegEx.create_from_string(
 	"(Joy-Con \\(L/R\\)|Joy-Cons)"
 )
-static var _regex_switch_joy_con_single := RegEx.create_from_string(
-	"(Joy-Con \\([LR]\\)|Left Joy-Con|Right Joy-Con)"
+static var _regex_switch_joy_con_left := RegEx.create_from_string(
+	"(Joy-Con \\(L\\)|Left Joy-Con)"
+)
+static var _regex_switch_joy_con_right := RegEx.create_from_string(
+	"(Joy-Con \\(R\\)|Right Joy-Con)"
 )
 static var _regex_switch_pro := RegEx.create_from_string(
 	"((Switch (Controller|Pro)|Horipad Switch)|Pro Controller)"
@@ -59,8 +62,8 @@ var _released := PackedInt64Array()
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_device_type returns the type/category of joypad based on its name. This method is
-## a best effort attempt and uses the SDL controller database.
+## get_device_type returns the type of joypad named `joypad_name`, as a best guess from
+## the SDL controller database.
 ##
 ## FIXME(https://github.com/godotengine/godot/issues/98008): This does not work on macOS
 ## at the moment.
@@ -85,8 +88,11 @@ func get_device_type(joypad_name: String) -> StdInputDevice.DeviceType:
 	if _regex_switch_joy_con_pair.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR
 
-	if _regex_switch_joy_con_single.search(joypad_name):
-		return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE
+	if _regex_switch_joy_con_left.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT
+
+	if _regex_switch_joy_con_right.search(joypad_name):
+		return StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT
 
 	if _regex_switch_pro.search(joypad_name):
 		return StdInputDevice.DEVICE_TYPE_SWITCH_PRO

@@ -40,7 +40,7 @@ func matches(device_type: StdInputDevice.DeviceType) -> bool:
 		"invalid argument: unknown device type",
 	)
 
-	return device_type in device_types
+	return StdInputDevice.is_device_type_listed(device_type, device_types)
 
 
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
