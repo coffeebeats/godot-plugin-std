@@ -1,7 +1,7 @@
 ##
 ## std/input/godot/joypad_monitor.gd
 ##
-## An implemention of `StdInputSlot.JoypadMonitor` which uses Godot's built-in device
+## An implementation of `StdInputSlot.JoypadMonitor` which uses Godot's built-in device
 ## input system to notify the `StdInputSlot` on joypad connection changes.
 ##
 
@@ -62,8 +62,8 @@ var _released := PackedInt64Array()
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## get_device_type returns the type/category of joypad based on its name. This method is
-## a best effort attempt and uses the SDL controller database.
+## get_device_type returns the type of joypad named `joypad_name`, as a best guess from
+## the SDL controller database.
 ##
 ## FIXME(https://github.com/godotengine/godot/issues/98008): This does not work on macOS
 ## at the moment.

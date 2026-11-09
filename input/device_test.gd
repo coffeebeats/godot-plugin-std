@@ -96,7 +96,7 @@ func test_is_device_type_listed_matches_a_listed_type_or_a_sided_joy_con(
 	var device_types: Array[StdInputDevice.DeviceType] = []
 	device_types.assign(params[1])
 
-	# When: Whether the list covers the device type is read.
+	# When: The list is checked for the device type.
 	var got := StdInputDevice.is_device_type_listed(device_type, device_types)
 
 	# Then: A listed type, or a sided Joy-Con under the single type, is covered.

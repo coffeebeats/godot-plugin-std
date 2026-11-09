@@ -70,8 +70,9 @@ const DEVICE_TYPE_STEAM_DECK := DeviceType.STEAM_DECK
 const DEVICE_TYPE_SWITCH_JOY_CON_PAIR := DeviceType.SWITCH_JOY_CON_PAIR
 
 ## DEVICE_TYPE_SWITCH_JOY_CON_SINGLE defines a single Nintendo Switch Joy-Con device of
-## either side. Steam Input reports a single Joy-Con as this type, and a glyph set or
-## names listing it match `DEVICE_TYPE_SWITCH_JOY_CON_LEFT` and `_RIGHT` too.
+## either side, as Steam Input reports one. A `StdInputGlyphSet` or
+## `StdInputOriginNames` listing it also matches `DEVICE_TYPE_SWITCH_JOY_CON_LEFT` and
+## `DEVICE_TYPE_SWITCH_JOY_CON_RIGHT`.
 const DEVICE_TYPE_SWITCH_JOY_CON_SINGLE := DeviceType.SWITCH_JOY_CON_SINGLE
 
 ## DEVICE_TYPE_SWITCH_JOY_CON_LEFT defines a single left Nintendo Switch Joy-Con, whose
@@ -94,7 +95,7 @@ const DEVICE_TYPE_XBOX_360 := DeviceType.XBOX_360
 ## DEVICE_TYPE_XBOX_ONE defines an Xbox ONE joypad.
 const DEVICE_TYPE_XBOX_ONE := DeviceType.XBOX_ONE
 
-## DEVICE_ID_ALL is a special identifier for matching all device ID's within InputMap.
+## DEVICE_ID_ALL is a special identifier for matching all device IDs within InputMap.
 ##
 ## NOTE: See https://github.com/godotengine/godot/pull/99449; '-1' values may change in
 ## the future.

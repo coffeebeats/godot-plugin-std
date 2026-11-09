@@ -1,7 +1,7 @@
 ##
 ## std/input/steam/device_glyphs.gd
 ##
-## StdInputSteamDeviceGlyphs is an implemention of `StdInputDeviceActions` which uses
+## StdInputSteamDeviceGlyphs is an implementation of `StdInputDeviceGlyphs` which uses
 ## the Steam Input API to retrieve origin glyph icons.
 ##
 
