@@ -31,6 +31,14 @@ func test_get_device_category_returns_correct_category(
 				StdInputDevice.DEVICE_TYPE_GENERIC
 			],
 			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT,
+				StdInputDevice.DEVICE_TYPE_GENERIC
+			],
+			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT,
+				StdInputDevice.DEVICE_TYPE_GENERIC
+			],
+			[
 				StdInputDevice.DEVICE_TYPE_STEAM_CONTROLLER,
 				StdInputDevice.DEVICE_TYPE_GENERIC
 			],
@@ -48,6 +56,51 @@ func test_get_device_category_returns_correct_category(
 
 	# Then: The correct category is returned.
 	assert_eq(got, expected_category)
+
+
+func test_is_device_type_listed_matches_a_listed_type_or_a_sided_joy_con(
+	params = use_parameters(
+		[
+			[StdInputDevice.DEVICE_TYPE_PS_4, [StdInputDevice.DEVICE_TYPE_PS_4], true],
+			[StdInputDevice.DEVICE_TYPE_PS_5, [StdInputDevice.DEVICE_TYPE_PS_4], false],
+			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT,
+				[StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE],
+				true,
+			],
+			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT,
+				[StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE],
+				true,
+			],
+			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE,
+				[StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT],
+				false,
+			],
+			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT,
+				[StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT],
+				false,
+			],
+			[
+				StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT,
+				[StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR],
+				false,
+			],
+		]
+	),
+) -> void:
+	# Given: A device type and the types a resource lists.
+	var device_type: StdInputDevice.DeviceType = params[0]
+	var device_types: Array[StdInputDevice.DeviceType] = []
+	device_types.assign(params[1])
+
+	# When: The list is checked for the device type.
+	var got := StdInputDevice.is_device_type_listed(device_type, device_types)
+
+	# Then: A listed type, or a sided Joy-Con under the single type, is covered.
+	assert_eq(got, params[2])
 
 
 func test_is_matching_event_origin_matches_keyboard_events() -> void:

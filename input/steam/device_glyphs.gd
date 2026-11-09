@@ -1,7 +1,7 @@
 ##
 ## std/input/steam/device_glyphs.gd
 ##
-## StdInputSteamDeviceGlyphs is an implemention of `StdInputDeviceActions` which uses
+## StdInputSteamDeviceGlyphs is an implementation of `StdInputDeviceGlyphs` which uses
 ## the Steam Input API to retrieve origin glyph icons.
 ##
 
@@ -155,6 +155,10 @@ static func _get_input_type(device_type: StdInputDevice.DeviceType) -> int:
 		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_PAIR:
 			return Steam.INPUT_TYPE_SWITCH_JOYCON_PAIR
 		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE:
+			return Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE
+		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT:
+			return Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE
+		StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT:
 			return Steam.INPUT_TYPE_SWITCH_JOYCON_SINGLE
 		StdInputDevice.DEVICE_TYPE_SWITCH_PRO:
 			return Steam.INPUT_TYPE_SWITCH_PRO_CONTROLLER

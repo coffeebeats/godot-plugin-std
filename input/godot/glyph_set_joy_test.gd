@@ -55,6 +55,16 @@ var _glyph_set: StdInputGlyphSetJoy = null
 # -- TEST METHODS -------------------------------------------------------------------- #
 
 
+func test_glyph_set_joy_matches_either_joy_con_side_when_listing_single() -> void:
+	# Given: A glyph set listing only a single Joy-Con of unknown side.
+	_glyph_set.device_types = [StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_SINGLE]
+
+	# When/Then: Each side matches, and an unlisted type does not.
+	assert_true(_glyph_set.matches(StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_LEFT))
+	assert_true(_glyph_set.matches(StdInputDevice.DEVICE_TYPE_SWITCH_JOY_CON_RIGHT))
+	assert_false(_glyph_set.matches(StdInputDevice.DEVICE_TYPE_SWITCH_PRO))
+
+
 func test_glyph_set_joy_origin_glyph_returns_each_buttons_own_texture() -> void:
 	for button in _BUTTONS:
 		# Given: A binding to the button.
