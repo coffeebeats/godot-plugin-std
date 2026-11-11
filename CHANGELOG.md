@@ -1,5 +1,13 @@
 # Changelog
 
+## 9.4.0 (2026-11-11)
+
+## What's Changed
+* feat(input): add `StdInputSteamLanguages`, naming the regional locale of each Steam language by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/628
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v9.3.0...v9.4.0
+
 ## 9.3.0 (2026-11-09)
 
 ## What's Changed
