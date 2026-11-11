@@ -12,8 +12,8 @@ extends Object
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 ## LOCALES maps each of Steam's API language names to the locale it is written for, as
-## Godot spells it. A language precedes its regional variants, so a locale that ties two
-## of them, such as `pt`, matches the language. See
+## Godot spells it. A language precedes its regional variants, so a locale equally close
+## to two of them, such as `pt`, matches the language. See
 ## https://partner.steamgames.com/doc/store/localization/languages.
 ##
 ## NOTE: Godot drops the `419` region Steam names for `latam`, so it is `es_MX` here.

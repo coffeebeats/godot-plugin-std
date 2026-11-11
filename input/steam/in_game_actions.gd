@@ -15,7 +15,8 @@ extends Resource
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## STEAM_LANGUAGES is `StdInputSteamLanguages.LOCALES`, which loaded locales match.
+## STEAM_LANGUAGES is `StdInputSteamLanguages.LOCALES`, which each loaded locale is
+## matched against.
 const STEAM_LANGUAGES := StdInputSteamLanguages.LOCALES
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
@@ -58,8 +59,8 @@ static func find_resources(
 	return resources
 
 
-## generate returns the manifest for the project: every action set under `res://` and
-## every loaded translation's language, with `locales` applied over them.
+## generate returns the manifest for every action set under `res://` and every loaded
+## translation's language, with `locales` applied over them.
 func generate() -> String:
 	var action_sets: Array[StdInputActionSet] = []
 	for resource in find_resources(&"StdInputActionSet"):
@@ -254,8 +255,9 @@ static func _get_action_key(
 	return "action_%s_%s" % [action_set.name, action]
 
 
-## _list_button_actions returns the digital actions Steam defines as buttons: every one
-## no stick drives, since a 2D analog action publishes its directional actions itself.
+## _list_button_actions returns the digital actions Steam defines as buttons, which are
+## those no stick drives, since a 2D analog action publishes its directional actions
+## itself.
 static func _list_button_actions(action_set: StdInputActionSet) -> Array[StringName]:
 	return action_set.actions_digital.filter(
 		func(action): return not action_set.get_analog_2d_action(action)
