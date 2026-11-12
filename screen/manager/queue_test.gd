@@ -161,8 +161,10 @@ func test_enqueue_or_run_while_held_waits_for_complete():
 	# Given: An operation waiting for its loads.
 	_queue.enqueue_or_run(func(): _queue.hold())
 
-	# When: A new operation is submitted and a frame passes.
+	# When: A new operation is submitted.
 	_queue.enqueue_or_run(func(): spy.called())
+
+	# When: A frame passes.
 	await get_tree().process_frame
 
 	# Then: It hasn't run, and the queue is operating and unsettled.
@@ -170,8 +172,10 @@ func test_enqueue_or_run_while_held_waits_for_complete():
 	assert_true(_queue.is_operating())
 	assert_false(_queue.is_settled())
 
-	# When: The waiting operation resumes and completes, and a frame passes.
+	# When: The waiting operation resumes and completes.
 	_queue.resume(func(): _queue.complete())
+
+	# When: A frame passes.
 	await get_tree().process_frame
 
 	# Then: The new operation has executed.
@@ -236,8 +240,10 @@ func test_reset_drops_operations_and_emits_settled():
 	_queue.enqueue_or_run(func(): spy.called())
 	watch_signals(_queue)
 
-	# When: The queue is reset and a frame passes.
+	# When: The queue is reset.
 	_queue.reset()
+
+	# When: A frame passes.
 	await get_tree().process_frame
 
 	# Then: Nothing more ran, and the queue settled.

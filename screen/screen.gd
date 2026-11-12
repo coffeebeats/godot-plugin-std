@@ -63,16 +63,17 @@ signal uncovered(scene: Node)
 ## - `NONE` keeps nothing; each open instantiates the scene and each close frees it.
 ## - `DETACHED` keeps the scene out of the tree from its first close, so a later open
 ##   only re-enters the tree.
-## - `IN_TREE` keeps the scene in the tree, parked: hidden in its own overlay, with
+## - `IN_TREE` keeps the scene parked in the tree, hidden in its own overlay, with
 ##   processing disabled and told it is covered, so opening it only shows it. It is
 ##   built at the mount of the first screen listing it under `dependency_screens`, to
 ##   any depth, or at its own first mount, and always isolates input below it.
 ##
 ## NOTE: A parked scene's `_enter_tree` runs once, so work for every open belongs on the
-## manager's `screen_entering`. Everything in the scene must hide and stop with its
-## root: no `CanvasLayer`, `Node3D`, shown `Window`, `CanvasItem` under a plain `Node`,
-## or node with a process mode of its own other than disabled. A scene that has one is
-## reported and kept `DETACHED` instead.
+## manager's `screen_entering`.
+##
+## NOTE: A scene holding a `CanvasLayer`, `Node3D`, shown `Window`, `CanvasItem` under a
+## plain `Node`, or node with its own process mode other than disabled can't park, so it
+## is reported and kept `DETACHED` instead.
 enum CacheMode {
 	NONE,
 	DETACHED,

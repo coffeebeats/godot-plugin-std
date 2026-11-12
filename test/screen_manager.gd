@@ -28,9 +28,6 @@ const _TIMEOUT_MSEC := 10000
 ## scene has since left the stack.
 ##
 ## NOTE: Passing a bare `StdTransition.new()` skips the screen's own transition.
-##
-## NOTE: This waits for the manager to settle, which includes a screen the scene itself
-## pushes as it enters.
 func push_and_wait(
 	screen: StdScreen,
 	instance: Node = null,
@@ -47,8 +44,8 @@ func push_and_wait(
 
 	push(screen, instance, transition)
 
-	# NOTE: This polls `is_settled` rather than awaiting `settled`, so that a transition
-	# which never finishes fails its test, on `process_frame` since GUT's `wait_until`
+	# NOTE: This polls `is_settled` on `process_frame` so a transition that never
+	# finishes times out, where awaiting `settled` would hang and GUT's `wait_until`
 	# stops under a pause.
 	var tree := get_tree()
 	var deadline := Time.get_ticks_msec() + _TIMEOUT_MSEC

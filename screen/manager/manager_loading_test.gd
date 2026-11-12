@@ -25,8 +25,8 @@ const _PATH_LAYERING := "res://screen/manager/_test_layering.tscn"
 const _PATH_SLOW := "res://screen/manager/_test_slow.tscn"
 
 
-## Backend scripts the engine's loader for `StdLoader`: a path in `cached` loads at
-## once, and any other path loads once a test calls `finish`.
+## Backend scripts the engine's loader for `StdLoader`, loading a path in `cached` at
+## once and any other path once a test calls `finish`.
 class Backend:
 	extends StdLoader.Backend
 
@@ -108,8 +108,10 @@ var _manager: StdScreenManager = null
 
 
 func test_push_unloaded_scene_changes_nothing_until_loaded():
-	# Given: A screen on the stack and a screen whose scene isn't loaded.
+	# Given: A screen on the stack.
 	await _push_base()
+
+	# Given: A screen whose scene isn't loaded.
 	var screen := _create_screen(_PATH_SLOW)
 
 	# When: The screen is pushed.
@@ -120,7 +122,7 @@ func test_push_unloaded_scene_changes_nothing_until_loaded():
 	assert_false(_manager.is_settled())
 	assert_true(_manager._input_blocker.is_inside_tree())
 
-	# When: The loader starts the load, the scene loads and the loader steps.
+	# When: The scene finishes loading.
 	StdLoader._step()
 	_backend.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
@@ -136,8 +138,10 @@ func test_push_unloaded_scene_requests_it_first():
 	var screen := _create_screen(_PATH_SLOW)
 	screen.dependency_scenes = PackedStringArray([_PATH_HOST])
 
-	# When: The screen is pushed and the loader steps.
+	# When: The screen is pushed.
 	_manager.push(screen)
+
+	# When: The loader steps.
 	StdLoader._step()
 
 	# Then: Its own scene was requested first.
@@ -145,8 +149,10 @@ func test_push_unloaded_scene_requests_it_first():
 
 
 func test_push_during_wait_runs_after_the_waiting_operation():
-	# Given: A screen waiting for its scene to load.
+	# Given: A screen on the stack.
 	await _push_base()
+
+	# Given: A screen waiting for its scene to load.
 	var slow := _create_screen(_PATH_SLOW)
 	_manager.push(slow)
 
@@ -157,7 +163,7 @@ func test_push_during_wait_runs_after_the_waiting_operation():
 	# Then: Nothing ran ahead of the waiting push.
 	assert_eq(_manager.get_depth(), 1)
 
-	# When: The loader starts the load, the scene loads and the loader steps.
+	# When: The waiting screen's scene finishes loading.
 	StdLoader._step()
 	_backend.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
@@ -171,13 +177,17 @@ func test_push_during_wait_runs_after_the_waiting_operation():
 
 
 func test_push_failed_load_leaves_stack_and_reports():
-	# Given: A screen on the stack and a screen whose scene fails to load.
+	# Given: A screen on the stack.
 	await _push_base()
+
+	# Given: A screen whose scene fails to load.
 	var screen := _create_screen(_PATH_SLOW)
 	watch_signals(_manager)
 
-	# When: The screen is pushed and its load fails.
+	# When: The screen is pushed.
 	_manager.push(screen)
+
+	# When: Its load fails.
 	StdLoader._step()
 	_backend.finish(_PATH_SLOW, null)
 	StdLoader._step()
@@ -195,8 +205,10 @@ func test_push_failed_load_leaves_stack_and_reports():
 
 
 func test_push_missing_scene_path_reports_load_failure():
-	# Given: A screen on the stack and a screen with neither a scene nor an instance.
+	# Given: A screen on the stack.
 	await _push_base()
+
+	# Given: A screen with neither a scene nor an instance.
 	var screen := _create_screen()
 	watch_signals(_manager)
 
@@ -211,11 +223,12 @@ func test_push_missing_scene_path_reports_load_failure():
 
 
 func test_load_screen_held_preparation_lets_push_open_at_once():
-	# Given: A screen whose scene is loaded through the manager in the background.
+	# Given: A screen loading through the manager in the background.
 	var screen := _create_screen(_PATH_SLOW)
 	var preparation := _manager.load_screen(screen)
 	assert_false(preparation.is_done())
 
+	# Given: Its scene finishes loading.
 	StdLoader._step()
 	_backend.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
@@ -229,12 +242,14 @@ func test_load_screen_held_preparation_lets_push_open_at_once():
 
 
 func test_load_screen_without_a_scene_loads_its_dependencies():
-	# Given: A screen pushed with an instance, whose attachment isn't loaded.
+	# Given: A screen without a scene, whose attachment isn't loaded.
 	var screen := _create_screen()
 	screen.attachment_scenes = PackedStringArray([_PATH_SLOW])
 
-	# When: It is loaded through the manager and the load ends.
+	# When: It is loaded through the manager.
 	var preparation := _manager.load_screen(screen)
+
+	# When: Its attachment finishes loading.
 	StdLoader._step()
 	_backend.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
@@ -275,8 +290,10 @@ func test_preparation_create_mixed_path_forms_one_file_is_done_after_load():
 
 
 func test_push_during_transition_completes_the_interrupted_push():
-	# Given: A screen on the stack and a screen whose transition hasn't mounted it.
+	# Given: A screen on the stack.
 	await _push_base()
+
+	# Given: A screen pushed through a transition that hasn't mounted it.
 	var transition := MockTransition.new()
 	var first := _create_screen(_PATH_HOST, transition)
 	_backend.cached[_PATH_HOST] = _pack(Control.new())
@@ -297,8 +314,10 @@ func test_push_during_transition_completes_the_interrupted_push():
 
 
 func test_pop_during_transition_completes_the_interrupted_pop():
-	# Given: Two screens, the top one popping through a transition that hasn't ended.
+	# Given: A screen on the stack.
 	await _push_base()
+
+	# Given: A second screen popping through a transition that hasn't ended.
 	var top := _create_screen()
 	top.transition_pop = MockTransition.new()
 	_manager.push(top, Control.new())
@@ -532,8 +551,10 @@ func test_close_twice_during_pop_transition_pops_only_the_top_screen():
 
 
 func test_teardown_during_wait_releases_input_and_settles():
-	# Given: A screen waiting for its scene to load.
+	# Given: A screen on the stack.
 	await _push_base()
+
+	# Given: A screen waiting for its scene to load.
 	_manager.push(_create_screen(_PATH_SLOW))
 	watch_signals(_manager)
 
@@ -591,11 +612,13 @@ func test_in_tree_open_shows_the_parked_scene():
 
 
 func test_in_tree_close_parks_the_scene_and_keeps_handlers():
-	# Given: An open screen kept in the tree, with a handler bound to its scene.
+	# Given: An open screen kept in the tree.
 	var kept := _create_kept()
 	await _push_host(kept)
 	_manager.push(kept)
 	var scene: Recorder = _manager.get_scene()
+
+	# Given: A handler bound to its scene.
 	kept.entering.connect(scene.set_meta.bind(&"opened", true).unbind(1))
 
 	# When: The kept screen is popped.
@@ -619,10 +642,12 @@ func test_in_tree_close_parks_the_scene_and_keeps_handlers():
 
 
 func test_in_tree_reopen_moves_the_overlay_above_newer_screens():
-	# Given: A parked screen kept in the tree, and a screen pushed after it was built.
+	# Given: A parked screen kept in the tree.
 	var kept := _create_kept()
 	await _push_host(kept)
 	var overlay: Node = _manager._cache.get_entry(kept).overlay
+
+	# Given: A screen pushed after it was built.
 	_manager.push(_create_screen(), Control.new())
 
 	# When: The kept screen is pushed.

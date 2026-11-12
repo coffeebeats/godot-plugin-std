@@ -313,9 +313,8 @@ func _sync() -> void:
 		disable_action_set_layers()
 
 	# NOTE: A covered loader's active peers are the covering screen's, which sync on
-	# their own, so only an uncovered loader re-syncs them. A screen parked by the
-	# manager is told it's covered with nothing covering it, so a hidden loader
-	# re-syncs them too.
+	# their own, so only an uncovered loader re-syncs them, or a hidden one, which the
+	# manager parks as covered with nothing covering it.
 	if held and action_set and (not _covered or not _is_source_visible()):
 		_resync_peers()
 

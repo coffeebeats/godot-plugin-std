@@ -361,7 +361,7 @@ func test_loader_covered_while_hidden_returns_the_set_to_its_peers() -> void:
 	await wait_idle_frames(1)
 	assert_eq(_slot.actions.get_action_set(_slot.device_id), _menu, "precondition")
 
-	# When: The manager parks the menu: hidden, then covered by nothing.
+	# When: The manager parks the menu, hiding it and covering it with nothing.
 	menu.hide()
 	loader.notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
 	await wait_idle_frames(1)

@@ -13,7 +13,7 @@ extends RefCounted
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-## settled is emitted whenever the queue empties: no operation is running, waiting or
+## settled is emitted whenever the queue empties, with no operation running, waiting or
 ## queued.
 signal settled
 
@@ -28,8 +28,8 @@ var _drain_scheduled: bool = false
 ## reset doesn't run after it.
 var _generation: int = 0
 
-## _is_active is true from the start of an operation until `complete` is called. Spans
-## the synchronous phase, any wait for loads and any transition.
+## _is_active is true from the start of an operation until `complete` is called,
+## spanning the synchronous phase, any wait for loads and any transition.
 var _is_active: bool = false
 
 ## _is_held is true while an operation waits for its loads.

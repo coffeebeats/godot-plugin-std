@@ -2,14 +2,13 @@
 ## screen/manager/cache.gd
 ##
 ## Cache holds the scenes the manager keeps while their screens are off the stack, and
-## decides where each waits: out of the tree for a `DETACHED` screen, and parked in its
+## decides where each waits, out of the tree for a `DETACHED` screen and parked in its
 ## own overlay for an `IN_TREE` one. Each kept scene holds the preparation it was built
 ## from, so opening it never waits on a load.
 ##
-## A parked scene is in the tree, hidden, with processing disabled and told it is
-## covered, so it draws nothing, gets no input, and holds no action set or focus. Its
-## overlay stays a child of the manager for the scene's whole life, so opening it moves
-## the overlay to the top instead of re-entering the tree.
+## A parked scene stays in the tree but draws nothing, gets no input, and holds no
+## action set or focus. Its overlay stays a child of the manager for the scene's whole
+## life, so opening it moves the overlay to the top instead of re-entering the tree.
 ##
 
 extends RefCounted

@@ -15,8 +15,8 @@ const _PATH_B := "res://load/_test_b.tscn"
 const _PATH_C := "res://load/_test_c.tscn"
 
 
-## FakeBackend scripts the engine's loader: it records what `StdLoader` asks of it and
-## answers as a test sets it up to.
+## FakeBackend scripts the engine's loader, recording what `StdLoader` asks of it and
+## answering as a test sets it up to.
 class FakeBackend:
 	extends StdLoader.Backend
 
@@ -197,7 +197,7 @@ func test_request_uid_and_path_share_one_result():
 
 
 func test_request_urgent_starts_next():
-	# Given: Two waiting requests behind one in flight.
+	# Given: A request waiting behind one in flight.
 	StdLoader.request(_PATH_A)
 	StdLoader._step()
 	StdLoader.request(_PATH_B)
@@ -398,8 +398,10 @@ func test_load_now_waiting_path_finishes_its_request_at_the_next_step():
 	var resource := Resource.new()
 	_backend.resources[_PATH_B] = resource
 
-	# When: The waiting path is loaded now and the loader steps.
+	# When: The waiting path is loaded now.
 	StdLoader.load_now(_PATH_B)
+
+	# When: The loader steps.
 	StdLoader._step()
 
 	# Then: The waiting request is done with that resource, never started.

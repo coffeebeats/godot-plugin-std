@@ -6,10 +6,6 @@
 ## load starts, finishes and reports only in the loader's per-frame step, never inside
 ## a caller's stack, so every result reports exactly once and from one place.
 ##
-## Its state belongs to the process rather than to a node, since "one load in flight"
-## is a property of the process. Nothing here waits for a load it did not ask for:
-## `load_now`, the one blocking call, waits only for the load it names.
-##
 ## NOTE: Godot 4.6 to 4.8 deadlock when a thread compiling a script waits in the loader
 ## for a resource another thread is loading. Loading one request at a time removes the
 ## second loading thread std would otherwise add; see the `preload` checker rule for
@@ -51,7 +47,10 @@ class Result:
 	## status is the engine's status for the load.
 	var status := ResourceLoader.THREAD_LOAD_IN_PROGRESS
 
+	## _fetched is whether `load_now` already took the threaded load's resource.
 	var _fetched: bool = false
+
+	## _type_hint is the type hint the threaded load starts with.
 	var _type_hint: String = ""
 
 	## get_error returns the load's error, `OK` while it runs and once it succeeded.
@@ -137,11 +136,9 @@ static var _stall_usec: int = 0
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## load_now returns the resource at `path`, loading it on the calling thread if it must.
-## A cached resource returns at once. If `path` is the request in flight, this waits for
-## that request alone, through the engine's wait, which keeps the main message queue
-## moving; otherwise it loads `path` beside whatever is in flight, never waiting on an
-## unrelated load. It warns when the load took over `SLOW_LOAD_USEC`.
+## load_now returns the resource at `path`, loading it on the calling thread unless it
+## is cached. It waits only for `path` itself, joining the request in flight when that
+## is `path`, and warns when the load took over `SLOW_LOAD_USEC`.
 ##
 ## NOTE: This is the one blocking load std offers, so every blocking load shows up here.
 static func load_now(path: String, type_hint: String = "") -> Resource:
@@ -176,11 +173,10 @@ static func load_now(path: String, type_hint: String = "") -> Resource:
 	return resource
 
 
-## request asks for the resource at `path` to be loaded on a thread, and returns the
-## handle that reports when it has. A repeat of a request still waiting or in flight
-## returns the same handle, whether by `uid://` or by path. An `urgent` request, or an
-## urgent repeat of one still waiting, starts next; nothing interrupts the request in
-## flight, which the engine cannot cancel.
+## request queues a threaded load of `path` and returns the handle that reports when it
+## ends. A repeat of a request still waiting or in flight, by `uid://` or by path,
+## returns the same handle, and an `urgent` one starts next, though nothing interrupts
+## the request in flight.
 ##
 ## NOTE: There is no way to withdraw a request. One nobody wants any more costs only
 ## background time, and its resource is freed with its last handle.

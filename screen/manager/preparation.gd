@@ -1,11 +1,11 @@
 ##
 ## screen/manager/preparation.gd
 ##
-## Preparation is the set of loads one screen needs before it can mount: its scene,
-## unless an instance was passed or one is kept, its attachment and dependency scenes,
-## and the same for every screen it lists under `dependency_screens`, to any depth. It
-## reports once every load has ended, and holds the loaded resources, which keeps them
-## cached for as long as it lives.
+## Preparation is the set of loads one screen needs before it can mount. It covers the
+## screen's scene, unless an instance was passed or one is kept, its attachment and
+## dependency scenes, and the same for every screen it lists under `dependency_screens`,
+## to any depth. It reports once every load has ended, and holds the loaded resources,
+## which keeps them cached for as long as it lives.
 ##
 ## NOTE: A preparation whose loads were all cached is done when it's created and never
 ## emits `done`, so check `is_done` before awaiting it.

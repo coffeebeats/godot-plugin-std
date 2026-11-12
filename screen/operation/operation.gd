@@ -3,8 +3,8 @@
 ##
 ## Base class for screen manager operations. Each operation encapsulates the logic for a
 ## single navigation action (e.g. push, pop, replace, or reset), in two steps the
-## manager runs in turn: `_prepare` names the loads it needs, and `_present`, once they
-## have ended, changes the stack.
+## manager runs in turn, `_prepare` naming the loads it needs and `_present` changing
+## the stack once they have ended.
 ##
 
 extends RefCounted
@@ -78,8 +78,8 @@ func _fail_unloaded(manager: StdScreenManager, done: Callable) -> bool:
 
 
 ## _finish_transition completes the running transition at once, as when a later call
-## arrives before it ends: the transition clears what it animated, then the change it
-## hadn't made yet runs, and the operation finishes with its signals.
+## arrives before it ends. The transition clears what it animated, the change it hadn't
+## made yet runs, and the operation finishes with its signals.
 static func _finish_transition(
 	transition: StdTransition, context: StdTransitionContext
 ) -> void:

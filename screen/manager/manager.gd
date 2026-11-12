@@ -156,10 +156,10 @@ func get_scene() -> Node:
 	return _current_scene()
 
 
-## load_screen starts loading, in the background, what opening `screen` needs: its
-## scene, if it has one, and every scene it depends on, to any depth. Holding the
-## returned preparation keeps them loaded, so a later operation opening the screen,
-## with or without an instance, doesn't wait.
+## load_screen starts loading, in the background, the scene of `screen`, if it has one,
+## and every scene it depends on, to any depth. Holding the returned preparation keeps
+## them loaded, so a later operation opening the screen, with or without an instance,
+## doesn't wait.
 func load_screen(screen: StdScreen) -> Preparation:
 	assert(screen != null, "invalid argument: missing screen")
 
@@ -313,8 +313,8 @@ func _block_input() -> void:
 	add_child(_input_blocker, false, Node.INTERNAL_MODE_BACK)
 
 
-## _complete_active completes, at once, the operation whose transition is running: its
-## transition skips to the end and the operation finishes with its signals.
+## _complete_active immediately completes the operation whose transition is running,
+## skipping its transition to the end and finishing the operation with its signals.
 func _complete_active() -> void:
 	if _active_transition == null:
 		return
@@ -344,7 +344,7 @@ func _create_blocker() -> Control:
 ## _create_resolver builds a resolver callable and the scene available at once, if any,
 ## for opening `screen` from `preparation`. The scene available at once is `instance` or
 ## a kept scene; otherwise the resolver instantiates the scene `preparation` loaded.
-## Neither ever loads. The second element is non-null when a scene is available at once.
+## Neither ever loads.
 func _create_resolver(
 	screen: StdScreen, instance: Node, preparation: Preparation
 ) -> Array:
@@ -427,8 +427,8 @@ func _discard_screen(screen: StdScreen) -> void:
 
 
 ## _end_wait ends the wait for an operation's preparation, releasing the queue's hold
-## and the input blocker. Every way out of a wait calls it: the preparation finishing,
-## failing, or the manager leaving the tree.
+## and the input blocker. Every way out of a wait calls it, whether the preparation
+## finishes or fails or the manager leaves the tree.
 func _end_wait() -> void:
 	if (
 		_waiting_preparation
@@ -443,15 +443,12 @@ func _end_wait() -> void:
 	_unblock_input()
 
 
-## _execute_op runs an operation. A call that arrives while another operation's
-## transition runs completes that operation first, skipping the rest of its transition,
-## so no operation is dropped. An operation whose preparation isn't done waits for it
-## with input blocked and later calls queued; otherwise it presents in the caller's
-## stack.
+## _execute_op runs an operation, first completing any whose transition is still
+## running, so none is dropped. An operation whose preparation isn't done waits for it
+## with input blocked and later calls queued; otherwise it presents at once.
 ##
-## NOTE: `_active_op` holds a strong reference to the operation while it runs. Without
-## it the operation, a `RefCounted`, can be freed while it waits, because GDScript
-## lambdas and bound-method `Callable`s capture `RefCounted` targets weakly.
+## NOTE: `_active_op` keeps the operation alive while it waits, since lambdas and bound
+## `Callable`s capture a `RefCounted` weakly.
 func _execute_op(op: Operation) -> void:
 	_complete_active()
 
@@ -498,9 +495,8 @@ func _force_stop() -> void:
 
 	transition.stop()
 
-	# Free entering scenes that were never mounted to prevent orphaned nodes. The scene
-	# is not in the tree and would otherwise leak. A scene kept in the tree belongs to
-	# the cache, which frees it.
+	# Frees an entering scene that never mounted, which would otherwise leak; a scene
+	# kept in the tree is the cache's to free.
 	if (
 		ctx
 		and not ctx._did_mount
@@ -668,10 +664,10 @@ func _play_screen_sound(event: StdSoundEvent) -> void:
 		_sound_player.play(event)
 
 
-## _prepare_screen returns the preparation for opening `screen`, with `instance` if one
-## was passed: a kept scene's own, or one requesting the scene, unless an instance
-## stands in for it, and every scene the screen depends on. A screen with neither a
-## scene nor an instance gets a failed preparation.
+## _prepare_screen returns the preparation for opening `screen` with `instance`, if one
+## was passed. A kept scene reuses its own; otherwise it requests every scene the screen
+## depends on and, unless `instance` stands in for it, the screen's scene. A screen with
+## neither a scene nor an instance gets a failed one.
 func _prepare_screen(screen: StdScreen, instance: Node, urgent: bool) -> Preparation:
 	if instance == null:
 		var entry := _cache.get_entry(screen)
@@ -871,7 +867,6 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 	if is_kept_in_tree:
 		return
 
-	# Keep or free the scene.
 	if screen.cache_mode != StdScreen.CacheMode.NONE and is_instance_valid(scene):
 		_cache.keep(screen, scene, preparation)
 	elif is_instance_valid(scene):
