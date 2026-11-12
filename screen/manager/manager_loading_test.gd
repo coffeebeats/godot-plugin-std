@@ -25,10 +25,10 @@ const _PATH_LAYERING := "res://screen/manager/_test_layering.tscn"
 const _PATH_SLOW := "res://screen/manager/_test_slow.tscn"
 
 
-## Backend scripts the engine's loader for `StdLoader`, loading a path in `cached` at
+## FakeEngineLoader scripts the engine for `StdLoader`, loading a path in `cached` at
 ## once and any other path once a test calls `finish`.
-class Backend:
-	extends StdLoader.Backend
+class FakeEngineLoader:
+	extends StdLoader.EngineLoader
 
 	var cached: Dictionary = {}
 	var resources: Dictionary = {}
@@ -101,7 +101,7 @@ class Recorder:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _backend: Backend = null
+var _engine_loader: FakeEngineLoader = null
 var _manager: StdScreenManager = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
@@ -124,7 +124,7 @@ func test_push_unloaded_scene_changes_nothing_until_loaded():
 
 	# When: The scene finishes loading.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	_engine_loader.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
 
 	# Then: The screen mounted, input is unblocked and the manager settled.
@@ -145,7 +145,7 @@ func test_push_unloaded_scene_requests_it_first():
 	StdLoader._step()
 
 	# Then: Its own scene was requested first.
-	assert_eq(_backend.started, [_PATH_SLOW] as Array[String])
+	assert_eq(_engine_loader.started, [_PATH_SLOW] as Array[String])
 
 
 func test_push_during_wait_runs_after_the_waiting_operation():
@@ -165,7 +165,7 @@ func test_push_during_wait_runs_after_the_waiting_operation():
 
 	# When: The waiting screen's scene finishes loading.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	_engine_loader.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
 	await wait_idle_frames(2)
 
@@ -189,7 +189,7 @@ func test_push_failed_load_leaves_stack_and_reports():
 
 	# When: Its load fails.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, null)
+	_engine_loader.finish(_PATH_SLOW, null)
 	StdLoader._step()
 
 	# Then: The stack is unchanged and the failure was reported.
@@ -230,7 +230,7 @@ func test_load_screen_held_preparation_lets_push_open_at_once():
 
 	# Given: Its scene finishes loading.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	_engine_loader.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
 	assert_true(preparation.is_done())
 
@@ -251,7 +251,7 @@ func test_load_screen_without_a_scene_loads_its_dependencies():
 
 	# When: Its attachment finishes loading.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	_engine_loader.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
 
 	# Then: The preparation is done, with nothing to report.
@@ -279,7 +279,7 @@ func test_preparation_create_mixed_path_forms_one_file_is_done_after_load():
 
 	# When: The scene finishes loading.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	_engine_loader.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
 
 	# Then: The preparation is done and reported it once.
@@ -296,7 +296,7 @@ func test_push_during_transition_completes_the_interrupted_push():
 	# Given: A screen pushed through a transition that hasn't mounted it.
 	var transition := MockTransition.new()
 	var first := _create_screen(_PATH_HOST, transition)
-	_backend.cached[_PATH_HOST] = _pack(Control.new())
+	_engine_loader.cached[_PATH_HOST] = _pack(Control.new())
 	watch_signals(first)
 	_manager.push(first)
 
@@ -382,7 +382,7 @@ func test_pop_during_push_wait_leaves_the_pushed_screen():
 
 	# When: The third screen's scene finishes loading.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	_engine_loader.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
 	await wait_idle_frames(2)
 
@@ -412,7 +412,7 @@ func test_pop_to_during_push_wait_pops_to_the_target():
 
 	# When: The third screen's scene finishes loading.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	_engine_loader.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
 	await wait_idle_frames(2)
 
@@ -442,7 +442,7 @@ func test_pop_to_during_replace_wait_leaves_the_pushed_screen():
 
 	# When: The replacement's scene finishes loading.
 	StdLoader._step()
-	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	_engine_loader.finish(_PATH_SLOW, _pack(Control.new()))
 	StdLoader._step()
 	await wait_idle_frames(2)
 
@@ -572,7 +572,7 @@ func test_in_tree_dependency_is_built_parked_at_host_mount():
 	var kept := _create_kept()
 	var host := _create_screen(_PATH_HOST)
 	host.dependency_screens = [kept]
-	_backend.cached[_PATH_HOST] = _pack(Control.new())
+	_engine_loader.cached[_PATH_HOST] = _pack(Control.new())
 	watch_signals(kept)
 
 	# When: The host is pushed.
@@ -666,7 +666,7 @@ func test_in_tree_scene_that_cannot_park_is_kept_detached():
 	layer.owner = root
 	var kept := _create_screen(_PATH_LAYERED)
 	kept.cache_mode = StdScreen.CacheMode.IN_TREE
-	_backend.cached[_PATH_LAYERED] = _pack(root)
+	_engine_loader.cached[_PATH_LAYERED] = _pack(root)
 
 	# When: A host listing it is pushed.
 	await _push_host(kept)
@@ -756,8 +756,8 @@ func after_each() -> void:
 
 func before_each() -> void:
 	StdLoader._reset()
-	_backend = Backend.new()
-	StdLoader._set_backend(_backend)
+	_engine_loader = FakeEngineLoader.new()
+	StdLoader._set_engine_loader(_engine_loader)
 
 	add_child_autofree(StdInputCursor.new())
 
@@ -772,14 +772,14 @@ func before_each() -> void:
 func _create_kept() -> StdScreen:
 	var screen := _create_screen(_PATH_KEPT)
 	screen.cache_mode = StdScreen.CacheMode.IN_TREE
-	_backend.cached[_PATH_KEPT] = _pack(Recorder.new())
+	_engine_loader.cached[_PATH_KEPT] = _pack(Recorder.new())
 	return screen
 
 
 func _create_layering() -> StdScreen:
 	var screen := _create_screen(_PATH_LAYERING)
 	screen.cache_mode = StdScreen.CacheMode.IN_TREE
-	_backend.cached[_PATH_LAYERING] = _pack(Layering.new())
+	_engine_loader.cached[_PATH_LAYERING] = _pack(Layering.new())
 	return screen
 
 
@@ -806,6 +806,6 @@ func _push_base() -> void:
 func _push_host(kept: StdScreen) -> void:
 	var host := _create_screen(_PATH_HOST)
 	host.dependency_screens = [kept]
-	_backend.cached[_PATH_HOST] = _pack(Control.new())
+	_engine_loader.cached[_PATH_HOST] = _pack(Control.new())
 	_manager.push(host)
 	await wait_idle_frames(1)

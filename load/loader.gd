@@ -68,9 +68,9 @@ class Result:
 		return status != ResourceLoader.THREAD_LOAD_IN_PROGRESS
 
 
-## Backend is the engine's resource loader as `StdLoader` uses it. A test replaces it
-## through `_set_backend` to script the engine.
-class Backend:
+## EngineLoader wraps the engine calls `StdLoader` makes, its resource loader and clock,
+## so a test can script the engine through `_set_engine_loader`. A game never uses it.
+class EngineLoader:
 	extends RefCounted
 
 	## get_cached returns the cached resource at `path`, or null if none is cached.
@@ -108,8 +108,8 @@ class Backend:
 
 static var _logger := StdLogger.create(&"std/load/loader")  # gdlint:ignore=class-definitions-order,max-line-length
 
-## _backend is the engine's loader, or a test's script of it.
-static var _backend: Backend = Backend.new()
+## _engine_loader is the engine's loader, or a test's script of it.
+static var _engine_loader: EngineLoader = EngineLoader.new()
 
 ## _in_flight is the one threaded request outstanding, or null.
 static var _in_flight: Result = null
@@ -144,24 +144,24 @@ static var _stall_usec: int = 0
 static func load_now(path: String, type_hint: String = "") -> Resource:
 	var key := _to_key(path)
 
-	if _backend.has_cached(key):
-		return _backend.get_cached(key)
+	if _engine_loader.has_cached(key):
+		return _engine_loader.get_cached(key)
 
-	var started := _backend.get_ticks_usec()
+	var started := _engine_loader.get_ticks_usec()
 	var resource: Resource = null
 
 	if _in_flight and _in_flight.path == key:
 		# NOTE: The engine hands a threaded load's result over once, so the step
 		# reports the request with what this fetched instead of asking again.
 		if not _in_flight._fetched:
-			_in_flight.resource = _backend.get_threaded(key)
+			_in_flight.resource = _engine_loader.get_threaded(key)
 			_in_flight._fetched = true
 
 		resource = _in_flight.resource
 	else:
-		resource = _backend.load_blocking(key, type_hint)
+		resource = _engine_loader.load_blocking(key, type_hint)
 
-	var elapsed := _backend.get_ticks_usec() - started
+	var elapsed := _engine_loader.get_ticks_usec() - started
 	if elapsed > SLOW_LOAD_USEC:
 		_logger.warn(
 			"Blocking load was slow.", {&"path": key, &"msec": elapsed / 1000.0}
@@ -197,8 +197,8 @@ static func request(
 	result.path = key
 	result._type_hint = type_hint
 
-	if _backend.has_cached(key):
-		result.resource = _backend.get_cached(key)
+	if _engine_loader.has_cached(key):
+		result.resource = _engine_loader.get_cached(key)
 		result.status = (
 			ResourceLoader.THREAD_LOAD_LOADED
 			if result.resource
@@ -280,7 +280,7 @@ static func _finish_in_flight(frame_usec: int) -> void:
 		return
 
 	var progress: Array = []
-	var status := _backend.get_progress(result.path, progress)
+	var status := _engine_loader.get_progress(result.path, progress)
 
 	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 		_watch_stall(progress[0] if not progress.is_empty() else 0.0, frame_usec)
@@ -290,7 +290,7 @@ static func _finish_in_flight(frame_usec: int) -> void:
 
 	var resource: Resource = null
 	if status == ResourceLoader.THREAD_LOAD_LOADED:
-		resource = _backend.get_threaded(result.path)
+		resource = _engine_loader.get_threaded(result.path)
 
 	_finish(result, resource)
 
@@ -300,7 +300,7 @@ static func _finish_in_flight(frame_usec: int) -> void:
 static func _reset() -> void:
 	_disconnect_step()
 
-	_backend = Backend.new()
+	_engine_loader = EngineLoader.new()
 	_in_flight = null
 	_last_step_usec = -1
 	_queue.clear()
@@ -310,10 +310,10 @@ static func _reset() -> void:
 	_stall_usec = 0
 
 
-## _set_backend replaces the engine's loader, which a test does to script it.
-static func _set_backend(backend: Backend) -> void:
-	assert(backend is Backend, "invalid argument; missing backend")
-	_backend = backend
+## _set_engine_loader replaces the engine's loader, which a test does to script it.
+static func _set_engine_loader(engine_loader: EngineLoader) -> void:
+	assert(engine_loader is EngineLoader, "invalid argument; missing engine loader")
+	_engine_loader = engine_loader
 
 
 ## _start_next starts the next waiting request, failing any the engine refuses.
@@ -321,7 +321,7 @@ static func _start_next() -> void:
 	while _in_flight == null and not _queue.is_empty():
 		var result: Result = _queue.pop_front()
 
-		var err := _backend.start(result.path, result._type_hint)
+		var err := _engine_loader.start(result.path, result._type_hint)
 		if err != OK:
 			_finish(result, null, {&"error": err})
 			continue
@@ -337,7 +337,7 @@ static func _start_next() -> void:
 ## _step finishes the request in flight if it ended, finishes every waiting request
 ## whose resource is already cached, then starts the next one.
 static func _step() -> void:
-	var now := _backend.get_ticks_usec()
+	var now := _engine_loader.get_ticks_usec()
 	var frame_usec := 0 if _last_step_usec < 0 else now - _last_step_usec
 	_last_step_usec = now
 
@@ -347,9 +347,9 @@ static func _step() -> void:
 	# NOTE: A report can run code that changes the queue, so each waiting request is
 	# looked up again before it is finished.
 	for result in _queue.duplicate():
-		if result in _queue and _backend.has_cached(result.path):
+		if result in _queue and _engine_loader.has_cached(result.path):
 			_queue.erase(result)
-			_finish(result, _backend.get_cached(result.path))
+			_finish(result, _engine_loader.get_cached(result.path))
 
 	_start_next()
 

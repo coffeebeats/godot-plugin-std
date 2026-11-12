@@ -15,10 +15,10 @@ const _PATH_B := "res://load/_test_b.tscn"
 const _PATH_C := "res://load/_test_c.tscn"
 
 
-## FakeBackend scripts the engine's loader, recording what `StdLoader` asks of it and
+## FakeEngineLoader scripts the engine, recording what `StdLoader` asks of it and
 ## answering as a test sets it up to.
-class FakeBackend:
-	extends StdLoader.Backend
+class FakeEngineLoader:
+	extends StdLoader.EngineLoader
 
 	## blocking_loads lists each path loaded on the calling thread, in order.
 	var blocking_loads: Array[String] = []
@@ -87,9 +87,9 @@ class FakeBackend:
 		return refused.get(path, OK)
 
 
-## SlowBackend advances its clock by more than the warning threshold on each load.
-class SlowBackend:
-	extends FakeBackend
+## SlowEngineLoader advances its clock by more than the warning threshold on each load.
+class SlowEngineLoader:
+	extends FakeEngineLoader
 
 	func load_blocking(path: String, type_hint: String) -> Resource:
 		ticks += StdLoader.SLOW_LOAD_USEC * 2
@@ -98,7 +98,7 @@ class SlowBackend:
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
-var _backend: FakeBackend = null
+var _engine_loader: FakeEngineLoader = null
 
 # -- TEST METHODS -------------------------------------------------------------------- #
 
@@ -106,7 +106,7 @@ var _backend: FakeBackend = null
 func test_request_cached_path_is_done_at_once():
 	# Given: A cached resource.
 	var resource := Resource.new()
-	_backend.cached[_PATH_A] = resource
+	_engine_loader.cached[_PATH_A] = resource
 
 	# When: It is requested.
 	var result := StdLoader.request(_PATH_A)
@@ -115,7 +115,7 @@ func test_request_cached_path_is_done_at_once():
 	assert_true(result.is_done())
 	assert_eq(result.resource, resource)
 	assert_eq(result.get_error(), OK)
-	assert_eq(_backend.started, [] as Array[String])
+	assert_eq(_engine_loader.started, [] as Array[String])
 
 
 func test_request_starts_nothing_inside_the_callers_stack():
@@ -123,7 +123,7 @@ func test_request_starts_nothing_inside_the_callers_stack():
 	var result := StdLoader.request(_PATH_A)
 
 	# Then: Nothing was started yet and the result is pending.
-	assert_eq(_backend.started, [] as Array[String])
+	assert_eq(_engine_loader.started, [] as Array[String])
 	assert_false(result.is_done())
 
 
@@ -137,14 +137,14 @@ func test_request_starts_one_load_at_a_time():
 	StdLoader._step()
 
 	# Then: Only the first load was started.
-	assert_eq(_backend.started, [_PATH_A] as Array[String])
+	assert_eq(_engine_loader.started, [_PATH_A] as Array[String])
 
 	# When: The first load ends and the loader steps.
-	_backend.finish(_PATH_A, Resource.new())
+	_engine_loader.finish(_PATH_A, Resource.new())
 	StdLoader._step()
 
 	# Then: The second load starts in the same step.
-	assert_eq(_backend.started, [_PATH_A, _PATH_B] as Array[String])
+	assert_eq(_engine_loader.started, [_PATH_A, _PATH_B] as Array[String])
 
 
 func test_request_reports_once_from_the_step():
@@ -155,7 +155,7 @@ func test_request_reports_once_from_the_step():
 
 	# Given: The engine finishes the load.
 	var resource := Resource.new()
-	_backend.finish(_PATH_A, resource)
+	_engine_loader.finish(_PATH_A, resource)
 
 	# Then: The result hasn't reported before the loader steps.
 	assert_signal_not_emitted(result, "done")
@@ -206,11 +206,11 @@ func test_request_urgent_starts_next():
 	StdLoader.request(_PATH_C, "", true)
 
 	# When: The load in flight ends and the loader steps.
-	_backend.finish(_PATH_A, Resource.new())
+	_engine_loader.finish(_PATH_A, Resource.new())
 	StdLoader._step()
 
 	# Then: The urgent request started next.
-	assert_eq(_backend.started, [_PATH_A, _PATH_C] as Array[String])
+	assert_eq(_engine_loader.started, [_PATH_A, _PATH_C] as Array[String])
 
 
 func test_request_urgent_repeat_moves_waiting_request_to_front():
@@ -224,16 +224,16 @@ func test_request_urgent_repeat_moves_waiting_request_to_front():
 	StdLoader.request(_PATH_C, "", true)
 
 	# When: The load in flight ends and the loader steps.
-	_backend.finish(_PATH_A, Resource.new())
+	_engine_loader.finish(_PATH_A, Resource.new())
 	StdLoader._step()
 
 	# Then: The repeated request started next.
-	assert_eq(_backend.started, [_PATH_A, _PATH_C] as Array[String])
+	assert_eq(_engine_loader.started, [_PATH_A, _PATH_C] as Array[String])
 
 
 func test_request_refused_by_the_engine_reports_failure():
 	# Given: A path the engine refuses to start.
-	_backend.refused[_PATH_A] = ERR_FILE_NOT_FOUND
+	_engine_loader.refused[_PATH_A] = ERR_FILE_NOT_FOUND
 	var result := StdLoader.request(_PATH_A)
 	watch_signals(result)
 
@@ -253,7 +253,7 @@ func test_request_failed_load_reports_failure():
 	StdLoader._step()
 
 	# When: The engine fails the load and the loader steps.
-	_backend.finish(_PATH_A, null)
+	_engine_loader.finish(_PATH_A, null)
 	StdLoader._step()
 
 	# Then: The result reported a failure.
@@ -270,7 +270,7 @@ func test_step_finishes_waiting_request_once_cached():
 
 	# Given: The waiting path is cached by other means.
 	var resource := Resource.new()
-	_backend.cached[_PATH_B] = resource
+	_engine_loader.cached[_PATH_B] = resource
 
 	# When: The loader steps.
 	StdLoader._step()
@@ -278,7 +278,7 @@ func test_step_finishes_waiting_request_once_cached():
 	# Then: The waiting request is done without being started.
 	assert_true(waiting.is_done())
 	assert_eq(waiting.resource, resource)
-	assert_eq(_backend.started, [_PATH_A] as Array[String])
+	assert_eq(_engine_loader.started, [_PATH_A] as Array[String])
 
 
 func test_step_disconnects_once_idle():
@@ -289,7 +289,7 @@ func test_step_disconnects_once_idle():
 
 	# When: Its load runs to the end.
 	StdLoader._step()
-	_backend.finish(_PATH_A, Resource.new())
+	_engine_loader.finish(_PATH_A, Resource.new())
 	StdLoader._step()
 
 	# Then: The step is no longer connected.
@@ -305,7 +305,7 @@ func test_step_reports_stalled_load_once():
 	# When: Frames pass, each longer than the cap, for longer than the stall limit.
 	var frames := ceili(float(StdLoader.STALL_USEC) / StdLoader.STALL_FRAME_USEC) + 1
 	for i in frames * 2:
-		_backend.ticks += StdLoader.STALL_FRAME_USEC * 10
+		_engine_loader.ticks += StdLoader.STALL_FRAME_USEC * 10
 		StdLoader._step()
 
 	# Then: The stall was reported once.
@@ -321,8 +321,8 @@ func test_step_counts_no_stall_while_loading_progresses():
 	# When: Frames pass for longer than the stall limit while it progresses.
 	var frames := ceili(float(StdLoader.STALL_USEC) / StdLoader.STALL_FRAME_USEC) + 1
 	for i in frames:
-		_backend.ticks += StdLoader.STALL_FRAME_USEC
-		_backend.progress[_PATH_A] = float(i) / frames
+		_engine_loader.ticks += StdLoader.STALL_FRAME_USEC
+		_engine_loader.progress[_PATH_A] = float(i) / frames
 		StdLoader._step()
 
 	# Then: No stall was reported.
@@ -332,14 +332,14 @@ func test_step_counts_no_stall_while_loading_progresses():
 func test_load_now_cached_path_returns_at_once():
 	# Given: A cached resource.
 	var resource := Resource.new()
-	_backend.cached[_PATH_A] = resource
+	_engine_loader.cached[_PATH_A] = resource
 
 	# When: It is loaded now.
 	var loaded := StdLoader.load_now(_PATH_A)
 
 	# Then: The cached resource is returned without a load.
 	assert_eq(loaded, resource)
-	assert_eq(_backend.blocking_loads, [] as Array[String])
+	assert_eq(_engine_loader.blocking_loads, [] as Array[String])
 
 
 func test_load_now_in_flight_path_waits_for_that_load():
@@ -348,15 +348,15 @@ func test_load_now_in_flight_path_waits_for_that_load():
 	watch_signals(result)
 	StdLoader._step()
 	var resource := Resource.new()
-	_backend.resources[_PATH_A] = resource
+	_engine_loader.resources[_PATH_A] = resource
 
 	# When: The same path is loaded now.
 	var loaded := StdLoader.load_now(_PATH_A)
 
 	# Then: It waited for the request in flight rather than loading again.
 	assert_eq(loaded, resource)
-	assert_eq(_backend.threaded_gets, [_PATH_A] as Array[String])
-	assert_eq(_backend.blocking_loads, [] as Array[String])
+	assert_eq(_engine_loader.threaded_gets, [_PATH_A] as Array[String])
+	assert_eq(_engine_loader.blocking_loads, [] as Array[String])
 
 	# Then: The request hasn't reported inside the caller's stack.
 	assert_signal_not_emitted(result, "done")
@@ -367,7 +367,7 @@ func test_load_now_in_flight_path_waits_for_that_load():
 	# Then: The request reported once, with the resource, fetched only once.
 	assert_signal_emit_count(result, "done", 1)
 	assert_eq(result.resource, resource)
-	assert_eq(_backend.threaded_gets, [_PATH_A] as Array[String])
+	assert_eq(_engine_loader.threaded_gets, [_PATH_A] as Array[String])
 
 
 func test_load_now_unrelated_path_never_waits_on_the_load_in_flight():
@@ -377,15 +377,15 @@ func test_load_now_unrelated_path_never_waits_on_the_load_in_flight():
 
 	# Given: Another path's resource.
 	var resource := Resource.new()
-	_backend.resources[_PATH_B] = resource
+	_engine_loader.resources[_PATH_B] = resource
 
 	# When: The other path is loaded now.
 	var loaded := StdLoader.load_now(_PATH_B)
 
 	# Then: It loaded on the calling thread, never waiting on the request in flight.
 	assert_eq(loaded, resource)
-	assert_eq(_backend.blocking_loads, [_PATH_B] as Array[String])
-	assert_eq(_backend.threaded_gets, [] as Array[String])
+	assert_eq(_engine_loader.blocking_loads, [_PATH_B] as Array[String])
+	assert_eq(_engine_loader.threaded_gets, [] as Array[String])
 
 
 func test_load_now_waiting_path_finishes_its_request_at_the_next_step():
@@ -396,7 +396,7 @@ func test_load_now_waiting_path_finishes_its_request_at_the_next_step():
 
 	# Given: The waiting path's resource.
 	var resource := Resource.new()
-	_backend.resources[_PATH_B] = resource
+	_engine_loader.resources[_PATH_B] = resource
 
 	# When: The waiting path is loaded now.
 	StdLoader.load_now(_PATH_B)
@@ -407,15 +407,15 @@ func test_load_now_waiting_path_finishes_its_request_at_the_next_step():
 	# Then: The waiting request is done with that resource, never started.
 	assert_true(waiting.is_done())
 	assert_eq(waiting.resource, resource)
-	assert_eq(_backend.started, [_PATH_A] as Array[String])
+	assert_eq(_engine_loader.started, [_PATH_A] as Array[String])
 
 
 func test_load_now_slow_load_warns():
 	# Given: A load which takes longer than the warning threshold.
-	_backend.resources[_PATH_A] = Resource.new()
-	var slow := SlowBackend.new()
-	slow.resources = _backend.resources
-	StdLoader._set_backend(slow)
+	_engine_loader.resources[_PATH_A] = Resource.new()
+	var slow := SlowEngineLoader.new()
+	slow.resources = _engine_loader.resources
+	StdLoader._set_engine_loader(slow)
 
 	# When: It is loaded now.
 	StdLoader.load_now(_PATH_A)
@@ -434,5 +434,5 @@ func after_each() -> void:
 func before_each() -> void:
 	StdLoader._reset()
 
-	_backend = FakeBackend.new()
-	StdLoader._set_backend(_backend)
+	_engine_loader = FakeEngineLoader.new()
+	StdLoader._set_engine_loader(_engine_loader)
