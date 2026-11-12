@@ -22,7 +22,7 @@ const SLOW_LOAD_USEC := 100000
 
 ## STALL_USEC is how long a threaded load may go without progress, in frame time,
 ## before the step reports it.
-const STALL_USEC := 20000000
+const STALL_USEC := 10000000
 
 ## STALL_FRAME_USEC caps the frame time a single step counts toward `STALL_USEC`, so a
 ## hitch or a breakpoint doesn't count as a stall.
