@@ -1,5 +1,14 @@
 # Changelog
 
+## 10.0.0 (2026-11-12)
+
+## What's Changed
+* feat(screen)!: load through `StdLoader` one request at a time, and wait for a screen's loads without blocking by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/630
+* chore: document in AGENTS.md that scripts export scenes and scripted resources instead of preloading them by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/631
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v9.4.0...v10.0.0
+
 ## 9.4.0 (2026-11-11)
 
 ## What's Changed
