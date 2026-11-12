@@ -118,14 +118,13 @@ func get_saved_version(config: Config) -> int:
 	return _meta.version
 
 
-## is_critical returns whether this schema has been marked as
-## requiring a save.
+## is_critical returns whether this schema has been marked as requiring a save.
 func is_critical() -> bool:
 	return _is_critical
 
 
-## is_dirty returns whether any item in this schema has unsaved
-## changes or the schema has been marked critical.
+## is_dirty returns whether any item in this schema has unsaved changes or the schema
+## has been marked critical.
 func is_dirty() -> bool:
 	if _is_critical:
 		return true
@@ -143,8 +142,8 @@ func is_dirty() -> bool:
 	return false
 
 
-## mark_critical flags this schema as requiring a save,
-## regardless of item-level dirty state.
+## mark_critical flags this schema as requiring a save, regardless of item-level dirty
+## state.
 func mark_critical() -> void:
 	_is_critical = true
 

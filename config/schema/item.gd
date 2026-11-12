@@ -1,5 +1,5 @@
 ##
-## std/config/item.gd
+## std/config/schema/item.gd
 ##
 ## StdConfigItem is a collection of key/value pairs that can be serialized to or
 ## deserialized from a `Config` object.

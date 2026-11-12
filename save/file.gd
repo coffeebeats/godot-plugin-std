@@ -14,7 +14,7 @@ extends StdConfigWriterBinary
 ## outcome. Check the `status` argument to determine whether the operation succeeded.
 signal save_loaded(data: StdSaveData, status: Status)
 
-# save_stored is emitted when a call to store save data completes, regardless of the
+## save_stored is emitted when a call to store save data completes, regardless of the
 ## outcome. Check the `status` argument to determine whether the operation succeeded.
 signal save_stored(data: StdSaveData, status: Status)
 

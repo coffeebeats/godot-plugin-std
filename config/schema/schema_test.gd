@@ -342,11 +342,13 @@ func test_check_migrations_rejects_version_from_gte_schema_version():
 
 
 func test_schema_is_not_dirty_after_load():
-	# Given: A schema with data stored in a Config.
+	# Given: A schema with non-default data.
 	var source := ConfigSchemaTest.new()
 	source.item = ConfigItemTest.new()
 	source.item.category = &"category"
 	source.item.key = 5
+
+	# Given: Its data stored in a Config.
 	var config := Config.new()
 	source.store(config)
 
@@ -375,15 +377,17 @@ func test_schema_is_dirty_when_item_mutated():
 
 
 func test_schema_clear_dirty_propagates_to_items():
-	# Given: A schema with a mutated item.
+	# Given: A freshly reset schema.
 	var schema := ConfigSchemaTest.new()
 	schema.item = ConfigItemTest.new()
 	schema.item.category = &"category"
 	schema.reset()
+
+	# Given: Its item was mutated.
 	schema.item.key = 42
 	assert_true(schema.is_dirty())
 
-	# When: clear_dirty is called on the schema.
+	# When: The schema's dirty state is cleared.
 	schema.clear_dirty()
 
 	# Then: The schema and its item are no longer dirty.
@@ -408,15 +412,17 @@ func test_schema_mark_critical_makes_dirty():
 
 
 func test_schema_clear_dirty_clears_critical():
-	# Given: A schema marked critical.
+	# Given: A freshly reset schema.
 	var schema := ConfigSchemaTest.new()
 	schema.item = ConfigItemTest.new()
 	schema.item.category = &"category"
 	schema.reset()
+
+	# Given: It was marked critical.
 	schema.mark_critical()
 	assert_true(schema.is_critical())
 
-	# When: clear_dirty is called.
+	# When: The schema's dirty state is cleared.
 	schema.clear_dirty()
 
 	# Then: The critical flag is cleared.
@@ -425,11 +431,13 @@ func test_schema_clear_dirty_clears_critical():
 
 
 func test_schema_is_not_dirty_after_reset():
-	# Given: A schema that has been mutated and marked critical.
+	# Given: A schema whose item was mutated.
 	var schema := ConfigSchemaTest.new()
 	schema.item = ConfigItemTest.new()
 	schema.item.category = &"category"
 	schema.item.key = 99
+
+	# Given: It was marked critical.
 	schema.mark_critical()
 
 	# When: The schema is reset.
@@ -462,11 +470,13 @@ func test_schema_is_not_dirty_after_copy():
 
 
 func test_schema_critical_persists_when_items_clean():
-	# Given: A schema with clean items but marked critical.
+	# Given: A freshly reset schema, whose items are clean.
 	var schema := ConfigSchemaTest.new()
 	schema.item = ConfigItemTest.new()
 	schema.item.category = &"category"
 	schema.reset()
+
+	# Given: It was marked critical.
 	schema.mark_critical()
 
 	# Then: The schema is dirty despite items being clean.
@@ -475,10 +485,12 @@ func test_schema_critical_persists_when_items_clean():
 
 
 func test_schema_load_clears_critical():
-	# Given: A schema marked critical.
+	# Given: A new schema with one item.
 	var schema := ConfigSchemaTest.new()
 	schema.item = ConfigItemTest.new()
 	schema.item.category = &"category"
+
+	# Given: It was marked critical.
 	schema.mark_critical()
 	assert_true(schema.is_critical())
 
