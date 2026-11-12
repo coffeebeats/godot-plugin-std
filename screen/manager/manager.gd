@@ -173,6 +173,9 @@ func load_screen(screen: StdScreen) -> Preparation:
 ## pop removes the topmost screen from the stack. When force is false (default), emits
 ## close_requested first; any handler can cancel. The result value is delivered via the
 ## screen's `popped` signal after removal.
+##
+## NOTE: The pop removes only the screen on top when it is called, and does nothing if
+## that screen has left the top by the time it runs.
 func pop(
 	result: Variant = null,
 	force: bool = false,
@@ -180,8 +183,9 @@ func pop(
 ) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
+	var screen: StdScreen = _stack.back()
+
 	if not force:
-		var screen: StdScreen = _stack.back()
 		assert(
 			screen is StdScreen,
 			"invalid state; missing screen",
@@ -196,18 +200,15 @@ func pop(
 			if state[0]:
 				return
 
-	var depth := _stack.size() - 1
-	var op := Pop.create(depth, transition, result)
+	var op := Pop.create_top([screen], transition, result)
 	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 ## pop_to pops screens until the given screen is on top.
 func pop_to(screen: StdScreen) -> void:
-	var idx := _stack.find(screen)
-	assert(idx >= 0, "screen not in stack")
+	assert(_stack.has(screen), "screen not in stack")
 
-	var depth := idx + 1
-	var op := Pop.create(depth)
+	var op := Pop.create_to(screen)
 	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
@@ -423,13 +424,6 @@ func _discard_screen(screen: StdScreen) -> void:
 		_overlays.free_if_unused(overlay)
 
 	screen.popped.emit(null)
-
-
-## _do_pop_to_depth is called by the close overlay handler. Wraps a pop operation for
-## enqueuing.
-func _do_pop_to_depth(depth: int) -> void:
-	var op := Pop.create(depth)
-	_execute_op(op)
 
 
 ## _end_wait ends the wait for an operation's preparation, releasing the queue's hold
@@ -718,8 +712,10 @@ func _release_focus(screen: StdScreen) -> void:
 
 
 ## _request_close propagates close_requested to the topmost 'count' screens, top first.
-## If no handler cancels, pops those screens. The bottom screen is never popped. The
-## caller has already marked the event handled, so a cancelled close still consumes it.
+## If no handler cancels, it pops those screens, which, as with `pop`, happens only if
+## they are still the topmost screens when the pop runs. The bottom screen is never
+## popped. The caller has already marked the event handled, so a cancelled close still
+## consumes it.
 func _request_close(event: InputEvent, count: int) -> void:
 	if _queue.is_operating():
 		return
@@ -727,6 +723,8 @@ func _request_close(event: InputEvent, count: int) -> void:
 	var target := maxi(1, _stack.size() - count)
 	if _stack.size() <= target:
 		return
+
+	var screens: Array[StdScreen] = _stack.slice(target)
 
 	# NOTE: Use an array so the lambda captures a reference.
 	var state := [false]
@@ -740,9 +738,8 @@ func _request_close(event: InputEvent, count: int) -> void:
 		if state[0]:
 			return
 
-	_queue.enqueue_or_run(
-		func(): _do_pop_to_depth(target),
-	)
+	var op := Pop.create_top(screens)
+	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 ## _request_close_overlay requests a close of every screen in the topmost overlay, in

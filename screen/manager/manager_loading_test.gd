@@ -304,6 +304,220 @@ func test_pop_during_transition_completes_the_interrupted_pop():
 	assert_true(_manager.is_current(other))
 
 
+func test_pop_during_push_transition_leaves_the_pushed_screen():
+	# Given: A screen on the stack.
+	await _push_base()
+
+	# Given: A second screen above it.
+	var middle := _create_screen()
+	_manager.push(middle, Control.new())
+
+	# Given: A third screen whose push transition hasn't mounted it.
+	var top := _create_screen()
+	top.transition_push = MockTransition.new()
+	_manager.push(top, Control.new())
+	watch_signals(middle)
+
+	# When: A pop is called before that transition ends.
+	_manager.pop()
+	await wait_idle_frames(2)
+
+	# Then: The pop asked the screen beneath, which wasn't on top once the push ran.
+	assert_signal_emitted(middle, "close_requested")
+
+	# Then: The push completed and the pop did nothing.
+	assert_signal_not_emitted(middle, "popped")
+	assert_eq(_manager.get_depth(), 3)
+	assert_true(_manager.is_current(top))
+	assert_true(_manager.is_settled())
+
+
+func test_pop_during_push_wait_leaves_the_pushed_screen():
+	# Given: A screen on the stack.
+	await _push_base()
+
+	# Given: A second screen above it.
+	var middle := _create_screen()
+	_manager.push(middle, Control.new())
+
+	# Given: A third screen waiting for its scene to load.
+	var top := _create_screen(_PATH_SLOW)
+	_manager.push(top)
+	watch_signals(middle)
+
+	# When: A pop is called while it waits.
+	_manager.pop()
+
+	# When: The third screen's scene finishes loading.
+	StdLoader._step()
+	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	StdLoader._step()
+	await wait_idle_frames(2)
+
+	# Then: The pop asked the screen beneath, which wasn't on top once the push ran.
+	assert_signal_emitted(middle, "close_requested")
+
+	# Then: The push completed and the pop did nothing.
+	assert_signal_not_emitted(middle, "popped")
+	assert_eq(_manager.get_depth(), 3)
+	assert_true(_manager.is_current(top))
+	assert_true(_manager.is_settled())
+
+
+func test_pop_to_during_push_wait_pops_to_the_target():
+	# Given: A screen on the stack.
+	await _push_base()
+
+	# Given: A second screen above it.
+	var middle := _create_screen()
+	_manager.push(middle, Control.new())
+
+	# Given: A third screen waiting for its scene to load.
+	_manager.push(_create_screen(_PATH_SLOW))
+
+	# When: A pop to the second screen is called while it waits.
+	_manager.pop_to(middle)
+
+	# When: The third screen's scene finishes loading.
+	StdLoader._step()
+	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	StdLoader._step()
+	await wait_idle_frames(2)
+
+	# Then: The push completed and the pop removed it, leaving the target on top.
+	assert_eq(_manager.get_depth(), 2)
+	assert_true(_manager.is_current(middle))
+	assert_true(_manager.is_settled())
+
+
+func test_pop_to_during_replace_wait_leaves_the_pushed_screen():
+	# Given: A screen on the stack.
+	await _push_base()
+
+	# Given: A second screen above it.
+	var middle := _create_screen()
+	_manager.push(middle, Control.new())
+
+	# Given: A replacement of the second screen waiting for its scene to load.
+	_manager.replace(_create_screen(_PATH_SLOW))
+
+	# Given: A screen pushed with an instance behind it.
+	var top := _create_screen()
+	_manager.push(top, Control.new())
+
+	# When: A pop to the second screen is called while the replacement waits.
+	_manager.pop_to(middle)
+
+	# When: The replacement's scene finishes loading.
+	StdLoader._step()
+	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	StdLoader._step()
+	await wait_idle_frames(2)
+
+	# Then: The replace and push completed, and the pop found its target gone.
+	assert_eq(_manager.get_depth(), 3)
+	assert_true(_manager.is_current(top))
+	assert_true(_manager.is_settled())
+
+
+func test_close_during_push_transition_leaves_the_pushed_screen():
+	# Given: A screen on the stack.
+	await _push_base()
+
+	# Given: A second screen above it.
+	var middle := _create_screen()
+	_manager.push(middle, Control.new())
+
+	# Given: A third screen whose non-blocking push hasn't mounted it.
+	var transition := MockTransition.new()
+	transition.block_input = false
+	var top := _create_screen()
+	top.transition_push = transition
+	_manager.push(top, Control.new())
+	watch_signals(middle)
+
+	# When: A close of the top screen is requested before that transition ends.
+	_manager._request_close_top(InputEventAction.new())
+	await wait_idle_frames(2)
+
+	# Then: The close asked the screen beneath, which wasn't on top once the push ran.
+	assert_signal_emitted(middle, "close_requested")
+
+	# Then: The push completed and the close did nothing.
+	assert_signal_not_emitted(middle, "popped")
+	assert_eq(_manager.get_depth(), 3)
+	assert_true(_manager.is_current(top))
+	assert_true(_manager.is_settled())
+
+
+func test_pop_twice_during_pop_transition_pops_only_the_top_screen():
+	# Given: A screen on the stack.
+	await _push_base()
+
+	# Given: A second screen above it.
+	var middle := _create_screen()
+	_manager.push(middle, Control.new())
+
+	# Given: A third screen leaving through a non-blocking transition.
+	var transition := MockTransition.new()
+	transition.block_input = false
+	var top := _create_screen()
+	top.transition_pop = transition
+	_manager.push(top, Control.new())
+	watch_signals(middle)
+	watch_signals(top)
+	_manager.pop()
+
+	# When: A second pop is called before that transition ends.
+	_manager.pop()
+	await wait_idle_frames(2)
+
+	# Then: The top screen was popped once.
+	assert_signal_emit_count(top, "popped", 1)
+
+	# Then: The screen beneath was neither asked nor popped.
+	assert_signal_not_emitted(middle, "close_requested")
+	assert_signal_not_emitted(middle, "popped")
+	assert_eq(_manager.get_depth(), 2)
+	assert_true(_manager.is_current(middle))
+	assert_true(_manager.is_settled())
+
+
+func test_close_twice_during_pop_transition_pops_only_the_top_screen():
+	# Given: A screen on the stack.
+	await _push_base()
+
+	# Given: A second screen above it.
+	var middle := _create_screen()
+	_manager.push(middle, Control.new())
+
+	# Given: A third screen that pops through a non-blocking transition.
+	var transition := MockTransition.new()
+	transition.block_input = false
+	var top := _create_screen()
+	top.transition_pop = transition
+	_manager.push(top, Control.new())
+	watch_signals(middle)
+	watch_signals(top)
+
+	# When: A close of the top screen is requested, which starts its pop.
+	_manager._request_close_top(InputEventAction.new())
+
+	# When: A second close is requested before that transition ends.
+	_manager._request_close_top(InputEventAction.new())
+	await wait_idle_frames(2)
+
+	# Then: The top screen was popped once.
+	assert_signal_emit_count(top, "popped", 1)
+
+	# Then: The screen beneath was neither asked nor popped.
+	assert_signal_not_emitted(middle, "close_requested")
+	assert_signal_not_emitted(middle, "popped")
+	assert_eq(_manager.get_depth(), 2)
+	assert_true(_manager.is_current(middle))
+	assert_true(_manager.is_settled())
+
+
 func test_teardown_during_wait_releases_input_and_settles():
 	# Given: A screen waiting for its scene to load.
 	await _push_base()

@@ -13,6 +13,10 @@ extends Resource
 
 ## close_requested is emitted when a close is requested for this screen via `pop()` or
 ## an overlay background click. Call `cancel.call()` from any handler to abort closing.
+##
+## NOTE: A request may not lead to a close, since a handler may cancel it or the screen
+## may have left the top by the time the pop runs. Work that must happen on close
+## belongs on `popped` or `exited`.
 @warning_ignore("unused_signal")
 signal close_requested(event: InputEvent, cancel: Callable)
 
