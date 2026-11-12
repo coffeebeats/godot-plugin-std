@@ -11,9 +11,12 @@
 ## later calls queued behind it, so mounting never loads. `is_settled` and `settled`
 ## report when every call has run, and `screen_load_failed` when a screen couldn't open.
 ##
-## Leaving the tree, or a close request, tears the manager down. Teardown drops every
+## Leaving the tree, or `tear_down`, tears the manager down. Teardown drops every
 ## operation and empties the stack before it emits `settled`, and a call made during it,
-## such as from a handler of a signal it emits, is ignored with a warning.
+## such as from a handler of a signal it emits, is ignored with a warning. A close
+## request keeps the stack, since a game may cancel it. A call made later in the frame
+## of a close request or of `tear_down` runs at the end of the frame, except a pop or
+## replace made while the stack is empty, which is ignored.
 ##
 ## Freeing a node deletes its children immediately. Stack operations often run from
 ## inside an input handler, so deleting a node while its handler is still running will
@@ -75,6 +78,10 @@ const Signals := preload("../../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+## GROUP_SCREEN_MANAGER is the `StdGroup` of every manager in the tree, through which a
+## game whose quit is certain tears each one down.
+const GROUP_SCREEN_MANAGER := &"std/screen:manager"
+
 ## _META_PROCESS_MODE is the metadata key used to save a scene's process mode before the
 ## manager disables it.
 const _META_PROCESS_MODE := &"addons_std_screen_manager_process_mode"
@@ -117,6 +124,11 @@ var _input_blocker: Control = null
 var _is_tearing_down: bool = false
 
 var _overlays: Overlays = null
+
+## _pending holds each operation accepted but not yet run, wherever the queue holds it,
+## so that a teardown can release what each one was handed.
+var _pending: Array[Operation] = []
+
 var _preparations: Dictionary[StdScreen, Preparation] = {}
 var _queue: OperationQueue = null
 var _scenes: Dictionary[StdScreen, Node] = {}
@@ -185,14 +197,14 @@ func load_screen(screen: StdScreen) -> Preparation:
 ## screen's `popped` signal after removal.
 ##
 ## NOTE: The pop removes only the screen on top when it is called, and does nothing if
-## that screen has left the top by the time it runs. A call made during teardown is
-## dropped.
+## that screen has left the top by the time it runs. A call made during teardown, or
+## with the stack empty later in the frame of `tear_down`, is dropped.
 func pop(
 	result: Variant = null,
 	force: bool = false,
 	transition: StdTransition = null,
 ) -> void:
-	if _drop_if_tearing_down(&"pop"):
+	if _drop_if_tearing_down(&"pop", null, true):
 		return
 
 	assert(_stack.size() > 1, "cannot pop the last screen")
@@ -215,19 +227,19 @@ func pop(
 				return
 
 	var op := Pop.create_top([screen], transition, result)
-	_queue.enqueue_or_run(_execute_op.bind(op))
+	_enqueue_op(op)
 
 
-## pop_to pops screens until the given screen is on top. A call made during teardown is
-## dropped.
+## pop_to pops screens until the given screen is on top. A call made during teardown, or
+## with the stack empty later in the frame of `tear_down`, is dropped.
 func pop_to(screen: StdScreen) -> void:
-	if _drop_if_tearing_down(&"pop_to"):
+	if _drop_if_tearing_down(&"pop_to", null, true):
 		return
 
 	assert(_stack.has(screen), "screen not in stack")
 
 	var op := Pop.create_to(screen)
-	_queue.enqueue_or_run(_execute_op.bind(op))
+	_enqueue_op(op)
 
 
 ## push adds a screen on top of the stack. A call made during teardown is dropped, and
@@ -246,17 +258,18 @@ func push(
 	)
 
 	var op := Push.create(screen, instance, transition)
-	_queue.enqueue_or_run(_execute_op.bind(op))
+	_enqueue_op(op)
 
 
-## replace swaps the topmost screen for a new one. A call made during teardown is
-## dropped, and frees `instance` unless it has a parent.
+## replace swaps the topmost screen for a new one. A call made during teardown, or with
+## the stack empty later in the frame of `tear_down`, is dropped, and frees `instance`
+## unless it has a parent.
 func replace(
 	screen: StdScreen,
 	instance: Node = null,
 	transition: StdTransition = null,
 ) -> void:
-	if _drop_if_tearing_down(&"replace", instance):
+	if _drop_if_tearing_down(&"replace", instance, true):
 		return
 
 	assert(
@@ -269,7 +282,7 @@ func replace(
 	)
 
 	var op := Replace.create(screen, instance, transition)
-	_queue.enqueue_or_run(_execute_op.bind(op))
+	_enqueue_op(op)
 
 
 ## reset clears the entire stack and pushes a new base screen. A call made during
@@ -288,19 +301,42 @@ func reset(
 	)
 
 	var op := Reset.create(screen, instance, transition)
-	_queue.enqueue_or_run(_execute_op.bind(op))
+	_enqueue_op(op)
+
+
+## tear_down tears the manager down as leaving the tree does, for a game whose quit is
+## certain, so that its screens close while the tree stands and nothing it holds out of
+## the tree is left for Godot to report as an orphan. A close request alone doesn't,
+## since a game may cancel it. A manager that isn't ready yet does nothing.
+func tear_down() -> void:
+	if not is_node_ready():
+		return
+
+	_teardown()
+
+	# NOTE: A close request usually follows, which keeps the manager from adding a child
+	# while it propagates, as `_notification` describes.
+	_queue.defer()
 
 
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
+func _enter_tree() -> void:
+	StdGroup.with_id(GROUP_SCREEN_MANAGER).add_member(self)
+
+
 func _exit_tree() -> void:
+	StdGroup.with_id(GROUP_SCREEN_MANAGER).remove_member(self)
 	_teardown()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		_teardown()
+		# NOTE: A game may cancel the request, so the stack stays. One sent with
+		# `propagate_notification` keeps the manager from adding or removing a child until
+		# it has reached every scene, so later calls wait for the end of the frame.
+		_queue.defer()
 
 
 func _ready() -> void:
@@ -456,23 +492,27 @@ func _discard_screen(screen: StdScreen) -> void:
 	screen.popped.emit(null)
 
 
-## _drop_if_tearing_down returns whether a call to `op` must be dropped because the
-## manager is tearing down, in which case it warns and frees `instance`, the scene the
-## call handed over, unless it has a parent that owns it.
+## _drop_if_tearing_down returns whether a call to `op` is dropped, in which case it
+## warns and frees `instance` unless a parent owns it. A call is dropped during
+## teardown, and one that `needs_screen` also while the stack is empty and calls wait
+## for the end of the frame.
 ##
 ## NOTE: A scene the cache keeps detached is freed by the same teardown anyway.
-func _drop_if_tearing_down(op: StringName, instance: Node = null) -> bool:
-	if not _is_tearing_down:
+func _drop_if_tearing_down(
+	op: StringName, instance: Node = null, needs_screen: bool = false
+) -> bool:
+	var finds_no_screen := needs_screen and _stack.is_empty() and _queue.is_deferring()
+	if not _is_tearing_down and not finds_no_screen:
 		return false
 
-	_logger.warn("Ignored; manager is tearing down.", {&"op": op})
+	if _is_tearing_down:
+		_logger.warn("Ignored; manager is tearing down.", {&"op": op})
+	else:
+		_logger.warn(
+			"Ignored; no screen to act on until the end of the frame.", {&"op": op}
+		)
 
-	if (
-		is_instance_valid(instance)
-		and instance.get_parent() == null
-		and not instance.is_inside_tree()
-	):
-		instance.free()
+	_free_unowned(instance)
 
 	return true
 
@@ -494,6 +534,13 @@ func _end_wait() -> void:
 	_unblock_input()
 
 
+## _enqueue_op hands `op` to the queue, which runs it now or once the operations before
+## it have run, and tracks it until it does.
+func _enqueue_op(op: Operation) -> void:
+	_pending.append(op)
+	_queue.enqueue_or_run(_execute_op.bind(op))
+
+
 ## _execute_op runs an operation, first completing any whose transition is still
 ## running, so none is dropped. An operation whose preparation isn't done waits for it
 ## with input blocked and later calls queued; otherwise it presents at once.
@@ -501,6 +548,8 @@ func _end_wait() -> void:
 ## NOTE: `_active_op` keeps the operation alive while it waits, since lambdas and bound
 ## `Callable`s capture a `RefCounted` weakly.
 func _execute_op(op: Operation) -> void:
+	_pending.erase(op)
+
 	_complete_active()
 
 	_active_op = op
@@ -576,6 +625,19 @@ func _free_attachments(screen: StdScreen) -> void:
 			node.queue_free()
 
 	_attachments.erase(screen)
+
+
+## _free_unowned frees `instance`, a scene handed to the manager, unless it was freed
+## already or has a parent that owns it.
+##
+## NOTE: `instance` is untyped, since a teardown may already have freed it.
+func _free_unowned(instance: Variant) -> void:
+	if (
+		is_instance_valid(instance)
+		and instance.get_parent() == null
+		and not instance.is_inside_tree()
+	):
+		instance.free()
 
 
 ## _mount_attachments instantiates the screen's attachment scenes into its overlay, from
@@ -789,7 +851,7 @@ func _request_close(event: InputEvent, count: int) -> void:
 			return
 
 	var op := Pop.create_top(screens)
-	_queue.enqueue_or_run(_execute_op.bind(op))
+	_enqueue_op(op)
 
 
 ## _request_close_overlay requests a close of every screen in the topmost overlay, in
@@ -841,6 +903,12 @@ func _teardown() -> void:
 
 	_is_tearing_down = true
 
+	var dropped: Array[Operation] = _pending.duplicate()
+	if _active_op:
+		dropped.push_front(_active_op)
+
+	_pending.clear()
+
 	_force_stop()
 	_end_wait()
 
@@ -891,6 +959,9 @@ func _teardown() -> void:
 	_input_blocker = null
 
 	_cache.clear()
+
+	for op in dropped:
+		op._discard(self)
 
 	# NOTE: The queue is reset last, so that a `settled` handler sees the stack empty and
 	# any call it makes is dropped.
