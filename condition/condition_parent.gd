@@ -38,9 +38,10 @@ func _enter_tree() -> void:
 
 
 func _notification(what: int) -> void:
-	# NOTE: Children held out of the tree are freed with the condition, and before
-	# Godot reports orphans at quit, so none is leaked.
-	if what == NOTIFICATION_PREDELETE or what == NOTIFICATION_WM_CLOSE_REQUEST:
+	# NOTE: Children held out of the tree are freed with the condition, and on a
+	# shutdown before Godot reports orphans, so none is leaked. A close request alone
+	# frees nothing, since a game may cancel it.
+	if what == NOTIFICATION_PREDELETE or what == StdLifecycle.NOTIFICATION_SHUTDOWN:
 		_free_removed_children()
 
 
