@@ -43,6 +43,10 @@ Off Steam, the [Godot glyph provider](./input/godot/device_glyphs.gd) draws orig
 
 The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
 
+#### **`load`**
+
+The [load](./load) directory contains [`StdLoader`](./load/loader.gd), which runs the process's threaded resource loads one at a time. A script exports a scene, or a resource that carries a script, rather than preloading it, since Godot 4.6 to 4.8 can deadlock on that `preload`.
+
 #### **`scene`**
 
 The [scene](./scene) directory contains an implementation of a [`StateMachine`](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
@@ -51,13 +55,15 @@ The [scene](./scene) directory contains an implementation of a [`StateMachine`](
 
 The [screen](./screen) directory contains [`StdScreenManager`](./screen/manager/manager.gd), a stack of [`StdScreen`](./screen/screen.gd)s where each screen covers the one below it.
 
+A screen opens once [`StdLoader`](./load/loader.gd) has loaded its scenes, and its `cache_mode` can keep its scene between uses.
+
 A [`StdPanel`](./screen/panel.gd) instead opens UI, such as a build or context menu, over a running scene that a screen would cover. It runs its control's transition, closes on its close actions and on a press outside the control, and follows the control's visibility.
 
 #### **`test`**
 
 The [test](./test) directory contains helpers for a project's GUT tests. [`StdTestInput`](./test/input.gd) mounts a scene at the root viewport under `--headless` and sends it real mouse motion, clicks, keys and actions through `Input`, so a test covers picking, focus and polled state.
 
-A scene run on its own, by F6 or in a test, has no [`StdScreenManager`](./screen/manager/manager.gd) among its ancestors, so it has no stack to push onto. [`StdTestScreenManager`](./test/screen_manager.gd) is a manager whose `push_and_wait` waits for the enter transition and returns the scene. A test that also clicks through what the scene pushes mounts the manager with `StdTestInput` before pushing.
+A scene run on its own, by F6 or in a test, has no [`StdScreenManager`](./screen/manager/manager.gd) among its ancestors, so it has no stack to push onto. [`StdTestScreenManager`](./test/screen_manager.gd) is a manager whose `push_and_wait` waits for the manager to settle and returns the scene. A test that also clicks through what the scene pushes mounts the manager with `StdTestInput` before pushing.
 
 ## **Development**
 

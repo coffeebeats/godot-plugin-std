@@ -13,6 +13,10 @@ extends Resource
 
 ## close_requested is emitted when a close is requested for this screen via `pop()` or
 ## an overlay background click. Call `cancel.call()` from any handler to abort closing.
+##
+## NOTE: A request may not lead to a close, since a handler may cancel it or the screen
+## may have left the top by the time the pop runs. Work that must happen on close
+## belongs on `popped` or `exited`.
 @warning_ignore("unused_signal")
 signal close_requested(event: InputEvent, cancel: Callable)
 
@@ -51,17 +55,40 @@ signal popped(result: Variant)
 @warning_ignore("unused_signal")
 signal uncovered(scene: Node)
 
+# -- DEFINITIONS --------------------------------------------------------------------- #
+
+## CacheMode is where the manager keeps a screen's scene while the screen isn't on the
+## stack.
+##
+## - `NONE` keeps nothing; each open instantiates the scene and each close frees it.
+## - `DETACHED` keeps the scene out of the tree from its first close, so a later open
+##   only re-enters the tree.
+## - `IN_TREE` keeps the scene parked in the tree, hidden in its own overlay, with
+##   processing disabled and told it is covered, so opening it only shows it. It is
+##   built at the mount of the first screen listing it under `dependency_screens`, to
+##   any depth, or at its own first mount, and always isolates input below it.
+##
+## NOTE: A parked scene's `_enter_tree` runs once, so work for every open belongs on the
+## manager's `screen_entering`.
+##
+## NOTE: A scene holding a `CanvasLayer`, `Node3D`, shown `Window`, `CanvasItem` under a
+## plain `Node`, or node with its own process mode other than disabled can't park, so it
+## is reported and kept `DETACHED` instead.
+enum CacheMode {
+	NONE,
+	DETACHED,
+	IN_TREE,
+}
+
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
 ## scene_path is the path to the packed scene file. Optional; when empty, the caller
 ## must provide a pre-built instance to push/replace/reset methods.
 @export_file("*.tscn", "*.scn") var scene_path: String = ""
 
-## cache_instance prevents the manager from freeing the scene on pop. The scene is
-## removed from the tree and stored internally. On the next push of this screen, the
-## cached instance is reused (re-added to tree) instead of instantiating from
-## scene_path.
-@export var cache_instance: bool = false
+## cache_mode is where the manager keeps this screen's scene between uses; see
+## `CacheMode`. A kept scene lives until the manager leaves the tree.
+@export var cache_mode := CacheMode.NONE
 
 ## pause_when_covered controls whether this screen's scene has its process mode set to
 ## disabled when another screen is pushed on top.
@@ -88,8 +115,8 @@ signal uncovered(scene: Node)
 @export var dependency_screens: Array[StdScreen] = []
 
 ## dependency_scenes is a list of scene paths that are loaded alongside this screen's
-## target scene. Loading begins immediately when the operation starts, overlapping with
-## any exit transition; resolution blocks at mount time only if still in progress.
+## target scene. An operation opening this screen waits for them before it changes
+## anything, with input blocked, so its mount never loads.
 @export_file("*.tscn", "*.scn") var dependency_scenes: PackedStringArray = []
 
 @export_group("Attachments")

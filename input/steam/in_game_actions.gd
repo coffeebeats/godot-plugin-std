@@ -52,7 +52,7 @@ static func find_resources(
 
 	var resources: Array[Resource] = []
 	for path in paths:
-		var resource: Resource = ResourceLoader.load(path)
+		var resource: Resource = StdLoader.load_now(path)
 		if resource:
 			resources.append(resource)
 

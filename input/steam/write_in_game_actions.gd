@@ -50,7 +50,7 @@ func _find_manifest(args: PackedStringArray) -> StdInputSteamInGameActions:
 
 	if args.size() == 1:
 		var path := ProjectSettings.localize_path(args[0])
-		var manifest := ResourceLoader.load(path) as StdInputSteamInGameActions
+		var manifest := StdLoader.load_now(path) as StdInputSteamInGameActions
 		if not manifest:
 			_logger.error("Not a StdInputSteamInGameActions resource.", {&"path": path})
 

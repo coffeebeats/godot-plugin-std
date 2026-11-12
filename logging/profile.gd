@@ -42,7 +42,7 @@ static func load_and_apply(path: String) -> void:
 	if not ResourceLoader.exists(path):
 		return
 
-	var profile: StdLogProfile = ResourceLoader.load(path)
+	var profile: StdLogProfile = StdLoader.load_now(path)
 	if not profile is StdLogProfile:
 		assert(false, "invalid argument; expected a 'StdLogProfile' resource")
 		return

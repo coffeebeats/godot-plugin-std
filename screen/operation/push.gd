@@ -32,10 +32,21 @@ static func create(
 	return op
 
 
+func get_screen() -> StdScreen:
+	return _screen
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _execute(manager: StdScreenManager, done: Callable) -> void:
+func _prepare(manager: StdScreenManager) -> Preparation:
+	if _screen in manager._stack:
+		return null
+
+	return _prepare_screen(manager, _screen, _instance)
+
+
+func _present(manager: StdScreenManager, done: Callable) -> void:
 	# Validate: no duplicates in stack.
 	if _screen in manager._stack:
 		(
@@ -48,8 +59,11 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		done.call()
 		return
 
+	if _fail_unloaded(manager, done):
+		return
+
 	var previous := manager._current_scene()
-	var result: Array = manager._create_resolver(_screen, _instance)
+	var result: Array = manager._create_resolver(_screen, _instance, _preparation)
 	var resolver: Callable = result[0]
 	var sync_scene: Node = result[1]
 
@@ -68,11 +82,11 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		&"enter",
 		previous,
 		sync_scene,
-		func(scene: Node) -> void: manager._mount_scene(_screen, scene),
+		func(scene: Node) -> void:
+			manager._mount_entering(_screen, scene, _preparation),
 		Callable(),
 		func() -> void:
 			if _screen not in manager._stack:
-				manager._preloads.erase(_screen)
 				done.call()
 				return
 			var scene: Node = manager._scenes.get(_screen)

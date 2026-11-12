@@ -51,7 +51,7 @@ func _on_allow() -> void:
 	)
 
 	if not _node:
-		var packed_scene := load(scene)
+		var packed_scene := StdLoader.load_now(scene)
 		assert(packed_scene is PackedScene, "invalid state; missing packed scene")
 
 		_node = packed_scene.instantiate()
