@@ -43,6 +43,12 @@ Off Steam, the [Godot glyph provider](./input/godot/device_glyphs.gd) draws orig
 
 The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
 
+#### **`load`**
+
+The [load](./load) directory contains [`StdLoader`](./load/loader.gd), which runs the process's threaded resource loads one at a time. `request` returns a `Result` that reports through `done` once its load ends, from the loader's per-frame step and never inside the caller's stack; check `is_done` first, since a cached resource is done at once. `load_now` is the one blocking load: it returns a cached resource at once, waits only for the load it names, and warns when a load is slow.
+
+Godot 4.6 to 4.8 deadlock when a script compiling on one thread waits in the loader for a resource another thread is loading, and a `preload` of a scene or a custom resource is the usual way in. Export the `PackedScene` or `Resource` and set it in the scene instead; godot-infra's `preload` checker rule reports the rest.
+
 #### **`scene`**
 
 The [scene](./scene) directory contains an implementation of a [`StateMachine`](./fsm/state_machine.gd) specialized for declaratively managing scene transitions. See the [examples folder](./scene/example/) for a sample main scene.
@@ -51,13 +57,17 @@ The [scene](./scene) directory contains an implementation of a [`StateMachine`](
 
 The [screen](./screen) directory contains [`StdScreenManager`](./screen/manager/manager.gd), a stack of [`StdScreen`](./screen/screen.gd)s where each screen covers the one below it.
 
+Operations run one at a time, in call order. One opening a screen whose scenes aren't loaded changes nothing until [`StdLoader`](./load/loader.gd) has loaded them, the screen's own scene first, with input blocked and later calls queued behind it, so mounting never loads. `load_screen` starts those loads in the background and returns a preparation which keeps them loaded while held. `is_settled` and `settled` report when no operation is left, and `screen_load_failed` when a screen couldn't open, leaving the stack as it was. A call that arrives while a transition runs completes that operation first, skipping the rest of its animation.
+
+A screen's `cache_mode` keeps its scene between uses: `DETACHED` out of the tree, or `IN_TREE` parked in its own hidden overlay, built with the first screen listing it under `dependency_screens`, so opening it, with no transition, only shows it.
+
 A [`StdPanel`](./screen/panel.gd) instead opens UI, such as a build or context menu, over a running scene that a screen would cover. It runs its control's transition, closes on its close actions and on a press outside the control, and follows the control's visibility.
 
 #### **`test`**
 
 The [test](./test) directory contains helpers for a project's GUT tests. [`StdTestInput`](./test/input.gd) mounts a scene at the root viewport under `--headless` and sends it real mouse motion, clicks, keys and actions through `Input`, so a test covers picking, focus and polled state.
 
-A scene run on its own, by F6 or in a test, has no [`StdScreenManager`](./screen/manager/manager.gd) among its ancestors, so it has no stack to push onto. [`StdTestScreenManager`](./test/screen_manager.gd) is a manager whose `push_and_wait` waits for the enter transition and returns the scene. A test that also clicks through what the scene pushes mounts the manager with `StdTestInput` before pushing.
+A scene run on its own, by F6 or in a test, has no [`StdScreenManager`](./screen/manager/manager.gd) among its ancestors, so it has no stack to push onto. [`StdTestScreenManager`](./test/screen_manager.gd) is a manager whose `push_and_wait` waits for the manager to settle and returns the scene. A test that also clicks through what the scene pushes mounts the manager with `StdTestInput` before pushing.
 
 ## **Development**
 

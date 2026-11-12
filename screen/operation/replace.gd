@@ -32,10 +32,21 @@ static func create(
 	return op
 
 
+func get_screen() -> StdScreen:
+	return _screen
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _execute(manager: StdScreenManager, done: Callable) -> void:
+func _prepare(manager: StdScreenManager) -> Preparation:
+	if _screen in manager._stack and manager._stack[-1] != _screen:
+		return null
+
+	return _prepare_screen(manager, _screen, _instance)
+
+
+func _present(manager: StdScreenManager, done: Callable) -> void:
 	# Reject duplicate (non-self) replace.
 	if _screen in manager._stack and manager._stack[-1] != _screen:
 		(
@@ -57,14 +68,24 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		done.call()
 		return
 
+	if _fail_unloaded(manager, done):
+		return
+
 	# Capture the overlay for transfer when both screens own theirs. If
 	# the old screen was sharing an overlay, teardown handles cleanup
-	# normally so the shared overlay stays with its original owner.
+	# normally so the shared overlay stays with its original owner. A
+	# screen kept in the tree owns its overlay for life, so it never
+	# hands one over or takes one.
 	var overlay_prev: StdScreenOverlay = null
-	if screen_prev.block_input_below and _screen.block_input_below:
+	if (
+		screen_prev.block_input_below
+		and _screen.block_input_below
+		and not manager._cache.is_in_tree(screen_prev)
+		and not manager._cache.is_in_tree(_screen)
+	):
 		overlay_prev = (manager._overlays.get_overlay(screen_prev))
 
-	var result: Array = manager._create_resolver(_screen, _instance)
+	var result: Array = manager._create_resolver(_screen, _instance, _preparation)
 	var resolver: Callable = result[0]
 	var sync_scene: Node = result[1]
 
@@ -90,7 +111,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		func(scene: Node) -> void:
 			if is_instance_valid(overlay_prev):
 				manager._overlays.register(_screen, overlay_prev)
-			manager._mount_scene(_screen, scene),
+			manager._mount_entering(_screen, scene),
 		func() -> void:
 			manager._stack.pop_back()
 			manager._scenes.erase(screen_prev)
@@ -102,7 +123,7 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		func() -> void:
 			manager._overlays.free_if_unused(overlay_prev)
 			if _screen not in manager._stack:
-				manager._preloads.erase(_screen)
+				manager._preparations.erase(_screen)
 				manager._update_stack_state()
 				if screen_prev not in manager._stack:
 					manager._notify_top_uncovered()

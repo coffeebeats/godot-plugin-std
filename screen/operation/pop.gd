@@ -35,7 +35,7 @@ static func create(
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _execute(manager: StdScreenManager, done: Callable) -> void:
+func _present(manager: StdScreenManager, done: Callable) -> void:
 	# Pop intermediate screens instantly (no transition - industry standard).
 	while manager._stack.size() > _depth + 1:
 		@warning_ignore("confusable_local_declaration")

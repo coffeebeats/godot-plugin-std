@@ -327,9 +327,9 @@ func test_exit_tree_frees_cached_scenes():
 	# Given: A base screen on the stack.
 	await _do_push()
 
-	# Given: A screen with cache_instance enabled, pushed on top.
+	# Given: A screen keeping its scene detached, pushed on top.
 	var screen := _create_screen()
-	screen.cache_instance = true
+	screen.cache_mode = StdScreen.CacheMode.DETACHED
 	var scene := Control.new()
 	await _do_push(screen, scene)
 

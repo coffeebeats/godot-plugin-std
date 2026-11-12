@@ -48,12 +48,15 @@ func _block_input() -> void:
 
 
 ## _mount adds the entering scene to the scene tree. This is a no-op if no mount
-## function is set. If a resolver is set, it is called first to resolve the scene
-## (sync-blocking on any in-progress background load).
+## function is set. If a resolver is set, it is called first to resolve the scene: a
+## kept or passed instance, or one instantiated from a scene the operation loaded
+## before it started, so mounting never loads. The mount function then builds each
+## screen kept in the tree that the entering screen depends on, so all building happens
+## in this one call.
 ##
-## NOTE: If the resolver returns `null` (failed load), the mount is skipped, unmount is
-## suppressed (to preserve the existing scene), and `done()` is called to abort the
-## operation gracefully.
+## NOTE: If the resolver returns `null` (failed instantiation), the mount is skipped,
+## unmount is suppressed (to preserve the existing scene), and `done()` is called to
+## abort the operation gracefully.
 func _mount() -> void:
 	if not _mount_fn.is_valid():
 		return

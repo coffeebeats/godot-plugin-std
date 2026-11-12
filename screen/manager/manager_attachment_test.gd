@@ -111,10 +111,10 @@ func test_pop_defers_scene_free_until_idle():
 
 
 func test_pop_frees_attachments_when_scene_is_cached():
-	# Given: A pushed screen which caches its scene instance.
+	# Given: A pushed screen which keeps its scene detached.
 	await _do_push()
 	var screen := _create_screen()
-	screen.cache_instance = true
+	screen.cache_mode = StdScreen.CacheMode.DETACHED
 	screen.attachment_scenes = PackedStringArray([_TEST_ATTACHMENT_PATH])
 	var scene := Control.new()
 	await _do_push(screen, scene)
@@ -126,7 +126,7 @@ func test_pop_frees_attachments_when_scene_is_cached():
 	await wait_idle_frames(2)
 
 	# Then: The scene was cached but the attachment was freed.
-	assert_eq(_manager._cache.get(screen), scene)
+	assert_eq(_manager._cache.get_entry(screen).scene, scene)
 	assert_false(is_instance_valid(attachment))
 
 

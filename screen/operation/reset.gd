@@ -33,10 +33,21 @@ static func create(
 	return op
 
 
+func get_screen() -> StdScreen:
+	return _screen
+
+
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
-func _execute(manager: StdScreenManager, done: Callable) -> void:
+func _prepare(manager: StdScreenManager) -> Preparation:
+	return _prepare_screen(manager, _screen, _instance)
+
+
+func _present(manager: StdScreenManager, done: Callable) -> void:
+	if _fail_unloaded(manager, done):
+		return
+
 	# Teardown all existing scenes in reverse order.
 	for i in range(manager._stack.size() - 1, -1, -1):
 		var s: StdScreen = manager._stack[i]
@@ -50,9 +61,9 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 	manager._stack.clear()
 	manager._scenes.clear()
 	manager._overlays.clear()
-	manager._preloads.clear()
+	manager._preparations.clear()
 
-	var result: Array = manager._create_resolver(_screen, _instance)
+	var result: Array = manager._create_resolver(_screen, _instance, _preparation)
 	var resolver: Callable = result[0]
 	var sync_scene: Node = result[1]
 
@@ -64,11 +75,11 @@ func _execute(manager: StdScreenManager, done: Callable) -> void:
 		&"enter",
 		null,
 		sync_scene,
-		func(scene: Node) -> void: manager._mount_scene(_screen, scene),
+		func(scene: Node) -> void: manager._mount_entering(_screen, scene),
 		Callable(),
 		func() -> void:
 			if _screen not in manager._stack:
-				manager._preloads.erase(_screen)
+				manager._preparations.erase(_screen)
 				done.call()
 				return
 			var scene: Node = manager._scenes.get(_screen)
