@@ -363,10 +363,7 @@ static func _step() -> void:
 
 ## _to_key returns the path a request is known by, a `uid://` resolved to its file.
 static func _to_key(path: String) -> String:
-	assert(
-		path.begins_with("res://") or path.begins_with("uid://"),
-		"invalid argument; expected an absolute path or a uid",
-	)
+	assert(path, "invalid argument; missing path")
 
 	var resolved := ResourceUID.ensure_path(path)
 	return resolved if resolved else path
