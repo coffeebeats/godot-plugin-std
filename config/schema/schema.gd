@@ -34,6 +34,10 @@ const PROPERTY_USAGE_SERDE := PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_ST
 
 static var _logger := StdLogger.create(&"std/config/schema")  # gdlint:ignore=class-definitions-order,max-line-length
 
+## _critical_marks counts calls to `mark_critical`, so `_install_baseline` can tell
+## whether the schema was marked after its baseline was captured.
+var _critical_marks: int = 0
+
 var _is_critical: bool = false
 var _meta := Metadata.new()
 
@@ -118,14 +122,13 @@ func get_saved_version(config: Config) -> int:
 	return _meta.version
 
 
-## is_critical returns whether this schema has been marked as
-## requiring a save.
+## is_critical returns whether this schema has been marked as requiring a save.
 func is_critical() -> bool:
 	return _is_critical
 
 
-## is_dirty returns whether any item in this schema has unsaved
-## changes or the schema has been marked critical.
+## is_dirty returns whether any item in this schema has unsaved changes or the schema
+## has been marked critical.
 func is_dirty() -> bool:
 	if _is_critical:
 		return true
@@ -143,10 +146,11 @@ func is_dirty() -> bool:
 	return false
 
 
-## mark_critical flags this schema as requiring a save,
-## regardless of item-level dirty state.
+## mark_critical flags this schema as requiring a save, regardless of item-level dirty
+## state.
 func mark_critical() -> void:
 	_is_critical = true
+	_critical_marks += 1
 
 
 ## load populates this schema object from the provided `Config` instance. Returns false
@@ -239,6 +243,44 @@ func store(config: Config) -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _capture_baseline returns each item's current values and the count of critical marks,
+## which `_install_baseline` makes the clean baseline later.
+func _capture_baseline() -> Dictionary:
+	var items := {}
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		var value: Variant = get(name)
+
+		if value is StdConfigItem:
+			items[name] = value._capture_baseline()
+
+	return {&"critical_marks": _critical_marks, &"items": items}
+
+
+## _install_baseline makes `baseline`, from `_capture_baseline`, the clean baseline,
+## so a value changed since it was captured reads dirty. The critical flag clears only
+## if `mark_critical` hasn't been called since.
+func _install_baseline(baseline: Dictionary) -> void:
+	if baseline[&"critical_marks"] == _critical_marks:
+		_is_critical = false
+
+	var items: Dictionary = baseline[&"items"]
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		var value: Variant = get(name)
+
+		if value is StdConfigItem and name in items:
+			value._install_baseline(items[name])
 
 
 func _apply_migrations(config: Config, from: int) -> void:
