@@ -43,6 +43,10 @@ Off Steam, the [Godot glyph provider](./input/godot/device_glyphs.gd) draws orig
 
 The [iter](./iter) directory contains helpful functions for interacting with sequences and collections of various types.
 
+#### **`lifecycle`**
+
+The [lifecycle](./lifecycle) directory contains [`StdLifecycle`](./lifecycle/lifecycle.gd), a node a game registers as an autoload and quits through. Its `shutdown` first emits `shutdown_requested` while every screen is still open, so a game can save. It then propagates `NOTIFICATION_SHUTDOWN`, on which [`StdScreenManager`](./screen/manager/manager.gd) closes its screens, and last the close request. A close request alone can be cancelled, so the screen manager keeps its stack on one.
+
 #### **`load`**
 
 The [load](./load) directory contains [`StdLoader`](./load/loader.gd), which runs the process's threaded resource loads one at a time. A script exports a scene, or a resource that carries a script, rather than preloading it, since Godot 4.6 to 4.8 can deadlock on that `preload`.

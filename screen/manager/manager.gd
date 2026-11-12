@@ -11,12 +11,12 @@
 ## later calls queued behind it, so mounting never loads. `is_settled` and `settled`
 ## report when every call has run, and `screen_load_failed` when a screen couldn't open.
 ##
-## Leaving the tree, or `tear_down`, tears the manager down. Teardown drops every
-## operation and empties the stack before it emits `settled`, and a call made during it,
-## such as from a handler of a signal it emits, is ignored with a warning. A close
-## request keeps the stack, since a game may cancel it. A call made later in the frame
-## of a close request or of `tear_down` runs at the end of the frame, except a pop or
-## replace made while the stack is empty, which is ignored.
+## Leaving the tree, or `StdLifecycle.NOTIFICATION_SHUTDOWN`, tears the manager down.
+## Teardown drops every operation and empties the stack before it emits `settled`, and a
+## call made during it, such as from a handler of a signal it emits, is ignored with a
+## warning. A close request keeps the stack, since a game may cancel it. A call made
+## later in the frame of either notification runs at the end of the frame, except a pop
+## or replace made while the stack is empty, which is ignored.
 ##
 ## Freeing a node deletes its children immediately. Stack operations often run from
 ## inside an input handler, so deleting a node while its handler is still running will
@@ -77,10 +77,6 @@ const Reset := preload("../operation/reset.gd")
 const Signals := preload("../../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
-
-## GROUP_SCREEN_MANAGER is the `StdGroup` of every manager in the tree, through which a
-## game whose quit is certain tears each one down.
-const GROUP_SCREEN_MANAGER := &"std/screen:manager"
 
 ## _META_PROCESS_MODE is the metadata key used to save a scene's process mode before the
 ## manager disables it.
@@ -198,7 +194,7 @@ func load_screen(screen: StdScreen) -> Preparation:
 ##
 ## NOTE: The pop removes only the screen on top when it is called, and does nothing if
 ## that screen has left the top by the time it runs. A call made during teardown, or
-## with the stack empty later in the frame of `tear_down`, is dropped.
+## with the stack empty later in the frame of a shutdown, is dropped.
 func pop(
 	result: Variant = null,
 	force: bool = false,
@@ -231,7 +227,7 @@ func pop(
 
 
 ## pop_to pops screens until the given screen is on top. A call made during teardown, or
-## with the stack empty later in the frame of `tear_down`, is dropped.
+## with the stack empty later in the frame of a shutdown, is dropped.
 func pop_to(screen: StdScreen) -> void:
 	if _drop_if_tearing_down(&"pop_to", null, true):
 		return
@@ -262,7 +258,7 @@ func push(
 
 
 ## replace swaps the topmost screen for a new one. A call made during teardown, or with
-## the stack empty later in the frame of `tear_down`, is dropped, and frees `instance`
+## the stack empty later in the frame of a shutdown, is dropped, and frees `instance`
 ## unless it has a parent.
 func replace(
 	screen: StdScreen,
@@ -304,38 +300,26 @@ func reset(
 	_enqueue_op(op)
 
 
-## tear_down tears the manager down as leaving the tree does, for a game whose quit is
-## certain, so that its screens close while the tree stands and nothing it holds out of
-## the tree is left for Godot to report as an orphan. A close request alone doesn't,
-## since a game may cancel it. A manager that isn't ready yet does nothing.
-func tear_down() -> void:
-	if not is_node_ready():
-		return
-
-	_teardown()
-
-	# NOTE: A close request usually follows, which keeps the manager from adding a child
-	# while it propagates, as `_notification` describes.
-	_queue.defer()
-
-
 # -- ENGINE METHODS (OVERRIDES) ------------------------------------------------------ #
 
 
-func _enter_tree() -> void:
-	StdGroup.with_id(GROUP_SCREEN_MANAGER).add_member(self)
-
-
 func _exit_tree() -> void:
-	StdGroup.with_id(GROUP_SCREEN_MANAGER).remove_member(self)
 	_teardown()
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		# NOTE: A game may cancel the request, so the stack stays. One sent with
-		# `propagate_notification` keeps the manager from adding or removing a child until
-		# it has reached every scene, so later calls wait for the end of the frame.
+	# NOTE: Either notification sent with `propagate_notification` keeps the manager from
+	# adding or removing a child until it has reached every scene, so later calls wait
+	# for the end of the frame.
+	if what == StdLifecycle.NOTIFICATION_SHUTDOWN:
+		# NOTE: A manager that isn't ready yet holds nothing to tear down.
+		if not is_node_ready():
+			return
+
+		_teardown()
+		_queue.defer()
+	elif what == NOTIFICATION_WM_CLOSE_REQUEST:
+		# NOTE: A game may cancel the request, so the stack stays.
 		_queue.defer()
 
 

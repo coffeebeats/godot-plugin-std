@@ -19,7 +19,7 @@ class MockManager:
 	signal transition_done
 
 	func _exit_tree() -> void:
-		StdGroup.with_id(GROUP_SCREEN_MANAGER).remove_member(self)
+		pass
 
 	func _ready() -> void:
 		pass

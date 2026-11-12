@@ -2,8 +2,8 @@
 ##
 ## screen/manager/manager_teardown_test.gd
 ##
-## Tests pertaining to how `StdScreenManager` tears down, from `tear_down` or leaving
-## the tree, how it drops calls made during teardown, and how a close request keeps its
+## Tests pertaining to how `StdScreenManager` tears down, on a shutdown or leaving the
+## tree, how it drops calls made during teardown, and how a close request keeps its
 ## stack and defers later calls to the end of the frame.
 ##
 
@@ -55,7 +55,7 @@ func test_tear_down_during_wait_tears_down_without_errors():
 	assert_true(blocker.is_inside_tree())
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The manager tore down without engine errors and settled.
 	assert_engine_error_count(0)
@@ -79,7 +79,7 @@ func test_tear_down_during_blocking_transition_tears_down_without_errors():
 	assert_true(blocker.is_inside_tree())
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The transition was stopped without engine errors.
 	assert_engine_error_count(0)
@@ -111,7 +111,7 @@ func test_tear_down_emits_settled_last_with_the_stack_empty():
 	)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: `settled` was emitted last, once the stack was empty.
 	assert_eq(order, [&"exited", &"popped", &"settled"] as Array[StringName])
@@ -131,7 +131,7 @@ func test_tear_down_drops_a_push_from_a_settled_handler():
 	_manager.settled.connect(func() -> void: _manager.push(next), CONNECT_ONE_SHOT)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The push was dropped with a warning, leaving nothing waiting.
 	assert_push_warning(_WARNING)
@@ -160,7 +160,7 @@ func test_tear_down_drops_a_push_from_a_popped_handler_and_frees_its_instance():
 	)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The push was dropped with a warning and its scene freed.
 	assert_push_warning(_WARNING)
@@ -190,7 +190,7 @@ func test_tear_down_drops_every_operation_from_an_exited_handler():
 	)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: Each operation was dropped with a warning, without engine errors.
 	assert_push_warning_count(5)
@@ -215,7 +215,7 @@ func test_tear_down_drop_keeps_an_instance_with_a_parent():
 	)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The push was dropped, leaving the node with its parent.
 	assert_push_warning(_WARNING)
@@ -232,11 +232,14 @@ func test_tear_down_from_a_teardown_handler_is_ignored():
 	await wait_idle_frames(1)
 
 	# Given: The top screen's `popped` handler tears the manager down again.
-	top.popped.connect(func(_result: Variant) -> void: _manager.tear_down())
+	top.popped.connect(
+		func(_result: Variant) -> void:
+			_manager.notification(StdLifecycle.NOTIFICATION_SHUTDOWN)
+	)
 	watch_signals(base)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The screen beneath was still torn down, once.
 	assert_signal_emit_count(base, "exited", 1)
@@ -257,7 +260,7 @@ func test_tear_down_then_exit_tree_emits_settled_once():
 	watch_signals(_manager)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: `settled` was emitted once.
 	assert_signal_emit_count(_manager, "settled", 1)
@@ -372,7 +375,7 @@ func test_tear_down_frees_an_instance_queued_behind_a_wait():
 	_manager.push(_create_screen(), instance)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The queued push's instance was freed, without engine errors.
 	assert_false(is_instance_valid(instance))
@@ -393,7 +396,7 @@ func test_tear_down_frees_the_instances_of_a_queued_replace_and_reset():
 	_manager.reset(_create_screen(), reset)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: Both queued instances were freed.
 	assert_false(is_instance_valid(replaced))
@@ -412,7 +415,7 @@ func test_tear_down_frees_an_instance_waiting_on_a_dependency():
 	assert_false(_manager.is_settled(), "precondition")
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The waiting push's instance was freed.
 	assert_false(is_instance_valid(instance))
@@ -431,7 +434,7 @@ func test_tear_down_frees_an_instance_queued_behind_a_transition():
 	_manager.push(_create_screen(), instance)
 
 	# When: The manager is torn down and a close request propagated in the same frame.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The queued push's instance was freed.
 	assert_false(is_instance_valid(instance))
@@ -452,7 +455,7 @@ func test_tear_down_keeps_a_queued_instance_with_a_parent():
 	_manager.push(_create_screen(), instance)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The instance its parent owns was kept.
 	assert_true(is_instance_valid(instance))
@@ -467,7 +470,7 @@ func test_tear_down_runs_a_push_from_a_scene_torn_down_at_the_end_of_the_frame()
 	await _push_base(scene)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The push waits, without engine errors.
 	assert_engine_error_count(0)
@@ -492,7 +495,7 @@ func test_tear_down_drops_a_pop_from_a_scene_torn_down():
 	await wait_idle_frames(1)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The pop was dropped with a warning, without engine errors.
 	assert_push_warning(_WARNING_NO_SCREEN)
@@ -509,7 +512,7 @@ func test_tear_down_drops_a_replace_from_a_scene_torn_down_and_frees_its_instanc
 	await _push_base(scene)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# Then: The replace was dropped with a warning, and its instance freed.
 	assert_push_warning(_WARNING_NO_SCREEN)
@@ -528,7 +531,7 @@ func test_tear_down_runs_a_push_from_a_node_after_the_manager():
 	_holder.add_child(node)
 
 	# When: The manager is torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 	await wait_idle_frames(1)
 
 	# Then: The confirm screen opened, without engine errors.
@@ -542,7 +545,7 @@ func test_tear_down_then_push_navigates_by_the_end_of_the_frame():
 	await _push_base()
 
 	# Given: The manager was torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 
 	# When: A screen is pushed in the same frame.
 	var screen := _create_screen()
@@ -560,7 +563,7 @@ func test_tear_down_then_push_emits_settled_once_it_runs():
 	await _push_base()
 
 	# Given: The manager was torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 	watch_signals(_manager)
 
 	# When: A screen is pushed in the same frame.
@@ -576,12 +579,12 @@ func test_tear_down_then_push_emits_settled_once_it_runs():
 	assert_true(_manager.is_settled())
 
 
-func test_tear_down_alone_drops_a_pop_made_later_in_the_frame():
+func test_shutdown_alone_drops_a_pop_made_later_in_the_frame():
 	# Given: A screen on the stack.
 	await _push_base()
 
-	# Given: The manager was torn down alone, as when a game quits from a button.
-	_manager.tear_down()
+	# Given: A shutdown was propagated with no close request after it.
+	_holder.propagate_notification(StdLifecycle.NOTIFICATION_SHUTDOWN)
 
 	# When: A pop is made later in the same frame.
 	_manager.pop()
@@ -596,7 +599,7 @@ func test_tear_down_then_navigate_while_in_tree_navigates_normally():
 	await _push_base()
 
 	# Given: The manager was torn down and a close request propagated.
-	_propagate_close_request()
+	_shut_down()
 	await wait_idle_frames(2)
 	assert_eq(_manager.get_depth(), 0)
 
@@ -687,9 +690,8 @@ func test_tear_down_then_close_request_then_exit_tree_frees_everything():
 	var blocker := _manager._input_blocker
 	assert_false(blocker.is_inside_tree(), "precondition")
 
-	# When: The manager is torn down and a close request then propagated.
-	_manager.tear_down()
-	_holder.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
+	# When: A shutdown and then a close request are propagated.
+	_shut_down()
 
 	# Then: The detached scene was freed at once, without engine errors.
 	assert_freed(kept_scene, "kept scene")
@@ -705,31 +707,12 @@ func test_tear_down_then_close_request_then_exit_tree_frees_everything():
 	assert_engine_error_count(0)
 
 
-func test_manager_joins_group_in_tree_and_leaves_on_exit():
-	var group := StdGroup.with_id(StdScreenManager.GROUP_SCREEN_MANAGER)
-
-	# Then: A manager in the tree is a member of the group.
-	assert_true(_manager in group.list_members())
-
-	# When: The manager leaves the tree.
-	_holder.remove_child(_manager)
-
-	# Then: It left the group.
-	assert_false(_manager in group.list_members())
-
-	# When: The manager re-enters the tree.
-	_holder.add_child(_manager)
-
-	# Then: It rejoined the group, once.
-	assert_eq(group.list_members().count(_manager), 1)
-
-
-func test_tear_down_before_ready_does_nothing():
+func test_shutdown_before_ready_does_nothing():
 	# Given: A manager which was never added to the tree, so it isn't ready.
 	var manager: StdScreenManager = autofree(StdScreenManager.new())
 
-	# When: It is torn down.
-	manager.tear_down()
+	# When: It is notified of a shutdown.
+	manager.notification(StdLifecycle.NOTIFICATION_SHUTDOWN)
 
 	# Then: Nothing failed.
 	assert_engine_error_count(0)
@@ -779,11 +762,11 @@ func _pack(root: Node) -> PackedScene:
 	return packed
 
 
-## _propagate_close_request tears the manager down and then delivers a close request
-## to its subtree, in the order a game's certain shutdown does, which leaves each node
-## unable to add or remove children until it returns.
-func _propagate_close_request() -> void:
-	_manager.tear_down()
+## _shut_down propagates a shutdown and then a close request through the manager's
+## subtree, as `StdLifecycle.shutdown` does, each leaving every node unable to add or
+## remove children until it returns.
+func _shut_down() -> void:
+	_holder.propagate_notification(StdLifecycle.NOTIFICATION_SHUTDOWN)
 	_holder.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
 
 
