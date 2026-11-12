@@ -82,11 +82,11 @@ func _present(manager: StdScreenManager, done: Callable) -> void:
 		&"enter",
 		previous,
 		sync_scene,
-		func(scene: Node) -> void: manager._mount_entering(_screen, scene),
+		func(scene: Node) -> void:
+			manager._mount_entering(_screen, scene, _preparation),
 		Callable(),
 		func() -> void:
 			if _screen not in manager._stack:
-				manager._preparations.erase(_screen)
 				done.call()
 				return
 			var scene: Node = manager._scenes.get(_screen)

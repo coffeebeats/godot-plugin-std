@@ -111,7 +111,7 @@ func _present(manager: StdScreenManager, done: Callable) -> void:
 		func(scene: Node) -> void:
 			if is_instance_valid(overlay_prev):
 				manager._overlays.register(_screen, overlay_prev)
-			manager._mount_entering(_screen, scene),
+			manager._mount_entering(_screen, scene, _preparation),
 		func() -> void:
 			manager._stack.pop_back()
 			manager._scenes.erase(screen_prev)
@@ -123,7 +123,6 @@ func _present(manager: StdScreenManager, done: Callable) -> void:
 		func() -> void:
 			manager._overlays.free_if_unused(overlay_prev)
 			if _screen not in manager._stack:
-				manager._preparations.erase(_screen)
 				manager._update_stack_state()
 				if screen_prev not in manager._stack:
 					manager._notify_top_uncovered()

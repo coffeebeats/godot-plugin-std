@@ -359,9 +359,6 @@ func _create_resolver(
 		# NOTE: A detached scene passed back in leaves the cache until it closes again.
 		_cache.take(screen)
 
-	if preparation:
-		_preparations[screen] = preparation
-
 	var resolver := func() -> Node:
 		if sync_scene != null:
 			return sync_scene
@@ -571,11 +568,11 @@ func _mount_attachments(screen: StdScreen, overlay: StdScreenOverlay) -> void:
 
 ## _mount_entering mounts the scene of the screen an operation opens, then builds each
 ## screen it depends on that is kept in the tree, so that all building happens within
-## the transition's one mount.
-func _mount_entering(screen: StdScreen, scene: Node) -> void:
+## the transition's one mount. `preparation` is recorded for the screen as it mounts.
+func _mount_entering(screen: StdScreen, scene: Node, preparation: Preparation) -> void:
 	var started := Time.get_ticks_usec()
 
-	_mount_scene(screen, scene)
+	_mount_scene(screen, scene, preparation)
 	_cache.build_dependencies(screen, _stack)
 
 	(
@@ -592,7 +589,14 @@ func _mount_entering(screen: StdScreen, scene: Node) -> void:
 
 ## _mount_scene adds a scene to the tree, registers it in the stack, and emits the
 ## entering signal. A parked scene is shown and uncovered rather than added.
-func _mount_scene(screen: StdScreen, scene: Node) -> void:
+##
+## NOTE: The screen's `preparation` is recorded here, and not when the operation starts,
+## because a screen replacing itself tears down its leaving scene first, and that
+## teardown consumes and keeps the screen's recorded preparation.
+func _mount_scene(screen: StdScreen, scene: Node, preparation: Preparation) -> void:
+	if preparation:
+		_preparations[screen] = preparation
+
 	for action in screen.close_actions:
 		if not InputMap.has_action(action):
 			_logger.warn("Close action not in InputMap.", {&"action": action})
