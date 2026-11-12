@@ -1,5 +1,14 @@
 # Changelog
 
+## 10.1.0 (2026-11-12)
+
+## What's Changed
+* feat(lifecycle): add `StdLifecycle`, and tear the screen manager down on its `NOTIFICATION_SHUTDOWN` by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/635
+* fix(condition): free held-out children on a shutdown, not on a close request a game may cancel by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/637
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v10.0.1...v10.1.0
+
 ## 10.0.1 (2026-11-12)
 
 ## What's Changed
