@@ -1,5 +1,13 @@
 # Changelog
 
+## 10.0.1 (2026-11-12)
+
+## What's Changed
+* fix(screen): keep the stack on a close request, and tear down through `tear_down` instead by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/633
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v10.0.0...v10.0.1
+
 ## 10.0.0 (2026-11-12)
 
 ## What's Changed
