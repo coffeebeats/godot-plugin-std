@@ -1,3 +1,4 @@
+# gdlint:disable=max-file-lines
 ##
 ## screen/manager/manager.gd
 ##
@@ -9,6 +10,10 @@
 ## loaded changes nothing until `StdLoader` has loaded them, with input blocked and
 ## later calls queued behind it, so mounting never loads. `is_settled` and `settled`
 ## report when every call has run, and `screen_load_failed` when a screen couldn't open.
+##
+## Leaving the tree, or a close request, tears the manager down. Teardown drops every
+## operation and empties the stack before it emits `settled`, and a call made during it,
+## such as from a handler of a signal it emits, is ignored with a warning.
 ##
 ## Freeing a node deletes its children immediately. Stack operations often run from
 ## inside an input handler, so deleting a node while its handler is still running will
@@ -51,7 +56,8 @@ signal screen_load_failed(screen: StdScreen)
 signal screen_uncovered(screen: StdScreen, scene: Node)
 
 ## settled is emitted whenever no operation is left running, waiting or queued. A game
-## checks `is_settled` before awaiting it, then reads `is_current` for the outcome.
+## checks `is_settled` before awaiting it, then reads `is_current` for the outcome. A
+## teardown that drops an operation emits it too, last, once the stack is empty.
 signal settled
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
@@ -106,6 +112,10 @@ var _attachments: Dictionary[StdScreen, Array] = {}
 var _cache: Cache = null
 var _cursor: StdInputCursor = null
 var _input_blocker: Control = null
+
+## _is_tearing_down is true while `_teardown` runs, during which every call is dropped.
+var _is_tearing_down: bool = false
+
 var _overlays: Overlays = null
 var _preparations: Dictionary[StdScreen, Preparation] = {}
 var _queue: OperationQueue = null
@@ -175,12 +185,16 @@ func load_screen(screen: StdScreen) -> Preparation:
 ## screen's `popped` signal after removal.
 ##
 ## NOTE: The pop removes only the screen on top when it is called, and does nothing if
-## that screen has left the top by the time it runs.
+## that screen has left the top by the time it runs. A call made during teardown is
+## dropped.
 func pop(
 	result: Variant = null,
 	force: bool = false,
 	transition: StdTransition = null,
 ) -> void:
+	if _drop_if_tearing_down(&"pop"):
+		return
+
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
 	var screen: StdScreen = _stack.back()
@@ -204,20 +218,28 @@ func pop(
 	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
-## pop_to pops screens until the given screen is on top.
+## pop_to pops screens until the given screen is on top. A call made during teardown is
+## dropped.
 func pop_to(screen: StdScreen) -> void:
+	if _drop_if_tearing_down(&"pop_to"):
+		return
+
 	assert(_stack.has(screen), "screen not in stack")
 
 	var op := Pop.create_to(screen)
 	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
-## push adds a screen on top of the stack.
+## push adds a screen on top of the stack. A call made during teardown is dropped, and
+## frees `instance` unless it has a parent.
 func push(
 	screen: StdScreen,
 	instance: Node = null,
 	transition: StdTransition = null,
 ) -> void:
+	if _drop_if_tearing_down(&"push", instance):
+		return
+
 	assert(
 		screen != null,
 		"invalid argument: missing screen",
@@ -227,12 +249,16 @@ func push(
 	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
-## replace swaps the topmost screen for a new one.
+## replace swaps the topmost screen for a new one. A call made during teardown is
+## dropped, and frees `instance` unless it has a parent.
 func replace(
 	screen: StdScreen,
 	instance: Node = null,
 	transition: StdTransition = null,
 ) -> void:
+	if _drop_if_tearing_down(&"replace", instance):
+		return
+
 	assert(
 		screen != null,
 		"invalid argument: missing screen",
@@ -246,12 +272,16 @@ func replace(
 	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
-## reset clears the entire stack and pushes a new base screen.
+## reset clears the entire stack and pushes a new base screen. A call made during
+## teardown is dropped, and frees `instance` unless it has a parent.
 func reset(
 	screen: StdScreen,
 	instance: Node = null,
 	transition: StdTransition = null,
 ) -> void:
+	if _drop_if_tearing_down(&"reset", instance):
+		return
+
 	assert(
 		screen != null,
 		"invalid argument: missing screen",
@@ -424,6 +454,27 @@ func _discard_screen(screen: StdScreen) -> void:
 		_overlays.free_if_unused(overlay)
 
 	screen.popped.emit(null)
+
+
+## _drop_if_tearing_down returns whether a call to `op` must be dropped because the
+## manager is tearing down, in which case it warns and frees `instance`, the scene the
+## call handed over, unless it has a parent that owns it.
+##
+## NOTE: A scene the cache keeps detached is freed by the same teardown anyway.
+func _drop_if_tearing_down(op: StringName, instance: Node = null) -> bool:
+	if not _is_tearing_down:
+		return false
+
+	_logger.warn("Ignored; manager is tearing down.", {&"op": op})
+
+	if (
+		is_instance_valid(instance)
+		and instance.get_parent() == null
+		and not instance.is_inside_tree()
+	):
+		instance.free()
+
+	return true
 
 
 ## _end_wait ends the wait for an operation's preparation, releasing the queue's hold
@@ -714,9 +765,9 @@ func _release_focus(screen: StdScreen) -> void:
 ## If no handler cancels, it pops those screens, which, as with `pop`, happens only if
 ## they are still the topmost screens when the pop runs. The bottom screen is never
 ## popped. The caller has already marked the event handled, so a cancelled close still
-## consumes it.
+## consumes it. Nothing happens during teardown.
 func _request_close(event: InputEvent, count: int) -> void:
-	if _queue.is_operating():
+	if _is_tearing_down or _queue.is_operating():
 		return
 
 	var target := maxi(1, _stack.size() - count)
@@ -780,13 +831,20 @@ func _resolve_transition(
 
 
 ## _teardown force-stops any active transition, drops any operation waiting or queued,
-## and frees all resources.
+## and frees all resources. Each screen on the stack emits its lifecycle signals, top
+## first, ending with `popped`, and `settled` follows last, once the stack is empty, if
+## an operation was dropped. Every call made until it returns, including one from a
+## handler of those signals, is dropped, as is a re-entrant teardown.
 func _teardown() -> void:
+	if _is_tearing_down:
+		return
+
+	_is_tearing_down = true
+
 	_force_stop()
 	_end_wait()
 
 	_active_op = null
-	_queue.reset()
 
 	# Emit lifecycle signals and queue-free active scenes. The stack is moved to a local
 	# before iteration to guard against re-entrant calls.
@@ -834,6 +892,12 @@ func _teardown() -> void:
 
 	_cache.clear()
 
+	# NOTE: The queue is reset last, so that a `settled` handler sees the stack empty and
+	# any call it makes is dropped.
+	_queue.reset()
+
+	_is_tearing_down = false
+
 
 ## _teardown_scene disconnects signal handlers, emits exited, and frees or keeps the
 ## scene. The overlay mapping should be erased before calling this if the overlay is
@@ -880,8 +944,13 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 		_cache.erase(screen)
 
 
-## _unblock_input removes the input blocker from the tree.
+## _unblock_input removes the input blocker from the tree. It does nothing during
+## teardown, which removes the blocker itself, deferred, since a close request
+## propagated through the tree leaves the manager unable to remove a child.
 func _unblock_input() -> void:
+	if _is_tearing_down:
+		return
+
 	if _input_blocker and _input_blocker.is_inside_tree():
 		_input_blocker.get_parent().remove_child(_input_blocker)
 
