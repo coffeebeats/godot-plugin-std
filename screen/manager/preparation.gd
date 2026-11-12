@@ -66,9 +66,13 @@ static func create(
 		var result := StdLoader.request(path, "", urgent)
 		preparation._results[path] = result
 
-		if not result.is_done():
-			preparation._pending += 1
-			result.done.connect(preparation._on_result_done, CONNECT_ONE_SHOT)
+		# NOTE: Two spellings of one file, such as `uid://` and `res://`, share a result,
+		# which is counted and connected once.
+		if result.is_done() or result.done.is_connected(preparation._on_result_done):
+			continue
+
+		preparation._pending += 1
+		result.done.connect(preparation._on_result_done, CONNECT_ONE_SHOT)
 
 	return preparation
 

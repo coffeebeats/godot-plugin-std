@@ -11,6 +11,7 @@ extends GutTest
 
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const Preparation := preload("preparation.gd")
 const TransitionTests := preload("../../transition/transition_test.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
@@ -235,6 +236,29 @@ func test_load_screen_without_a_scene_loads_its_dependencies():
 	# Then: It mounted inside the call, with its attachment.
 	assert_true(_manager.is_current(screen))
 	assert_eq(_manager._attachments[screen].size(), 1)
+
+
+func test_preparation_create_mixed_path_forms_one_file_is_done_after_load():
+	# Given: A `uid://` for an unloaded scene.
+	var id := ResourceUID.create_id()
+	ResourceUID.add_id(id, _PATH_SLOW)
+
+	# Given: A preparation naming that scene by `uid://` and by path.
+	var preparation: Preparation = Preparation.create(
+		ResourceUID.id_to_text(id), PackedStringArray([_PATH_SLOW])
+	)
+	watch_signals(preparation)
+
+	# When: The scene finishes loading.
+	StdLoader._step()
+	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	StdLoader._step()
+
+	# Then: The preparation is done and reported it once.
+	assert_true(preparation.is_done())
+	assert_signal_emit_count(preparation, "done", 1)
+
+	ResourceUID.remove_id(id)
 
 
 func test_push_during_transition_completes_the_interrupted_push():
