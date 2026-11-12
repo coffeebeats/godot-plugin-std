@@ -378,13 +378,16 @@ func _create_resolver(
 	screen: StdScreen, instance: Node, preparation: Preparation
 ) -> Array:
 	var sync_scene: Node = instance
+	var entry := _cache.get_entry(screen)
 
 	if sync_scene == null:
-		var entry := _cache.get_entry(screen)
 		if entry and entry.overlay:
 			sync_scene = entry.scene if is_instance_valid(entry.scene) else null
 		else:
 			sync_scene = _cache.take(screen)
+	elif entry and not entry.overlay and entry.scene == instance:
+		# NOTE: A detached scene passed back in leaves the cache until it closes again.
+		_cache.take(screen)
 
 	if preparation:
 		_preparations[screen] = preparation

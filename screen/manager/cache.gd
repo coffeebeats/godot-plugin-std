@@ -279,7 +279,10 @@ static func _free(entry: Entry) -> void:
 		if is_instance_valid(entry.overlay):
 			entry.overlay.queue_free()
 	elif is_instance_valid(entry.scene):
-		entry.scene.free()
+		if entry.scene.is_inside_tree():
+			entry.scene.queue_free()
+		else:
+			entry.scene.free()
 
 
 ## _find_unparkable_under appends to `offenders` each node under `node` that hiding and
