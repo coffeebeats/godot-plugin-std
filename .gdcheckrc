@@ -11,3 +11,14 @@ excludes=[
   "res://logging/sink_godot.gd",
   "res://input/steam/write_in_game_actions.gd",
 ]
+
+[preload]
+
+; GUT loads a test script while it collects the tests, before any can start a load.
+excludes=["res://*_test.gd"]
+
+[resource-loader]
+
+; Only the loader calls the engine's loads. A test loads scripts for GUT's doubles.
+allow=["res://load/loader.gd"]
+excludes=["res://*_test.gd"]
