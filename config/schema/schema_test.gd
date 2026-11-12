@@ -503,9 +503,106 @@ func test_schema_load_clears_critical():
 	assert_false(schema.is_dirty())
 
 
+func test_schema_install_baseline_makes_captured_values_clean():
+	# Given: A schema whose item changed since it was last clean.
+	var schema := _create_schema()
+	schema.item.key = 1
+
+	# Given: A baseline captured from its current values.
+	var baseline := schema._capture_baseline()
+
+	# When: The baseline is installed.
+	schema._install_baseline(baseline)
+
+	# Then: The schema is clean.
+	assert_false(schema.is_dirty())
+
+
+func test_schema_install_baseline_keeps_a_change_made_after_capture():
+	# Given: A clean schema.
+	var schema := _create_schema()
+
+	# Given: A baseline captured from its current values.
+	var baseline := schema._capture_baseline()
+
+	# Given: Its item changed after the capture.
+	schema.item.key = 1
+
+	# When: The baseline is installed.
+	schema._install_baseline(baseline)
+
+	# Then: The later change reads dirty.
+	assert_true(schema.is_dirty())
+
+
+func test_schema_install_baseline_after_revert_is_clean():
+	# Given: A clean schema.
+	var schema := _create_schema()
+
+	# Given: A baseline captured from its current values.
+	var baseline := schema._capture_baseline()
+
+	# Given: Its item changed and was changed back after the capture.
+	schema.item.key = 1
+	schema.item.key = 0
+
+	# When: The baseline is installed.
+	schema._install_baseline(baseline)
+
+	# Then: The schema is clean.
+	assert_false(schema.is_dirty())
+
+
+func test_schema_install_baseline_clears_a_mark_made_before_capture():
+	# Given: A clean schema marked critical.
+	var schema := _create_schema()
+	schema.mark_critical()
+
+	# Given: A baseline captured after the mark.
+	var baseline := schema._capture_baseline()
+
+	# When: The baseline is installed.
+	schema._install_baseline(baseline)
+
+	# Then: The critical flag is cleared.
+	assert_false(schema.is_critical())
+	assert_false(schema.is_dirty())
+
+
+func test_schema_install_baseline_keeps_a_mark_made_after_capture():
+	# Given: A clean schema marked critical.
+	var schema := _create_schema()
+	schema.mark_critical()
+
+	# Given: A baseline captured after the mark.
+	var baseline := schema._capture_baseline()
+
+	# Given: It was marked critical again after the capture.
+	schema.mark_critical()
+
+	# When: The baseline is installed.
+	schema._install_baseline(baseline)
+
+	# Then: It is still critical.
+	assert_true(schema.is_critical())
+	assert_true(schema.is_dirty())
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
 func before_all():
 	# NOTE: Hide unactionable errors when using object doubles.
 	ProjectSettings.set("debug/gdscript/warnings/native_method_override", false)
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _create_schema returns a clean schema with one item.
+func _create_schema() -> ConfigSchemaTest:
+	var schema := ConfigSchemaTest.new()
+	schema.item = ConfigItemTest.new()
+	schema.item.category = &"category"
+	schema.reset()
+	return schema
