@@ -58,6 +58,10 @@ Follows GDScript style guide. Key project-specific conventions:
 - Private members: underscore prefix (`_data`, `_mutex`)
 - StringNames: use `&` prefix for literals (`&"category"`, `&"key"`)
 
+### Loading
+
+- Export a scene, or a resource that carries a script, and set it in the scene that ships the script instead of `preload`ing it, since such a preload can deadlock Godot's threaded loader; the checker's `preload` rule enforces this. Preloading a script is fine.
+
 ### Comments
 
 - Use `##` for public API documentation
