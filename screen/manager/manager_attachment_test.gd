@@ -10,6 +10,7 @@ extends GutTest
 
 const Screen := preload("../screen.gd")
 const Manager := preload("manager.gd")
+const Preparation := preload("preparation.gd")
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
@@ -111,10 +112,10 @@ func test_pop_defers_scene_free_until_idle():
 
 
 func test_pop_frees_attachments_when_scene_is_cached():
-	# Given: A pushed screen which caches its scene instance.
+	# Given: A pushed screen which keeps its scene detached.
 	await _do_push()
 	var screen := _create_screen()
-	screen.cache_instance = true
+	screen.cache_mode = StdScreen.CacheMode.DETACHED
 	screen.attachment_scenes = PackedStringArray([_TEST_ATTACHMENT_PATH])
 	var scene := Control.new()
 	await _do_push(screen, scene)
@@ -126,8 +127,87 @@ func test_pop_frees_attachments_when_scene_is_cached():
 	await wait_idle_frames(2)
 
 	# Then: The scene was cached but the attachment was freed.
-	assert_eq(_manager._cache.get(screen), scene)
+	assert_eq(_manager._cache.get_entry(screen).scene, scene)
 	assert_false(is_instance_valid(attachment))
+
+
+func test_replace_self_none_mounts_attachments():
+	# Given: A pushed screen with an attachment, whose scene isn't kept on close.
+	var screen := _create_screen()
+	screen.attachment_scenes = PackedStringArray([_TEST_ATTACHMENT_PATH])
+	screen.cache_mode = Screen.CacheMode.NONE
+	await _do_push(screen)
+
+	var attachment_prev: Node = _get_attachments(screen)[0]
+
+	# When: The top screen replaces itself.
+	var scene := Control.new()
+	_manager.replace(screen, scene)
+	await wait_idle_frames(2)
+
+	# Then: The entering scene's attachment was mounted and the leaving one freed.
+	var attachments := _get_attachments(screen)
+	assert_eq(attachments.size(), 1)
+	assert_ne(attachments[0], attachment_prev)
+	assert_eq(attachments[0].get_parent(), _manager._overlays.get_overlay(screen))
+	assert_false(is_instance_valid(attachment_prev))
+
+
+func test_replace_self_detached_mounts_attachments_and_keeps_leaving_preparation():
+	# Given: A pushed screen with an attachment, keeping its scene out of the tree.
+	var screen := _create_screen()
+	screen.attachment_scenes = PackedStringArray([_TEST_ATTACHMENT_PATH])
+	screen.cache_mode = Screen.CacheMode.DETACHED
+	var scene_prev := Control.new()
+	await _do_push(screen, scene_prev)
+
+	var preparation_prev: Preparation = _manager._preparations.get(screen)
+	assert_not_null(preparation_prev)
+
+	# When: The top screen replaces itself.
+	var scene := Control.new()
+	_manager.replace(screen, scene)
+	await wait_idle_frames(2)
+
+	# Then: The entering scene's attachment was mounted.
+	var attachments := _get_attachments(screen)
+	assert_eq(attachments.size(), 1)
+	assert_eq(attachments[0].get_parent(), _manager._overlays.get_overlay(screen))
+
+	# Then: The kept entry holds the leaving scene and its own preparation.
+	var entry := _manager._cache.get_entry(screen)
+	assert_eq(entry.scene, scene_prev)
+	assert_not_null(_manager._preparations.get(screen))
+	assert_eq(entry.preparation, preparation_prev)
+	assert_ne(entry.preparation, _manager._preparations.get(screen))
+
+
+func test_replace_self_in_tree_mounts_attachments_and_keeps_entering_preparation():
+	# Given: A pushed screen with an attachment, keeping its scene in the tree.
+	var screen := _create_screen()
+	screen.attachment_scenes = PackedStringArray([_TEST_ATTACHMENT_PATH])
+	screen.cache_mode = Screen.CacheMode.IN_TREE
+	await _do_push(screen)
+
+	var preparation_prev: Preparation = _manager._preparations.get(screen)
+	assert_not_null(preparation_prev)
+
+	# When: The top screen replaces itself.
+	var scene := Control.new()
+	_manager.replace(screen, scene)
+	await wait_idle_frames(2)
+
+	# Then: The entering scene's attachment was mounted.
+	var attachments := _get_attachments(screen)
+	assert_eq(attachments.size(), 1)
+	assert_eq(attachments[0].get_parent(), _manager._overlays.get_overlay(screen))
+
+	# Then: The kept entry holds the mounted scene and the preparation it came from.
+	var entry := _manager._cache.get_entry(screen)
+	assert_eq(entry.scene, scene)
+	assert_not_null(_manager._preparations.get(screen))
+	assert_ne(entry.preparation, preparation_prev)
+	assert_eq(entry.preparation, _manager._preparations.get(screen))
 
 
 func test_teardown_frees_attachments():

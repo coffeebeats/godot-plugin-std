@@ -5,6 +5,11 @@
 ## each backed by an instantiated scene node. This is a thin orchestrator that delegates
 ## to operation objects for navigation logic.
 ##
+## Operations run one at a time, in call order. One opening a screen whose scenes aren't
+## loaded changes nothing until `StdLoader` has loaded them, with input blocked and
+## later calls queued behind it, so mounting never loads. `is_settled` and `settled`
+## report when every call has run, and `screen_load_failed` when a screen couldn't open.
+##
 ## Freeing a node deletes its children immediately. Stack operations often run from
 ## inside an input handler, so deleting a node while its handler is still running will
 ## crash the engine. To avoid that, every node here is detached from its parent before
@@ -38,15 +43,25 @@ signal screen_exited(screen: StdScreen, scene: Node)
 ## screen_exiting is emitted before a screen's exit transition starts.
 signal screen_exiting(screen: StdScreen, scene: Node)
 
+## screen_load_failed is emitted when an operation couldn't open `screen` because its
+## scene failed to load, or it has none. The stack is left as it was.
+signal screen_load_failed(screen: StdScreen)
+
 ## screen_uncovered is emitted when a covering screen is popped.
 signal screen_uncovered(screen: StdScreen, scene: Node)
 
+## settled is emitted whenever no operation is left running, waiting or queued. A game
+## checks `is_settled` before awaiting it, then reads `is_current` for the outcome.
+signal settled
+
 # -- DEPENDENCIES -------------------------------------------------------------------- #
 
+const Cache := preload("cache.gd")
 const Operation := preload("../operation/operation.gd")
 const OperationQueue := preload("queue.gd")
 const Overlays := preload("overlays.gd")
 const Pop := preload("../operation/pop.gd")
+const Preparation := preload("preparation.gd")
 const Push := preload("../operation/push.gd")
 const Replace := preload("../operation/replace.gd")
 const Reset := preload("../operation/reset.gd")
@@ -88,16 +103,21 @@ var _active_context: StdScreenTransitionContext = null
 var _active_op: Operation = null
 var _active_transition: StdTransition = null
 var _attachments: Dictionary[StdScreen, Array] = {}
-var _cache: Dictionary[StdScreen, Node] = {}
+var _cache: Cache = null
 var _cursor: StdInputCursor = null
 var _input_blocker: Control = null
-var _loader: StdScreenLoader = null
 var _overlays: Overlays = null
-var _preloads: Dictionary[StdScreen, Dictionary] = {}
+var _preparations: Dictionary[StdScreen, Preparation] = {}
 var _queue: OperationQueue = null
 var _scenes: Dictionary[StdScreen, Node] = {}
 var _sound_player: StdSoundEventPlayer = null
 var _stack: Array[StdScreen] = []
+
+## _waiting_op is the operation waiting for its preparation, or null.
+var _waiting_op: Operation = null
+
+## _waiting_preparation is the preparation `_waiting_op` waits for, or null.
+var _waiting_preparation: Preparation = null
 
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
@@ -126,24 +146,36 @@ func is_current(screen: StdScreen) -> bool:
 	return _current_screen() == screen
 
 
+## is_settled returns whether no operation is running, waiting for its loads, or queued.
+func is_settled() -> bool:
+	return _queue.is_settled() if _queue else true
+
+
 ## get_scene returns the topmost scene instance, or null if empty.
 func get_scene() -> Node:
 	return _current_scene()
 
 
-## load_screen starts loading the screen's scene and its dependency scenes.
-func load_screen(screen: StdScreen, include_dependencies: bool = true) -> Dictionary:
-	var paths := PackedStringArray()
-	if screen.scene_path:
-		paths.append(screen.scene_path)
-	if include_dependencies:
-		paths.append_array(screen.get_dependency_paths())
-	return _loader.load_all_scenes(paths)
+## load_screen starts loading, in the background, the scene of `screen`, if it has one,
+## and every scene it depends on, to any depth. Holding the returned preparation keeps
+## them loaded, so a later operation opening the screen, with or without an instance,
+## doesn't wait.
+func load_screen(screen: StdScreen) -> Preparation:
+	assert(screen != null, "invalid argument: missing screen")
+
+	var entry := _cache.get_entry(screen)
+	if entry and entry.preparation and is_instance_valid(entry.scene):
+		return entry.preparation
+
+	return Preparation.create(screen.scene_path, screen.get_dependency_paths())
 
 
 ## pop removes the topmost screen from the stack. When force is false (default), emits
 ## close_requested first; any handler can cancel. The result value is delivered via the
 ## screen's `popped` signal after removal.
+##
+## NOTE: The pop removes only the screen on top when it is called, and does nothing if
+## that screen has left the top by the time it runs.
 func pop(
 	result: Variant = null,
 	force: bool = false,
@@ -151,8 +183,9 @@ func pop(
 ) -> void:
 	assert(_stack.size() > 1, "cannot pop the last screen")
 
+	var screen: StdScreen = _stack.back()
+
 	if not force:
-		var screen: StdScreen = _stack.back()
 		assert(
 			screen is StdScreen,
 			"invalid state; missing screen",
@@ -167,18 +200,15 @@ func pop(
 			if state[0]:
 				return
 
-	var depth := _stack.size() - 1
-	var op := Pop.create(depth, transition, result)
+	var op := Pop.create_top([screen], transition, result)
 	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 ## pop_to pops screens until the given screen is on top.
 func pop_to(screen: StdScreen) -> void:
-	var idx := _stack.find(screen)
-	assert(idx >= 0, "screen not in stack")
+	assert(_stack.has(screen), "screen not in stack")
 
-	var depth := idx + 1
-	var op := Pop.create(depth)
+	var op := Pop.create_to(screen)
 	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
@@ -257,10 +287,9 @@ func _ready() -> void:
 		"invalid config; missing 'StdInputCursor'",
 	)
 
-	_loader = StdScreenLoader.new()
-	_loader.name = &"StdScreenLoader"
-	add_child(_loader, Engine.is_editor_hint(), INTERNAL_MODE_FRONT)
+	_queue.settled.connect(settled.emit)
 
+	_cache = Cache.new(self)
 	_overlays = Overlays.new(self)
 
 	if not StdGroup.is_empty(StdSoundEventPlayer.GROUP_SOUND_PLAYER):
@@ -284,6 +313,25 @@ func _block_input() -> void:
 	add_child(_input_blocker, false, Node.INTERNAL_MODE_BACK)
 
 
+## _complete_active immediately completes the operation whose transition is running,
+## skipping its transition to the end and finishing the operation with its signals.
+func _complete_active() -> void:
+	if _active_transition == null:
+		return
+
+	var transition := _active_transition
+	var ctx := _active_context
+
+	_active_transition = null
+	_active_context = null
+
+	# NOTE: The queue carries on with the operation about to run, so the interrupted
+	# operation's completion must not complete the queue.
+	_active_op = null
+
+	Operation._finish_transition(transition, ctx)
+
+
 ## _create_blocker creates a transparent full-rect Control that swallows all input.
 func _create_blocker() -> Control:
 	var ctrl := _InputBlocker.new()
@@ -293,69 +341,35 @@ func _create_blocker() -> Control:
 	return ctrl
 
 
-## _create_resolver builds a resolver callable and an optional sync scene for the given
-## screen. The resolver, when called, sync-blocks on any in-progress background loads
-## and returns the instantiated scene node. The second element is non-null when the
-## scene is immediately available (instance or cache) — operations pass it as
-## `entering` for force-stop cleanup.
-func _create_resolver(screen: StdScreen, instance: Node) -> Array:
-	var sync_scene: Node = null
-	var scene_path := ""
-	var load_result: StdScreenLoader.Result = null
+## _create_resolver builds a resolver callable and the scene available at once, if any,
+## for opening `screen` from `preparation`. The scene available at once is `instance` or
+## a kept scene; otherwise the resolver instantiates the scene `preparation` loaded.
+## Neither ever loads.
+func _create_resolver(
+	screen: StdScreen, instance: Node, preparation: Preparation
+) -> Array:
+	var sync_scene: Node = instance
+	var entry := _cache.get_entry(screen)
 
-	if instance:
-		sync_scene = instance
-	else:
-		var cached: Node = _cache.get(screen)
-		if cached and is_instance_valid(cached):
-			_cache.erase(screen)
-			sync_scene = cached
+	if sync_scene == null:
+		if entry and entry.overlay:
+			sync_scene = entry.scene if is_instance_valid(entry.scene) else null
 		else:
-			_cache.erase(screen)
-			if screen.scene_path == "":
-				(
-					_logger
-					. error(
-						"Missing scene_path and no instance.",
-						{&"screen": str(screen)},
-					)
-				)
-				return [func() -> Node: return null, null]
+			sync_scene = _cache.take(screen)
+	elif entry and not entry.overlay and entry.scene == instance:
+		# NOTE: A detached scene passed back in leaves the cache until it closes again.
+		_cache.take(screen)
 
-			scene_path = screen.scene_path
-			load_result = _loader.load_scene(scene_path)
-
-	var dep_paths := screen.get_dependency_paths()
-	var dep_results: Dictionary[String, StdScreenLoader.Result] = {}
-	if not dep_paths.is_empty():
-		dep_results = _loader.load_all_scenes(dep_paths)
-		_preloads[screen] = dep_results
-
-	var loader := _loader
 	var resolver := func() -> Node:
-		var scene: Node = sync_scene
-		if scene == null:
-			if not load_result.is_done():
-				loader.load_scene_sync(scene_path)
-			if load_result.scene == null:
-				(
-					_logger
-					. error(
-						"Scene load failed.",
-						{&"path": scene_path},
-					)
-				)
-				return null
-			scene = load_result.scene.instantiate()
+		if sync_scene != null:
+			return sync_scene
 
-		for path in dep_paths:
-			if ResourceLoader.has_cached(path):
-				continue
-			var dep: StdScreenLoader.Result = dep_results.get(path)
-			if dep and not dep.is_done():
-				loader.load_scene_sync(path)
+		var packed: PackedScene = preparation.get_scene() if preparation else null
+		if packed == null:
+			_logger.error("Scene load failed.", {&"path": screen.scene_path})
+			return null
 
-		return scene
+		return packed.instantiate()
 
 	return [resolver, sync_scene]
 
@@ -371,6 +385,24 @@ func _current_screen() -> StdScreen:
 	return null if _stack.is_empty() else _stack[-1]
 
 
+## _detach_scene removes the screen's scene and then its attachments from the tree. A
+## scene kept in the tree is parked in its overlay instead.
+##
+## NOTE: They leave in tree order, so that a loader leaving re-syncs only peers whose
+## set is already loaded or which leave after it, never one about to leave.
+func _detach_scene(screen: StdScreen, scene: Node) -> void:
+	var entry := _cache.get_entry(screen)
+
+	if entry and entry.overlay and entry.scene == scene:
+		_cache.park(screen)
+	elif is_instance_valid(scene) and scene.get_parent():
+		scene.get_parent().remove_child(scene)
+
+	for node: Node in _attachments.get(screen, []):
+		if is_instance_valid(node) and node.get_parent():
+			node.get_parent().remove_child(node)
+
+
 ## _discard_screen removes a broken screen (missing scene) from the top of the stack and
 ## cleans up all associated state. The overlay is freed only when no other screen shares
 ## it (`free_if_unused` checks `is_in_use`). Callers should invoke
@@ -380,41 +412,64 @@ func _discard_screen(screen: StdScreen) -> void:
 
 	_stack.pop_back()
 	_scenes.erase(screen)
-	_preloads.erase(screen)
+	_preparations.erase(screen)
 
 	_free_attachments(screen)
 
 	var overlay := _overlays.get_overlay(screen)
 	_release_focus(screen)
 	_overlays.erase(screen)
-	_overlays.free_if_unused(overlay)
+
+	if not _cache.owns(overlay):
+		_overlays.free_if_unused(overlay)
 
 	screen.popped.emit(null)
 
 
-## _do_pop_to_depth is called by the close overlay handler. Wraps a pop operation for
-## enqueuing.
-func _do_pop_to_depth(depth: int) -> void:
-	var op := Pop.create(depth)
-	_execute_op(op)
+## _end_wait ends the wait for an operation's preparation, releasing the queue's hold
+## and the input blocker. Every way out of a wait calls it, whether the preparation
+## finishes or fails or the manager leaves the tree.
+func _end_wait() -> void:
+	if (
+		_waiting_preparation
+		and _waiting_preparation.done.is_connected(_on_preparation_done)
+	):
+		_waiting_preparation.done.disconnect(_on_preparation_done)
+
+	_waiting_op = null
+	_waiting_preparation = null
+
+	_queue.release()
+	_unblock_input()
 
 
-## _execute_op holds a strong reference to the operation for the duration of its
-## execution. Without this, the operation (a `RefCounted` subclass) can be freed during
-## async scene loading because GDScript lambdas and bound-method `Callable`s capture
-## `RefCounted` targets weakly.
+## _execute_op runs an operation, first completing any whose transition is still
+## running, so none is dropped. An operation whose preparation isn't done waits for it
+## with input blocked and later calls queued; otherwise it presents at once.
+##
+## NOTE: `_active_op` keeps the operation alive while it waits, since lambdas and bound
+## `Callable`s capture a `RefCounted` weakly.
 func _execute_op(op: Operation) -> void:
-	# Cancel the prior op's transition before `_active_op = op` drops it; its
-	# pending `ctx.finished` lambda would otherwise fire with a freed capture.
-	_force_stop()
+	_complete_active()
 
 	_active_op = op
-	op._execute(
-		self,
-		func() -> void:
-			_active_op = null
-			_queue.complete(),
-	)
+
+	var preparation := op._prepare(self)
+	if preparation and not preparation.is_done():
+		_wait(op, preparation)
+		return
+
+	_present_op(op)
+
+
+## _finish_op completes the queue's current operation, unless `op` is one that a later
+## call completed early, whose completion the queue no longer awaits.
+func _finish_op(op: Operation) -> void:
+	if _active_op != op:
+		return
+
+	_active_op = null
+	_queue.complete()
 
 
 ## _force_hover_recalculation recomputes hover at the mouse's position, so that a
@@ -427,7 +482,7 @@ func _force_hover_recalculation() -> void:
 
 
 ## _force_stop stops the active transition, which ends its context and releases its
-## input blocker.
+## input blocker, without completing its operation. Only teardown does this.
 func _force_stop() -> void:
 	if _active_transition == null:
 		return
@@ -438,28 +493,17 @@ func _force_stop() -> void:
 	_active_transition = null
 	_active_context = null
 
-	# NOTE: The blocker belongs to the transition discarded here. The next operation
-	# re-arms one in the same call stack if its transition blocks input.
 	transition.stop()
 
-	# Free entering scenes that were never mounted to prevent orphaned nodes. The scene
-	# is not in the tree and would otherwise leak. For async cases (resolver-based),
-	# `entering` is null until mount() completes — nothing to free.
-	if ctx and not ctx._did_mount and is_instance_valid(ctx.entering):
+	# Frees an entering scene that never mounted, which would otherwise leak; a scene
+	# kept in the tree is the cache's to free.
+	if (
+		ctx
+		and not ctx._did_mount
+		and is_instance_valid(ctx.entering)
+		and not ctx.entering.is_inside_tree()
+	):
 		ctx.entering.free()
-
-
-## _detach_scene removes the screen's scene and then its attachments from the tree.
-##
-## NOTE: They leave in tree order, so that a loader leaving re-syncs only peers whose
-## set is already loaded or which leave after it, never one about to leave.
-func _detach_scene(screen: StdScreen, scene: Node) -> void:
-	if is_instance_valid(scene) and scene.get_parent():
-		scene.get_parent().remove_child(scene)
-
-	for node: Node in _attachments.get(screen, []):
-		if is_instance_valid(node) and node.get_parent():
-			node.get_parent().remove_child(node)
 
 
 ## _free_attachments detaches and queue-frees the given screen's attachment nodes.
@@ -467,8 +511,8 @@ func _detach_scene(screen: StdScreen, scene: Node) -> void:
 ## NOTE: Detach first. The overlay may be shared and survive this screen, and a queued
 ## free would leave the node in it, still receiving input, until the end of the frame.
 ##
-## TODO: Attachments are rebuilt on every push, even when `cache_instance` retains the
-## scene. Left alone for now since they are small.
+## TODO: Attachments are rebuilt on every push, even when `cache_mode` keeps the scene.
+## Left alone for now since they are small.
 func _free_attachments(screen: StdScreen) -> void:
 	if screen not in _attachments:
 		return
@@ -483,18 +527,66 @@ func _free_attachments(screen: StdScreen) -> void:
 	_attachments.erase(screen)
 
 
-## _free_cache immediately frees all cached scene instances. Cached scenes are not in
-## the tree, so direct `free` is safe even in blocked contexts.
-func _free_cache() -> void:
-	for node in _cache.values():
-		if is_instance_valid(node):
-			node.free()
-	_cache.clear()
+## _mount_attachments instantiates the screen's attachment scenes into its overlay, from
+## the screen's preparation, so mounting never loads.
+##
+## NOTE: Attachments are added after the mounted scene so that they receive unhandled
+## input first; input is dispatched to sibling nodes in reverse tree order.
+func _mount_attachments(screen: StdScreen, overlay: StdScreenOverlay) -> void:
+	if screen.attachment_scenes.is_empty():
+		return
+
+	var nodes: Array = []
+	var preparation: Preparation = _preparations.get(screen)
+
+	for path in screen.attachment_scenes:
+		var packed: PackedScene = null
+		if preparation:
+			packed = preparation.get_resource(path) as PackedScene
+
+		if packed == null:
+			_logger.error("Failed to load attachment scene.", {&"path": path})
+			continue
+
+		var node := packed.instantiate()
+		overlay.add_child(node)
+		nodes.append(node)
+
+	if nodes:
+		_attachments[screen] = nodes
 
 
-## _mount_scene adds a scene to the tree, registers it in the stack, and
-## emits the entering signal.
-func _mount_scene(screen: StdScreen, scene: Node) -> void:
+## _mount_entering mounts the scene of the screen an operation opens, then builds each
+## screen it depends on that is kept in the tree, so that all building happens within
+## the transition's one mount. `preparation` is recorded for the screen as it mounts.
+func _mount_entering(screen: StdScreen, scene: Node, preparation: Preparation) -> void:
+	var started := Time.get_ticks_usec()
+
+	_mount_scene(screen, scene, preparation)
+	_cache.build_dependencies(screen, _stack)
+
+	(
+		_logger
+		. debug(
+			"Mounted screen.",
+			{
+				&"scene": screen.scene_path,
+				&"msec": (Time.get_ticks_usec() - started) / 1000.0,
+			},
+		)
+	)
+
+
+## _mount_scene adds a scene to the tree, registers it in the stack, and emits the
+## entering signal. A parked scene is shown and uncovered rather than added.
+##
+## NOTE: The screen's `preparation` is recorded here, and not when the operation starts,
+## because a screen replacing itself tears down its leaving scene first, and that
+## teardown consumes and keeps the screen's recorded preparation.
+func _mount_scene(screen: StdScreen, scene: Node, preparation: Preparation) -> void:
+	if preparation:
+		_preparations[screen] = preparation
+
 	for action in screen.close_actions:
 		if not InputMap.has_action(action):
 			_logger.warn("Close action not in InputMap.", {&"action": action})
@@ -502,18 +594,34 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 		screen.close_actions.all(InputMap.has_action), "invalid config; missing actions"
 	)
 
-	var overlay := _overlays.get_overlay(screen)
-	if not is_instance_valid(overlay):
-		overlay = (
-			_overlays
-			. get_or_create(
-				_stack,
-				screen.block_input_below,
-				_request_close_overlay,
-				_request_close_top,
+	var entry := _cache.get_entry(screen)
+	var is_parked := entry != null and entry.overlay != null and entry.scene == scene
+
+	var overlay: StdScreenOverlay = null
+
+	if is_parked:
+		overlay = _cache.open(screen)
+	elif _cache.is_in_tree(screen) and _cache.admit(screen, scene):
+		# NOTE: A screen kept in the tree owns one overlay for life. A scene that can't
+		# park once ready is never registered, so closing its ordinary overlay keeps it
+		# detached.
+		overlay = _cache.create_overlay(true)
+		overlay.add_child(scene)
+		if _cache.confirm(screen, scene):
+			_cache.register(screen, scene, _preparations.get(screen), overlay)
+	else:
+		overlay = _overlays.get_overlay(screen)
+		if not is_instance_valid(overlay):
+			overlay = (
+				_overlays
+				. get_or_create(
+					_stack,
+					screen.block_input_below,
+					_request_close_overlay,
+					_request_close_top,
+				)
 			)
-		)
-	overlay.add_child(scene)
+		overlay.add_child(scene)
 
 	_stack.append(screen)
 	_scenes[screen] = scene
@@ -526,48 +634,15 @@ func _mount_scene(screen: StdScreen, scene: Node) -> void:
 
 	_update_stack_state()
 
+	if is_parked:
+		scene.propagate_notification(NOTIFICATION_SCREEN_UNCOVERED)
+
 	_mount_attachments(screen, overlay)
 
 	screen.entering.emit(scene)
 	screen_entering.emit(screen, scene)
 
 	_play_screen_sound(screen.sound_enter)
-
-
-## _mount_attachments instantiates the screen's attachment scenes into its overlay.
-##
-## NOTE: Attachments are added after the mounted scene so that they receive unhandled
-## input first; input is dispatched to sibling nodes in reverse tree order.
-func _mount_attachments(screen: StdScreen, overlay: StdScreenOverlay) -> void:
-	if screen.attachment_scenes.is_empty():
-		return
-
-	var nodes: Array = []
-	var preloaded: Dictionary = _preloads.get(screen, {})
-
-	for path in screen.attachment_scenes:
-		var packed: PackedScene = null
-
-		var result: StdScreenLoader.Result = preloaded.get(path)
-		if result:
-			packed = result.scene
-
-		# NOTE: The resolver skips synchronous loads for paths already in the resource
-		# cache, so a preloaded result may not have its scene populated yet. Only cached
-		# paths are loaded directly here; mounting must not block on a new load.
-		if packed == null and ResourceLoader.has_cached(path):
-			packed = ResourceLoader.load(path, "PackedScene")
-
-		if packed == null:
-			_logger.error("Failed to load attachment scene.", {&"path": path})
-			continue
-
-		var node := packed.instantiate()
-		overlay.add_child(node)
-		nodes.append(node)
-
-	if nodes:
-		_attachments[screen] = nodes
 
 
 ## _notify_top_uncovered emits uncovered lifecycle signals for the current top screen.
@@ -589,6 +664,43 @@ func _play_screen_sound(event: StdSoundEvent) -> void:
 		_sound_player.play(event)
 
 
+## _prepare_screen returns the preparation for opening `screen` with `instance`, if one
+## was passed. A kept scene reuses its own; otherwise it requests every scene the screen
+## depends on and, unless `instance` stands in for it, the screen's scene. A screen with
+## neither a scene nor an instance gets a failed one.
+func _prepare_screen(screen: StdScreen, instance: Node, urgent: bool) -> Preparation:
+	if instance == null:
+		var entry := _cache.get_entry(screen)
+		if entry and entry.preparation and is_instance_valid(entry.scene):
+			return entry.preparation
+
+		if not screen.scene_path:
+			return Preparation.failed()
+
+	var scene_path := "" if instance else screen.scene_path
+
+	return Preparation.create(scene_path, screen.get_dependency_paths(), urgent)
+
+
+## _present_op presents an operation whose preparation is done.
+##
+## NOTE: The operation itself reports a screen that couldn't load, after its own checks,
+## and leaves the stack as it was.
+func _present_op(op: Operation) -> void:
+	op._present(self, _finish_op.bind(op))
+
+
+## _report_unloaded reports that `screen` couldn't open because its scene failed to load
+## or it has none.
+func _report_unloaded(screen: StdScreen) -> void:
+	if screen.scene_path:
+		_logger.error("Scene load failed.", {&"path": screen.scene_path})
+	else:
+		_logger.error("Missing scene_path and no instance.", {&"screen": str(screen)})
+
+	screen_load_failed.emit(screen)
+
+
 ## _release_focus ends the focus claim the screen's overlay registered at mount, which
 ## focuses the control saved beneath it. A screen whose overlay was handed to another
 ## screen has no claim to end.
@@ -599,8 +711,10 @@ func _release_focus(screen: StdScreen) -> void:
 
 
 ## _request_close propagates close_requested to the topmost 'count' screens, top first.
-## If no handler cancels, pops those screens. The bottom screen is never popped. The
-## caller has already marked the event handled, so a cancelled close still consumes it.
+## If no handler cancels, it pops those screens, which, as with `pop`, happens only if
+## they are still the topmost screens when the pop runs. The bottom screen is never
+## popped. The caller has already marked the event handled, so a cancelled close still
+## consumes it.
 func _request_close(event: InputEvent, count: int) -> void:
 	if _queue.is_operating():
 		return
@@ -608,6 +722,8 @@ func _request_close(event: InputEvent, count: int) -> void:
 	var target := maxi(1, _stack.size() - count)
 	if _stack.size() <= target:
 		return
+
+	var screens: Array[StdScreen] = _stack.slice(target)
 
 	# NOTE: Use an array so the lambda captures a reference.
 	var state := [false]
@@ -621,9 +737,8 @@ func _request_close(event: InputEvent, count: int) -> void:
 		if state[0]:
 			return
 
-	_queue.enqueue_or_run(
-		func(): _do_pop_to_depth(target),
-	)
+	var op := Pop.create_top(screens)
+	_queue.enqueue_or_run(_execute_op.bind(op))
 
 
 ## _request_close_overlay requests a close of every screen in the topmost overlay, in
@@ -664,10 +779,14 @@ func _resolve_transition(
 	return screen.transition
 
 
-## _teardown force-stops any active transition and frees all resources.
+## _teardown force-stops any active transition, drops any operation waiting or queued,
+## and frees all resources.
 func _teardown() -> void:
 	_force_stop()
-	_queue.clear()
+	_end_wait()
+
+	_active_op = null
+	_queue.reset()
 
 	# Emit lifecycle signals and queue-free active scenes. The stack is moved to a local
 	# before iteration to guard against re-entrant calls.
@@ -698,7 +817,7 @@ func _teardown() -> void:
 	_scenes.clear()
 	_attachments.clear()
 	_overlays.clear()
-	_preloads.clear()
+	_preparations.clear()
 
 	if is_instance_valid(_cursor):
 		for overlay in overlays:
@@ -713,18 +832,27 @@ func _teardown() -> void:
 		_input_blocker.free.call_deferred()
 	_input_blocker = null
 
-	_free_cache()
+	_cache.clear()
 
 
-## _teardown_scene disconnects signal handlers, emits exited, and frees or caches the
+## _teardown_scene disconnects signal handlers, emits exited, and frees or keeps the
 ## scene. The overlay mapping should be erased before calling this if the overlay is
-## being reused.
+## being reused. A scene kept in the tree is parked, with its handlers still connected,
+## and keeps its overlay.
 func _teardown_scene(screen: StdScreen, scene: Node) -> void:
-	screen.disconnect_signal_handlers(scene)
+	var entry := _cache.get_entry(screen)
+	var is_kept_in_tree := (
+		entry != null and entry.overlay != null and entry.scene == scene
+	)
+
+	if not is_kept_in_tree:
+		screen.disconnect_signal_handlers(scene)
+
 	screen.exited.emit(scene)
 	screen_exited.emit(screen, scene)
 
-	_preloads.erase(screen)
+	var preparation: Preparation = _preparations.get(screen)
+	_preparations.erase(screen)
 
 	# NOTE: Detach first. The overlay may be shared and survive this screen, and a
 	# queued free would leave the scene in it, still receiving input, until the end
@@ -736,21 +864,20 @@ func _teardown_scene(screen: StdScreen, scene: Node) -> void:
 	_release_focus(screen)
 	_overlays.erase(screen)
 
-	# Cache or free the scene.
-	var should_cache := screen.cache_instance and is_instance_valid(scene)
-	if should_cache:
-		_cache[screen] = scene
+	if is_kept_in_tree:
+		return
+
+	if screen.cache_mode != StdScreen.CacheMode.NONE and is_instance_valid(scene):
+		_cache.keep(screen, scene, preparation)
 	elif is_instance_valid(scene):
 		scene.queue_free()
 
-	_overlays.free_if_unused(overlay)
+	if not _cache.owns(overlay):
+		_overlays.free_if_unused(overlay)
 
-	# Clean up stale cache entry if caching was toggled off.
-	if not screen.cache_instance and screen in _cache:
-		var stale: Node = _cache[screen]
+	# Clean up a stale entry if keeping was turned off.
+	if screen.cache_mode == StdScreen.CacheMode.NONE:
 		_cache.erase(screen)
-		if is_instance_valid(stale):
-			stale.free()
 
 
 ## _unblock_input removes the input blocker from the tree.
@@ -808,3 +935,31 @@ func _update_process_modes() -> void:
 func _update_stack_state() -> void:
 	_update_process_modes()
 	_overlays.update_config(_stack)
+
+
+## _wait holds `op` until `preparation` is done, with input blocked and later calls
+## queued behind it, so nothing on the stack changes until its loads have ended.
+func _wait(op: Operation, preparation: Preparation) -> void:
+	_waiting_op = op
+	_waiting_preparation = preparation
+
+	_queue.hold()
+	_block_input()
+
+	preparation.done.connect(_on_preparation_done, CONNECT_ONE_SHOT)
+
+
+# -- SIGNAL HANDLERS ----------------------------------------------------------------- #
+
+
+## _on_preparation_done presents the waiting operation, from `StdLoader`'s step, once
+## its preparation is done.
+func _on_preparation_done() -> void:
+	var op := _waiting_op
+
+	_end_wait()
+
+	if op == null:
+		return
+
+	_queue.resume(_present_op.bind(op))

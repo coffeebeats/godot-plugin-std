@@ -219,13 +219,13 @@ func test_push_and_wait_with_scene_pausing_tree_still_returns():
 	assert_eq(scene, instance)
 
 
-func test_push_and_wait_with_scene_pushing_screen_returns_before_it_finishes():
+func test_push_and_wait_with_scene_pushing_screen_waits_for_that_push():
 	# Given: A manager.
 	var manager := _add_manager()
 
-	# Given: A screen whose enter transition never finishes.
+	# Given: A screen whose enter transition finishes a moment later.
 	var dialog := StdScreen.new()
-	dialog.transition = _UnfinishedTransition.new()
+	dialog.transition = _DelayedTransition.new()
 
 	# Given: A scene which pushes that screen when it's ready.
 	var instance := _CallbackScene.new()

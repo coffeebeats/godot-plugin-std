@@ -133,7 +133,7 @@ func test_fade_with_cached_screen_pop_leaves_scene_at_full_alpha():
 
 	# Given: A cached screen fading through one resource, already pushed.
 	var screen := StdScreen.new()
-	screen.cache_instance = true
+	screen.cache_mode = StdScreen.CacheMode.DETACHED
 	screen.transition = _create_fade()
 	var scene := Control.new()
 	await manager.push_and_wait(screen, scene)

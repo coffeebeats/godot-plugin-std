@@ -154,6 +154,104 @@ func test_enqueue_or_run_during_async_phase_drains():
 	assert_called(spy, "called")
 
 
+func test_enqueue_or_run_while_held_waits_for_complete():
+	# Given: A spy to track execution.
+	var spy = double(Spy).new()
+
+	# Given: An operation waiting for its loads.
+	_queue.enqueue_or_run(func(): _queue.hold())
+
+	# When: A new operation is submitted.
+	_queue.enqueue_or_run(func(): spy.called())
+
+	# When: A frame passes.
+	await get_tree().process_frame
+
+	# Then: It hasn't run, and the queue is operating and unsettled.
+	assert_not_called(spy, "called")
+	assert_true(_queue.is_operating())
+	assert_false(_queue.is_settled())
+
+	# When: The waiting operation resumes and completes.
+	_queue.resume(func(): _queue.complete())
+
+	# When: A frame passes.
+	await get_tree().process_frame
+
+	# Then: The new operation has executed.
+	assert_called(spy, "called")
+
+
+func test_resume_holds_calls_until_complete():
+	# Given: A spy to track execution.
+	var spy = double(Spy).new()
+
+	# Given: An operation waiting for its loads.
+	_queue.enqueue_or_run(func(): _queue.hold())
+
+	# When: It resumes, submitting an operation from its synchronous phase.
+	_queue.resume(func(): _queue.enqueue_or_run(func(): spy.called()))
+	await get_tree().process_frame
+
+	# Then: The submitted operation waits for the resumed one to complete.
+	assert_not_called(spy, "called")
+	assert_false(_queue.is_operating())
+
+
+func test_complete_emptying_the_queue_emits_settled():
+	# Given: A running operation.
+	_queue.enqueue_or_run(func(): pass)
+	watch_signals(_queue)
+	assert_false(_queue.is_settled())
+
+	# When: It completes with nothing queued.
+	_queue.complete()
+
+	# Then: The queue settled.
+	assert_signal_emit_count(_queue, "settled", 1)
+	assert_true(_queue.is_settled())
+
+
+func test_complete_with_queued_operation_emits_settled_after_it():
+	# Given: A running operation with another queued behind it.
+	_queue.enqueue_or_run(func(): _queue.enqueue_or_run(func(): _queue.complete()))
+	watch_signals(_queue)
+
+	# When: The running operation completes.
+	_queue.complete()
+
+	# Then: The queue hasn't settled while the next operation is pending.
+	assert_signal_not_emitted(_queue, "settled")
+	assert_false(_queue.is_settled())
+
+	# When: A frame passes and the queued operation runs and completes.
+	await get_tree().process_frame
+
+	# Then: The queue settled once.
+	assert_signal_emit_count(_queue, "settled", 1)
+
+
+func test_reset_drops_operations_and_emits_settled():
+	# Given: A spy to track execution.
+	var spy = double(Spy).new()
+
+	# Given: A waiting operation with another queued behind it.
+	_queue.enqueue_or_run(func(): _queue.hold())
+	_queue.enqueue_or_run(func(): spy.called())
+	watch_signals(_queue)
+
+	# When: The queue is reset.
+	_queue.reset()
+
+	# When: A frame passes.
+	await get_tree().process_frame
+
+	# Then: Nothing more ran, and the queue settled.
+	assert_not_called(spy, "called")
+	assert_signal_emit_count(_queue, "settled", 1)
+	assert_true(_queue.is_settled())
+
+
 func test_clear_prevents_queued_operations_from_running():
 	# Given: A spy to track inner execution.
 	var spy = double(Spy).new()
