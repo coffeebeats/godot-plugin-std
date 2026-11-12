@@ -157,11 +157,17 @@ func get_scene() -> Node:
 
 
 ## load_screen starts loading, in the background, what opening `screen` needs: its
-## scene and every scene it depends on, to any depth. Holding the returned preparation
-## keeps them loaded, so a later operation opening the screen doesn't wait.
+## scene, if it has one, and every scene it depends on, to any depth. Holding the
+## returned preparation keeps them loaded, so a later operation opening the screen,
+## with or without an instance, doesn't wait.
 func load_screen(screen: StdScreen) -> Preparation:
 	assert(screen != null, "invalid argument: missing screen")
-	return _prepare_screen(screen, null, false)
+
+	var entry := _cache.get_entry(screen)
+	if entry and entry.preparation and is_instance_valid(entry.scene):
+		return entry.preparation
+
+	return Preparation.create(screen.scene_path, screen.get_dependency_paths())
 
 
 ## pop removes the topmost screen from the stack. When force is false (default), emits
@@ -304,42 +310,6 @@ func _block_input() -> void:
 		_input_blocker = _create_blocker()
 
 	add_child(_input_blocker, false, Node.INTERNAL_MODE_BACK)
-
-
-## _build_dependencies builds and parks every screen `screen` depends on, to any depth,
-## that is kept in the tree and has no scene yet. The preparation of `screen` loaded
-## their scenes, so this only instantiates.
-func _build_dependencies(screen: StdScreen) -> void:
-	var pending: Array[StdScreen] = screen.dependency_screens.duplicate()
-	var visited: Dictionary[StdScreen, bool] = {screen: true}
-
-	while not pending.is_empty():
-		var dependency: StdScreen = pending.pop_front()
-		if dependency == null or dependency in visited:
-			continue
-
-		visited[dependency] = true
-		pending.append_array(dependency.dependency_screens)
-
-		if (
-			not _cache.is_in_tree(dependency)
-			or _cache.get_entry(dependency)
-			or dependency in _stack
-		):
-			continue
-
-		var preparation := _prepare_screen(dependency, null, false)
-		if not preparation.is_done():
-			(
-				_logger
-				. warn(
-					"Kept screen isn't loaded; it builds at its own mount.",
-					{&"scene": dependency.scene_path},
-				)
-			)
-			continue
-
-		_cache.build(dependency, preparation)
 
 
 ## _complete_active completes, at once, the operation whose transition is running: its
@@ -606,7 +576,7 @@ func _mount_entering(screen: StdScreen, scene: Node) -> void:
 	var started := Time.get_ticks_usec()
 
 	_mount_scene(screen, scene)
-	_build_dependencies(screen)
+	_cache.build_dependencies(screen, _stack)
 
 	(
 		_logger

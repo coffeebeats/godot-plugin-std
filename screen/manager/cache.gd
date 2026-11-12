@@ -110,6 +110,41 @@ func build(screen: StdScreen, preparation: Preparation) -> bool:
 	return true
 
 
+## build_dependencies builds and parks every screen `screen` depends on, to any depth,
+## that is kept in the tree and has no scene yet, unless it is on `stack`. The
+## preparation of `screen` loaded their scenes, so this only instantiates.
+func build_dependencies(screen: StdScreen, stack: Array[StdScreen]) -> void:
+	var pending: Array[StdScreen] = screen.dependency_screens.duplicate()
+	var visited: Dictionary[StdScreen, bool] = {screen: true}
+
+	while not pending.is_empty():
+		var dependency: StdScreen = pending.pop_front()
+		if dependency == null or dependency in visited:
+			continue
+
+		visited[dependency] = true
+		pending.append_array(dependency.dependency_screens)
+
+		if not is_in_tree(dependency) or dependency in _entries or dependency in stack:
+			continue
+
+		var preparation: Preparation = Preparation.create(
+			dependency.scene_path, dependency.get_dependency_paths()
+		)
+
+		if not preparation.is_done():
+			(
+				_logger
+				. warn(
+					"Kept screen isn't loaded; it builds at its own mount.",
+					{&"scene": dependency.scene_path},
+				)
+			)
+			continue
+
+		build(dependency, preparation)
+
+
 ## clear frees every kept scene, along with the overlays parked scenes live in.
 func clear() -> void:
 	for entry: Entry in _entries.values():

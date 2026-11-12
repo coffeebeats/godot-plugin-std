@@ -214,6 +214,29 @@ func test_load_screen_held_preparation_lets_push_open_at_once():
 	assert_true(_manager.is_current(screen))
 
 
+func test_load_screen_without_a_scene_loads_its_dependencies():
+	# Given: A screen pushed with an instance, whose attachment isn't loaded.
+	var screen := _create_screen()
+	screen.attachment_scenes = PackedStringArray([_PATH_SLOW])
+
+	# When: It is loaded through the manager and the load ends.
+	var preparation := _manager.load_screen(screen)
+	StdLoader._step()
+	_backend.finish(_PATH_SLOW, _pack(Control.new()))
+	StdLoader._step()
+
+	# Then: The preparation is done, with nothing to report.
+	assert_true(preparation.is_done())
+	assert_eq(preparation.get_error(), OK)
+
+	# When: The screen is pushed with an instance.
+	_manager.push(screen, Control.new())
+
+	# Then: It mounted inside the call, with its attachment.
+	assert_true(_manager.is_current(screen))
+	assert_eq(_manager._attachments[screen].size(), 1)
+
+
 func test_push_during_transition_completes_the_interrupted_push():
 	# Given: A screen on the stack and a screen whose transition hasn't mounted it.
 	await _push_base()
