@@ -276,6 +276,46 @@ func test_condition_parent_freed_frees_held_out_child() -> void:
 	assert_false(is_instance_valid(child))
 
 
+func test_condition_parent_shutdown_frees_held_out_child() -> void:
+	# Given: A condition parent whose allow expression is false, over a child.
+	var condition := StdConditionParent.new()
+	condition.expressions_allow = [FakeExpression.new(false)]
+	var child: Node = autofree(Node.new())
+	condition.add_child(child)
+
+	# Given: It's in the scene tree under a holder, holding the child out.
+	_place_parent(condition)
+	assert_null(child.get_parent(), "precondition: child held out")
+
+	# When: A shutdown is propagated.
+	condition.notification(StdLifecycle.NOTIFICATION_SHUTDOWN)
+
+	# Then: The held-out child was freed at once.
+	assert_false(is_instance_valid(child))
+
+
+func test_condition_parent_close_request_keeps_held_out_child() -> void:
+	# Given: A condition parent whose allow expression is false, over a child.
+	var allow := FakeExpression.new(false)
+	var condition := StdConditionParent.new()
+	condition.expressions_allow = [allow]
+	var child: Node = autofree(Node.new())
+	condition.add_child(child)
+
+	# Given: It's in the scene tree under a holder, holding the child out.
+	_place_parent(condition)
+	assert_null(child.get_parent(), "precondition: child held out")
+
+	# Given: A close request arrived, which the game cancelled.
+	condition.notification(NOTIFICATION_WM_CLOSE_REQUEST)
+
+	# When: The allow expression becomes true.
+	allow.set_value(true)
+
+	# Then: The child is added back.
+	assert_has(condition.get_children(), child)
+
+
 func test_condition_parent_block_after_close_request_removes_child() -> void:
 	# Given: A condition parent whose allow expression is true, over a child.
 	var allow := FakeExpression.new(true)
