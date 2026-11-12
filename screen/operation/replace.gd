@@ -39,6 +39,10 @@ func get_screen() -> StdScreen:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
+func _discard(manager: StdScreenManager) -> void:
+	manager._free_unowned(_instance)
+
+
 func _prepare(manager: StdScreenManager) -> Preparation:
 	if _screen in manager._stack and manager._stack[-1] != _screen:
 		return null

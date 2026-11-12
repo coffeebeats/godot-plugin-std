@@ -6,7 +6,8 @@
 ## while it waits for its loads, is held until that operation completes. A call made
 ## while an operation's transition runs is queued and drained at once, and the manager
 ## completes the running operation, skipping the rest of its transition, before it runs
-## the next.
+## the next. A call made while the queue defers, from `defer` to the end of that frame,
+## is queued and drained at once, too.
 ##
 
 extends RefCounted
@@ -31,6 +32,9 @@ var _generation: int = 0
 ## _is_active is true from the start of an operation until `complete` is called,
 ## spanning the synchronous phase, any wait for loads and any transition.
 var _is_active: bool = false
+
+## _is_deferring is true from `defer` until the end of that frame, or a reset.
+var _is_deferring: bool = false
 
 ## _is_held is true while an operation waits for its loads.
 var _is_held: bool = false
@@ -71,11 +75,21 @@ func complete() -> void:
 		settled.emit()
 
 
+## defer queues every call made until the end of the frame, so that each runs then, in
+## call order, rather than at once. A reset ends it.
+func defer() -> void:
+	if _is_deferring:
+		return
+
+	_is_deferring = true
+	_end_defer.call_deferred(_generation)
+
+
 ## enqueue_or_run has three behaviors depending on queue state:
 ##  - Sync phase, a wait for loads, or a drain pending: append only, which waits for
 ##    `complete` (or for the pending drain).
-##  - Transition running: append and drain, so the next operation runs at the end of
-##    the frame and completes the one running first.
+##  - Transition running, or deferring: append and drain, so the next operation runs at
+##    the end of the frame, completing any running first.
 ##  - Idle: run immediately.
 ##
 ## NOTE: Operations must call `complete` when finished.
@@ -84,7 +98,7 @@ func enqueue_or_run(operation: Callable) -> void:
 		_queue.append(operation)
 		return
 
-	if _is_active:
+	if _is_active or _is_deferring:
 		_queue.append(operation)
 		_drain()
 		return
@@ -101,6 +115,11 @@ func enqueue_or_run(operation: Callable) -> void:
 func hold() -> void:
 	assert(_is_active, "invalid state; no operation is running")
 	_is_held = true
+
+
+## is_deferring returns whether calls wait for the end of the frame, after `defer`.
+func is_deferring() -> bool:
+	return _is_deferring
 
 
 ## is_operating returns whether an operation's synchronous phase is executing, or an
@@ -127,6 +146,7 @@ func reset() -> void:
 	_generation += 1
 	_drain_scheduled = false
 	_is_active = false
+	_is_deferring = false
 	_is_held = false
 	_is_operating = false
 	_queue.clear()
@@ -147,6 +167,12 @@ func resume(operation: Callable) -> void:
 
 
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _end_defer ends the deferral `defer` began, unless a reset has ended it since.
+func _end_defer(generation: int) -> void:
+	if generation == _generation:
+		_is_deferring = false
 
 
 ## _end_sync ends a synchronous phase. A call made after the operation completed within

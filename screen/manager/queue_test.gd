@@ -252,6 +252,49 @@ func test_reset_drops_operations_and_emits_settled():
 	assert_true(_queue.is_settled())
 
 
+func test_defer_runs_a_call_at_the_end_of_the_frame():
+	# Given: A spy to track execution.
+	var spy = double(Spy).new()
+
+	# Given: An idle queue deferring its calls.
+	_queue.defer()
+
+	# When: An operation is enqueued.
+	_queue.enqueue_or_run(
+		func():
+			spy.called()
+			_queue.complete()
+	)
+
+	# Then: It waits, and the queue is not settled.
+	assert_not_called(spy, "called")
+	assert_false(_queue.is_settled())
+
+	# Then: It ran by the end of the frame, which ended the deferral.
+	await get_tree().process_frame
+	assert_called(spy, "called")
+	assert_false(_queue.is_deferring())
+	assert_true(_queue.is_settled())
+
+
+func test_reset_ends_a_deferral():
+	# Given: A spy to track execution.
+	var spy = double(Spy).new()
+
+	# Given: A queue deferring its calls.
+	_queue.defer()
+
+	# Given: The queue was reset.
+	_queue.reset()
+
+	# When: An operation is enqueued.
+	_queue.enqueue_or_run(func(): spy.called())
+
+	# Then: It ran at once.
+	assert_called(spy, "called")
+	assert_false(_queue.is_deferring())
+
+
 func test_clear_prevents_queued_operations_from_running():
 	# Given: A spy to track inner execution.
 	var spy = double(Spy).new()

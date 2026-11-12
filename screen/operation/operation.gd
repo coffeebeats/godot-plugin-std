@@ -32,6 +32,14 @@ func get_screen() -> StdScreen:
 # -- PRIVATE METHODS (OVERRIDES) ----------------------------------------------------- #
 
 
+## _discard releases what the operation holds when the manager drops it unrun, as a
+## teardown does.
+##
+## NOTE: Subclasses which take a scene instance override this to free it.
+func _discard(_manager: StdScreenManager) -> void:
+	pass
+
+
 ## _prepare validates the operation and returns the preparation it needs before it can
 ## present, or null if it needs none. It changes nothing on the stack.
 ##
