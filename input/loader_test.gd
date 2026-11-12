@@ -346,6 +346,30 @@ func test_loader_keeps_a_shared_layer_under_a_screen_with_the_same_sets() -> voi
 	assert_eq(_slot.list_action_set_layers(), [_layer] as Array[StdInputActionSetLayer])
 
 
+func test_loader_covered_while_hidden_returns_the_set_to_its_peers() -> void:
+	# Given: A loader outside the stack holding the game's set.
+	add_child_autofree(_make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE))
+	await wait_idle_frames(1)
+
+	# Given: A menu whose loader holds its own set in place of the game's.
+	var menu := Control.new()
+	var loader := _make_loader(StdInputActionSetLoader.ActiveWhile.IN_TREE)
+	loader.action_set = _menu
+	loader.action_set_layers = [] as Array[StdInputActionSetLayer]
+	menu.add_child(loader)
+	add_child_autofree(menu)
+	await wait_idle_frames(1)
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _menu, "precondition")
+
+	# When: The manager parks the menu: hidden, then covered by nothing.
+	menu.hide()
+	loader.notification(StdScreenManager.NOTIFICATION_SCREEN_COVERED)
+	await wait_idle_frames(1)
+
+	# Then: The game's set is loaded again.
+	assert_eq(_slot.actions.get_action_set(_slot.device_id), _action_set)
+
+
 func test_loader_under_a_container_takes_no_slot_and_covers_no_sibling() -> void:
 	# Given: A box container holding a button.
 	var scene := Control.new()
