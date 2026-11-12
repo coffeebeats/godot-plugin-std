@@ -52,6 +52,8 @@ Follows GDScript style guide. Key project-specific conventions:
   # -- SETTERS/GETTERS ----------------------------------------------------------------- #
   ```
 
+- Never `preload` a scene, or a resource that carries a script such as a `StdScreen` or an action set; export it as a `PackedScene` or `Resource` and set it in the scene that ships the script. Godot 4.6 to 4.8 can deadlock when a script compiling on one thread waits on a resource another thread is loading. Preloading a script is fine, as is any preload in a GUT test, which compiles before any load starts.
+
 ### Naming
 
 - Class names: `Std` prefix for exported classes (e.g., `StdConfigSchema`)
