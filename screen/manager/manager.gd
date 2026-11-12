@@ -606,10 +606,13 @@ func _mount_scene(screen: StdScreen, scene: Node, preparation: Preparation) -> v
 	if is_parked:
 		overlay = _cache.open(screen)
 	elif _cache.is_in_tree(screen) and _cache.admit(screen, scene):
-		# NOTE: A screen kept in the tree owns one overlay for its whole life.
+		# NOTE: A screen kept in the tree owns one overlay for life. A scene that can't
+		# park once ready is never registered, so closing its ordinary overlay keeps it
+		# detached.
 		overlay = _cache.create_overlay(true)
 		overlay.add_child(scene)
-		_cache.register(screen, scene, _preparations.get(screen), overlay)
+		if _cache.confirm(screen, scene):
+			_cache.register(screen, scene, _preparations.get(screen), overlay)
 	else:
 		overlay = _overlays.get_overlay(screen)
 		if not is_instance_valid(overlay):

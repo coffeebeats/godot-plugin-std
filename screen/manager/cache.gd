@@ -54,9 +54,10 @@ var _manager: StdScreenManager = null
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## admit reports whether `scene` can be parked for `screen`, checking it once, and keeps
-## `screen` detached from then on if it can't. A screen kept in the tree always isolates
-## input, so it also reports a `block_input_below` that is off.
+## admit reports whether `scene` can be parked for `screen`, checking it before it
+## enters the tree, and keeps `screen` detached from then on if it can't. It also warns
+## of a `block_input_below` that is off, since a screen kept in the tree always isolates
+## input.
 func admit(screen: StdScreen, scene: Node) -> bool:
 	if not screen.block_input_below:
 		(
@@ -67,21 +68,7 @@ func admit(screen: StdScreen, scene: Node) -> bool:
 			)
 		)
 
-	var offenders := find_unparkable(scene)
-	if offenders.is_empty():
-		return true
-
-	(
-		_logger
-		. error(
-			"Scene can't be kept in the tree; keeping it detached.",
-			{&"scene": screen.scene_path, &"nodes": ",".join(offenders)},
-		)
-	)
-
-	_demoted[screen] = true
-
-	return false
+	return confirm(screen, scene)
 
 
 ## build instantiates the scene of `screen`, an `IN_TREE` screen, from `preparation`
@@ -102,8 +89,16 @@ func build(screen: StdScreen, preparation: Preparation) -> bool:
 	var overlay := create_overlay(false)
 
 	# NOTE: The scene enters the tree inside a hidden overlay, so it readies with
-	# nothing visible.
+	# nothing visible. One that adds a node it can't park with leaves the tree again
+	# within this call, before a frame draws it.
 	overlay.add_child(scene)
+
+	if not confirm(screen, scene):
+		overlay.remove_child(scene)
+		overlay.free()
+		keep(screen, scene, preparation)
+		return true
+
 	register(screen, scene, preparation, overlay)
 	park(screen)
 
@@ -151,6 +146,27 @@ func clear() -> void:
 		_free(entry)
 
 	_entries.clear()
+
+
+## confirm reports whether `scene` can be parked for `screen` as it stands, and keeps
+## `screen` detached from then on if it can't. A scene can add nodes as it enters the
+## tree and readies, so one kept in the tree is confirmed again once it is ready.
+func confirm(screen: StdScreen, scene: Node) -> bool:
+	var offenders := find_unparkable(scene)
+	if offenders.is_empty():
+		return true
+
+	(
+		_logger
+		. error(
+			"Scene can't be kept in the tree; keeping it detached.",
+			{&"scene": screen.scene_path, &"nodes": ",".join(offenders)},
+		)
+	)
+
+	_demoted[screen] = true
+
+	return false
 
 
 ## create_overlay adds an overlay for a scene kept in the tree to the manager, wired to

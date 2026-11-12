@@ -21,6 +21,7 @@ const MockTransition := TransitionTests.MockTransition  # gdlint:ignore=constant
 const _PATH_HOST := "res://screen/manager/_test_host.tscn"
 const _PATH_KEPT := "res://screen/manager/_test_kept.tscn"
 const _PATH_LAYERED := "res://screen/manager/_test_layered.tscn"
+const _PATH_LAYERING := "res://screen/manager/_test_layering.tscn"
 const _PATH_SLOW := "res://screen/manager/_test_slow.tscn"
 
 
@@ -66,6 +67,18 @@ class Backend:
 	func start(path: String, _type_hint: String) -> Error:
 		started.append(path)
 		return OK
+
+
+## Layering adds a `CanvasLayer` to itself as it readies, after the check made before it
+## enters the tree.
+class Layering:
+	extends Control
+
+	var layer: CanvasLayer = null
+
+	func _ready() -> void:
+		layer = CanvasLayer.new()
+		add_child(layer)
 
 
 ## Recorder counts the screen notifications its subtree receives.
@@ -640,6 +653,48 @@ func test_in_tree_scene_that_cannot_park_is_kept_detached():
 	assert_false(entry.scene.is_inside_tree())
 
 
+func test_in_tree_dependency_adding_a_layer_when_ready_is_kept_detached():
+	# Given: A screen kept in the tree whose scene adds a `CanvasLayer` as it readies.
+	var kept := _create_layering()
+
+	# When: A host listing it is pushed.
+	await _push_host(kept)
+
+	# Then: The scene was reported and kept out of the tree, with its layer.
+	assert_push_error("Scene can't be kept in the tree; keeping it detached.")
+	var entry = _manager._cache.get_entry(kept)
+	assert_null(entry.overlay)
+	assert_false(entry.scene.is_inside_tree())
+	assert_false(entry.scene.layer.is_inside_tree())
+
+
+func test_in_tree_first_push_adding_a_layer_when_ready_detaches_on_pop():
+	# Given: A screen on the stack.
+	await _push_base()
+
+	# Given: A screen kept in the tree whose scene adds a `CanvasLayer` as it readies.
+	var kept := _create_layering()
+
+	# When: The kept screen is pushed.
+	_manager.push(kept)
+	var scene: Layering = _manager.get_scene()
+	var overlay: Node = scene.get_parent()
+
+	# When: It is popped.
+	_manager.pop(null, true)
+
+	# Then: The scene was reported and kept out of the tree, with its layer.
+	assert_push_error("Scene can't be kept in the tree; keeping it detached.")
+	var entry = _manager._cache.get_entry(kept)
+	assert_null(entry.overlay)
+	assert_eq(entry.scene, scene)
+	assert_false(scene.is_inside_tree())
+	assert_false(scene.layer.is_inside_tree())
+
+	# Then: The overlay it opened in left the tree.
+	assert_false(overlay.is_inside_tree())
+
+
 func test_in_tree_ignores_block_input_below():
 	# Given: A screen kept in the tree with `block_input_below` off.
 	var kept := _create_kept()
@@ -693,6 +748,13 @@ func _create_kept() -> StdScreen:
 	var screen := _create_screen(_PATH_KEPT)
 	screen.cache_mode = StdScreen.CacheMode.IN_TREE
 	_backend.cached[_PATH_KEPT] = _pack(Recorder.new())
+	return screen
+
+
+func _create_layering() -> StdScreen:
+	var screen := _create_screen(_PATH_LAYERING)
+	screen.cache_mode = StdScreen.CacheMode.IN_TREE
+	_backend.cached[_PATH_LAYERING] = _pack(Layering.new())
 	return screen
 
 
