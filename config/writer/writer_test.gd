@@ -103,7 +103,7 @@ func test_config_writer_load_config_reads_existing_file_data():
 	# Given: An empty `Config` instance.
 	var config := Config.new()
 
-	# Given: A config writer writing to a file that doesn't exist.
+	# Given: A config writer reading that file.
 	writer = StdConfigWriterTest.new()
 	writer.path = path
 	add_child(writer)
@@ -114,7 +114,7 @@ func test_config_writer_load_config_reads_existing_file_data():
 	# Then: There's no error.
 	assert_eq(err, OK)
 
-	# Then: The config instance matches expectations
+	# Then: The config instance matches expectations.
 	assert_eq(config.get_string(&"category", &"key", ""), "value")
 
 	# Then: The file's contents match expectations.
@@ -221,13 +221,13 @@ func test_creates_backup_on_write():
 	writer.backup_count = 1
 	add_child(writer)
 
-	# Given: First store.
+	# Given: A first config is stored.
 	var config_a := Config.new()
 	config_a.set_int(&"data", &"value", 10)
 	var err := writer.store_config(config_a).wait()
 	assert_eq(err, OK, "First store should succeed")
 
-	# When: Second store — first data should be backed up.
+	# When: A second config is stored.
 	var config_b := Config.new()
 	config_b.set_int(&"data", &"value", 20)
 	err = writer.store_config(config_b).wait()
@@ -281,13 +281,13 @@ func test_falls_back_to_backup_on_corrupted_main():
 	writer.backup_count = 1
 	add_child(writer)
 
-	# Given: First store with valid data.
+	# Given: A first config is stored.
 	var config_a := Config.new()
 	config_a.set_int(&"data", &"value", 42)
 	var err := writer.store_config(config_a).wait()
 	assert_eq(err, OK, "First store should succeed")
 
-	# Given: Second store with new data.
+	# Given: A second config is stored.
 	var config_b := Config.new()
 	config_b.set_int(&"data", &"value", 99)
 	err = writer.store_config(config_b).wait()
@@ -340,13 +340,13 @@ func test_falls_back_to_backup_when_main_file_missing():
 	writer.backup_count = 1
 	add_child(writer)
 
-	# Given: First store with valid data.
+	# Given: A first config is stored.
 	var config_a := Config.new()
 	config_a.set_int(&"data", &"value", 42)
 	var err := writer.store_config(config_a).wait()
 	assert_eq(err, OK, "First store should succeed")
 
-	# Given: Second store with new data (first data is now in .bak).
+	# Given: A second config is stored, moving the first to .bak.
 	var config_b := Config.new()
 	config_b.set_int(&"data", &"value", 99)
 	err = writer.store_config(config_b).wait()
@@ -416,7 +416,7 @@ func test_rotates_backups_and_evicts_oldest():
 	assert_true(FileAccess.file_exists(bak3_path), ".bak3 should exist")
 	assert_false(FileAccess.file_exists(bak4_path), ".bak4 should not exist")
 
-	# Then: Verify contents — main=4, .bak=3, .bak2=2, .bak3=1.
+	# Then: The main file holds 4, and .bak through .bak3 hold 3 down to 1.
 	var main_data: Dictionary = bytes_to_var(FileAccess.get_file_as_bytes(abs_path))
 	assert_eq(main_data[&"data"][&"value"], 4, "Main should contain value 4")
 
