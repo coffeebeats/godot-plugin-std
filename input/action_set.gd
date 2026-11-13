@@ -30,14 +30,14 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 
 # -- CONFIGURATION ------------------------------------------------------------------- #
 
-## name is the name of the identifier for the action set. It must be unique among all
-## other action sets and action set layers.
+## name identifies the action set, and must be unique among all action sets and action
+## set layers.
 @export var name: StringName
 
 @export_group("Analog actions ")
 @export_subgroup("1D ")
 
-## actions_analog_1d is a list of input actions names which can be bound to 1D analog
+## actions_analog_1d is a list of input action names which can be bound to 1D analog
 ## input origins (e.g. analog triggers).
 @export var actions_analog_1d: Array[StringName] = []
 
@@ -48,7 +48,7 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 ## `<action>_down`, which must also be listed in `actions_digital`. Godot binds,
 ## rebinds, and shows glyphs for those four as it does any digital action, and the game
 ## reads them with `Input.get_vector`. Steam defines the 2D action as one
-## `joystick_move` action in their place: the four leave the manifest, the Steam actions
+## `joystick_move` action in their place; the four leave the manifest, the Steam actions
 ## component publishes them from the stick's axes, and a glyph for any of them shows
 ## the stick.
 ##
@@ -61,7 +61,7 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 
 @export_group("Digital actions ")
 
-## actions_digital is a list of input actions names which can be bound to "digital"
+## actions_digital is a list of input action names which can be bound to "digital"
 ## (i.e. on/off) input origins.
 @export var actions_digital: Array[StringName] = []
 
@@ -82,13 +82,14 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 ## cursor_confined defines whether the cursor is confined to the game window.
 ##
 ## NOTE: The cursor is confined if the current action set or any activated action set
-## layer enables it, unless `StdInputCursor.confined_property` is set.
+## layer enables it, unless `StdInputCursor.confined_property` is set. On the web it is
+## never confined.
 @export var cursor_confined: bool = false
 
 ## cursor_captured defines whether the cursor is captured.
 ##
-## NOTE: This property will be true if the current action set or any activated action
-## set layer enables it.
+## NOTE: The cursor is captured if the current action set or any activated action set
+## layer enables it.
 @export var cursor_captured: bool = false
 
 @export_subgroup("Hide")
@@ -110,7 +111,7 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 ## cursor_hide_actions_if_hovered is a list of actions (like `cursor_hide_actions`)
 ## which will request the cursor to be hidden, but only if there's currently a node
 ## being hovered which is tracked by a `StdInputCursorFocusHandler`. This can be used to
-## seamlessly "accept" mouse-hovered UI elements with a joypad.
+## "accept" mouse-hovered UI elements with a joypad.
 ##
 ## NOTE: Actions defined in layers will add to the total set of actions which will hide
 ## the cursor. As such, there's no need to include actions from parent layers.
@@ -128,8 +129,8 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 @export_subgroup("Reveal")
 
 ## cursor_reveal_mouse_buttons is a list of mouse buttons which, when "just" pressed,
-## will trigger the cursor to be shown. Note that this doesn't guarantee that the cursor
-## will be shown, as the visibility is dependent on a number of factors.
+## will trigger the cursor to be shown. This doesn't guarantee that the cursor will be
+## shown, as the visibility is dependent on a number of factors.
 ##
 ## NOTE: Mouse buttons defined in layers will add to the total set of buttons which will
 ## reveal the cursor. As such, there's no need to include actions from parent layers.
@@ -173,8 +174,8 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 ## its value.
 @export var cursor_click_activates_kbm: PropertyStatus = PROPERTY_STATUS_INHERIT
 
-# NOTE: Unfortunately, due to Steam Input offering a far richer API for defining action
-# sets, this abstraction must leak some Steam-related details.
+# NOTE: Steam Input offers a far richer API for defining action sets, so this
+# abstraction must leak some Steam-related details.
 
 @export_group("Steam ")
 

@@ -16,6 +16,16 @@ const _TEST_HIDE_ACTION := &"test_hide"
 ## the cursor.
 const _TEST_HIDE_ACTION_OTHER := &"test_hide_other"
 
+
+## StdInputCursorUnconfinableTest is a cursor on a platform which can't confine the
+## cursor, as the web can't.
+class StdInputCursorUnconfinableTest:
+	extends StdInputCursor
+
+	func _is_confinement_supported() -> bool:
+		return false
+
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 var cursor: StdInputCursor = null
@@ -151,6 +161,72 @@ func test_confined_property_change_does_not_emit_visibility_changed() -> void:
 
 	# Then: The cursor's visibility isn't reported as changed.
 	assert_signal_not_emitted(cursor, "cursor_visibility_changed")
+
+
+func test_get_is_confined_false_with_confining_action_set_when_unsupported() -> void:
+	# Given: A cursor which can't be confined, added to the scene.
+	_use_unconfinable_cursor()
+	add_child_autofree(cursor)
+
+	# When: An action set which confines the cursor is applied.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_confined = true
+	cursor.update_configuration([action_set])
+
+	# Then: The cursor isn't confined.
+	assert_false(cursor.get_is_confined())
+
+
+func test_get_is_confined_false_on_ready_when_property_on_and_unsupported() -> void:
+	# Given: A cursor which can't be confined, whose confinement property is on.
+	_use_unconfinable_cursor()
+	cursor.confined_property = _make_confined_property(true)
+
+	# When: The cursor is added to the scene.
+	add_child_autofree(cursor)
+
+	# Then: The cursor isn't confined.
+	assert_false(cursor.get_is_confined())
+
+
+func test_get_is_confined_false_after_property_turns_on_when_unsupported() -> void:
+	# Given: A cursor which can't be confined, whose confinement property is off.
+	var property := _make_confined_property(false)
+	_use_unconfinable_cursor()
+	cursor.confined_property = property
+	add_child_autofree(cursor)
+
+	# When: The property is turned on.
+	property.set_value(true)
+
+	# Then: The cursor isn't confined.
+	assert_false(cursor.get_is_confined())
+
+
+func test_cursor_visibility_toggles_when_confinement_unsupported() -> void:
+	# Given: A cursor which can't be confined, added to the scene.
+	_use_unconfinable_cursor()
+	add_child_autofree(cursor)
+
+	# Given: An action set which confines the cursor is applied.
+	var action_set := StdInputActionSet.new()
+	action_set.cursor_confined = true
+	cursor.update_configuration([action_set])
+	assert_true(cursor.get_is_visible(), "precondition: cursor visible")
+
+	# When: The cursor is hidden.
+	cursor.hide_cursor()
+
+	# Then: The cursor is hidden and still isn't confined.
+	assert_false(cursor.get_is_visible())
+	assert_false(cursor.get_is_confined())
+
+	# When: The cursor is shown.
+	cursor.show_cursor()
+
+	# Then: The cursor is visible and still isn't confined.
+	assert_true(cursor.get_is_visible())
+	assert_false(cursor.get_is_confined())
 
 
 func test_get_is_visible_returns_true_by_default() -> void:
@@ -1778,7 +1854,6 @@ func before_all() -> void:
 
 
 func before_each() -> void:
-	# Clear the global cursor group before each test.
 	StdGroup.with_id(StdInputCursor.GROUP_INPUT_CURSOR).clear_members()
 
 	cursor = StdInputCursor.new()
@@ -1863,3 +1938,10 @@ func _tab_press(shift: bool = false) -> InputEventKey:
 	event.shift_pressed = shift
 	event.pressed = true
 	return event
+
+
+## _use_unconfinable_cursor replaces the cursor, before it enters the scene, with one
+## which can't be confined.
+func _use_unconfinable_cursor() -> void:
+	cursor.free()
+	cursor = StdInputCursorUnconfinableTest.new()
