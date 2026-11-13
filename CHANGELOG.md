@@ -1,5 +1,14 @@
 # Changelog
 
+## 10.1.3 (2026-11-13)
+
+## What's Changed
+* fix(input): never request a confined mouse mode on the web by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/643
+* chore: guard against 3D classes with the checker's `disable-3d` rule instead of a GUT test by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/645
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v10.1.2...v10.1.3
+
 ## 10.1.2 (2026-11-13)
 
 ## What's Changed
