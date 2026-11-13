@@ -1,5 +1,13 @@
 # Changelog
 
+## 10.1.2 (2026-11-13)
+
+## What's Changed
+* fix(screen): name `Node3D` by string in the parking check so the cache parses on 3D-disabled builds by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/641
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v10.1.1...v10.1.2
+
 ## 10.1.1 (2026-11-13)
 
 ## What's Changed
