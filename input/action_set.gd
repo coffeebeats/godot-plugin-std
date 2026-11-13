@@ -82,7 +82,8 @@ const ANALOG_2D_DIRECTIONS: Array[StringName] = [&"left", &"right", &"up", &"dow
 ## cursor_confined defines whether the cursor is confined to the game window.
 ##
 ## NOTE: The cursor is confined if the current action set or any activated action set
-## layer enables it, unless `StdInputCursor.confined_property` is set.
+## layer enables it, unless `StdInputCursor.confined_property` is set. On the web it is
+## never confined.
 @export var cursor_confined: bool = false
 
 ## cursor_captured defines whether the cursor is captured.

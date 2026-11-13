@@ -90,7 +90,7 @@ class _Claim:
 
 ## confined_property is an optional settings property which, when set, decides whether
 ## the cursor is confined to the window in place of the active action sets' choice. A
-## captured cursor stays captured either way.
+## captured cursor stays captured either way, and on the web it is never confined.
 @export var confined_property: StdSettingsPropertyBool = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -159,7 +159,7 @@ func get_hovered() -> Control:
 
 
 ## get_is_confined returns whether the cursor is currently confined to the window. A
-## captured cursor isn't confined.
+## captured cursor isn't confined, nor is one on the web.
 func get_is_confined() -> bool:
 	return _cursor_confined and not _cursor_captured
 
@@ -552,6 +552,14 @@ func _grab_focus_deferred(
 	_deferred_grab_focus.call_deferred(_deferred_focus_id, trigger, make_focusable)
 
 
+## _is_confinement_supported returns whether the platform can confine the cursor. The
+## web display server logs an error for either confined mouse mode and applies neither.
+##
+## NOTE: This is an instance method so tests can override it.
+func _is_confinement_supported() -> bool:
+	return not OS.has_feature(&"web")
+
+
 ## _prune_claims drops the claims whose control was freed without a release.
 func _prune_claims() -> void:
 	for index in range(_claims.size() - 1, -1, -1):
@@ -560,6 +568,9 @@ func _prune_claims() -> void:
 
 
 func _resolve_confined() -> bool:
+	if not _is_confinement_supported():
+		return false
+
 	if confined_property:
 		return confined_property.get_value()
 
