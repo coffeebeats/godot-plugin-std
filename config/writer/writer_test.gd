@@ -21,6 +21,26 @@ class StdConfigWriterTest:
 		return path
 
 
+class StdConfigWriterBlockingTest:
+	extends StdConfigWriterTest
+
+	## entered is posted by the worker thread once a write begins.
+	var entered := Semaphore.new()
+
+	## release must be posted once per write to let that write proceed.
+	var release := Semaphore.new()
+
+	func _exit_tree():
+		# NOTE: Unblock any parked write so a failed test can't hang the teardown.
+		release.post()
+		super._exit_tree()
+
+	func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
+		entered.post()
+		release.wait()
+		return super._config_write_bytes(config_path, data)
+
+
 # -- INITIALIZATION ------------------------------------------------------------------ #
 
 ## path_test_dir is the path to the case-specific testing directory; this will be
@@ -83,7 +103,7 @@ func test_config_writer_load_config_reads_existing_file_data():
 	# Given: An empty `Config` instance.
 	var config := Config.new()
 
-	# Given: A config writer writing to a file that doesn't exist.
+	# Given: A config writer reading that file.
 	writer = StdConfigWriterTest.new()
 	writer.path = path
 	add_child(writer)
@@ -94,7 +114,7 @@ func test_config_writer_load_config_reads_existing_file_data():
 	# Then: There's no error.
 	assert_eq(err, OK)
 
-	# Then: The config instance matches expectations
+	# Then: The config instance matches expectations.
 	assert_eq(config.get_string(&"category", &"key", ""), "value")
 
 	# Then: The file's contents match expectations.
@@ -155,6 +175,42 @@ func test_config_writer_store_config_succeeds_when_nested_file_does_not_exist():
 	assert_eq_deep(got._data, config._data)
 
 
+func test_config_writer_store_config_during_write_returns_busy_without_wedging():
+	# Given: A config writer whose writes block until released.
+	var blocking := StdConfigWriterBlockingTest.new()
+	blocking.path = path_test_dir.path_join("test.dat")
+	writer = blocking
+	add_child(writer)
+
+	# Given: A non-empty `Config` instance.
+	var config := Config.new()
+	config.set_string(&"category", &"key", "value")
+
+	# Given: A store is in flight, with the worker thread inside the write.
+	var result_first := writer.store_config(config)
+	blocking.entered.wait()
+
+	# When: Another store is requested while the first is in flight.
+	var err_busy := writer.store_config(config).wait()
+
+	# When: The in-flight write is released.
+	blocking.release.post()
+	var err_first := result_first.wait()
+
+	# When: Another store is requested once the writer is idle.
+	blocking.release.post()
+	var err_after := writer.store_config(config).wait()
+
+	# Then: The overlapping store was rejected as busy.
+	assert_eq(err_busy, ERR_BUSY)
+
+	# Then: The in-flight store succeeded.
+	assert_eq(err_first, OK)
+
+	# Then: The writer accepts commands again after the rejection.
+	assert_eq(err_after, OK)
+
+
 func test_creates_backup_on_write():
 	# Given: A test file path.
 	var path := path_test_dir.path_join("config.dat")
@@ -165,13 +221,13 @@ func test_creates_backup_on_write():
 	writer.backup_count = 1
 	add_child(writer)
 
-	# Given: First store.
+	# Given: A first config is stored.
 	var config_a := Config.new()
 	config_a.set_int(&"data", &"value", 10)
 	var err := writer.store_config(config_a).wait()
 	assert_eq(err, OK, "First store should succeed")
 
-	# When: Second store — first data should be backed up.
+	# When: A second config is stored.
 	var config_b := Config.new()
 	config_b.set_int(&"data", &"value", 20)
 	err = writer.store_config(config_b).wait()
@@ -225,13 +281,13 @@ func test_falls_back_to_backup_on_corrupted_main():
 	writer.backup_count = 1
 	add_child(writer)
 
-	# Given: First store with valid data.
+	# Given: A first config is stored.
 	var config_a := Config.new()
 	config_a.set_int(&"data", &"value", 42)
 	var err := writer.store_config(config_a).wait()
 	assert_eq(err, OK, "First store should succeed")
 
-	# Given: Second store with new data.
+	# Given: A second config is stored.
 	var config_b := Config.new()
 	config_b.set_int(&"data", &"value", 99)
 	err = writer.store_config(config_b).wait()
@@ -284,13 +340,13 @@ func test_falls_back_to_backup_when_main_file_missing():
 	writer.backup_count = 1
 	add_child(writer)
 
-	# Given: First store with valid data.
+	# Given: A first config is stored.
 	var config_a := Config.new()
 	config_a.set_int(&"data", &"value", 42)
 	var err := writer.store_config(config_a).wait()
 	assert_eq(err, OK, "First store should succeed")
 
-	# Given: Second store with new data (first data is now in .bak).
+	# Given: A second config is stored, moving the first to .bak.
 	var config_b := Config.new()
 	config_b.set_int(&"data", &"value", 99)
 	err = writer.store_config(config_b).wait()
@@ -360,7 +416,7 @@ func test_rotates_backups_and_evicts_oldest():
 	assert_true(FileAccess.file_exists(bak3_path), ".bak3 should exist")
 	assert_false(FileAccess.file_exists(bak4_path), ".bak4 should not exist")
 
-	# Then: Verify contents — main=4, .bak=3, .bak2=2, .bak3=1.
+	# Then: The main file holds 4, and .bak through .bak3 hold 3 down to 1.
 	var main_data: Dictionary = bytes_to_var(FileAccess.get_file_as_bytes(abs_path))
 	assert_eq(main_data[&"data"][&"value"], 4, "Main should contain value 4")
 

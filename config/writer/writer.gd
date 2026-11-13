@@ -57,7 +57,7 @@ func copy_file(
 
 	_worker_mutex.lock()
 
-	if _pending != Command.UNSPECIFIED:
+	if _is_busy():
 		_worker_mutex.unlock()
 		return StdThreadWorkerResult.failed(ERR_BUSY)
 
@@ -82,7 +82,7 @@ func load_config(config: Config) -> StdThreadWorkerResult:
 
 	_worker_mutex.lock()
 
-	if _pending != Command.UNSPECIFIED:
+	if _is_busy():
 		_worker_mutex.unlock()
 		return StdThreadWorkerResult.failed(ERR_BUSY)
 
@@ -100,7 +100,7 @@ func store_config(config: Config) -> StdThreadWorkerResult:
 
 	_worker_mutex.lock()
 
-	if _pending != Command.UNSPECIFIED:
+	if _is_busy():
 		_worker_mutex.unlock()
 		return StdThreadWorkerResult.failed(ERR_BUSY)
 
@@ -115,8 +115,8 @@ func store_config(config: Config) -> StdThreadWorkerResult:
 
 
 ## _config_read_bytes is an overridable method which defines how the specified file
-## contents are read from the provided filepath. This allows customizing things like
-## which backup files are used, for example.
+## contents are read from the provided filepath. This allows customizing which backup
+## files are used.
 ##
 ## By default, this implementation will read directly from the provided file path.
 func _config_read_bytes(config_path: String) -> ReadResult:
@@ -124,8 +124,8 @@ func _config_read_bytes(config_path: String) -> ReadResult:
 
 
 ## _config_write_bytes is an overridable method which defines how the specified file
-## contents are written to the provided filepath. This allows customizing things like
-## which backup files are used, for example.
+## contents are written to the provided filepath. This allows customizing which backup
+## files are used.
 ##
 ## By default, this implementation will write the provided file contents to a '.tmp'
 ## file. Once that succeeds, the file will be renamed to the actual file. This ensures
@@ -299,7 +299,7 @@ func _handle_load(
 	if read_result.error == OK and read_result.bytes.size() >= _get_minimum_size():
 		data = _deserialize_var(read_result.bytes)
 
-	# Backup fallback: try backups if main file was corrupt or missing.
+	# Fall back to the backups if the main file was corrupt or missing.
 	if (
 		not data is Dictionary
 		and backup_count > 0
@@ -378,6 +378,15 @@ func _handle_store(
 	return err
 
 
+## _is_busy returns whether a command is queued or the worker is still executing one.
+## The caller must hold `_worker_mutex`.
+##
+## NOTE: `_worker_impl` clears `_pending` once the thread takes a command, so checking
+## `_pending` alone admits a call that `run` rejects, leaving it queued forever.
+func _is_busy() -> bool:
+	return _pending != Command.UNSPECIFIED or _worker_result != null
+
+
 ## _read_file_bytes reads the raw contents from the specified file path using managed
 ## file I/O (logging, state tracking). Unlike `_config_read_bytes`, this method is not
 ## virtual and should be used for direct file reads (e.g. backup reads).
@@ -417,7 +426,7 @@ func _rotate_backups(config_path: String) -> void:
 	if FileAccess.file_exists(path_oldest):
 		_file_move(path_oldest, path_oldest_tmp)
 
-	# Shift each backup up: .bak{N-1} -> .bak{N}
+	# Shift each backup up one depth, from .bak{N-1} to .bak{N}.
 	for i in range(backup_count - 1, 0, -1):
 		var from := _get_bak_filepath(i - 1)
 		var to := _get_bak_filepath(i)
@@ -425,7 +434,7 @@ func _rotate_backups(config_path: String) -> void:
 		if FileAccess.file_exists(from):
 			_file_move(from, to)
 
-	# Back up current file: .bak (depth 0).
+	# Back up the current file to .bak (depth 0).
 	var bak := _get_bak_filepath(0)
 
 	var copy_err := _file_copy(config_path, bak)
@@ -438,7 +447,7 @@ func _rotate_backups(config_path: String) -> void:
 			)
 		)
 
-		# Reverse the shifts: move .bak{i} -> .bak{i-1} for each shifted file.
+		# Reverse the shifts, moving each shifted .bak{i} back to .bak{i-1}.
 		for i in range(1, backup_count):
 			var from := _get_bak_filepath(i)
 			var to := _get_bak_filepath(i - 1)
