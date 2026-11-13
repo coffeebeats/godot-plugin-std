@@ -61,6 +61,7 @@ Follows GDScript style guide. Key project-specific conventions:
 ### Loading
 
 - Export a scene, or a resource that carries a script, and set it in the scene that ships the script instead of `preload`ing it, since such a preload can deadlock Godot's threaded loader; the checker's `preload` rule enforces this. Preloading a script is fine.
+- Name no 3D class in code, whether in `extends`, a type hint, `is`, `as` or a constructor call. A 2D game's export template is often built with `disable_3d`, which drops `Node3D` and its subclasses, most classes named with `3D` (`World3D`, `PhysicsServer3D`), the XR and glTF classes, the primitive meshes and `WorldEnvironment`, and the engine then fails to parse the script and every script depending on it. The editor keeps 3D, so nothing shows until a 2D export boots. Test a node by name with `is_class(&"Node3D")` instead. std ships no 3D-only script, so `test/disable_3d_test.gd` checks every shipped script for these names; it errs toward flagging, and a flagged class that 2D builds keep, such as `Texture3D`, goes in its allowlist.
 
 ### Comments
 
