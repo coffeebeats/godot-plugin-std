@@ -1854,7 +1854,6 @@ func before_all() -> void:
 
 
 func before_each() -> void:
-	# Clear the global cursor group before each test.
 	StdGroup.with_id(StdInputCursor.GROUP_INPUT_CURSOR).clear_members()
 
 	cursor = StdInputCursor.new()
