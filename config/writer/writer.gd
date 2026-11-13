@@ -57,7 +57,7 @@ func copy_file(
 
 	_worker_mutex.lock()
 
-	if _pending != Command.UNSPECIFIED:
+	if _is_busy():
 		_worker_mutex.unlock()
 		return StdThreadWorkerResult.failed(ERR_BUSY)
 
@@ -82,7 +82,7 @@ func load_config(config: Config) -> StdThreadWorkerResult:
 
 	_worker_mutex.lock()
 
-	if _pending != Command.UNSPECIFIED:
+	if _is_busy():
 		_worker_mutex.unlock()
 		return StdThreadWorkerResult.failed(ERR_BUSY)
 
@@ -100,7 +100,7 @@ func store_config(config: Config) -> StdThreadWorkerResult:
 
 	_worker_mutex.lock()
 
-	if _pending != Command.UNSPECIFIED:
+	if _is_busy():
 		_worker_mutex.unlock()
 		return StdThreadWorkerResult.failed(ERR_BUSY)
 
@@ -376,6 +376,15 @@ func _handle_store(
 	)
 
 	return err
+
+
+## _is_busy returns whether a command is queued or the worker is still executing one.
+## The caller must hold `_worker_mutex`.
+##
+## NOTE: `_worker_impl` clears `_pending` once the thread takes a command, so checking
+## `_pending` alone admits a call that `run` rejects, leaving it queued forever.
+func _is_busy() -> bool:
+	return _pending != Command.UNSPECIFIED or _worker_result != null
 
 
 ## _read_file_bytes reads the raw contents from the specified file path using managed
