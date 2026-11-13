@@ -197,7 +197,14 @@ func erase(screen: StdScreen) -> void:
 static func find_unparkable(scene: Node) -> PackedStringArray:
 	var offenders := PackedStringArray()
 
-	if scene is CanvasLayer or scene is Node3D or (scene is Window and scene.visible):
+	# NOTE: `Node3D` is named as a string, since an engine built with `disable_3d`
+	# registers no such class and fails to parse a script naming it as a type. No 3D node
+	# exists on such a build, so `is_class` answering false there is correct.
+	if (
+		scene is CanvasLayer
+		or scene.is_class(&"Node3D")
+		or (scene is Window and scene.visible)
+	):
 		offenders.append(".: %s" % scene.get_class())
 
 	_find_unparkable_under(scene, scene, offenders)
@@ -345,7 +352,7 @@ static func _find_unparkable_under(
 
 		if (
 			child is CanvasLayer
-			or child is Node3D
+			or child.is_class(&"Node3D")
 			or (child is Window and child.visible)
 		):
 			reason = child.get_class()
