@@ -1,5 +1,14 @@
 # Changelog
 
+## 10.1.1 (2026-11-13)
+
+## What's Changed
+* fix(save): clear save data's dirty flag after a successful write by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/638
+* fix(save): return `STATUS_BUSY` when the writer is busy, and stop a rejected command from wedging it by @coffeebeats in https://github.com/coffeebeats/godot-plugin-std/pull/640
+
+
+**Full Changelog**: https://github.com/coffeebeats/godot-plugin-std/compare/v10.1.0...v10.1.1
+
 ## 10.1.0 (2026-11-12)
 
 ## What's Changed
