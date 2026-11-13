@@ -2,9 +2,9 @@
 ## std/input/cursor.gd
 ##
 ## StdInputCursor is a class which manages the application cursor, specifically its
-## visibility and confinement to the window. It also helps the application gracefully
-## transition between "digital"/focus-based navigation and cursor navigation by keeping
-## track of recently hovered UI elements and grabbing focus during mode transitions.
+## visibility and confinement to the window. It also helps the application transition
+## between "digital"/focus-based navigation and cursor navigation by keeping track of
+## recently hovered UI elements and grabbing focus during mode transitions.
 ##
 ## Cursor visibility is tracked apart from the active input device; showing or hiding
 ## the cursor never activates a device, though the `StdInputSlot` may activate one from
@@ -33,9 +33,8 @@ extends Node
 
 # -- SIGNALS ------------------------------------------------------------------------- #
 
-## about_to_grab_focus is emitted whenever the specified node is about to grab focus.
-## The `trigger` parameter is the input action name that caused the focus change, if one
-## exists (i.e. it's only populated if an input action triggered the focus change).
+## about_to_grab_focus is emitted when `node` is about to grab focus. `trigger` is the
+## input action which caused the change, or empty when no action did.
 signal about_to_grab_focus(node: Control, trigger: StringName)
 
 ## cursor_visibility_changed is emitted when the visibility of the application's cursor
@@ -56,6 +55,7 @@ const Signals := preload("../event/signal.gd")
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
+## GROUP_INPUT_CURSOR is the `StdGroup` ID the cursor joins; at most one cursor may.
 const GROUP_INPUT_CURSOR := &"std/input:cursor"
 
 
@@ -90,7 +90,7 @@ class _Claim:
 
 ## confined_property is an optional settings property which, when set, decides whether
 ## the cursor is confined to the window in place of the active action sets' choice. A
-## captured cursor stays captured either way.
+## captured cursor stays captured either way, and on the web it is never confined.
 @export var confined_property: StdSettingsPropertyBool = null
 
 # -- INITIALIZATION ------------------------------------------------------------------ #
@@ -159,7 +159,7 @@ func get_hovered() -> Control:
 
 
 ## get_is_confined returns whether the cursor is currently confined to the window. A
-## captured cursor isn't confined.
+## captured cursor isn't confined, nor is one on the web.
 func get_is_confined() -> bool:
 	return _cursor_confined and not _cursor_captured
 
@@ -238,17 +238,15 @@ func report_clicked(control: Control) -> void:
 	_focus_to_restore = control
 
 
-## report_focus_handler_visible is used to notify the `StdInputCursor` that a previously
-## hidden, or disabled, focus handler is now visible and enabled. This serves as a
-## trigger to re-evaluate focus if there isn't currently a focused node.
+## report_focus_handler_visible notifies the `StdInputCursor` that a hidden or disabled
+## focus handler is now visible and enabled, so a hidden cursor resolves focus again.
 func report_focus_handler_visible(_handler: StdInputCursorFocusHandler) -> void:
 	if not _cursor_visible:
 		_update_focus()
 
 
-## set_hovered registers the provided `Control` node as the most recently hovered UI
-## element. If the cursor is disabled, focus will transition directly to this node if
-## eligible.
+## set_hovered registers `control` as the hovered UI element and returns whether it
+## changed. When the cursor next hides, `control` takes focus if it's under the root.
 func set_hovered(control: Control) -> bool:
 	assert(control is Control, "missing argument")
 
@@ -284,8 +282,8 @@ func show_cursor() -> void:
 	_on_properties_changed()
 
 
-## unset_hovered clears the specified `Control` node as the last hovered UI element. If
-## the node is not actually the last hovered node, nothing happens.
+## unset_hovered clears `control` as the hovered UI element, returning false and doing
+## nothing if it isn't the one hovered.
 func unset_hovered(control: Control) -> bool:
 	assert(control is Control, "missing argument")
 
@@ -320,7 +318,6 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 	_hide_actions_if_hovered = PackedStringArray()
 	for action_set in action_sets:
 		for action in action_set.cursor_hide_actions_if_hovered:
-			# NOTE: This operation makes this O(n^2), but arrays should be small.
 			if action not in _hide_actions_if_hovered:
 				_hide_actions_if_hovered.append(action)
 
@@ -329,7 +326,6 @@ func update_configuration(action_sets: Array[StdInputActionSet] = []) -> void:
 	_reveal_mouse_buttons = []
 	for action_set in action_sets:
 		for button in action_set.cursor_reveal_mouse_buttons:
-			# NOTE: This operation makes this O(n^2), but arrays should be small.
 			if button not in _reveal_mouse_buttons:
 				_reveal_mouse_buttons.append(button)
 
@@ -552,6 +548,14 @@ func _grab_focus_deferred(
 	_deferred_grab_focus.call_deferred(_deferred_focus_id, trigger, make_focusable)
 
 
+## _is_confinement_supported returns whether the platform can confine the cursor. The
+## web display server logs an error for either confined mouse mode and applies neither.
+##
+## NOTE: This is an instance method so tests can override it.
+func _is_confinement_supported() -> bool:
+	return not OS.has_feature(&"web")
+
+
 ## _prune_claims drops the claims whose control was freed without a release.
 func _prune_claims() -> void:
 	for index in range(_claims.size() - 1, -1, -1):
@@ -560,6 +564,9 @@ func _prune_claims() -> void:
 
 
 func _resolve_confined() -> bool:
+	if not _is_confinement_supported():
+		return false
+
 	if confined_property:
 		return confined_property.get_value()
 
@@ -681,9 +688,8 @@ func _update_focus(trigger: StringName = &"") -> void:
 		get_viewport().gui_release_focus()
 		return
 
-	# NOTE: Only use _hovered if it's under the focus root (or there is no
-	# root). This handles the case where a modal opens over a hovered element —
-	# the element remains hovered but shouldn't receive focus (Godot bug).
+	# NOTE: A control under a modal which opened over it stays hovered (a Godot bug), so
+	# a hovered control outside the root mustn't take focus.
 	if _hovered and (not root or root.is_ancestor_of(_hovered)):
 		# NOTE: Focus is grabbed at once, so the press which hid the cursor acts on it.
 		_grab_focus(_hovered, trigger)
