@@ -22,3 +22,10 @@ excludes=["res://*_test.gd"]
 ; Only the loader calls the engine's loads. A test loads scripts for GUT's doubles.
 allow=["res://load/loader.gd"]
 excludes=["res://*_test.gd"]
+
+[disable-3d]
+
+; std ships no 3D-only script, and `dist` leaves out the tests, so they may name 3D
+; classes.
+disallow_3d_classes=true
+excludes=["res://*_test.gd"]
