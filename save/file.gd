@@ -11,36 +11,53 @@ extends StdConfigWriterBinary
 # -- SIGNALS ------------------------------------------------------------------------- #
 
 ## save_loaded is emitted when a call to load save data completes, regardless of the
-## outcome. Check the `status` argument to determine whether the operation succeeded.
+## outcome. Check the `status` argument to determine whether the operation succeeded; a
+## call rejected because this writer was busy emits `STATUS_BUSY` and read nothing.
 signal save_loaded(data: StdSaveData, status: Status)
 
-# save_stored is emitted when a call to store save data completes, regardless of the
-## outcome. Check the `status` argument to determine whether the operation succeeded.
+## save_stored is emitted when a call to store save data completes, regardless of the
+## outcome. Check the `status` argument to determine whether the operation succeeded; a
+## call rejected because this writer was busy emits `STATUS_BUSY` and wrote nothing.
 signal save_stored(data: StdSaveData, status: Status)
 
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
-## Status defines the possible states that a save slot can be in.
+## Status defines the possible states that a save slot can be in. `BUSY` denotes a
+## request rejected, without touching the slot, because another command was running.
+##
+## NOTE: A rejected request may be retried once `is_worker_in_progress` returns `false`;
+## the signals don't mark it, as rejections emit them and `store_config` calls don't.
 enum Status {
 	UNKNOWN = 0,
 	OK = 1,
 	EMPTY = 2,
 	BROKEN = 3,
 	DISK_FULL = 4,
+	BUSY = 5,
 }
 
 const STATUS_BROKEN := Status.BROKEN
+const STATUS_BUSY := Status.BUSY
 const STATUS_DISK_FULL := Status.DISK_FULL
 const STATUS_EMPTY := Status.EMPTY
 const STATUS_OK := Status.OK
 const STATUS_UNKNOWN := Status.UNKNOWN
 
+# -- INITIALIZATION ------------------------------------------------------------------ #
+
+## _latest_stores maps the instance ID of save data with a write in flight to the
+## number of the last write copied from it, so an earlier write can defer to it.
+var _latest_stores: Dictionary[int, int] = {}
+
+## _stores_copied counts the writes copied from save data, numbering each from one.
+var _stores_copied: int = 0
+
 # -- PUBLIC METHODS ------------------------------------------------------------------ #
 
 
-## load_save_data asynchronously hydrates the provided save data resource with the save
-## data persisted at this writer's configured filepath. The return value denotes the
-## current state of the save slot (i.e. whether it's empty, usable, or corrupt).
+## load_save_data asynchronously hydrates the provided save data resource from this
+## writer's configured filepath, returning the save slot's state (i.e. empty, usable, or
+## corrupt), or `STATUS_BUSY` with the data untouched if this writer was busy.
 ##
 ## NOTE: The results of this function call must be awaited.
 func load_save_data(data: StdSaveData) -> Status:
@@ -48,8 +65,7 @@ func load_save_data(data: StdSaveData) -> Status:
 
 	var config := Config.new()  # Will temporarily hold save data.
 
-	var result: Result = load_config(config)
-	assert(result is Result, "invalid state; missing result")
+	var result := load_config(config)
 
 	var err: Error = await result.done
 	if err != OK:
@@ -82,9 +98,10 @@ func load_save_data(data: StdSaveData) -> Status:
 	# Persist migrated data so migration doesn't re-run.
 	if saved_version < data.version:
 		var cfg := Config.new()
-		data.store(cfg)
+		var baseline := _copy_for_store(data, cfg)
 		var store_result := store_config(cfg)
 		var store_err: Error = await store_result.done
+		_finish_store(data, baseline, store_err == OK)
 		if store_err != OK:
 			(
 				_logger
@@ -98,16 +115,15 @@ func load_save_data(data: StdSaveData) -> Status:
 	return STATUS_OK
 
 
-## load_save_data_sync synchronously hydrates the provided save data resource with the
-## save data persisted at this writer's configured filepath. The return value denotes
-## the current state of the save slot (i.e. whether it's empty, usable, or corrupt).
+## load_save_data_sync synchronously hydrates the provided save data resource from this
+## writer's configured filepath, returning the save slot's state (i.e. empty, usable, or
+## corrupt), or `STATUS_BUSY` with the data untouched if this writer was busy.
 func load_save_data_sync(data: StdSaveData) -> Status:
 	assert(data is StdSaveData, "invalid argument; missing data")
 
 	var config := Config.new()  # Will temporarily hold save data.
 
-	var result: Result = load_config(config)
-	assert(result is Result, "invalid state; missing result")
+	var result := load_config(config)
 
 	var err: Error = result.wait()
 	if err != OK:
@@ -141,9 +157,10 @@ func load_save_data_sync(data: StdSaveData) -> Status:
 	# Persist migrated data so migration doesn't re-run.
 	if saved_version < data.version:
 		var cfg := Config.new()
-		data.store(cfg)
+		var baseline := _copy_for_store(data, cfg)
 		var store_result := store_config(cfg)
 		var store_err: Error = store_result.wait()
+		_finish_store(data, baseline, store_err == OK)
 		if store_err != OK:
 			(
 				_logger
@@ -158,42 +175,45 @@ func load_save_data_sync(data: StdSaveData) -> Status:
 
 
 ## store_save_data asynchronously persists the provided save data to this writer's
-## configured filepath. The return value denotes the current state of the save slot
-## (i.e. whether it's empty, usable, or corrupt).
+## configured filepath, returning the save slot's state (i.e. empty, usable, or
+## corrupt), or `STATUS_BUSY` with nothing written if this writer was busy. A successful
+## write leaves `data` clean as of when it was copied; until then, or after a failure or
+## a rejection, it reads dirty.
 ##
 ## NOTE: The results of this function call must be awaited.
 func store_save_data(data: StdSaveData) -> Status:
 	assert(data is StdSaveData, "invalid argument; missing data")
 
 	var config := Config.new()  # Will temporarily hold save data.
-	data.store(config)
+	var baseline := _copy_for_store(data, config)
 
-	var result: Result = store_config(config)
-	assert(result is Result, "invalid state; missing result")
+	var result := store_config(config)
 
 	var err: Error = await result.done
 
 	var status := _handle_result(err)
+	_finish_store(data, baseline, status == STATUS_OK)
 	save_stored.emit(data, status)
 
 	return status
 
 
 ## store_save_data_sync synchronously persists the provided save data to this writer's
-## configured filepath. The return value denotes the current state of the save slot
-## (i.e. whether it's empty, usable, or corrupt).
+## configured filepath, returning the save slot's state (i.e. empty, usable, or
+## corrupt), or `STATUS_BUSY` with nothing written if this writer was busy. A successful
+## write leaves `data` clean; a failed or rejected one leaves it dirty.
 func store_save_data_sync(data: StdSaveData) -> Status:
 	assert(data is StdSaveData, "invalid argument; missing data")
 
 	var config := Config.new()  # Will temporarily hold save data.
-	data.store(config)
+	var baseline := _copy_for_store(data, config)
 
-	var result: Result = store_config(config)
-	assert(result is Result, "invalid state; missing result")
+	var result := store_config(config)
 
 	var err: Error = result.wait()
 
 	var status := _handle_result(err)
+	_finish_store(data, baseline, status == STATUS_OK)
 	save_stored.emit(data, status)
 
 	return status
@@ -228,6 +248,20 @@ func _get_save_directory() -> String:
 # -- PRIVATE METHODS ----------------------------------------------------------------- #
 
 
+## _copy_for_store copies `data` into `config` for a write and returns the baseline that
+## `_finish_store` makes clean if the write succeeds.
+##
+## NOTE: The data is marked critical first, so it reads dirty until the write succeeds.
+func _copy_for_store(data: StdSaveData, config: Config) -> Dictionary:
+	data.mark_critical()
+	data.store(config)
+
+	_stores_copied += 1
+	_latest_stores[data.get_instance_id()] = _stores_copied
+
+	return {&"data": data._capture_baseline(), &"store": _stores_copied}
+
+
 ## _create_named_backup enqueues a one-off backup copy at `{filepath}.{extension}` on
 ## the worker thread. Returns `null` if the backup already exists (idempotent).
 func _create_named_backup(
@@ -240,6 +274,22 @@ func _create_named_backup(
 		return null
 
 	return copy_file(filepath, path_bak)
+
+
+## _finish_store makes `baseline`, from `_copy_for_store`, the clean baseline of `data`
+## after a successful write, or leaves `data` needing a save after a failed one. A write
+## copied before another write of `data` changes nothing, since the later one decides.
+func _finish_store(data: StdSaveData, baseline: Dictionary, succeeded: bool) -> void:
+	var id := data.get_instance_id()
+	if _latest_stores.get(id, 0) != baseline[&"store"]:
+		return
+
+	_latest_stores.erase(id)
+
+	if succeeded:
+		data._install_baseline(baseline[&"data"])
+	else:
+		data.mark_critical()
 
 
 func _is_save_directory_empty() -> bool:
@@ -277,6 +327,10 @@ func _handle_result(err: Error) -> Status:
 				)
 			)
 			return STATUS_DISK_FULL
+
+		ERR_BUSY:
+			_logger.debug("Rejected save file request; writer is busy.")
+			return STATUS_BUSY
 
 		ERR_INVALID_DATA:
 			return STATUS_BROKEN

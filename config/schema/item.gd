@@ -1,5 +1,5 @@
 ##
-## std/config/item.gd
+## std/config/schema/item.gd
 ##
 ## StdConfigItem is a collection of key/value pairs that can be serialized to or
 ## deserialized from a `Config` object.
@@ -29,14 +29,7 @@ var _snapshot: Dictionary = {}
 
 ## clear_dirty snapshots current property values as the clean baseline.
 func clear_dirty() -> void:
-	_snapshot.clear()
-
-	for property in get_property_list():
-		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
-			continue
-
-		var name: StringName = property[PROPERTY_KEY_NAME]
-		_snapshot[name] = get(name)
+	_install_baseline(_capture_baseline())
 
 
 ## copy hydrates this config item with the data from the provided instance. All values
@@ -195,3 +188,27 @@ func store(config: Config) -> void:
 func _get_category() -> StringName:
 	assert(false, "unimplemented")
 	return &""
+
+
+# -- PRIVATE METHODS ----------------------------------------------------------------- #
+
+
+## _capture_baseline returns current property values, which `_install_baseline`
+## makes the clean baseline, now or later.
+func _capture_baseline() -> Dictionary:
+	var baseline := {}
+
+	for property in get_property_list():
+		if property[PROPERTY_KEY_USAGE] & PROPERTY_USAGE_SERDE != PROPERTY_USAGE_SERDE:
+			continue
+
+		var name: StringName = property[PROPERTY_KEY_NAME]
+		baseline[name] = get(name)
+
+	return baseline
+
+
+## _install_baseline makes `baseline`, from `_capture_baseline`, the clean baseline,
+## so a value changed since it was captured reads dirty.
+func _install_baseline(baseline: Dictionary) -> void:
+	_snapshot = baseline
