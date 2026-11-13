@@ -1,6 +1,6 @@
 ##
 ## Tests pertaining to the `StdSaveFile` class, covering the save data's dirty state
-## after a write.
+## after a write and requests made while the writer is busy.
 ##
 
 extends GutTest
@@ -12,17 +12,36 @@ const Config := preload("../config/config.gd")
 # -- DEFINITIONS --------------------------------------------------------------------- #
 
 
-## SaveFileTest is a save file writing to a test directory, which can fail its writes.
+## SaveFileTest is a save file writing to a test directory, which can fail or block its
+## writes.
 class SaveFileTest:
 	extends StdSaveFile
+
+	## block controls whether writes wait on `release` before proceeding.
+	var block: bool = false
 
 	## directory is the directory save files are written to.
 	var directory: String = ""
 
+	## entered is posted by the worker thread once a blocking write begins.
+	var entered := Semaphore.new()
+
 	## fail_writes is whether every write fails as a full disk would.
 	var fail_writes: bool = false
 
+	## release must be posted once per blocking write to let that write proceed.
+	var release := Semaphore.new()
+
+	func _exit_tree():
+		# NOTE: Unblock any parked write so a failed test can't hang the teardown.
+		release.post()
+		super._exit_tree()
+
 	func _config_write_bytes(config_path: String, data: PackedByteArray) -> Error:
+		if block:
+			entered.post()
+			release.wait()
+
 		if fail_writes:
 			return ERR_FILE_CANT_WRITE
 
@@ -269,6 +288,140 @@ func test_load_save_data_failing_to_persist_migrated_data_leaves_it_dirty():
 	assert_true(data.is_dirty())
 
 
+func test_load_save_data_during_a_write_returns_busy():
+	# Given: A store is in flight, with the worker thread inside the write.
+	var result_in_flight := _start_blocked_store()
+
+	# Given: Save data holding a change.
+	var data := _create_dirty_data()
+	data.item.value = 12
+
+	# Given: The save file's signals are watched.
+	watch_signals(_file)
+
+	# When: The save data is loaded while the store is in flight.
+	var status: StdSaveFile.Status = await _file.load_save_data(data)
+
+	# When: The in-flight write is released.
+	_finish_blocked_store(result_in_flight)
+
+	# Then: The load was rejected as busy.
+	assert_eq(status, StdSaveFile.STATUS_BUSY)
+	assert_signal_emitted_with_parameters(
+		_file, "save_loaded", [data, StdSaveFile.STATUS_BUSY]
+	)
+
+	# Then: The save data was left untouched.
+	assert_eq(data.item.value, 12)
+
+
+func test_load_save_data_sync_during_a_write_returns_busy():
+	# Given: A store is in flight, with the worker thread inside the write.
+	var result_in_flight := _start_blocked_store()
+
+	# Given: Save data holding a change.
+	var data := _create_dirty_data()
+	data.item.value = 12
+
+	# Given: The save file's signals are watched.
+	watch_signals(_file)
+
+	# When: The save data is loaded while the store is in flight.
+	var status := _file.load_save_data_sync(data)
+
+	# When: The in-flight write is released.
+	_finish_blocked_store(result_in_flight)
+
+	# Then: The load was rejected as busy.
+	assert_eq(status, StdSaveFile.STATUS_BUSY)
+	assert_signal_emitted_with_parameters(
+		_file, "save_loaded", [data, StdSaveFile.STATUS_BUSY]
+	)
+
+	# Then: The save data was left untouched.
+	assert_eq(data.item.value, 12)
+
+
+func test_store_save_data_during_a_write_returns_busy():
+	# Given: A store is in flight, with the worker thread inside the write.
+	var result_in_flight := _start_blocked_store()
+
+	# Given: Save data with a change to save.
+	var data := _create_dirty_data()
+
+	# Given: The save file's signals are watched.
+	watch_signals(_file)
+
+	# When: The save data is stored while the store is in flight.
+	var status: StdSaveFile.Status = await _file.store_save_data(data)
+
+	# When: The in-flight write is released.
+	_finish_blocked_store(result_in_flight)
+
+	# Then: The store was rejected as busy.
+	assert_eq(status, StdSaveFile.STATUS_BUSY)
+	assert_signal_emitted_with_parameters(
+		_file, "save_stored", [data, StdSaveFile.STATUS_BUSY]
+	)
+
+	# Then: The unsaved data still reads dirty.
+	assert_true(data.is_dirty())
+
+
+func test_store_save_data_sync_during_a_write_returns_busy():
+	# Given: A store is in flight, with the worker thread inside the write.
+	var result_in_flight := _start_blocked_store()
+
+	# Given: Save data with a change to save.
+	var data := _create_dirty_data()
+
+	# Given: The save file's signals are watched.
+	watch_signals(_file)
+
+	# When: The save data is stored while the store is in flight.
+	var status := _file.store_save_data_sync(data)
+
+	# When: The in-flight write is released.
+	_finish_blocked_store(result_in_flight)
+
+	# Then: The store was rejected as busy.
+	assert_eq(status, StdSaveFile.STATUS_BUSY)
+	assert_signal_emitted_with_parameters(
+		_file, "save_stored", [data, StdSaveFile.STATUS_BUSY]
+	)
+
+	# Then: The unsaved data still reads dirty.
+	assert_true(data.is_dirty())
+
+
+func test_store_save_data_sync_after_a_busy_rejection_succeeds():
+	# Given: A store is in flight, with the worker thread inside the write.
+	var result_in_flight := _start_blocked_store()
+
+	# Given: Save data holding a change.
+	var data := _create_dirty_data()
+	data.item.value = 12
+
+	# Given: A store was rejected because the writer was busy.
+	assert_eq(_file.store_save_data_sync(data), StdSaveFile.STATUS_BUSY)
+
+	# Given: The in-flight write was released.
+	_finish_blocked_store(result_in_flight)
+
+	# When: The save data is stored again once the writer is idle.
+	_file.block = false
+	var status := _file.store_save_data_sync(data)
+
+	# Then: The store succeeded and left the data clean.
+	assert_eq(status, StdSaveFile.STATUS_OK)
+	assert_false(data.is_dirty())
+
+	# Then: The stored data can be loaded back.
+	var got := _create_dirty_data()
+	assert_eq(_file.load_save_data_sync(got), StdSaveFile.STATUS_OK)
+	assert_eq(got.item.value, 12)
+
+
 # -- TEST HOOKS ---------------------------------------------------------------------- #
 
 
@@ -303,3 +456,23 @@ func _create_dirty_data() -> SaveDataTest:
 	data.item.value = 1
 
 	return data
+
+
+## _finish_blocked_store releases the write started by `_start_blocked_store` and waits
+## for it to complete successfully.
+func _finish_blocked_store(result: StdThreadWorkerResult) -> void:
+	_file.release.post()
+	assert_eq(result.wait(), OK)
+
+
+## _start_blocked_store starts a store whose write blocks until released, returning
+## once the worker thread is inside that write.
+func _start_blocked_store() -> StdThreadWorkerResult:
+	var config := Config.new()
+	_create_dirty_data().store(config)
+
+	_file.block = true
+	var result := _file.store_config(config)
+	_file.entered.wait()
+
+	return result
